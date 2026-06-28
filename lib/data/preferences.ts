@@ -1,0 +1,32 @@
+/**
+ * Per-user preferences — server-only DB access (Prisma).
+ *
+ * SERVER-ONLY: imports `@/lib/db` (Prisma → pg), so never import this from a
+ * client component (see [[aec-prisma-client-boundary]]). The client-safe
+ * `Preferences` TYPE + `PREFERENCES` defaults live in `lib/data/settings.ts`
+ * (which stays prisma-free); this module only does the reads/writes.
+ *
+ * Storage: a user's preferences are a JSON blob on `User.preferences`. Reads
+ * merge the saved partial over the practice-wide defaults so missing keys fall
+ * back gracefully (and new pref fields work without a migration of stored rows).
+ */
+import { prisma } from "@/lib/db";
+import { PREFERENCES, type Preferences } from "./settings";
+
+export async function getUserPreferences(userId?: string | null): Promise<Preferences> {
+  if (!userId) return PREFERENCES;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { preferences: true },
+  });
+  const saved = (user?.preferences ?? {}) as Partial<Preferences>;
+  return { ...PREFERENCES, ...saved };
+}
+
+export async function saveUserPreferences(userId: string, prefs: Preferences): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    // Prisma Json column — store the whole blob.
+    data: { preferences: prefs as object },
+  });
+}

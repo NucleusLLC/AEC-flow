@@ -1,0 +1,220 @@
+import Link from "next/link";
+import { ArrowUpRight, ArrowDownRight, Minus, BarChart3 } from "lucide-react";
+import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
+import { ProgressBar } from "@/components/ui/progress";
+import { getDashboardData, type Trend } from "@/lib/data/dashboard";
+import { getRecentActivity } from "@/lib/data/activity";
+import { formatCurrencyCompact, formatDate } from "@/lib/format";
+import { initials } from "@/lib/utils";
+
+export const metadata = { title: "Dashboard · ZenArch" };
+
+function TrendPill({ trend }: { trend?: Trend }) {
+  if (!trend) return null;
+  const Icon =
+    trend.direction === "up" ? ArrowUpRight : trend.direction === "down" ? ArrowDownRight : Minus;
+  const tone =
+    trend.direction === "up"
+      ? "text-emerald-600"
+      : trend.direction === "down"
+        ? "text-red-600"
+        : "text-muted";
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${tone}`}>
+      <Icon className="h-3.5 w-3.5" />
+      {trend.value}%
+    </span>
+  );
+}
+
+export default async function DashboardPage() {
+  const { stats, pipeline, projects, onLeave } = await getDashboardData();
+  const recentActivity = await getRecentActivity(8);
+  const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
+  const pipelineMax = Math.max(...pipeline.map((s) => s.value));
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-6">
+      {/* Greeting */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-fg">Good afternoon, Greg</h2>
+          <p className="text-sm text-muted">
+            Here&apos;s what&apos;s happening across the practice today.
+          </p>
+        </div>
+        <Link
+          href="/reports"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+        >
+          <BarChart3 className="h-4 w-4 text-muted" />
+          View reports
+        </Link>
+      </div>
+
+      {/* Stat tiles */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <Card key={stat.key} className="p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted">{stat.label}</span>
+              <TrendPill trend={stat.trend} />
+            </div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{stat.value}</div>
+            <div className="mt-1 text-xs text-faint">{stat.hint}</div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Active projects */}
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Active Projects"
+            subtitle="Live delivery across the studio"
+            action={
+              <Link href="/projects" className="text-xs font-medium text-brand hover:underline">
+                View all
+              </Link>
+            }
+          />
+          <div className="divide-y divide-border">
+            {projects.map((p) => (
+              <Link
+                key={p.id}
+                href={`/projects/${p.id}`}
+                className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] text-faint">{p.number}</span>
+                    <StatusBadge status={p.status} />
+                    <PriorityBadge priority={p.priority} />
+                  </div>
+                  <div className="mt-0.5 truncate text-sm font-medium text-fg group-hover:text-brand">
+                    {p.name}
+                  </div>
+                  <div className="truncate text-xs text-muted">
+                    {p.client} · {p.manager}
+                  </div>
+                </div>
+                <div className="hidden w-40 shrink-0 sm:block">
+                  <div className="mb-1 flex items-center justify-between text-[11px] text-muted">
+                    <span>{p.progressPct}%</span>
+                    <span>{formatDate(p.targetEndDate)}</span>
+                  </div>
+                  <ProgressBar value={p.progressPct} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        {/* On leave today */}
+        <Card>
+          <CardHeader
+            title="Out of Office"
+            subtitle="On leave this week"
+            action={
+              <Link href="/leave" className="text-xs font-medium text-brand hover:underline">
+                View all
+              </Link>
+            }
+          />
+          <div className="divide-y divide-border">
+            {onLeave.map((person) => (
+              <div key={person.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                  {initials(person.name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-fg">{person.name}</div>
+                  <div className="text-xs text-muted">Back {formatDate(person.until)}</div>
+                </div>
+                <Badge tone="slate">{person.type}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Proposals pipeline */}
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Proposals Pipeline"
+            subtitle={`${formatCurrencyCompact(pipelineTotal)} across ${pipeline.reduce(
+              (n, s) => n + s.count,
+              0,
+            )} proposals`}
+            action={
+              <Link href="/proposals" className="text-xs font-medium text-brand hover:underline">
+                View all
+              </Link>
+            }
+          />
+          <CardBody className="space-y-4">
+            {pipeline.map((stage) => (
+              <div key={stage.stage}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="font-medium text-fg">
+                    {stage.stage} <span className="text-faint">· {stage.count}</span>
+                  </span>
+                  <span className="text-muted">{formatCurrencyCompact(stage.value)}</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full bg-brand"
+                    style={{ width: `${(stage.value / pipelineMax) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
+
+        {/* Recent activity — real ActivityLog feed */}
+        <Card>
+          <CardHeader
+            title="Recent Activity"
+            action={
+              <Link href="/activity" className="text-xs font-medium text-brand hover:underline">
+                View all
+              </Link>
+            }
+          />
+          <CardBody>
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-muted">No recent activity.</p>
+            ) : (
+              <ol className="space-y-4">
+                {recentActivity.map((entry) => (
+                  <li key={entry.id} className="flex gap-3">
+                    <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand/70" />
+                    <div className="min-w-0">
+                      <p className="text-sm text-fg">
+                        <span className="font-medium">{entry.actor}</span>{" "}
+                        <span className="text-muted">
+                          {entry.action} {entry.entityType}
+                        </span>{" "}
+                        {entry.href ? (
+                          <Link href={entry.href} className="font-medium hover:text-brand hover:underline">
+                            {entry.entityLabel}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{entry.entityLabel}</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-faint">{entry.at}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+    </div>
+  );
+}

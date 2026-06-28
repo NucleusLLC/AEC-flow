@@ -1,0 +1,2174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// ⛔️⛔️⛔️ DO NOT RUN `prisma db push` (especially NOT `--accept-data-loss`) ⛔️⛔️⛔️
+// This Supabase database is SHARED with NucleusLicenseOps (the licensing/billing system,
+// github.com/greglacle/nucleus-licenseops). Its 26 tables (licenses, companies, usage_*,
+// stripe_*, etc.) live in this same DB. They are mapped at the BOTTOM of this file as
+// @@ignore'd models so push won't DROP them — but Prisma still cannot represent some of
+// their features (partial indexes, RLS), so push can still ALTER them destructively.
+// For schema changes here: use additive `ALTER TABLE` / `prisma migrate` only. See CLAUDE.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  DIRECTOR
+  MANAGER
+  STAFF
+  VIEWER
+}
+
+enum Discipline {
+  ARCHITECTURE
+  STRUCTURAL
+  INTERIOR
+  MEP
+  PROJECT_MANAGEMENT
+}
+
+enum Department {
+  DESIGN
+  ENGINEERING
+  MANAGEMENT
+  ADMIN
+  FINANCE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  UNPAID
+  MATERNITY
+  PATERNITY
+  PUBLIC
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ClientType {
+  DEVELOPER
+  GOVERNMENT
+  HOSPITALITY
+  HEALTHCARE
+  COMMERCIAL
+  RESIDENTIAL
+  PRIVATE
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  PENDING
+  APPROVED
+  ON_HOLD
+  REJECTED
+  VOID
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PhaseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum MeetingType {
+  CLIENT
+  INTERNAL
+  SITE
+  AUTHORITY
+  VIRTUAL
+}
+
+enum ActionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model User {
+  id              String      @id @default(cuid())
+  email           String      @unique
+  passwordHash    String?
+  name            String
+  phone           String?
+  avatarUrl       String?
+  role            UserRole    @default(STAFF)
+  discipline      Discipline?
+  department      Department?
+  status          UserStatus  @default(ACTIVE)
+  capacity        Int         @default(100)
+  utilisation     Int         @default(0)
+  bio             String?
+  skills          String[]
+  annualLeaveTotal Int        @default(22)
+  annualLeaveTaken Int        @default(0)
+  workingHours    Json?
+  preferences     Json?     // per-user settings blob (see lib/data/preferences.ts)
+  officeLocation  String?
+  joiningDate     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  sessions         Session[]
+  managedProjects  Project[]         @relation("ProjectManager")
+  phases           PhaseAssignment[]
+  leaveRequests    LeaveRequest[]
+  meetingsAsAuthor MeetingMinute[]
+  actionItems      ActionItem[]
+  proposals        Proposal[]        @relation("ProposalOwner")
+  followUps        Proposal[]        @relation("FollowUpOwner")
+  activityLogs     ActivityLog[]
+  notifications    Notification[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Client {
+  id            String        @id @default(cuid())
+  name          String
+  companyName   String?
+  contactPerson String?
+  email         String?
+  phone         String?
+  website       String?
+  taxNumber     String?
+  type          ClientType    @default(PRIVATE)
+  status        ClientStatus  @default(ACTIVE)
+  notes         String?
+  tags          String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  addresses    ClientAddress[]
+  proposals    Proposal[]
+  orders       Order[]
+  projects     Project[]
+  activityLogs ActivityLog[]
+}
+
+model ClientAddress {
+  id        String  @id @default(cuid())
+  clientId  String
+  label     String
+  line1     String
+  line2     String?
+  city      String?
+  emirate   String?
+  country   String  @default("UAE")
+  isPrimary Boolean @default(false)
+  client    Client  @relation(fields: [clientId], references: [id])
+}
+
+model Proposal {
+  id                String         @id @default(cuid())
+  refNumber         String         @unique
+  title             String
+  clientId          String
+  ownerId           String
+  followUpOwnerId   String?
+  templateId        String?
+  status            ProposalStatus @default(DRAFT)
+  revision          Int            @default(1)
+  currency          String         @default("AED")
+  totalFee          Decimal
+  scopeSummary      String?
+  exclusions        String?
+  assumptions       String?
+  terms             String?
+  estimatedDuration Int?
+  sentAt            DateTime?
+  approvedAt        DateTime?
+  followUpDate      DateTime?
+  lastContactDate   DateTime?
+  followUpNotes     String?
+  nextAction        String?
+  validUntil        DateTime?
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  client        Client             @relation(fields: [clientId], references: [id])
+  owner         User               @relation("ProposalOwner", fields: [ownerId], references: [id])
+  followUpOwner User?              @relation("FollowUpOwner", fields: [followUpOwnerId], references: [id])
+  template      ProposalTemplate?  @relation(fields: [templateId], references: [id])
+  lineItems     ProposalLineItem[]
+  milestones    ProposalMilestone[]
+  attachments   Attachment[]
+  order         Order?
+}
+
+model ProposalLineItem {
+  id          String      @id @default(cuid())
+  proposalId  String
+  description String
+  discipline  Discipline?
+  amount      Decimal
+  isOptional  Boolean     @default(false)
+  sortOrder   Int         @default(0)
+  proposal    Proposal    @relation(fields: [proposalId], references: [id])
+}
+
+model ProposalMilestone {
+  id         String   @id @default(cuid())
+  proposalId String
+  name       String
+  percentage Int
+  dueWeek    Int?
+  proposal   Proposal @relation(fields: [proposalId], references: [id])
+}
+
+model ProposalTemplate {
+  id         String      @id @default(cuid())
+  name       String
+  discipline Discipline?
+  content    Json
+  isDefault  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  proposals  Proposal[]
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique
+  clientId          String
+  proposalId        String?     @unique
+  title             String
+  serviceType       String
+  status            OrderStatus @default(DRAFT)
+  fee               Decimal
+  currency          String      @default("AED")
+  scopeSummary      String?
+  siteAddress       String?
+  expectedStartDate DateTime?
+  expectedEndDate   DateTime?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  client      Client       @relation(fields: [clientId], references: [id])
+  proposal    Proposal?    @relation(fields: [proposalId], references: [id])
+  project     Project?
+  attachments Attachment[]
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  projectNumber String        @unique
+  name          String
+  clientId      String
+  orderId       String?       @unique
+  managerId     String
+  status        ProjectStatus @default(ACTIVE)
+  priority      Priority      @default(MEDIUM)
+  description   String?
+  siteAddress   String?
+  disciplines   Discipline[]
+  startDate     DateTime?
+  targetEndDate DateTime?
+  completedAt   DateTime?
+  progressPct   Int           @default(0)
+  contractValue Decimal?
+  currency      String        @default("AED")
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  client       Client          @relation(fields: [clientId], references: [id])
+  order        Order?          @relation(fields: [orderId], references: [id])
+  manager      User            @relation("ProjectManager", fields: [managerId], references: [id])
+  phases       ProjectPhase[]
+  meetings     MeetingMinute[]
+  attachments  Attachment[]
+  activityLogs ActivityLog[]
+}
+
+model ProjectPhase {
+  id           String      @id @default(cuid())
+  projectId    String
+  parentId     String?
+  name         String
+  discipline   Discipline?
+  status       PhaseStatus @default(NOT_STARTED)
+  startDate    DateTime?
+  endDate      DateTime?
+  progressPct  Int         @default(0)
+  sortOrder    Int         @default(0)
+  notes        String?
+  deliverables String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  project      Project           @relation(fields: [projectId], references: [id])
+  parent       ProjectPhase?     @relation("SubPhases", fields: [parentId], references: [id])
+  children     ProjectPhase[]    @relation("SubPhases")
+  assignments  PhaseAssignment[]
+  dependencies PhaseDependency[] @relation("DependentPhase")
+  dependents   PhaseDependency[] @relation("RequiredPhase")
+}
+
+model PhaseDependency {
+  id          String       @id @default(cuid())
+  dependentId String
+  requiredId  String
+  type        String       @default("FS")
+  lagDays     Int          @default(0)
+  dependent   ProjectPhase @relation("DependentPhase", fields: [dependentId], references: [id])
+  required    ProjectPhase @relation("RequiredPhase", fields: [requiredId], references: [id])
+}
+
+model PhaseAssignment {
+  id       String       @id @default(cuid())
+  phaseId  String
+  userId   String
+  roleName String?
+  phase    ProjectPhase @relation(fields: [phaseId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
+
+  @@unique([phaseId, userId])
+}
+
+model MeetingMinute {
+  id           String      @id @default(cuid())
+  projectId    String
+  authorId     String
+  title        String
+  type         MeetingType @default(CLIENT)
+  meetingDate  DateTime
+  location     String?
+  participants String[]
+  summary      String?
+  discussion   String?
+  decisions    String?
+  followUpDate DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id])
+  author      User         @relation(fields: [authorId], references: [id])
+  actionItems ActionItem[]
+  attachments Attachment[]
+}
+
+model ActionItem {
+  id          String       @id @default(cuid())
+  meetingId   String
+  assigneeId  String
+  description String
+  dueDate     DateTime?
+  status      ActionStatus @default(OPEN)
+  completedAt DateTime?
+  meeting     MeetingMinute @relation(fields: [meetingId], references: [id])
+  assignee    User          @relation(fields: [assigneeId], references: [id])
+}
+
+model LeaveRequest {
+  id         String      @id @default(cuid())
+  userId     String
+  type       LeaveType
+  status     LeaveStatus @default(PENDING)
+  startDate  DateTime
+  endDate    DateTime
+  days       Int
+  reason     String?
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id])
+}
+
+model PublicHoliday {
+  id        String   @id @default(cuid())
+  name      String
+  date      DateTime
+  country   String   @default("UAE")
+  isCompany Boolean  @default(false)
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  filename   String
+  url        String
+  mimeType   String
+  sizeBytes  Int
+  proposalId String?
+  orderId    String?
+  projectId  String?
+  meetingId  String?
+  uploadedAt DateTime @default(now())
+
+  proposal Proposal?     @relation(fields: [proposalId], references: [id])
+  order    Order?        @relation(fields: [orderId], references: [id])
+  project  Project?      @relation(fields: [projectId], references: [id])
+  meeting  MeetingMinute? @relation(fields: [meetingId], references: [id])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  meta       Json?
+  clientId   String?
+  projectId  String?
+  createdAt  DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  client  Client?  @relation(fields: [clientId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Construction Administration & Reporting module
+// Self-contained: projectId and party fields are denormalised strings (no FK
+// relations to existing models) so the module migrates independently and stays
+// portable across regions (Aruba, NL, Colombia, Curaçao, Bonaire, USA). Money
+// uses Decimal; labels are resolved at the app layer (lib/ca/i18n.ts) so the
+// schema stays language-neutral. Column names follow the suite's camelCase
+// convention; @@map pins the table names to the spec's snake_case.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum CaReportType {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  EXECUTIVE
+  PROGRESS_CERTIFICATION
+  BANK_DRAW
+  COMPLETION
+}
+
+enum CaReportStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  APPROVED
+  ISSUED
+  ARCHIVED
+}
+
+enum ChangeOrderStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  VOID
+}
+
+enum CaDiscipline {
+  ARCHITECTURAL
+  STRUCTURAL
+  MECHANICAL
+  ELECTRICAL
+  PLUMBING
+  CIVIL
+  OTHER
+}
+
+enum RfiPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum RfiStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+  VOID
+}
+
+enum ImpactLevel {
+  NONE
+  POSSIBLE
+  CONFIRMED
+}
+
+enum SiteInstructionStatus {
+  DRAFT
+  ISSUED
+  ACKNOWLEDGED
+  CLOSED
+}
+
+enum SubmittalStatus {
+  REQUIRED
+  SUBMITTED
+  REVIEWED
+  APPROVED
+  APPROVED_AS_NOTED
+  REVISE_AND_RESUBMIT
+  REJECTED
+}
+
+enum DelayStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+  CLOSED
+}
+
+enum CertificationStatus {
+  DRAFT
+  ISSUED
+  APPROVED
+  ARCHIVED
+}
+
+enum PunchStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  REJECTED
+}
+
+model CaReport {
+  id                    String         @id @default(cuid())
+  projectId             String
+  projectName           String?
+  reportType            CaReportType
+  reportNumber          String         @unique
+  version               Int            @default(1)
+  reportingPeriodStart  DateTime?
+  reportingPeriodEnd    DateTime?
+  preparedBy            String?
+  reviewedBy            String?
+  approvedBy            String?
+  status                CaReportStatus @default(DRAFT)
+  weatherSummary        String?
+  siteConditions        String?
+  workCompleted         String?
+  workPlannedNextPeriod String?
+  manpowerSummary       Json?
+  equipmentSummary      Json?
+  materialDeliveries    String?
+  safetyIncidents       String?
+  qualityIssues         String?
+  delays                String?
+  risks                 String?
+  photos                Json?
+  notes                 String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([projectId])
+  @@index([reportType])
+  @@index([status])
+  @@map("ca_reports")
+}
+
+model ChangeOrder {
+  id                        String            @id @default(cuid())
+  projectId                 String
+  projectName               String?
+  changeOrderNumber         String            @unique
+  version                   Int               @default(1)
+  title                     String
+  description               String?
+  reason                    String?
+  requestedBy               String?
+  contractorId              String?
+  architectId               String?
+  engineerId                String?
+  ownerId                   String?
+  status                    ChangeOrderStatus @default(DRAFT)
+  costLabor                 Decimal           @default(0)
+  costMaterial              Decimal           @default(0)
+  costEquipment             Decimal           @default(0)
+  costSubcontractor         Decimal           @default(0)
+  overheadPercentage        Decimal           @default(0)
+  profitPercentage          Decimal           @default(0)
+  contingencyPercentage     Decimal           @default(0)
+  vatPercentage             Decimal           @default(0)
+  totalCost                 Decimal           @default(0)
+  currency                  String            @default("USD")
+  scheduleImpactDays        Int               @default(0)
+  originalContractValue     Decimal           @default(0)
+  approvedChangeOrdersToDate Decimal          @default(0)
+  revisedContractValue      Decimal           @default(0)
+  // Estimate-module link + BIM/5D placeholders (Phase 3)
+  estimateLineItemId        String?
+  bimElementId              String?
+  revitCategory             String?
+  ifcCategory               String?
+  quantitySource            String?
+  modelRevision             String?
+  costLink5d                String?
+  dateRequested             DateTime?
+  dateSubmitted             DateTime?
+  dateApproved              DateTime?
+  attachments               Json?
+  notes                     String?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("change_orders")
+}
+
+model RfiLog {
+  id            String       @id @default(cuid())
+  projectId     String
+  projectName   String?
+  rfiNumber     String       @unique
+  subject       String
+  question      String?
+  submittedBy   String?
+  assignedTo    String?
+  discipline    CaDiscipline @default(OTHER)
+  priority      RfiPriority  @default(NORMAL)
+  status        RfiStatus    @default(OPEN)
+  response      String?
+  responseBy    String?
+  dateSubmitted DateTime?
+  dateRequired  DateTime?
+  dateResponded DateTime?
+  linkedChangeOrderId String?
+  attachments   Json?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("rfi_logs")
+}
+
+model SiteInstruction {
+  id                  String                @id @default(cuid())
+  projectId           String
+  projectName         String?
+  instructionNumber   String                @unique
+  title               String
+  description         String?
+  issuedBy            String?
+  issuedTo            String?
+  discipline          CaDiscipline          @default(OTHER)
+  costImpact          ImpactLevel           @default(NONE)
+  scheduleImpact      ImpactLevel           @default(NONE)
+  linkedChangeOrderId String?
+  status              SiteInstructionStatus @default(DRAFT)
+  dateIssued          DateTime?
+  attachments         Json?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("site_instructions")
+}
+
+model SubmittalLog {
+  id               String          @id @default(cuid())
+  projectId        String
+  projectName      String?
+  submittalNumber  String          @unique
+  title            String
+  description      String?
+  submittedBy      String?
+  reviewedBy       String?
+  discipline       CaDiscipline    @default(OTHER)
+  status           SubmittalStatus @default(REQUIRED)
+  dateRequired     DateTime?
+  dateSubmitted    DateTime?
+  dateReviewed     DateTime?
+  attachments      Json?
+  reviewerComments String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("submittal_logs")
+}
+
+model DelayNotice {
+  id                String      @id @default(cuid())
+  projectId         String
+  projectName       String?
+  delayNoticeNumber String      @unique
+  title             String
+  description       String?
+  cause             String?
+  responsibleParty  String?
+  claimedDays       Int         @default(0)
+  approvedDays      Int         @default(0)
+  costImpact        Decimal     @default(0)
+  status            DelayStatus @default(SUBMITTED)
+  dateStarted       DateTime?
+  dateResolved      DateTime?
+  attachments       Json?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("delay_notices")
+}
+
+model ProgressCertification {
+  id                        String              @id @default(cuid())
+  projectId                 String
+  projectName               String?
+  certificationNumber       String              @unique
+  version                   Int                 @default(1)
+  inspectionDate            DateTime?
+  certifiedBy               String?
+  lenderName                String?
+  contractorName            String?
+  contractValue             Decimal             @default(0)
+  currency                  String              @default("USD")
+  previousPercentComplete   Decimal             @default(0)
+  currentPercentComplete    Decimal             @default(0)
+  workCompletedValue        Decimal             @default(0)
+  retentionPercentage       Decimal             @default(0)
+  retentionAmount           Decimal             @default(0)
+  previousPaymentsValue     Decimal             @default(0)
+  amountRecommendedForPayment Decimal           @default(0)
+  deficiencies              String?
+  recommendation            String?
+  status                    CertificationStatus @default(DRAFT)
+  photos                    Json?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("progress_certifications")
+}
+
+model PunchListItem {
+  id               String      @id @default(cuid())
+  projectId        String
+  projectName      String?
+  itemNumber       String      @unique
+  location         String?
+  description      String
+  trade            String?
+  responsibleParty String?
+  priority         Priority    @default(MEDIUM)
+  status           PunchStatus @default(OPEN)
+  dateIdentified   DateTime?
+  dueDate          DateTime?
+  dateCompleted    DateTime?
+  verifiedBy       String?
+  photosBefore     Json?
+  photosAfter      Json?
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@map("punch_list_items")
+}
+
+/* ───────────────────────── Land Development / Parceling ─────────────────────
+ * Self-contained module (denormalised `projectId` strings, no FKs to the core
+ * project tables) — portable across Aruba / Caribbean / NL jurisdictions. Money
+ * is Decimal; areas / rates / percentages are Float. See lib/development/calc.ts
+ * for the calculation engine and lib/development/seed-data.ts for the demo. */
+
+enum DevProjectStatus {
+  PLANNING
+  ACQUISITION
+  PERMITTING
+  INFRASTRUCTURE
+  SALES
+  CLOSEOUT
+  COMPLETED
+  ON_HOLD
+  ARCHIVED
+}
+
+enum PropertyType {
+  PROPERTY_LAND
+  LONG_LEASE
+  MIXED
+}
+
+enum DevProjectType {
+  PARCEL_ONLY
+  HOUSE_AND_PARCEL
+  APARTMENT
+  MIXED_USE
+}
+
+enum LotType {
+  RESIDENTIAL
+  COMMERCIAL
+  CORNER
+  PREMIUM
+  GREEN
+  UTILITY
+  OTHER
+}
+
+enum LotStatus {
+  DRAFT
+  RESERVED
+  OPTIONED
+  SOLD
+  CLOSED
+}
+
+enum DevPaymentStatus {
+  NONE
+  DEPOSIT_PAID
+  PARTIAL
+  PAID_IN_FULL
+  OVERDUE
+}
+
+enum PermitTaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  BLOCKED
+  DONE
+}
+
+enum DevRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum BudgetStatus {
+  BUDGETED
+  COMMITTED
+  IN_PROGRESS
+  INVOICED
+  PAID
+  OVER_BUDGET
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  RESERVED
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum FinancingStatus {
+  CASH
+  PRE_APPROVED
+  PENDING
+  DECLINED
+  UNKNOWN
+}
+
+enum ScenarioKind {
+  BASE
+  CONSERVATIVE
+  OPTIMISTIC
+  CUSTOM
+}
+
+enum DevDocumentKind {
+  PARCEL_DEED
+  LEASE
+  SURVEY
+  TOPOGRAPHIC_PLAN
+  PARCELING_PLAN
+  DOW_DIP_SUBMISSION
+  APPROVAL
+  UTILITY_LETTER
+  BUYER_CONTRACT
+  INVOICE
+  PAYMENT_RECEIPT
+  SALES_AGREEMENT
+  CLOSING_DOCUMENT
+  OTHER
+}
+
+model DevelopmentProject {
+  id                    String           @id @default(cuid())
+  projectNumber         String           @unique
+  name                  String
+  location              String?
+  clientOwner           String?
+  developer             String?
+  status                DevProjectStatus @default(PLANNING)
+  currency              String           @default("AWG")
+  totalParcelArea       Float            @default(0)
+  zoningClassification  String?
+  ropvArticleRef        String?
+  propertyType          PropertyType     @default(PROPERTY_LAND)
+  projectType           DevProjectType   @default(PARCEL_ONLY)
+  startDate             DateTime?
+  targetPermitDate      DateTime?
+  targetInfraDate       DateTime?
+  targetSalesLaunchDate DateTime?
+  targetCloseoutDate    DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@index([status])
+  @@map("development_projects")
+}
+
+model LandAcquisition {
+  id                    String  @id @default(cuid())
+  projectId             String  @unique
+  parcelAcquisitionCost Decimal @default(0)
+  transferTax           Decimal @default(0)
+  notaryCost            Decimal @default(0)
+  kadasterCost          Decimal @default(0)
+  brokerCommission      Decimal @default(0)
+  dueDiligence          Decimal @default(0)
+  appraisal             Decimal @default(0)
+  topographicSurvey     Decimal @default(0)
+  parcelingSurvey       Decimal @default(0)
+  meetbrieven           Decimal @default(0)
+  legalSetup            Decimal @default(0)
+  companySetup          Decimal @default(0)
+  taxAdvisor            Decimal @default(0)
+  financingSetup        Decimal @default(0)
+  bankGuarantee         Decimal @default(0)
+  contingencyPct        Float   @default(0)
+
+  @@map("land_acquisitions")
+}
+
+model LandUseAllocation {
+  id                   String @id @default(cuid())
+  projectId            String @unique
+  grossParcelArea      Float  @default(0)
+  roadArea             Float  @default(0)
+  sidewalkArea         Float  @default(0)
+  greenArea            Float  @default(0)
+  utilityArea          Float  @default(0)
+  drainageArea         Float  @default(0)
+  commonArea           Float  @default(0)
+  poolDeckArea         Float  @default(0)
+  retainedOwnerArea    Float  @default(0)
+  otherNonSellableArea Float  @default(0)
+  requiredGreenPct     Float  @default(0)
+  requiredRoadPct      Float  @default(0)
+
+  @@map("land_use_allocations")
+}
+
+model LotInventory {
+  id                     String           @id @default(cuid())
+  projectId              String
+  lotNumber              String
+  phase                  String?
+  block                  String?
+  lotType                LotType          @default(RESIDENTIAL)
+  areaM2                 Float            @default(0)
+  frontage               Float?
+  depth                  Float?
+  cornerLot              Boolean          @default(false)
+  viewPremium            Boolean          @default(false)
+  baseLandPricePerM2     Decimal          @default(0)
+  premiumAdjustmentPerM2 Decimal          @default(0)
+  allocatedLandCost      Decimal          @default(0)
+  allocatedInfraCost     Decimal          @default(0)
+  allocatedSoftCost      Decimal          @default(0)
+  status                 LotStatus        @default(DRAFT)
+  buyerName              String?
+  broker                 String?
+  reservationDate        DateTime?
+  agreementDate          DateTime?
+  closingDate            DateTime?
+  depositPct             Float            @default(0)
+  paymentStatus          DevPaymentStatus @default(NONE)
+  notes                  String?
+
+  @@index([projectId])
+  @@index([status])
+  @@map("lot_inventory")
+}
+
+model UnitType {
+  id         String              @id @default(cuid())
+  projectId  String
+  name       String
+  quantity   Int                 @default(1)
+  components UnitCostComponent[]
+
+  @@index([projectId])
+  @@map("unit_types")
+}
+
+model UnitCostComponent {
+  id                    String   @id @default(cuid())
+  unitTypeId            String
+  unitType              UnitType @relation(fields: [unitTypeId], references: [id], onDelete: Cascade)
+  name                  String
+  area                  Float    @default(0)
+  constructionCostPerM2 Decimal  @default(0)
+  salesPricePerM2       Decimal  @default(0)
+  sortOrder             Int      @default(0)
+
+  @@index([unitTypeId])
+  @@map("unit_cost_components")
+}
+
+model InfrastructureBudget {
+  id          String       @id @default(cuid())
+  projectId   String
+  costCode    Int
+  category    String
+  item        String
+  quantity    Float        @default(0)
+  unit        String?
+  unitRate    Decimal      @default(0)
+  budget      Decimal      @default(0)
+  committed   Decimal      @default(0)
+  actualPaid  Decimal      @default(0)
+  vendor      String?
+  contractRef String?
+  invoiceRef  String?
+  status      BudgetStatus @default(BUDGETED)
+
+  @@index([projectId])
+  @@index([costCode])
+  @@map("infrastructure_budgets")
+}
+
+model PermitTask {
+  id            String           @id @default(cuid())
+  projectId     String
+  name          String
+  responsible   String?
+  startDate     DateTime?
+  dueDate       DateTime?
+  completedDate DateTime?
+  status        PermitTaskStatus @default(NOT_STARTED)
+  dependency    String?
+  riskLevel     DevRiskLevel     @default(LOW)
+  notes         String?
+  sortOrder     Int              @default(0)
+
+  @@index([projectId])
+  @@map("permit_tasks")
+}
+
+model SalesLead {
+  id              String          @id @default(cuid())
+  projectId       String
+  name            String
+  contact         String?
+  source          String?
+  interestedLot   String?
+  budget          Decimal         @default(0)
+  financingStatus FinancingStatus @default(UNKNOWN)
+  status          LeadStatus      @default(NEW)
+  depositReceived Decimal         @default(0)
+  contractSigned  Boolean         @default(false)
+  broker          String?
+  commissionPct   Float           @default(0)
+  followUpDate    DateTime?
+  notes           String?
+
+  @@index([projectId])
+  @@index([status])
+  @@map("sales_leads")
+}
+
+model CashFlowMonth {
+  id                 String  @id @default(cuid())
+  projectId          String
+  month              String
+  acquisitionCost    Decimal @default(0)
+  consultantCost     Decimal @default(0)
+  permitCost         Decimal @default(0)
+  infrastructureCost Decimal @default(0)
+  constructionCost   Decimal @default(0)
+  marketingCost      Decimal @default(0)
+  financingCost      Decimal @default(0)
+  salesIncome        Decimal @default(0)
+  depositIncome      Decimal @default(0)
+  loanDraw           Decimal @default(0)
+  loanRepayment      Decimal @default(0)
+  equityInvested     Decimal @default(0)
+
+  @@unique([projectId, month])
+  @@index([projectId])
+  @@map("cash_flow_months")
+}
+
+model DevScenario {
+  id                       String       @id @default(cuid())
+  projectId                String
+  name                     String
+  kind                     ScenarioKind @default(CUSTOM)
+  landPurchasePrice        Decimal      @default(0)
+  salesPricePerM2          Decimal      @default(0)
+  constructionCostPerM2    Decimal      @default(0)
+  infrastructureCost       Decimal      @default(0)
+  softCostPct              Float        @default(0)
+  financingRatePct         Float        @default(0)
+  absorptionRate           Float        @default(0)
+  contingencyPct           Float        @default(0)
+  developerProfitTargetPct Float        @default(0)
+  salesDelayMonths         Int          @default(0)
+
+  @@index([projectId])
+  @@map("dev_scenarios")
+}
+
+model DevDocument {
+  id         String          @id @default(cuid())
+  projectId  String
+  kind       DevDocumentKind @default(OTHER)
+  name       String
+  url        String?
+  uploadedAt DateTime        @default(now())
+
+  @@index([projectId])
+  @@map("dev_documents")
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// Cost-Estimation module (BOQ estimate sheets). Self-contained: projectId is a
+// denormalised string (no FK) so it stays portable, mirroring the CA module.
+// Numeric fields use Float (estimate inputs drive live JS recalculation in
+// lib/estimates/calc.ts). @@map pins snake_case table names.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum EstimateStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+}
+
+model CostEstimate {
+  id            String         @id @default(cuid())
+  projectId     String?
+  projectNumber String?
+  projectName   String
+  client        String?
+  location      String?
+  version       String         @default("V1.0")
+  date          DateTime?
+  currency      String         @default("USD")
+  avgLaborRate  Float          @default(0)
+  profitPct     Float          @default(0)
+  bboPct        Float          @default(0)
+  gfa           Float?
+  status        EstimateStatus @default(DRAFT)
+  amount        Float          @default(0)
+  budget        Json? // Budget & Timeline config (schedule coupler + payment/retainage)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  categories EstimateCategory[]
+
+  @@index([projectId])
+  @@map("cost_estimates")
+}
+
+model EstimateCategory {
+  id         String         @id @default(cuid())
+  estimateId String
+  name       String
+  code       String?
+  sortOrder  Int            @default(0)
+  items      EstimateItem[]
+  estimate   CostEstimate   @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  @@index([estimateId])
+  @@map("estimate_categories")
+}
+
+model EstimateItem {
+  id                  String           @id @default(cuid())
+  categoryId          String
+  task                String
+  qty                 Float            @default(0)
+  unit                String           @default("no")
+  laborNorm           Float            @default(0)
+  materialUnitCost    Float            @default(0)
+  equipmentUnitCost   Float            @default(0)
+  subcontractUnitCost Float            @default(0)
+  poc                 Float            @default(0)
+  code                String?
+  sortOrder           Int              @default(0)
+  // Calculation engine (Phase 1–5): per-line method + method-specific inputs.
+  // All nullable → existing rows read back as Norm-Based (the default).
+  calculationMethod   String?
+  laborRatePerUnit    Float?
+  assembly            Json?
+  category            EstimateCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("estimate_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Project Schedule (Gantt) — persists the interactive programme. Tasks store the
+// client-side task key (t1, s1, …) so dependsOn / parentId references survive a
+// round-trip. `config` holds schedule-level settings (categories, calendar,
+// status date) as JSON for later wiring. Keyed by projectId (projectNumber).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model ProjectSchedule {
+  id            String         @id @default(cuid())
+  projectId     String         @unique
+  projectNumber String
+  projectName   String
+  client        String?
+  manager       String?
+  config        Json?
+  tasks         ScheduleTask[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("project_schedules")
+}
+
+model ScheduleTask {
+  id           String          @id @default(cuid())
+  scheduleId   String
+  taskKey      String // client-side task id (stable within a schedule)
+  name         String
+  discipline   String
+  status       String
+  start        String // ISO yyyy-mm-dd (string to match the app, no TZ drift)
+  end          String
+  progressPct  Float           @default(0)
+  dependsOn    String[] // task keys (finish-to-start)
+  assignee     String?
+  parentId     String?
+  durationUnit String?
+  category     String?
+  subCategory  String?
+  sortOrder    Int             @default(0)
+  schedule     ProjectSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@map("schedule_tasks")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cost-Estimation — firm-wide price book (materials + equipment reference rates
+// that feed estimate costing). Self-contained; @@map snake_case.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum PriceKind {
+  MATERIAL
+  EQUIPMENT
+}
+
+model PriceItem {
+  id        String    @id @default(cuid())
+  kind      PriceKind
+  code      String
+  name      String
+  category  String
+  unit      String
+  unitPrice Float     @default(0)
+  supplier  String?
+  note      String?
+  region    String?
+  currency  String?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([kind])
+  @@map("price_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cost-Estimation — firm-wide Norm Set (standard tasks with fixed labor norms +
+// default costs that drive estimate line items). Self-contained; @@map snake_case.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model NormSetTask {
+  id                  String  @id @default(cuid())
+  trade               String
+  task                String
+  unit                String
+  laborNorm           Float   @default(0)
+  materialUnitCost    Float?
+  equipmentUnitCost   Float?
+  subcontractUnitCost Float?
+  code                String?
+  sortOrder           Int     @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("norm_set_tasks")
+}
+
+/* ──────────────── Land Development — commercial entities ────────────────────
+ * Procurement chain (Vendor → Contract → Invoice → Payment) and sales side
+ * (BuyerReservation → SalesContract). Self-contained, denormalised projectId. */
+
+enum DevContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  TERMINATED
+}
+
+enum DevInvoiceStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PAID
+  DISPUTED
+}
+
+enum DevReservationStatus {
+  ACTIVE
+  CONVERTED
+  EXPIRED
+  CANCELLED
+}
+
+enum DevSalesContractStatus {
+  DRAFT
+  SIGNED
+  CLOSED
+  CANCELLED
+}
+
+model Vendor {
+  id        String  @id @default(cuid())
+  projectId String
+  name      String
+  trade     String?
+  contact   String?
+  email     String?
+  phone     String?
+  notes     String?
+
+  @@index([projectId])
+  @@map("dev_vendors")
+}
+
+model DevContract {
+  id            String            @id @default(cuid())
+  projectId     String
+  contractRef   String
+  title         String
+  vendorName    String?
+  costCode      Int?
+  value         Decimal           @default(0)
+  retentionPct  Float             @default(0)
+  status        DevContractStatus @default(DRAFT)
+  startDate     DateTime?
+  endDate       DateTime?
+  notes         String?
+
+  @@index([projectId])
+  @@map("dev_contracts")
+}
+
+model DevInvoice {
+  id            String           @id @default(cuid())
+  projectId     String
+  invoiceNumber String
+  contractRef   String?
+  vendorName    String?
+  costCode      Int?
+  amount        Decimal          @default(0)
+  status        DevInvoiceStatus @default(DRAFT)
+  dateIssued    DateTime?
+  dateDue       DateTime?
+
+  @@index([projectId])
+  @@map("dev_invoices")
+}
+
+model DevPayment {
+  id            String    @id @default(cuid())
+  projectId     String
+  invoiceNumber String?
+  vendorName    String?
+  amount        Decimal   @default(0)
+  method        String?
+  reference     String?
+  datePaid      DateTime?
+
+  @@index([projectId])
+  @@map("dev_payments")
+}
+
+model BuyerReservation {
+  id              String               @id @default(cuid())
+  projectId       String
+  lotNumber       String
+  buyerName       String
+  contact         String?
+  broker          String?
+  depositAmount   Decimal              @default(0)
+  status          DevReservationStatus @default(ACTIVE)
+  reservationDate DateTime?
+  expiryDate      DateTime?
+  notes           String?
+
+  @@index([projectId])
+  @@map("dev_buyer_reservations")
+}
+
+model SalesContract {
+  id             String                 @id @default(cuid())
+  projectId      String
+  contractNumber String
+  lotNumber      String
+  buyerName      String
+  salePrice      Decimal                @default(0)
+  depositPaid    Decimal                @default(0)
+  status         DevSalesContractStatus @default(DRAFT)
+  signedDate     DateTime?
+  closingDate    DateTime?
+  notes          String?
+
+  @@index([projectId])
+  @@map("dev_sales_contracts")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cost-Estimation — firm-wide General Conditions (preliminaries: insurance, site
+// facilities, utilities…) feeding the estimate's optional GC markup line.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model GeneralConditionItem {
+  id        String   @id @default(cuid())
+  name      String
+  unit      String
+  qty       Float    @default(0)
+  unitCost  Float    @default(0)
+  note      String?
+  enabled   Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("general_condition_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cost-Estimation — reusable estimate Templates (firm library). Nested
+// categories/items stored as JSON (read-mostly, saved wholesale via "Save as…").
+// id = dotted handle (e.g. "AEC.Traditional1LevelHouse").
+// ═══════════════════════════════════════════════════════════════════════════
+
+model EstimateTemplate {
+  id          String   @id
+  name        String
+  description String   @default("")
+  categories  Json
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("estimate_templates")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cost-Estimation — estimating Wiki (knowledge base). facts stored as JSON;
+// image is an optional uploaded data-URL (overrides the built-in illoKey).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WikiArticle {
+  id        String   @id @default(cuid())
+  title     String
+  category  String
+  tags      String[]
+  summary   String
+  facts     Json
+  body      String?
+  illoKey   String?
+  image     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wiki_articles")
+}
+
+// ===========================================================================
+// EXTERNAL TABLES — owned by NucleusLicenseOps (github.com/greglacle/nucleus-licenseops),
+// which shares this Supabase database. Mapped here (introspected, @@ignore) ONLY so
+// `prisma db push` from aec-management does NOT drop them. DO NOT edit these models or
+// query them from aec-management. They are excluded from the Prisma Client (@@ignore).
+// If NucleusLicenseOps changes its schema, re-introspect; better: avoid `db push` (see CLAUDE.md).
+// ===========================================================================
+
+enum nlo_apikey_kind {
+  product_app
+  internal_service
+  reseller
+  enterprise
+}
+
+enum nlo_company_status {
+  active
+  suspended
+  closed
+  trial
+}
+
+enum nlo_license_status {
+  active
+  trialing
+  past_due
+  in_grace
+  expired
+  suspended
+  cancelled
+  pending
+}
+
+enum nlo_license_type {
+  subscription
+  perpetual
+  trial
+  floating
+  node_locked
+  named_user
+  site
+  enterprise
+  offline
+  evaluation
+}
+
+enum nlo_product_kind {
+  web_saas
+  desktop
+  hybrid
+  mobile
+  enterprise_onprem
+  private_network
+}
+
+enum nlo_role {
+  super_admin
+  admin
+  support
+  reseller
+  company_admin
+  company_user
+}
+
+enum nlo_session_status {
+  active
+  ended
+  expired
+}
+
+enum nlo_status {
+  active
+  inactive
+  suspended
+  archived
+}
+
+enum nlo_ticket_status {
+  open
+  pending
+  closed
+}
+
+
+
+model api_keys {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind               nlo_apikey_kind
+  name               String
+  key_hash           String             @unique(map: "api_keys_hash_idx")
+  key_prefix         String
+  product_id         String?            @db.Uuid
+  company_id         String?            @db.Uuid
+  reseller_id        String?            @db.Uuid
+  scopes             String[]           @default([])
+  rate_limit_per_min Int                @default(600)
+  expires_at         DateTime?          @db.Timestamptz(6)
+  revoked_at         DateTime?          @db.Timestamptz(6)
+  last_used_at       DateTime?          @db.Timestamptz(6)
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  companies          companies?         @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products           products?          @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reseller_accounts  reseller_accounts? @relation(fields: [reseller_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_logs {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actor_type  String
+  actor_id    String?  @db.Uuid
+  actor_email String?
+  action      String
+  target_type String?
+  target_id   String?  @db.Uuid
+  company_id  String?  @db.Uuid
+  reseller_id String?  @db.Uuid
+  details     Json     @default("{}")
+  ip          String?  @db.Inet
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at], map: "audit_logs_created_idx")
+  @@index([target_type, target_id], map: "audit_logs_target_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model checkout_sessions {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id         String?    @db.Uuid
+  plan_id            String?    @db.Uuid
+  stripe_session_id  String?    @unique
+  stripe_customer_id String?
+  status             String     @default("created")
+  created_at         DateTime   @default(now()) @db.Timestamptz(6)
+  companies          companies? @relation(fields: [company_id], references: [id], onUpdate: NoAction)
+  plans              plans?     @relation(fields: [plan_id], references: [id], onUpdate: NoAction)
+
+  @@index([company_id], map: "checkout_sessions_company_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model companies {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String
+  status                nlo_company_status      @default(active)
+  reseller_id           String?                 @db.Uuid
+  stripe_customer_id    String?
+  region                String?
+  metadata              Json                    @default("{}")
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  api_keys              api_keys[]
+  checkout_sessions     checkout_sessions[]
+  reseller_accounts     reseller_accounts?      @relation(fields: [reseller_id], references: [id], onUpdate: NoAction)
+  company_users         company_users[]
+  entitlement_decisions entitlement_decisions[]
+  licenses              licenses[]
+  stripe_invoices       stripe_invoices[]
+  support_tickets       support_tickets[]
+
+  @@index([reseller_id], map: "companies_reseller_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model company_users {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id   String     @db.Uuid
+  auth_user_id String?    @db.Uuid
+  email        String
+  role         nlo_role   @default(company_user)
+  status       nlo_status @default(active)
+  created_at   DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime   @default(now()) @db.Timestamptz(6)
+  companies    companies  @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([company_id, email])
+  @@index([auth_user_id], map: "company_users_auth_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entitlement_decisions {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_id  String?    @db.Uuid
+  company_id  String?    @db.Uuid
+  product_key String?
+  device_hash String?
+  app_version String?
+  module_key  String?
+  feature_key String?
+  allowed     Boolean
+  reason      String?
+  ip          String?    @db.Inet
+  country     String?
+  request     Json       @default("{}")
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  companies   companies? @relation(fields: [company_id], references: [id], onUpdate: NoAction)
+  licenses    licenses?  @relation(fields: [license_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_at], map: "ent_decisions_created_idx")
+  @@index([license_id], map: "ent_decisions_license_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model features {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module_id         String              @db.Uuid
+  key               String
+  name              String
+  status            nlo_status          @default(active)
+  metered           Boolean             @default(false)
+  metadata          Json                @default("{}")
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  modules           modules             @relation(fields: [module_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  plan_entitlements plan_entitlements[]
+
+  @@unique([module_id, key])
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model floating_sessions {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_id        String             @db.Uuid
+  device_hash       String
+  seat_index        Int
+  status            nlo_session_status @default(active)
+  app_version       String?
+  started_at        DateTime           @default(now()) @db.Timestamptz(6)
+  last_heartbeat_at DateTime           @default(now()) @db.Timestamptz(6)
+  expires_at        DateTime           @db.Timestamptz(6)
+  ended_at          DateTime?          @db.Timestamptz(6)
+  metadata          Json               @default("{}")
+  licenses          licenses           @relation(fields: [license_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  // NOTE: real DB has a PARTIAL unique index "floating_sessions_live_device_idx"
+  // on (license_id, device_hash) WHERE status = 'active' — not expressible in Prisma
+  // schema. Owned by NucleusLicenseOps; do not `db push` from here (see schema header).
+  @@index([license_id, status], map: "floating_sessions_active_idx")
+  @@index([license_id], map: "floating_sessions_license_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model idempotency_keys {
+  endpoint     String
+  key          String
+  actor_email  String?
+  request_hash String
+  status       Int      @default(0)
+  response     Json     @default("{}")
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([endpoint, key])
+  @@index([created_at], map: "idempotency_keys_created_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model license_devices {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_id     String     @db.Uuid
+  device_hash    String
+  label          String?
+  app_version    String?
+  os             String?
+  status         nlo_status @default(active)
+  activated_at   DateTime   @default(now()) @db.Timestamptz(6)
+  last_seen_at   DateTime   @default(now()) @db.Timestamptz(6)
+  deactivated_at DateTime?  @db.Timestamptz(6)
+  metadata       Json       @default("{}")
+  licenses       licenses   @relation(fields: [license_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([license_id, device_hash])
+  @@index([license_id], map: "license_devices_license_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model license_templates {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id           String           @db.Uuid
+  plan_id              String           @db.Uuid
+  name                 String
+  default_license_type nlo_license_type @default(subscription)
+  reseller_issuable    Boolean          @default(false)
+  max_per_reseller     Int?
+  defaults             Json             @default("{}")
+  status               nlo_status       @default(active)
+  created_at           DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime         @default(now()) @db.Timestamptz(6)
+  plans                plans            @relation(fields: [plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products             products         @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([product_id, name])
+  @@index([product_id], map: "license_templates_product_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model licenses {
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id             String                  @db.Uuid
+  product_id             String                  @db.Uuid
+  plan_id                String                  @db.Uuid
+  reseller_id            String?                 @db.Uuid
+  license_type           nlo_license_type
+  status                 nlo_license_status      @default(pending)
+  key_hash               String                  @unique(map: "licenses_key_hash_idx")
+  key_prefix             String
+  issued_at              DateTime                @default(now()) @db.Timestamptz(6)
+  starts_at              DateTime?               @db.Timestamptz(6)
+  expires_at             DateTime?               @db.Timestamptz(6)
+  grace_days             Int?
+  offline_days           Int?
+  maintenance_until      DateTime?               @db.Timestamptz(6)
+  max_users              Int?
+  max_devices            Int?
+  max_floating_seats     Int?
+  limits                 Json                    @default("{}")
+  allowed_major_versions Int[]
+  blocked_versions       String[]
+  min_version            String?
+  region_policy          Json                    @default("{}")
+  stripe_subscription_id String?
+  notes                  String?
+  metadata               Json                    @default("{}")
+  created_at             DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                @default(now()) @db.Timestamptz(6)
+  entitlement_decisions  entitlement_decisions[]
+  floating_sessions      floating_sessions[]
+  license_devices        license_devices[]
+  companies              companies               @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plans                  plans                   @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products               products                @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reseller_accounts      reseller_accounts?      @relation(fields: [reseller_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stripe_invoices        stripe_invoices[]
+  usage_events           usage_events[]
+  usage_meters           usage_meters[]
+
+  @@index([company_id], map: "licenses_company_idx")
+  @@index([product_id], map: "licenses_product_idx")
+  @@index([stripe_subscription_id], map: "licenses_stripe_sub_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model modules {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id        String              @db.Uuid
+  key               String
+  name              String
+  status            nlo_status          @default(active)
+  sort_order        Int                 @default(0)
+  metadata          Json                @default("{}")
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  features          features[]
+  products          products            @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plan_entitlements plan_entitlements[]
+
+  @@unique([product_id, key])
+  @@ignore
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model plan_entitlements {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plan_id    String    @db.Uuid
+  module_id  String?   @db.Uuid
+  feature_id String?   @db.Uuid
+  granted    Boolean   @default(true)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  features   features? @relation(fields: [feature_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  modules    modules?  @relation(fields: [module_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plans      plans     @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([plan_id], map: "plan_entitlements_plan_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model plans {
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id           String              @db.Uuid
+  key                  String
+  name                 String
+  default_license_type nlo_license_type    @default(subscription)
+  status               nlo_status          @default(active)
+  trial_days           Int                 @default(0)
+  grace_days           Int                 @default(7)
+  offline_days         Int                 @default(0)
+  max_users            Int?
+  max_devices          Int?
+  max_floating_seats   Int?
+  limits               Json                @default("{}")
+  stripe_product_id    String?
+  stripe_price_id      String?
+  metadata             Json                @default("{}")
+  created_at           DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime            @default(now()) @db.Timestamptz(6)
+  checkout_sessions    checkout_sessions[]
+  license_templates    license_templates[]
+  licenses             licenses[]
+  plan_entitlements    plan_entitlements[]
+  products             products            @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([product_id, key])
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model products {
+  id                      String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key                     String              @unique
+  name                    String
+  kind                    nlo_product_kind    @default(web_saas)
+  status                  nlo_status          @default(active)
+  uses_login              Boolean             @default(false)
+  uses_license_key        Boolean             @default(true)
+  uses_device_activation  Boolean             @default(false)
+  uses_floating           Boolean             @default(false)
+  uses_offline            Boolean             @default(false)
+  uses_onprem_server      Boolean             @default(false)
+  uses_module_validation  Boolean             @default(true)
+  uses_feature_validation Boolean             @default(true)
+  uses_usage_metering     Boolean             @default(false)
+  public_key_id           String?
+  metadata                Json                @default("{}")
+  created_at              DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime            @default(now()) @db.Timestamptz(6)
+  api_keys                api_keys[]
+  license_templates       license_templates[]
+  licenses                licenses[]
+  modules                 modules[]
+  plans                   plans[]
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model reseller_accounts {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  status          nlo_status       @default(active)
+  commission_rate Decimal          @default(0) @db.Decimal(6, 4)
+  permissions     Json             @default("{}")
+  metadata        Json             @default("{}")
+  created_at      DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime         @default(now()) @db.Timestamptz(6)
+  api_keys        api_keys[]
+  companies       companies[]
+  licenses        licenses[]
+  reseller_users  reseller_users[]
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model reseller_users {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reseller_id       String            @db.Uuid
+  auth_user_id      String?           @db.Uuid
+  email             String
+  role              nlo_role          @default(reseller)
+  status            nlo_status        @default(active)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime          @default(now()) @db.Timestamptz(6)
+  reseller_accounts reseller_accounts @relation(fields: [reseller_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([reseller_id, email])
+  @@index([auth_user_id], map: "reseller_users_auth_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model staff_users {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_user_id String?    @unique @db.Uuid
+  email        String     @unique
+  role         nlo_role   @default(support)
+  status       nlo_status @default(active)
+  mfa_enrolled Boolean    @default(false)
+  created_at   DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime   @default(now()) @db.Timestamptz(6)
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model stripe_invoices {
+  id                     String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id             String?    @db.Uuid
+  license_id             String?    @db.Uuid
+  stripe_invoice_id      String     @unique
+  stripe_subscription_id String?
+  number                 String?
+  status                 String?
+  amount_due             BigInt?
+  amount_paid            BigInt?
+  currency               String?
+  hosted_invoice_url     String?
+  invoice_pdf            String?
+  period_start           DateTime?  @db.Timestamptz(6)
+  period_end             DateTime?  @db.Timestamptz(6)
+  created_at             DateTime   @default(now()) @db.Timestamptz(6)
+  companies              companies? @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  licenses               licenses?  @relation(fields: [license_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([company_id], map: "stripe_invoices_company_idx")
+  @@index([stripe_subscription_id], map: "stripe_invoices_sub_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model support_tickets {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id      String            @db.Uuid
+  opened_by_email String
+  subject         String
+  status          nlo_ticket_status @default(open)
+  priority        String            @default("normal")
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  companies       companies         @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ticket_messages ticket_messages[]
+
+  @@index([company_id], map: "support_tickets_company_idx")
+  @@index([status])
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model system_settings {
+  key        String   @id
+  value      Json     @default("{}")
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ticket_messages {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id       String          @db.Uuid
+  author_email    String
+  author_type     String
+  body            String
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  support_tickets support_tickets @relation(fields: [ticket_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ticket_id], map: "ticket_messages_ticket_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model usage_events {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_id  String   @db.Uuid
+  feature_key String
+  quantity    Int      @default(0)
+  metadata    Json     @default("{}")
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  licenses    licenses @relation(fields: [license_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "usage_events_created_idx")
+  @@index([license_id], map: "usage_events_license_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model usage_meters {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_id   String   @db.Uuid
+  feature_key  String
+  period_start DateTime @db.Timestamptz(6)
+  period_end   DateTime @db.Timestamptz(6)
+  used         BigInt   @default(0)
+  period_limit BigInt?
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  licenses     licenses @relation(fields: [license_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([license_id, feature_key, period_start])
+  @@index([license_id, feature_key], map: "usage_meters_feature_idx")
+  @@index([license_id], map: "usage_meters_license_idx")
+  @@ignore
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model webhook_event_logs {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  source       String    @default("stripe")
+  event_id     String
+  event_type   String
+  payload      Json
+  signature_ok Boolean   @default(false)
+  processed    Boolean   @default(false)
+  processed_at DateTime? @db.Timestamptz(6)
+  error        String?
+  attempts     Int       @default(0)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@unique([source, event_id])
+  @@index([processed], map: "webhook_logs_processed_idx")
+  @@index([event_type], map: "webhook_logs_type_idx")
+  @@ignore
+}
+
+

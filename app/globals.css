@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/*
+ * ZenArch AEC Suite — design tokens.
+ *
+ * The palette is driven by raw CSS variables on :root / .dark. @theme inline maps
+ * the Tailwind colour tokens onto those variables — because the raw vars are
+ * defined OUTSIDE @theme, Tailwind can't fold them to literals, so utilities keep
+ * a `var(--c-*)` reference and recolour instantly when the .dark class is toggled.
+ */
+:root {
+  --c-canvas: #f6f7f9;
+  --c-surface: #ffffff;
+  --c-surface-2: #f9fafb;
+  --c-border: #e6e8eb;
+  --c-fg: #14181f;
+  --c-muted: #6b7280;
+  --c-faint: #9aa1ab;
+
+  --c-sidebar: #0f1b2d;
+  --c-sidebar-2: #15263d;
+  --c-sidebar-fg: #cdd6e3;
+  --c-sidebar-muted: #7f8ea3;
+
+  --c-brand: #1d4ed8;
+  --c-brand-fg: #ffffff;
+  --c-accent: #2563eb;
+}
+
+.dark {
+  --c-canvas: #0b0e14;
+  --c-surface: #12161f;
+  --c-surface-2: #1a202c;
+  --c-border: #283143;
+  --c-fg: #e7eaf0;
+  --c-muted: #9aa3b2;
+  --c-faint: #6b7480;
+
+  --c-sidebar: #0a0f18;
+  --c-sidebar-2: #121b2a;
+  --c-sidebar-fg: #cdd6e3;
+  --c-sidebar-muted: #7f8ea3;
+
+  --c-brand: #3b82f6;
+  --c-brand-fg: #ffffff;
+  --c-accent: #60a5fa;
+}
+
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-border: var(--c-border);
+  --color-fg: var(--c-fg);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+
+  --color-sidebar: var(--c-sidebar);
+  --color-sidebar-2: var(--c-sidebar-2);
+  --color-sidebar-fg: var(--c-sidebar-fg);
+  --color-sidebar-muted: var(--c-sidebar-muted);
+
+  --color-brand: var(--c-brand);
+  --color-brand-fg: var(--c-brand-fg);
+  --color-accent: var(--c-accent);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-card: 14px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--c-canvas);
+  color: var(--c-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ease the flip between themes (colours only — never layout). */
+body,
+.bg-surface,
+.bg-surface-2,
+.border-border {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Thin, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-faint) transparent;
+}

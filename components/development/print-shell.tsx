@@ -1,0 +1,102 @@
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { PrintButton } from "@/components/development/print-button";
+
+/**
+ * Shared A4 print surface for Land Development reports — ZenArch letterhead, a
+ * meta strip and a disclaimer. `@page { size: A4 }` yields a true A4 PDF via the
+ * browser's "Save as PDF". The toolbar is hidden when printing.
+ */
+export function DevPrintShell({
+  backHref,
+  docTitle,
+  refNumber,
+  projectName,
+  meta,
+  children,
+}: {
+  backHref: string;
+  docTitle: string;
+  refNumber: string;
+  projectName: string;
+  meta: { label: string; value: string }[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-h-screen bg-gray-100 print:bg-white">
+      <style>{`@page { size: A4; margin: 14mm; } @media print { html, body { background: #fff; } }`}</style>
+
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
+        <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Link>
+        <PrintButton />
+      </div>
+
+      <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
+        {/* Letterhead */}
+        <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
+          <div>
+            <div className="text-2xl font-bold tracking-tight text-gray-900">ZenArch</div>
+            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
+              Development · Land · Project Management
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
+            <div className="mt-1 font-mono text-xs text-gray-600">{refNumber}</div>
+            <div className="text-[11px] text-gray-500">{projectName}</div>
+          </div>
+        </div>
+
+        {/* Meta strip */}
+        <div className="mt-4 grid grid-cols-4 gap-3 rounded-md bg-gray-50 px-4 py-3 text-[11px] print:bg-gray-50">
+          {meta.map((m) => (
+            <div key={m.label}>
+              <div className="text-gray-400">{m.label}</div>
+              <div className="font-medium text-gray-900">{m.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {children}
+
+        <p className="mt-8 text-[9px] leading-relaxed text-gray-400">
+          Disclaimer: This development pro-forma is issued for planning and feasibility purposes.
+          Figures are based on information available at the date of issue and remain subject to
+          verification, market conditions, permit outcomes and final account. Not an offer or a
+          guarantee of returns. © ZenArch Development.
+        </p>
+        <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
+          ZenArch Development · {refNumber} · {docTitle}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PrintSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-6 break-inside-avoid">
+      <h2 className="border-b border-gray-300 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{title}</h2>
+      <div className="mt-2">{children}</div>
+    </section>
+  );
+}
+
+/** Two-column key/value rows for the print sheet. */
+export function PrintKv({ rows }: { rows: Array<[string, string]> }) {
+  return (
+    <table className="w-full text-[11px]">
+      <tbody>
+        {rows.map(([k, v]) => (
+          <tr key={k} className="border-b border-dashed border-gray-200">
+            <td className="py-1 text-gray-500">{k}</td>
+            <td className="py-1 text-right font-medium text-gray-900">{v}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
