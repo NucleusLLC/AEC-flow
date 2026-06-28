@@ -6,26 +6,6 @@ Goal: flip the suite from in-memory **placeholder data** to a live **Supabase Po
 
 ---
 
-## ⛔️ SHARED DATABASE — do NOT `prisma db push` (read first)
-
-This database (`zouzxwuojnsyjvadvldr`) is **shared with NucleusLicenseOps** (the licensing/billing
-system — github.com/greglacle/nucleus-licenseops). 26 of its tables (`licenses`, `companies`,
-`usage_*`, `stripe_*`, `floating_sessions`, …) live in this same Postgres.
-
-- **Never run `prisma db push`** (and never `--accept-data-loss`). Push enforces "DB == this schema"
-  and will try to **drop/alter** the licensing tables. They are mapped at the bottom of
-  `prisma/schema.prisma` as `@@ignore`d models so push won't *drop* them, but Prisma can't represent
-  some of their features (partial indexes, RLS), so push is still unsafe.
-- **To change this app's schema:** apply an additive `ALTER TABLE` via
-  `npx prisma db execute --file <sql> --schema prisma/schema.prisma` (or a `$executeRawUnsafe`
-  script through `@/lib/db`), then update `schema.prisma` to match and run `npx prisma generate`.
-- **Safety check** before/after any schema work — must print *"This is an empty migration."*:
-  `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`
-- If NucleusLicenseOps changes its schema, re-introspect with `prisma db pull --print` and refresh
-  the `@@ignore`d block. (Anything below that mentions `prisma db push` is superseded by this rule.)
-
----
-
 ## 0. Pre-flight (state as left overnight)
 - Stack: **Next 16 + React 19 + Prisma 7** with the **driver-adapter** model (`@prisma/adapter-pg` + `pg`), Tailwind v4.
 - `lib/db.ts` → builds `PrismaClient` with `new PrismaPg({ connectionString: process.env.DATABASE_URL })` (the **pooled** URL).
