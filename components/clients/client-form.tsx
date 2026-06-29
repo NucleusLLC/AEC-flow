@@ -231,9 +231,9 @@ export function ClientForm({
           </div>
           <div>
             <label className={labelClass} htmlFor="emirate">
-              Emirate
+              State
             </label>
-            <input id="emirate" name="emirate" className={inputClass} placeholder="Dubai" defaultValue={initial?.emirate} />
+            <input id="emirate" name="emirate" className={inputClass} placeholder="State / Province" defaultValue={initial?.emirate} />
           </div>
           <div>
             <label className={labelClass} htmlFor="country">

@@ -384,7 +384,7 @@ export function PracticeForm({
           <Field label="Founded" value={form.founded} onChange={(v) => set("founded", v)} disabled={disabled} />
           <Field label="Address" value={form.addressLine} onChange={(v) => set("addressLine", v)} disabled={disabled} className="block sm:col-span-2" />
           <Field label="City" value={form.city} onChange={(v) => set("city", v)} disabled={disabled} />
-          <Field label="Emirate" value={form.emirate} onChange={(v) => set("emirate", v)} disabled={disabled} />
+          <Field label="State" value={form.emirate} onChange={(v) => set("emirate", v)} disabled={disabled} />
           <Field label="Phone" type="tel" value={form.phone} onChange={(v) => set("phone", v)} disabled={disabled} />
           <Field label="Email" type="email" value={form.email} onChange={(v) => set("email", v)} disabled={disabled} />
           <Field label="Website" value={form.website} onChange={(v) => set("website", v)} disabled={disabled} />

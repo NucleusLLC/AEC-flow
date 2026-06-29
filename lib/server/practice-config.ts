@@ -104,7 +104,11 @@ export async function saveFooter(footer: FooterSettings): Promise<void> {
 /** The org-wide system monetary unit (used as the default across all modules). */
 export async function getSystemCurrency(): Promise<string> {
   const cfg = await readConfig();
-  return cfg.currency ?? DEFAULT_SYSTEM_CURRENCY;
+  // On serverless (Vercel) the .app-config.json file isn't present/writable, so
+  // fall back to a SYSTEM_CURRENCY env var before the hardcoded default. This
+  // lets the live deployment set the org currency until config moves to the DB.
+  const envCurrency = process.env.SYSTEM_CURRENCY?.trim().toUpperCase() || undefined;
+  return cfg.currency ?? envCurrency ?? DEFAULT_SYSTEM_CURRENCY;
 }
 
 export async function saveSystemCurrency(currency: string): Promise<void> {
