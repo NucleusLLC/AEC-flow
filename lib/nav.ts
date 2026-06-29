@@ -61,7 +61,7 @@ export const navSections: NavSection[] = [
     title: "Delivery",
     items: [
       { label: "Schedule", href: "/schedule", icon: CalendarClock },
-      { label: "Projects", href: "/projects", icon: FolderKanban, disabled: true },
+      { label: "Projects", href: "/projects", icon: FolderKanban },
       { label: "Land Development", href: "/development", icon: Map, disabled: true },
     ],
   },
@@ -71,7 +71,7 @@ export const navSections: NavSection[] = [
       { label: "Construction Admin", href: "/construction-admin", icon: HardHat },
       { label: "Meeting Minutes", href: "/meetings", icon: NotebookPen },
       // Drawings & Documents are still placeholder (no persistence) — grayed until wired.
-      { label: "Drawings", href: "/drawings", icon: FileStack, disabled: true },
+      { label: "Drawings", href: "/drawings", icon: FileStack },
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
     ],
   },
@@ -79,7 +79,7 @@ export const navSections: NavSection[] = [
     title: "People",
     items: [
       { label: "Team", href: "/team", icon: UsersRound, disabled: true },
-      { label: "Chat", href: "/chat", icon: MessageSquare, disabled: true },
+      { label: "Chat", href: "/chat", icon: MessageSquare },
       { label: "Leave", href: "/leave", icon: CalendarDays, disabled: true },
     ],
   },
