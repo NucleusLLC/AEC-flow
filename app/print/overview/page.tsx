@@ -9,7 +9,7 @@ import { getProposals } from "@/lib/data/proposals";
 import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 
-export const metadata: Metadata = { title: "Practice Overview · ZenArch" };
+export const metadata: Metadata = { title: "Practice Overview · AEC-flow" };
 
 const OPEN_PROPOSAL = ["DRAFT", "SENT", "PENDING", "ON_HOLD"];
 
@@ -94,7 +94,7 @@ export default async function PracticeOverview() {
       <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
           <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">ZenArch</div>
+            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
             <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
               Architecture · Engineering · Project Management
             </div>
@@ -130,7 +130,7 @@ export default async function PracticeOverview() {
         </div>
 
         <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          ZenArch Consultants · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
+          AEC-flow · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
         </div>
       </div>
     </div>

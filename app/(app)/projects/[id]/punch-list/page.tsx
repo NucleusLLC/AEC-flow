@@ -8,7 +8,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
-  return { title: project ? `${project.name} · Punch List · ZenArch` : "Project · ZenArch" };
+  return { title: project ? `${project.name} · Punch List · AEC-flow` : "Project · AEC-flow" };
 }
 
 export default async function ProjectPunchListPage({ params }: PageProps) {

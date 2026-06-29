@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { ChangeOrderForm } from "@/components/construction-admin/change-order-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New Change Order · ZenArch" };
+export const metadata: Metadata = { title: "New Change Order · AEC-flow" };
 
 export default async function NewChangeOrderPage() {
   const projects = await getProjects();

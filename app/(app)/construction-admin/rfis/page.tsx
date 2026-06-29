@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { RfiLog } from "@/components/construction-admin/rfi-log";
 import { listRfis } from "@/lib/data/ca/rfis";
 
-export const metadata = { title: "RFIs · ZenArch" };
+export const metadata = { title: "RFIs · AEC-flow" };
 
 export default async function RfisPage() {
   const rfis = await listRfis();

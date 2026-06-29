@@ -1,6 +1,6 @@
 import { ClientImport } from "@/components/imports/client-import";
 
-export const metadata = { title: "Import Data · ZenArch" };
+export const metadata = { title: "Import Data · AEC-flow" };
 
 export default function ImportsPage() {
   return (

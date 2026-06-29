@@ -12,7 +12,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const meeting = await getMeeting(id);
-  return { title: meeting ? `Edit ${meeting.title} · ZenArch` : "Edit Minutes · ZenArch" };
+  return { title: meeting ? `Edit ${meeting.title} · AEC-flow` : "Edit Minutes · AEC-flow" };
 }
 
 export default async function EditMeetingPage({ params }: PageProps) {

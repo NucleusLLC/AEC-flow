@@ -12,7 +12,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const order = await getOrder(id);
-  return { title: order ? `${order.orderNumber} · ZenArch` : "Order · ZenArch" };
+  return { title: order ? `${order.orderNumber} · AEC-flow` : "Order · AEC-flow" };
 }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {

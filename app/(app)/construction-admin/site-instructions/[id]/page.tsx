@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const si = await getSiteInstruction(id);
-  return { title: si ? `${si.instructionNumber} · ${si.title} · ZenArch` : "Site Instruction · ZenArch" };
+  return { title: si ? `${si.instructionNumber} · ${si.title} · AEC-flow` : "Site Instruction · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

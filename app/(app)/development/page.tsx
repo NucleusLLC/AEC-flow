@@ -6,7 +6,7 @@ import { DEV_PROJECT_TYPE_LABEL } from "@/lib/data/development.types";
 import { listDevelopmentProjects } from "@/lib/data/development";
 import { formatCurrency, formatNumber } from "@/lib/format";
 
-export const metadata = { title: "Land Development · ZenArch" };
+export const metadata = { title: "Land Development · AEC-flow" };
 
 export default async function DevelopmentListPage() {
   const projects = await listDevelopmentProjects();

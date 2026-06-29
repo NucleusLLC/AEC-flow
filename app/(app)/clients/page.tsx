@@ -5,7 +5,7 @@ import { ClientsView } from "@/components/clients/clients-view";
 import { getClients, summarizeClients } from "@/lib/data/clients";
 import { formatCurrencyCompact } from "@/lib/format";
 
-export const metadata = { title: "Clients · ZenArch" };
+export const metadata = { title: "Clients · AEC-flow" };
 
 export default async function ClientsPage() {
   const clients = await getClients();

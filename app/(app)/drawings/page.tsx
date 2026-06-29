@@ -3,7 +3,7 @@ import { DrawingsApp } from "@/components/drawings/drawings-app";
 import { getDrawings } from "@/lib/data/drawings";
 import { getProjectDirectory } from "@/lib/data/projects";
 
-export const metadata = { title: "Drawings · ZenArch" };
+export const metadata = { title: "Drawings · AEC-flow" };
 
 export default async function DrawingsPage() {
   const [drawings, directory] = await Promise.all([getDrawings(), getProjectDirectory()]);

@@ -3,7 +3,7 @@ import { MessageSquare } from "lucide-react";
 import { ChatView } from "@/components/chat/chat-view";
 import { getChatData, summarizeChat } from "@/lib/data/chat";
 
-export const metadata: Metadata = { title: "Team Chat · ZenArch" };
+export const metadata: Metadata = { title: "Team Chat · AEC-flow" };
 
 export default async function ChatPage() {
   const data = await getChatData();

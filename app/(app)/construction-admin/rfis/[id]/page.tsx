@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const rfi = await getRfi(id);
-  return { title: rfi ? `${rfi.rfiNumber} · ${rfi.subject} · ZenArch` : "RFI · ZenArch" };
+  return { title: rfi ? `${rfi.rfiNumber} · ${rfi.subject} · AEC-flow` : "RFI · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

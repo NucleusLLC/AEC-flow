@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZenArch — AEC Management Suite",
+  title: "AEC-flow — AEC Management Suite",
   description: "Proposals, projects, and people for an architecture & engineering practice.",
 };
 

@@ -3,7 +3,7 @@ import { DocumentsApp } from "@/components/documents/documents-app";
 import { getDocuments } from "@/lib/data/documents";
 import { getProjectDirectory } from "@/lib/data/projects";
 
-export const metadata = { title: "Documents · ZenArch" };
+export const metadata = { title: "Documents · AEC-flow" };
 
 export default async function DocumentsPage() {
   const [documents, directory] = await Promise.all([getDocuments(), getProjectDirectory()]);

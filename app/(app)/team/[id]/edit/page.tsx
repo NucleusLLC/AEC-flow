@@ -10,7 +10,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const member = await getTeamMember(id);
-  return { title: member ? `Edit ${member.name} · ZenArch` : "Edit Member · ZenArch" };
+  return { title: member ? `Edit ${member.name} · AEC-flow` : "Edit Member · AEC-flow" };
 }
 
 export default async function EditMemberPage({ params }: PageProps) {

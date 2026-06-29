@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { MemberForm } from "@/components/team/member-form";
 
-export const metadata = { title: "Add Member · ZenArch" };
+export const metadata = { title: "Add Member · AEC-flow" };
 
 export default function NewMemberPage() {
   return (

@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { DelayNoticeForm } from "@/components/construction-admin/delay-notice-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New Delay Notice · ZenArch" };
+export const metadata: Metadata = { title: "New Delay Notice · AEC-flow" };
 
 export default async function NewDelayNoticePage() {
   const projects = await getProjects();

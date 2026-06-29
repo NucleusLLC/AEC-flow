@@ -11,7 +11,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const order = await getOrder(id);
-  return { title: order ? `Edit ${order.orderNumber} · ZenArch` : "Edit Order · ZenArch" };
+  return { title: order ? `Edit ${order.orderNumber} · AEC-flow` : "Edit Order · AEC-flow" };
 }
 
 export default async function EditOrderPage({ params }: PageProps) {

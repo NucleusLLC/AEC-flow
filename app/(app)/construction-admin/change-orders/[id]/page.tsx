@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const co = await getChangeOrder(id);
-  return { title: co ? `${co.changeOrderNumber} · ${co.title} · ZenArch` : "Change Order · ZenArch" };
+  return { title: co ? `${co.changeOrderNumber} · ${co.title} · AEC-flow` : "Change Order · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

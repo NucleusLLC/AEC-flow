@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { DelayNoticeLog } from "@/components/construction-admin/delay-notice-log";
 import { listDelayNotices } from "@/lib/data/ca/delay-notices";
 
-export const metadata = { title: "Delay Notices · ZenArch" };
+export const metadata = { title: "Delay Notices · AEC-flow" };
 
 export default async function DelayNoticesPage() {
   const notices = await listDelayNotices();

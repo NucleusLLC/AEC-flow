@@ -16,7 +16,7 @@ export function Sidebar() {
           Z
         </div>
         <div className="leading-tight">
-          <div className="text-sm font-semibold text-white">ZenArch</div>
+          <div className="text-sm font-semibold text-white">AEC-flow</div>
           <div className="text-[11px] text-sidebar-muted">AEC Management Suite</div>
         </div>
       </div>

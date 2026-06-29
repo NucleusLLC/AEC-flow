@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { SubmittalLog } from "@/components/construction-admin/submittal-log";
 import { listSubmittals } from "@/lib/data/ca/submittals";
 
-export const metadata = { title: "Submittals · ZenArch" };
+export const metadata = { title: "Submittals · AEC-flow" };
 
 export default async function SubmittalsPage() {
   const submittals = await listSubmittals();

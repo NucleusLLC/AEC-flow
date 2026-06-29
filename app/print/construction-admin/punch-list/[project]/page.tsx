@@ -34,7 +34,7 @@ const STATUS_COLOR: Record<PunchStatus, string> = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { project } = await params;
-  return { title: project === "all" ? "Punch List Register — ZenArch" : `Punch List — ${project}` };
+  return { title: project === "all" ? "Punch List Register — AEC-flow" : `Punch List — ${project}` };
 }
 
 /** Group items by location label, preserving a stable order. */
@@ -136,7 +136,7 @@ export default async function PunchListPrintPage({ params }: PageProps) {
         {/* Letterhead */}
         <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
           <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">ZenArch</div>
+            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
             <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
               Architecture · Engineering · Project Management
             </div>
@@ -185,10 +185,10 @@ export default async function PunchListPrintPage({ params }: PageProps) {
 
         <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
           Disclaimer: This snag and defect register is issued for construction administration purposes. Items
-          remain subject to site verification and final inspection prior to handover. © ZenArch Consultants.
+          remain subject to site verification and final inspection prior to handover. © AEC-flow.
         </p>
         <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          ZenArch Consultants · {reportRef} · {docTitle}
+          AEC-flow · {reportRef} · {docTitle}
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const proposal = await getProposal(id);
   return {
-    title: proposal ? `${proposal.refNumber} · ${proposal.title} · ZenArch` : "Proposal · ZenArch",
+    title: proposal ? `${proposal.refNumber} · ${proposal.title} · AEC-flow` : "Proposal · AEC-flow",
   };
 }
 

@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const sub = await getSubmittal(id);
-  return { title: sub ? `${sub.submittalNumber} · ${sub.title} · ZenArch` : "Submittal · ZenArch" };
+  return { title: sub ? `${sub.submittalNumber} · ${sub.title} · AEC-flow` : "Submittal · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

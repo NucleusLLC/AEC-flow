@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { ChangeOrderRegister } from "@/components/construction-admin/change-order-register";
 import { listChangeOrders } from "@/lib/data/ca/change-orders";
 
-export const metadata = { title: "Change Orders · ZenArch" };
+export const metadata = { title: "Change Orders · AEC-flow" };
 
 export default async function ChangeOrdersPage() {
   const changeOrders = await listChangeOrders();

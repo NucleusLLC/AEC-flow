@@ -2,7 +2,7 @@ import { ScheduleApp } from "@/components/schedule/schedule-app";
 import { getSchedules } from "@/lib/data/schedule-db";
 import { getProjectDirectory } from "@/lib/data/projects";
 
-export const metadata = { title: "Schedule · ZenArch" };
+export const metadata = { title: "Schedule · AEC-flow" };
 
 export default async function SchedulePage() {
   const [schedules, directory] = await Promise.all([getSchedules(), getProjectDirectory()]);

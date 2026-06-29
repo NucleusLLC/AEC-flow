@@ -5,7 +5,7 @@ import { ProposalForm } from "@/components/proposals/proposal-form";
 import { getProposals } from "@/lib/data/proposals";
 import { getClients } from "@/lib/data/clients";
 
-export const metadata: Metadata = { title: "New Proposal · ZenArch" };
+export const metadata: Metadata = { title: "New Proposal · AEC-flow" };
 
 /** Next reference in the PRO-YYYY-NNN series (deterministic from existing refs). */
 function nextRef(refs: string[]): string {

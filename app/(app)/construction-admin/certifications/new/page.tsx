@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { CertForm } from "@/components/construction-admin/cert-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New Certification · ZenArch" };
+export const metadata: Metadata = { title: "New Certification · AEC-flow" };
 
 export default async function NewCertificationPage() {
   const projects = await getProjects();

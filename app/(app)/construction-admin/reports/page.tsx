@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { ReportList } from "@/components/construction-admin/report-list";
 import { listReports } from "@/lib/data/ca/reports";
 
-export const metadata = { title: "Reports · ZenArch" };
+export const metadata = { title: "Reports · AEC-flow" };
 
 export default async function ReportsPage() {
   const reports = await listReports();

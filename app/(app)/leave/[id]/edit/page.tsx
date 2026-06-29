@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const request = await getLeaveRequest(id);
   return {
-    title: request ? `Edit ${request.userName}'s Leave · ZenArch` : "Edit Leave · ZenArch",
+    title: request ? `Edit ${request.userName}'s Leave · AEC-flow` : "Edit Leave · AEC-flow",
   };
 }
 

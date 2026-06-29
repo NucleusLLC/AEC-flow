@@ -4,7 +4,7 @@ import { ProjectForm } from "@/components/projects/project-form";
 import { getClients } from "@/lib/data/clients";
 import { getTeam } from "@/lib/data/team";
 
-export const metadata = { title: "New Project · ZenArch" };
+export const metadata = { title: "New Project · AEC-flow" };
 
 export default async function NewProjectPage() {
   const [clients, team] = await Promise.all([getClients(), getTeam()]);

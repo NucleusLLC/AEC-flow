@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const project = await getProject(id);
   return {
-    title: project ? `Edit ${project.name} · ZenArch` : "Edit Project · ZenArch",
+    title: project ? `Edit ${project.name} · AEC-flow` : "Edit Project · AEC-flow",
   };
 }
 

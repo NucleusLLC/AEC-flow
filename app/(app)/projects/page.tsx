@@ -5,7 +5,7 @@ import { ProjectsView } from "@/components/projects/projects-view";
 import { getProjects, summarizeProjects } from "@/lib/data/projects";
 import { formatCurrencyCompact } from "@/lib/format";
 
-export const metadata = { title: "Projects · ZenArch" };
+export const metadata = { title: "Projects · AEC-flow" };
 
 export default async function ProjectsPage() {
   const projects = await getProjects();

@@ -6,7 +6,7 @@ import { ProposalsApp } from "@/components/proposals/proposals-app";
 import { getProposalRecords, summarizeProposals } from "@/lib/data/proposals";
 import { formatCurrencyCompact } from "@/lib/format";
 
-export const metadata = { title: "Proposals · ZenArch" };
+export const metadata = { title: "Proposals · AEC-flow" };
 
 export default async function ProposalsPage() {
   const proposals = await getProposalRecords();

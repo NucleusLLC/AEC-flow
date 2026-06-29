@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const dn = await getDelayNotice(id);
-  return { title: dn ? `${dn.delayNoticeNumber} · ${dn.title} · ZenArch` : "Delay Notice · ZenArch" };
+  return { title: dn ? `${dn.delayNoticeNumber} · ${dn.title} · AEC-flow` : "Delay Notice · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

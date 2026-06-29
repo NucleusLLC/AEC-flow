@@ -20,7 +20,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const member = await getTeamMember(id);
-  return { title: member ? `${member.name} · ZenArch` : "Team · ZenArch" };
+  return { title: member ? `${member.name} · AEC-flow` : "Team · AEC-flow" };
 }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {

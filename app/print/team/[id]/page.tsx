@@ -41,7 +41,7 @@ export default async function TeamMemberSheet({ params }: PageProps) {
       <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
           <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">ZenArch</div>
+            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
             <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">Architecture · Engineering · Project Management</div>
           </div>
           <div className="text-right">
@@ -102,7 +102,7 @@ export default async function TeamMemberSheet({ params }: PageProps) {
         </table>
 
         <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          ZenArch Consultants · {m.name} · {ROLE_LABEL[m.role]}
+          AEC-flow · {m.name} · {ROLE_LABEL[m.role]}
         </div>
       </div>
     </div>

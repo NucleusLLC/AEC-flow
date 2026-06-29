@@ -8,7 +8,7 @@ import { getTeam } from "@/lib/data/team";
 import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
 import { authOptions } from "@/lib/auth";
 
-export const metadata = { title: "Settings · ZenArch" };
+export const metadata = { title: "Settings · AEC-flow" };
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);

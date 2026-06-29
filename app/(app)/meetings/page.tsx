@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { MeetingsView } from "@/components/meetings/meetings-view";
 import { getMeetings, summarizeMeetings } from "@/lib/data/meetings";
 
-export const metadata = { title: "Meeting Minutes · ZenArch" };
+export const metadata = { title: "Meeting Minutes · AEC-flow" };
 
 export default async function MeetingsPage() {
   const meetings = await getMeetings();

@@ -8,7 +8,7 @@ import { getRecentActivity } from "@/lib/data/activity";
 import { formatCurrencyCompact, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
-export const metadata = { title: "Dashboard · ZenArch" };
+export const metadata = { title: "Dashboard · AEC-flow" };
 
 function TrendPill({ trend }: { trend?: Trend }) {
   if (!trend) return null;

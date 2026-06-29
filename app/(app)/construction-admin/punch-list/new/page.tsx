@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PunchForm } from "@/components/construction-admin/punch-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New Punch Item · ZenArch" };
+export const metadata: Metadata = { title: "New Punch Item · AEC-flow" };
 
 export default async function NewPunchItemPage() {
   const projects = await getProjects();

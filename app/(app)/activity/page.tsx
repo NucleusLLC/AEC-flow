@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { getRecentActivity, type ActivityEntry } from "@/lib/data/activity";
 import { formatDate } from "@/lib/format";
 
-export const metadata = { title: "Activity · ZenArch" };
+export const metadata = { title: "Activity · AEC-flow" };
 
 // Group entries by calendar day (YYYY-MM-DD) preserving recency order.
 function groupByDay(entries: ActivityEntry[]): { day: string; items: ActivityEntry[] }[] {

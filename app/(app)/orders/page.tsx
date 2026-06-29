@@ -5,7 +5,7 @@ import { OrdersView } from "@/components/orders/orders-view";
 import { getOrders, summarizeOrders } from "@/lib/data/orders";
 import { formatCurrencyCompact } from "@/lib/format";
 
-export const metadata = { title: "Orders · ZenArch" };
+export const metadata = { title: "Orders · AEC-flow" };
 
 export default async function OrdersPage() {
   const orders = await getOrders();

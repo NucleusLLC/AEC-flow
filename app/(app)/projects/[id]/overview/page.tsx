@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
-  return { title: project ? `${project.name} · Overview · ZenArch` : "Project · ZenArch" };
+  return { title: project ? `${project.name} · Overview · AEC-flow` : "Project · AEC-flow" };
 }
 
 const phaseTone: Record<PhaseStatus, "neutral" | "blue" | "green" | "amber" | "slate"> = {
