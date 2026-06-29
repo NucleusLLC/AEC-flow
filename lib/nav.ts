@@ -78,7 +78,7 @@ export const navSections: NavSection[] = [
   {
     title: "People",
     items: [
-      { label: "Team", href: "/team", icon: UsersRound, disabled: true },
+      { label: "Team", href: "/team", icon: UsersRound },
       { label: "Chat", href: "/chat", icon: MessageSquare },
       { label: "Leave", href: "/leave", icon: CalendarDays, disabled: true },
     ],

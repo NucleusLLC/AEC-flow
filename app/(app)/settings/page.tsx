@@ -6,6 +6,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { listTemplates } from "@/lib/data/proposal-templates";
 import { getTeam } from "@/lib/data/team";
 import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
+import { isFounderEmail } from "@/lib/server/founder";
 import { authOptions } from "@/lib/auth";
 
 export const metadata = { title: "Settings · AEC-flow" };
@@ -13,6 +14,7 @@ export const metadata = { title: "Settings · AEC-flow" };
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
+  const isFounder = isFounderEmail(session?.user?.email);
 
   const [practice, templates, team, preferences, keyStatus] = await Promise.all([
     getPracticeSettings(),
@@ -54,6 +56,7 @@ export default async function SettingsPage() {
         preferences={preferences}
         keyStatus={keyStatus}
         canSave={!!userId}
+        isFounder={isFounder}
       />
     </div>
   );

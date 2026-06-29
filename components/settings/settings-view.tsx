@@ -56,6 +56,7 @@ export function SettingsView({
   preferences,
   keyStatus,
   canSave,
+  isFounder = false,
 }: {
   profile: PracticeProfile;
   logoDataUrl: string | null;
@@ -68,6 +69,7 @@ export function SettingsView({
   preferences: Preferences;
   keyStatus: AnthropicKeyStatus;
   canSave: boolean;
+  isFounder?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("practice");
 
@@ -96,7 +98,7 @@ export function SettingsView({
       </div>
 
       {tab === "practice" ? (
-        <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave} />
+        <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave} canEditFooter={isFounder} />
       ) : null}
 
       {tab === "templates" ? (
