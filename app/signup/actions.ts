@@ -12,8 +12,9 @@ import bcrypt from "bcryptjs";
 import { addMonths } from "date-fns";
 import { prisma } from "@/lib/db";
 
-/** Free beta-access length, in months. */
-export const BETA_ACCESS_MONTHS = 12;
+/** Free beta-access length, in months. (Local: a "use server" file may only
+ * export async functions, so this stays module-private.) */
+const BETA_ACCESS_MONTHS = 12;
 
 export type SignupResult = { ok: true } | { ok: false; error: string };
 
