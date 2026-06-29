@@ -53,6 +53,32 @@ export async function getAccount(userId: string): Promise<AccountProfile | null>
   };
 }
 
+export type BetaMembership = {
+  betaTester: boolean;
+  betaSignedUpAt: string | null;
+  betaAccessUntil: string | null;
+};
+
+/**
+ * Read the beta-program metadata stored in the user's preferences JSON
+ * (set at self-signup). Returns null for non-beta/legacy accounts.
+ */
+export async function getBetaMembership(userId: string): Promise<BetaMembership | null> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { preferences: true },
+  });
+  const prefs = u?.preferences;
+  if (!prefs || typeof prefs !== "object") return null;
+  const p = prefs as Record<string, unknown>;
+  if (p.betaTester !== true) return null;
+  return {
+    betaTester: true,
+    betaSignedUpAt: typeof p.betaSignedUpAt === "string" ? p.betaSignedUpAt : null,
+    betaAccessUntil: typeof p.betaAccessUntil === "string" ? p.betaAccessUntil : null,
+  };
+}
+
 export async function updateProfile(userId: string, input: ProfileInput): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
