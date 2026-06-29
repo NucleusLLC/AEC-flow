@@ -21,6 +21,7 @@ import {
   Upload,
   Settings,
   Bug,
+  LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
@@ -89,6 +90,7 @@ export const navSections: NavSection[] = [
       { label: "Reports", href: "/reports", icon: BarChart3 },
       { label: "Imports", href: "/imports", icon: Upload, disabled: true },
       { label: "Exports", href: "/exports", icon: Download, disabled: true },
+      { label: "Widgets", href: "/widgets", icon: LayoutGrid },
       { label: "Beta Reports", href: "/beta-reports", icon: Bug },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
