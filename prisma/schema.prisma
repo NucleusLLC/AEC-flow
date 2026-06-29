@@ -1573,6 +1573,18 @@ enum BetaReportStatus {
   CLOSED
 }
 
+// Org-wide application config (system currency, practice profile, logo, footer,
+// AI key) persisted as one JSON blob — replaces the filesystem .app-config.json,
+// which isn't writable on serverless. Single row keyed "singleton" today; becomes
+// per-company when multi-tenant. Read/written via lib/server/app-config-store.
+model AppConfig {
+  id        String   @id
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@map("app_config")
+}
+
 model BetaReport {
   id            String           @id @default(cuid())
   kind          BetaReportKind

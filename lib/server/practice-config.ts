@@ -10,11 +10,8 @@
  * client-safe `PracticeProfile` TYPE + `PRACTICE` defaults live in
  * `lib/data/settings.ts` (which stays fs/prisma-free).
  */
-import { promises as fs } from "fs";
-import path from "path";
 import { PRACTICE, type PracticeProfile } from "@/lib/data/settings";
-
-const CONFIG_PATH = path.join(process.cwd(), ".app-config.json");
+import { readAppConfig, writeAppConfig } from "./app-config-store";
 
 type AppConfig = {
   anthropicApiKey?: string;
@@ -48,15 +45,11 @@ export const MIN_LOGO_SIZE = 24;
 export const MAX_LOGO_SIZE = 160;
 
 async function readConfig(): Promise<AppConfig> {
-  try {
-    return JSON.parse(await fs.readFile(CONFIG_PATH, "utf8")) as AppConfig;
-  } catch {
-    return {};
-  }
+  return (await readAppConfig()) as AppConfig;
 }
 
 async function writeConfig(cfg: AppConfig): Promise<void> {
-  await fs.writeFile(CONFIG_PATH, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+  await writeAppConfig(cfg as Record<string, unknown>);
 }
 
 export type PracticeSettings = {
