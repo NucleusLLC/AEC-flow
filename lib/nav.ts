@@ -22,6 +22,7 @@ import {
   Settings,
   Bug,
   LayoutGrid,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +63,7 @@ export const navSections: NavSection[] = [
     title: "Delivery",
     items: [
       { label: "Schedule", href: "/schedule", icon: CalendarClock },
+      { label: "Tasks", href: "/tasks", icon: ListChecks },
       { label: "Projects", href: "/projects", icon: FolderKanban },
       { label: "Land Development", href: "/development", icon: Map, disabled: true },
     ],
