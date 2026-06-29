@@ -7,23 +7,18 @@
  * key saved through the Settings UI. NEVER import this from a client component —
  * it touches the filesystem and would hold a secret.
  */
-import { promises as fs } from "fs";
-import path from "path";
+import { readAppConfig, writeAppConfig } from "./app-config-store";
 
-const CONFIG_PATH = path.join(process.cwd(), ".app-config.json");
-
-type AppConfig = { anthropicApiKey?: string };
+// The blob holds more than the AI key (currency, footer, …); we read/modify/write
+// the WHOLE thing so saving the key never clobbers the other settings.
+type AppConfig = { anthropicApiKey?: string } & Record<string, unknown>;
 
 async function readConfig(): Promise<AppConfig> {
-  try {
-    return JSON.parse(await fs.readFile(CONFIG_PATH, "utf8")) as AppConfig;
-  } catch {
-    return {};
-  }
+  return (await readAppConfig()) as AppConfig;
 }
 
 async function writeConfig(cfg: AppConfig): Promise<void> {
-  await fs.writeFile(CONFIG_PATH, JSON.stringify(cfg, null, 2) + "\n", "utf8");
+  await writeAppConfig(cfg as Record<string, unknown>);
 }
 
 /** The effective key: env var (deploy-managed) takes precedence over the saved one. */
