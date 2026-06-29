@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = { title: "Sign in · AEC-flow" };
@@ -21,6 +22,12 @@ export default function LoginPage() {
           <Suspense fallback={null}>
             <LoginForm />
           </Suspense>
+          <p className="mt-4 border-t border-border pt-4 text-center text-sm text-muted">
+            New to AEC-flow?{" "}
+            <Link href="/signup" className="font-medium text-brand hover:underline">
+              Join the beta — 12 months free
+            </Link>
+          </p>
         </div>
 
         <p className="mt-4 text-center text-xs text-faint">
