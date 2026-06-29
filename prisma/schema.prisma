@@ -1551,3 +1551,45 @@ model WikiArticle {
 
   @@map("wiki_articles")
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BETA-Report — in-app feedback (Bug / Wish) from beta testers, with optional
+// screenshot. Self-contained like the Construction-Admin module: the reporter
+// is denormalised to plain string columns (no FK to User) so the feature stays
+// portable and never blocks a write on an unmatched account. The screenshot is
+// a downscaled JPEG data-URL (beta-grade storage); move to object storage later.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum BetaReportKind {
+  BUG
+  WISH
+}
+
+enum BetaReportStatus {
+  NEW
+  IN_REVIEW
+  PLANNED
+  RESOLVED
+  CLOSED
+}
+
+model BetaReport {
+  id            String           @id @default(cuid())
+  kind          BetaReportKind
+  title         String
+  description   String
+  status        BetaReportStatus @default(NEW)
+  pageUrl       String?
+  userAgent     String?
+  screenshot    String? // downscaled JPEG data-URL, or null
+  reporterId    String?
+  reporterName  String?
+  reporterEmail String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([kind])
+  @@index([status])
+  @@index([createdAt])
+  @@map("beta_reports")
+}
