@@ -52,8 +52,8 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Clients", href: "/clients", icon: Users },
       { label: "Estimates", href: "/estimates", icon: Calculator },
-      { label: "Proposals", href: "/proposals", icon: FileText },
       { label: "Cost Database", href: "/cost-database", icon: Database, disabled: true },
+      { label: "Proposals", href: "/proposals", icon: FileText },
       { label: "Orders", href: "/orders", icon: ClipboardList, disabled: true },
     ],
   },

@@ -82,18 +82,20 @@ const ROLE_DESCRIPTION: Record<UserRole, string> = {
   VIEWER: "Read-only access to dashboards and assigned records.",
 };
 
+// Generic blank defaults — each company fills in its own profile. (No ZenArch
+// branding shipped as defaults.) Becomes per-company config once multi-tenant.
 export const PRACTICE: PracticeProfile = {
-  name: "ZenArch",
-  legalName: "ZenArch Design Consultants LLC",
-  trn: "100482736500003",
-  founded: "2014",
-  addressLine: "Office 1204, Boulevard Plaza Tower 1",
-  city: "Dubai",
-  emirate: "Dubai",
-  country: "UAE",
-  phone: "+971 4 555 0190",
-  email: "studio@zenarch.ae",
-  website: "zenarch.ae",
+  name: "",
+  legalName: "",
+  trn: "",
+  founded: "",
+  addressLine: "",
+  city: "",
+  emirate: "",
+  country: "",
+  phone: "",
+  email: "",
+  website: "",
 };
 
 const TEMPLATES: ProposalTemplate[] = [
