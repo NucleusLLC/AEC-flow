@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ClientForm } from "@/components/clients/client-form";
 
-export const metadata = { title: "New Client · ZenArch" };
+export const metadata = { title: "New Client · AEC-flow" };
 
 export default function NewClientPage() {
   return (

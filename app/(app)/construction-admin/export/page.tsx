@@ -8,7 +8,7 @@ import { listRfis } from "@/lib/data/ca/rfis";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
 import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
 
-export const metadata = { title: "Export Center · ZenArch" };
+export const metadata = { title: "Export Center · AEC-flow" };
 
 function ExportRow({ href, title, sub }: { href: string; title: string; sub: string }) {
   return (

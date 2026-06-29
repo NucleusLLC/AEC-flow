@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const meeting = await getMeeting(id);
   return {
-    title: meeting ? `${meeting.title} · Minutes · ZenArch` : "Minutes · ZenArch",
+    title: meeting ? `${meeting.title} · Minutes · AEC-flow` : "Minutes · AEC-flow",
   };
 }
 

@@ -13,7 +13,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
-export const metadata = { title: "Leave · ZenArch" };
+export const metadata = { title: "Leave · AEC-flow" };
 
 export default async function LeavePage() {
   const [requests, whoIsOut, holidays] = await Promise.all([

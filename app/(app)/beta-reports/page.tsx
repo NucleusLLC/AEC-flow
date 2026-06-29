@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { BetaReportsView } from "@/components/beta-report/beta-reports-view";
 import { getBetaReports, summarizeBetaReports } from "@/lib/data/beta-reports";
 
-export const metadata = { title: "Beta Reports · ZenArch" };
+export const metadata = { title: "Beta Reports · AEC-flow" };
 
 export default async function BetaReportsPage() {
   const reports = await getBetaReports();

@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { PunchListView } from "@/components/construction-admin/punch-list-view";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
 
-export const metadata = { title: "Punch List · ZenArch" };
+export const metadata = { title: "Punch List · AEC-flow" };
 
 export default async function PunchListPage() {
   const items = await listPunchItems();

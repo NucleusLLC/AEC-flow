@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getAccount } from "@/lib/data/account";
 import { AccountForm } from "@/components/account/account-form";
 
-export const metadata = { title: "My Account · ZenArch" };
+export const metadata = { title: "My Account · AEC-flow" };
 
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);

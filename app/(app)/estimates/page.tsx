@@ -7,7 +7,7 @@ import { getTemplates } from "@/lib/data/estimate-templates";
 import { getWikiArticles } from "@/lib/data/estimating-wiki-db";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 
-export const metadata = { title: "Cost Estimation · ZenArch" };
+export const metadata = { title: "Cost Estimation · AEC-flow" };
 
 export default async function EstimatesPage() {
   const [projects, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, practice] = await Promise.all([

@@ -13,7 +13,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const r = await getReport(id);
-  return { title: r ? `${r.reportNumber} · ZenArch` : "Report · ZenArch" };
+  return { title: r ? `${r.reportNumber} · AEC-flow` : "Report · AEC-flow" };
 }
 
 function Section({ title, body }: { title: string; body: string | null }) {

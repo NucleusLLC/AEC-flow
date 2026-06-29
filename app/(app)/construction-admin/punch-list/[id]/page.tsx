@@ -14,7 +14,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const item = await getPunchItem(id);
-  return { title: item ? `${item.itemNumber} · Punch List · ZenArch` : "Punch Item · ZenArch" };
+  return { title: item ? `${item.itemNumber} · Punch List · AEC-flow` : "Punch Item · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

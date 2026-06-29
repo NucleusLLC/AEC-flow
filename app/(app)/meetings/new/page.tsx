@@ -5,7 +5,7 @@ import { MeetingForm } from "@/components/meetings/meeting-form";
 import { getProjects } from "@/lib/data/projects";
 import { getTeam } from "@/lib/data/team";
 
-export const metadata: Metadata = { title: "New Minutes · ZenArch" };
+export const metadata: Metadata = { title: "New Minutes · AEC-flow" };
 
 export default async function NewMeetingPage() {
   const [projects, team] = await Promise.all([getProjects(), getTeam()]);

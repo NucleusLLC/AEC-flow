@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { FormsView } from "@/components/forms/forms-view";
 import { getForms } from "@/lib/data/forms";
 
-export const metadata = { title: "Forms · ZenArch" };
+export const metadata = { title: "Forms · AEC-flow" };
 
 export default async function FormsPage() {
   const forms = await getForms();

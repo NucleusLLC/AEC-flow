@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { OrderForm } from "@/components/orders/order-form";
 import { getClients } from "@/lib/data/clients";
 
-export const metadata = { title: "New Order · ZenArch" };
+export const metadata = { title: "New Order · AEC-flow" };
 
 export default async function NewOrderPage() {
   const clients = await getClients();

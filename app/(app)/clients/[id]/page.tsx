@@ -24,7 +24,7 @@ import { initials } from "@/lib/utils";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const client = await getClient(id);
-  return { title: `${client?.name ?? "Client"} · ZenArch` };
+  return { title: `${client?.name ?? "Client"} · AEC-flow` };
 }
 
 const proposalTone: Record<ProposalStatus, Parameters<typeof Badge>[0]["tone"]> = {

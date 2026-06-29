@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { TeamView } from "@/components/team/team-view";
 import { getTeam, summarizeTeam } from "@/lib/data/team";
 
-export const metadata = { title: "Team · ZenArch" };
+export const metadata = { title: "Team · AEC-flow" };
 
 export default async function TeamPage() {
   const members = await getTeam();

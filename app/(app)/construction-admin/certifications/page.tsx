@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { CertList } from "@/components/construction-admin/cert-list";
 import { listCertifications } from "@/lib/data/ca/certifications";
 
-export const metadata = { title: "Certifications · ZenArch" };
+export const metadata = { title: "Certifications · AEC-flow" };
 
 export default async function CertificationsPage() {
   const certifications = await listCertifications();

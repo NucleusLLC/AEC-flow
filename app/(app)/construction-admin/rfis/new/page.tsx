@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { RfiForm } from "@/components/construction-admin/rfi-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New RFI · ZenArch" };
+export const metadata: Metadata = { title: "New RFI · AEC-flow" };
 
 export default async function NewRfiPage() {
   const projects = await getProjects();

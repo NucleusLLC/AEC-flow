@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { SiteInstructionForm } from "@/components/construction-admin/site-instruction-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New Site Instruction · ZenArch" };
+export const metadata: Metadata = { title: "New Site Instruction · AEC-flow" };
 
 export default async function NewSiteInstructionPage() {
   const projects = await getProjects();

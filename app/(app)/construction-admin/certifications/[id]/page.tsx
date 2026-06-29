@@ -12,7 +12,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const c = await getCertification(id);
-  return { title: c ? `${c.certificationNumber} · ZenArch` : "Certification · ZenArch" };
+  return { title: c ? `${c.certificationNumber} · AEC-flow` : "Certification · AEC-flow" };
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

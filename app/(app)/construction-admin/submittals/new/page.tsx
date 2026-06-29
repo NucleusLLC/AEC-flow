@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { SubmittalForm } from "@/components/construction-admin/submittal-form";
 import { getProjects } from "@/lib/data/projects";
 
-export const metadata: Metadata = { title: "New Submittal · ZenArch" };
+export const metadata: Metadata = { title: "New Submittal · AEC-flow" };
 
 export default async function NewSubmittalPage() {
   const projects = await getProjects();

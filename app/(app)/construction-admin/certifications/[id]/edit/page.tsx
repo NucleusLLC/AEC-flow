@@ -6,7 +6,7 @@ import { CertForm } from "@/components/construction-admin/cert-form";
 import { getProjects } from "@/lib/data/projects";
 import { getCertification } from "@/lib/data/ca/certifications";
 
-export const metadata: Metadata = { title: "Edit Certification · ZenArch" };
+export const metadata: Metadata = { title: "Edit Certification · AEC-flow" };
 
 export default async function EditCertificationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

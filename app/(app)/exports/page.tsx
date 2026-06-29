@@ -7,7 +7,7 @@ import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
 
-export const metadata = { title: "Data Export · ZenArch" };
+export const metadata = { title: "Data Export · AEC-flow" };
 
 export default async function ExportsPage() {
   const [clients, projects, proposals, orders, team, leave] = await Promise.all([

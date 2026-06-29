@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { LeaveRequestForm } from "@/components/leave/leave-request-form";
 import { getTeam } from "@/lib/data/team";
 
-export const metadata = { title: "Request Leave · ZenArch" };
+export const metadata = { title: "Request Leave · AEC-flow" };
 
 export default async function NewLeavePage() {
   const team = await getTeam();

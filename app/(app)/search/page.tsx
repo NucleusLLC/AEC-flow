@@ -18,7 +18,7 @@ import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 import { formatCurrencyCompact } from "@/lib/format";
 
-export const metadata = { title: "Search · ZenArch" };
+export const metadata = { title: "Search · AEC-flow" };
 
 type Result = {
   id: string;

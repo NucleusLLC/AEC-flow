@@ -25,7 +25,7 @@ import { listCertifications } from "@/lib/data/ca/certifications";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
 import { formatCurrencyCompact, formatCurrency } from "@/lib/format";
 
-export const metadata = { title: "Construction Admin · ZenArch" };
+export const metadata = { title: "Construction Admin · AEC-flow" };
 
 const RISK_TONE = { LOW: "green", MEDIUM: "amber", HIGH: "red" } as const;
 

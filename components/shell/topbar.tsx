@@ -16,7 +16,7 @@ function usePageTitle(): string {
   const match = items
     .filter((i) => pathname === i.href || pathname.startsWith(i.href + "/"))
     .sort((a, b) => b.href.length - a.href.length)[0];
-  return match?.label ?? "ZenArch";
+  return match?.label ?? "AEC-flow";
 }
 
 export function Topbar({ notifications }: { notifications: NotificationItem[] }) {

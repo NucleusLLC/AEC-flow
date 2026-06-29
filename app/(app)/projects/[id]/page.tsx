@@ -16,7 +16,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
-  return { title: project ? `${project.name} · Dashboard · ZenArch` : "Project · ZenArch" };
+  return { title: project ? `${project.name} · Dashboard · AEC-flow` : "Project · AEC-flow" };
 }
 
 export default async function ProjectDashboardPage({ params }: PageProps) {

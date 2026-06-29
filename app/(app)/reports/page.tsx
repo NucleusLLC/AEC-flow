@@ -17,7 +17,7 @@ import {
 } from "@/lib/data/projects";
 import { formatCurrencyCompact } from "@/lib/format";
 
-export const metadata = { title: "Reports · ZenArch" };
+export const metadata = { title: "Reports · AEC-flow" };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -95,7 +95,7 @@ export default async function ReportsPage() {
             Practice analytics across proposals and project delivery.
           </p>
         </div>
-        <EmailButton subject="ZenArch — Practice Report" attachment="Practice Report.pdf" />
+        <EmailButton subject="AEC-flow — Practice Report" attachment="Practice Report.pdf" />
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

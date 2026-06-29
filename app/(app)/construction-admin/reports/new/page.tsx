@@ -5,7 +5,7 @@ import { ReportForm } from "@/components/construction-admin/report-form";
 import { getProjects } from "@/lib/data/projects";
 import type { CaReportType } from "@/lib/ca/types";
 
-export const metadata: Metadata = { title: "New Report · ZenArch" };
+export const metadata: Metadata = { title: "New Report · AEC-flow" };
 
 type PageProps = { searchParams: Promise<{ type?: string }> };
 

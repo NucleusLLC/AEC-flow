@@ -1,6 +1,6 @@
 import { CostDatabaseView } from "@/components/cost-data/cost-database-view";
 
-export const metadata = { title: "Cost Database · ZenArch" };
+export const metadata = { title: "Cost Database · AEC-flow" };
 
 export default function CostDatabasePage() {
   return (

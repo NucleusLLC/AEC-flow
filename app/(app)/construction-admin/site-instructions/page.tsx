@@ -4,7 +4,7 @@ import { CaSubNav } from "@/components/construction-admin/sub-nav";
 import { SiteInstructionLog } from "@/components/construction-admin/site-instruction-log";
 import { listSiteInstructions } from "@/lib/data/ca/site-instructions";
 
-export const metadata = { title: "Site Instructions · ZenArch" };
+export const metadata = { title: "Site Instructions · AEC-flow" };
 
 export default async function SiteInstructionsPage() {
   const instructions = await listSiteInstructions();
