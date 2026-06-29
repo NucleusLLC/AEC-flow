@@ -64,6 +64,7 @@ export function PracticeForm({
   footer,
   logoSettings,
   canSave,
+  canEditFooter = false,
 }: {
   profile: PracticeProfile;
   logoDataUrl: string | null;
@@ -71,6 +72,8 @@ export function PracticeForm({
   footer: FooterSettings;
   logoSettings: LogoSettings;
   canSave: boolean;
+  /** The document footer is app advertising — only the founder may edit it. */
+  canEditFooter?: boolean;
 }) {
   const [logoCfg, setLogoCfg] = useState<LogoSettings>(logoSettings);
   const [, startLogoCfg] = useTransition();
@@ -306,15 +309,21 @@ export function PracticeForm({
 
       {/* Document Footer */}
       <Card>
-        <CardHeader title="Footer Text" subtitle="The line printed at the bottom of every page of exported documents." />
+        <CardHeader title="Footer Text" subtitle="The line printed at the bottom of every page of exported documents — managed by AEC-flow." />
         <CardBody className="space-y-3">
+          {!canEditFooter ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2/40 px-3 py-2 text-xs text-muted">
+              <Lock className="h-3.5 w-3.5 text-faint" />
+              This footer is set by AEC-flow and can&apos;t be changed.
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-end gap-3">
             <label className="block min-w-[200px] flex-1">
               <span className="text-xs font-medium text-muted">Footer text</span>
               <input
                 value={foot.text}
                 onChange={(e) => setFoot({ ...foot, text: e.target.value })}
-                disabled={!canSave || footPending}
+                disabled={!canEditFooter || footPending}
                 placeholder="AEC Management Suite"
                 className={inputCls}
               />
@@ -324,7 +333,7 @@ export function PracticeForm({
               <select
                 value={foot.fontFamily}
                 onChange={(e) => setFoot({ ...foot, fontFamily: e.target.value })}
-                disabled={!canSave || footPending}
+                disabled={!canEditFooter || footPending}
                 className="mt-1 h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
                 style={{ width: 190 }}
               >
@@ -341,7 +350,7 @@ export function PracticeForm({
                 max={24}
                 value={foot.fontSize}
                 onChange={(e) => setFoot({ ...foot, fontSize: Number(e.target.value) || 9 })}
-                disabled={!canSave || footPending}
+                disabled={!canEditFooter || footPending}
                 className="mt-1 h-9 w-24 rounded-lg border border-border bg-surface px-3 text-right text-sm tabular-nums text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
               />
             </label>
@@ -361,7 +370,7 @@ export function PracticeForm({
             <button
               type="button"
               onClick={() => saveFoot(foot)}
-              disabled={!canSave || footPending}
+              disabled={!canEditFooter || footPending}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {footPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isCurrentUserFounder } from "@/lib/server/founder";
 import {
   getAnthropicApiKey,
   getAnthropicKeyStatus,
@@ -128,7 +129,10 @@ export async function saveSystemCurrencyAction(currency: string): Promise<Action
 }
 
 export async function saveFooterAction(footer: FooterSettings): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to change the footer." };
+  // The footer is app-level advertising — only the founder may change it.
+  if (!(await isCurrentUserFounder())) {
+    return { ok: false, error: "Only the AEC-flow founder can change the footer." };
+  }
   try {
     await saveFooter(footer);
     revalidatePath("/", "layout");
