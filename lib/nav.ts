@@ -86,7 +86,7 @@ export const navSections: NavSection[] = [
   {
     items: [
       { label: "Activity", href: "/activity", icon: Activity, disabled: true },
-      { label: "Reports", href: "/reports", icon: BarChart3, disabled: true },
+      { label: "Reports", href: "/reports", icon: BarChart3 },
       { label: "Imports", href: "/imports", icon: Upload, disabled: true },
       { label: "Exports", href: "/exports", icon: Download, disabled: true },
       { label: "Beta Reports", href: "/beta-reports", icon: Bug },
