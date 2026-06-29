@@ -86,7 +86,7 @@ export function ProposalsApp({ proposals }: { proposals: ProposalRecord[] }) {
           </thead>
           <tbody>
             {rows.map((c) => (
-              <tr key={c.client} onClick={() => setSel(c.client)} className="cursor-pointer border-b border-border/70 odd:bg-white even:bg-slate-50 hover:bg-brand/5">
+              <tr key={c.client} onClick={() => setSel(c.client)} className="cursor-pointer border-b border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-brand/5">
                 <td className="px-3 py-2 text-xs font-medium text-fg">{c.client}</td>
                 <td className="px-3 py-2 text-right text-xs tabular-nums text-muted">{c.count}</td>
                 <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-fg">{c.open > 0 ? formatCurrencyCompact(c.open) : "—"}</td>

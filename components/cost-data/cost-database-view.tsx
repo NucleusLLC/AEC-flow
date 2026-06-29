@@ -238,7 +238,7 @@ function Items() {
           </thead>
           <tbody>
             {items.map((it: CostItem) => (
-              <tr key={it.id} className="border-b border-border/70 odd:bg-white even:bg-slate-50 hover:bg-brand/5">
+              <tr key={it.id} className="border-b border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-brand/5">
                 <td className="px-3 py-1.5 text-[11px]">
                   <span className="font-mono text-muted">{it.externalReferenceCode}</span>
                   {it.classificationCode ? <span className="ml-1 text-faint">· {it.classificationSystem} {it.classificationCode}</span> : null}
