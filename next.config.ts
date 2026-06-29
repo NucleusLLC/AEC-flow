@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   // importing the Prisma-backed data layer (e.g. Construction Admin) fails to
   // compile with "Module not found: Can't resolve 'dns'".
   serverExternalPackages: ["pg", "@prisma/adapter-pg", "@prisma/client"],
+  experimental: {
+    // BETA-Report submits a downscaled JPEG screenshot inline with the form via a
+    // Server Action. The default cap is 1MB; raise it so a busy screen still fits
+    // (the widget also downscales + steps JPEG quality down to stay well under this).
+    serverActions: { bodySizeLimit: "4mb" },
+  },
 };
 
 export default nextConfig;

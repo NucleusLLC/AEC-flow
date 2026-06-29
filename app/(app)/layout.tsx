@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { CommandPalette } from "@/components/shell/command-palette";
+import { BetaReportWidget } from "@/components/beta-report/beta-report-widget";
 import { SystemCurrencyInit } from "@/components/shell/system-currency-init";
 import { getNotificationsForCurrentUser } from "@/lib/data/notifications";
 import { getSystemCurrency } from "@/lib/server/practice-config";
@@ -35,6 +36,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       {/* Global ⌘K / Ctrl+K command palette (renders null until opened). */}
       <CommandPalette />
+      {/* Floating BETA-Report widget — Bug/Wish feedback with optional screenshot. */}
+      <BetaReportWidget />
     </div>
   );
 }
