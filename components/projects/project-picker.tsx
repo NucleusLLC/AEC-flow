@@ -68,7 +68,7 @@ export function ProjectPicker({
           </thead>
           <tbody>
             {list.map((r) => (
-              <tr key={r.key} onClick={() => onSelect(r.key)} className="cursor-pointer border-b border-border/70 odd:bg-white even:bg-slate-50 hover:bg-brand/5">
+              <tr key={r.key} onClick={() => onSelect(r.key)} className="cursor-pointer border-b border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-brand/5">
                 <td className="px-3 py-2 font-mono text-[11px] text-muted">{r.projectNumber}</td>
                 <td className="px-3 py-2 text-xs font-medium text-fg">{r.projectName}</td>
                 <td className="px-3 py-2 text-[11px] text-muted">{r.location}</td>
