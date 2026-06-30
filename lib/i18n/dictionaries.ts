@@ -56,6 +56,27 @@ const es: Dict = {
   "Full screen": "Pantalla completa",
   "Exit full screen": "Salir",
   Language: "Idioma",
+  // Dashboard + common
+  "Active Projects": "Proyectos activos",
+  "Pipeline Value": "Valor en cartera",
+  "Awaiting Approval": "Pendiente de aprobación",
+  "Team Utilisation": "Utilización del equipo",
+  "Here's what's happening across the practice today.":
+    "Esto es lo que sucede hoy en la práctica.",
+  "View reports": "Ver informes",
+  "View all": "Ver todo",
+  "Live delivery across the studio": "Entrega en curso del estudio",
+  "Out of Office": "Fuera de oficina",
+  "On leave this week": "De licencia esta semana",
+  "Proposals Pipeline": "Cartera de propuestas",
+  "Recent Activity": "Actividad reciente",
+  "No recent activity.": "Sin actividad reciente.",
+  "Good morning": "Buenos días",
+  "Good afternoon": "Buenas tardes",
+  "Good evening": "Buenas noches",
+  "left in your free beta access": "restantes de tu acceso beta gratuito",
+  'Tap "New Bug/Wish" anytime to send feedback.':
+    'Pulsa "Nuevo Bug/Deseo" para enviar comentarios.',
 };
 
 const nl: Dict = {
@@ -94,6 +115,27 @@ const nl: Dict = {
   "Full screen": "Volledig scherm",
   "Exit full screen": "Sluiten",
   Language: "Taal",
+  // Dashboard + common
+  "Active Projects": "Actieve projecten",
+  "Pipeline Value": "Pijplijnwaarde",
+  "Awaiting Approval": "Wacht op goedkeuring",
+  "Team Utilisation": "Teambezetting",
+  "Here's what's happening across the practice today.":
+    "Dit speelt er vandaag binnen het bureau.",
+  "View reports": "Rapporten bekijken",
+  "View all": "Alles bekijken",
+  "Live delivery across the studio": "Lopende uitvoering van het bureau",
+  "Out of Office": "Afwezig",
+  "On leave this week": "Deze week met verlof",
+  "Proposals Pipeline": "Offertepijplijn",
+  "Recent Activity": "Recente activiteit",
+  "No recent activity.": "Geen recente activiteit.",
+  "Good morning": "Goedemorgen",
+  "Good afternoon": "Goedemiddag",
+  "Good evening": "Goedenavond",
+  "left in your free beta access": "resterend in je gratis beta-toegang",
+  'Tap "New Bug/Wish" anytime to send feedback.':
+    'Tik op "Nieuwe Bug/Wens" om feedback te sturen.',
 };
 
 export const DICT: Record<Lang, Dict> = { en: {}, es, nl };

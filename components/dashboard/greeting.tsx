@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/components/i18n/language-provider";
+
 /**
  * Time-of-day greeting for the signed-in user. The period is derived from the
  * browser's local clock at render; `suppressHydrationWarning` absorbs the
@@ -12,7 +14,8 @@ function periodFor(hour: number): string {
 }
 
 export function Greeting({ name }: { name: string }) {
-  const period = periodFor(new Date().getHours());
+  const t = useT();
+  const period = t(periodFor(new Date().getHours()));
   return (
     <h2 suppressHydrationWarning className="text-xl font-semibold text-fg">
       {period}
