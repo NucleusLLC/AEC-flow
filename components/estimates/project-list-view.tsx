@@ -18,6 +18,7 @@ const statusTone: Record<EstimateProject["status"], "slate" | "amber" | "green">
 export function ProjectListView({ projects, onSelect }: { projects: EstimateProject[]; onSelect: (p: EstimateProject) => void }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "date", dir: -1 });
+  const [newOpen, setNewOpen] = useState(false);
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -45,9 +46,38 @@ export function ProjectListView({ projects, onSelect }: { projects: EstimateProj
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search number, name, address, client…" className="h-8 w-72 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
         </div>
-        <button type="button" onClick={() => console.log("[estimate:new]")} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90">
-          <Plus className="h-4 w-4" /> New estimate
-        </button>
+        <div className="relative">
+          <button type="button" onClick={() => setNewOpen((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90">
+            <Plus className="h-4 w-4" /> New estimate
+          </button>
+          {newOpen ? (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setNewOpen(false)} aria-hidden />
+              <div className="absolute right-0 z-30 mt-2 max-h-80 w-80 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
+                <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-faint">
+                  Choose a project to estimate
+                </div>
+                {projects.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-muted">No projects available.</div>
+                ) : (
+                  projects.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { onSelect(p); setNewOpen(false); }}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-fg transition-colors hover:bg-surface-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{p.projectName}</span>
+                        <span className="block truncate text-xs text-muted">{p.projectNumber} · {p.client}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="overflow-x-auto">

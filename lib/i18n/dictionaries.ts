@@ -77,6 +77,34 @@ const es: Dict = {
   "left in your free beta access": "restantes de tu acceso beta gratuito",
   'Tap "New Bug/Wish" anytime to send feedback.':
     'Pulsa "Nuevo Bug/Deseo" para enviar comentarios.',
+  // Module page headers
+  "Cost Estimation": "Estimación de costos",
+  "Project Schedule": "Cronograma del proyecto",
+  "Construction Administration & Reporting": "Administración de obra e informes",
+  "Developers, government bodies, and private accounts — and their full proposal-to-project history.":
+    "Promotores, organismos públicos y cuentas privadas, con todo su historial de propuesta a proyecto.",
+  "Select a project to open its bill-of-quantities estimate — labor norms, materials, equipment and subcontractor costs roll up by section, with profit and overhead applied to the total.":
+    "Selecciona un proyecto para abrir su presupuesto por partidas: normas de mano de obra, materiales, equipo y subcontratos se suman por sección, con beneficio y gastos generales aplicados al total.",
+  "Pick a project to view its programme — phase timelines and dependencies.":
+    "Elige un proyecto para ver su programa: cronograma de fases y dependencias.",
+  "Fee proposals from draft to approval — pipeline value, follow-ups, and win rate.":
+    "Propuestas de honorarios de borrador a aprobación: valor en cartera, seguimientos y tasa de éxito.",
+  "Live delivery across disciplines — phases, progress, and project teams.":
+    "Entrega en curso entre disciplinas: fases, avance y equipos de proyecto.",
+  "Project controls across change orders, RFIs, progress reports and lender certifications.":
+    "Control de obra: órdenes de cambio, RFIs, informes de avance y certificaciones para financistas.",
+  "Record meetings, decisions, and follow-up actions across every project.":
+    "Registra reuniones, decisiones y acciones de seguimiento en todos los proyectos.",
+  "Pick a project to open its drawing set — every plan and sheet by discipline and revision.":
+    "Elige un proyecto para abrir su juego de planos: cada plano y lámina por disciplina y revisión.",
+  "Manage your practice profile, proposal templates, members, and preferences.":
+    "Gestiona el perfil de la práctica, plantillas de propuestas, miembros y preferencias.",
+  "Handy personal tools — punch clock, world clocks, and a quick Kanban board. Saved in your browser.":
+    "Herramientas personales: reloj de fichaje, relojes mundiales y un tablero Kanban rápido. Guardado en tu navegador.",
+  "Bug reports and wishes sent by beta testers from the in-app Feedback button.":
+    "Reportes de errores y deseos enviados por los probadores beta desde el botón de Feedback en la app.",
+  "Practice analytics across proposals and project delivery.":
+    "Analítica de la práctica sobre propuestas y entrega de proyectos.",
 };
 
 const nl: Dict = {
@@ -136,6 +164,34 @@ const nl: Dict = {
   "left in your free beta access": "resterend in je gratis beta-toegang",
   'Tap "New Bug/Wish" anytime to send feedback.':
     'Tik op "Nieuwe Bug/Wens" om feedback te sturen.',
+  // Module page headers
+  "Cost Estimation": "Kostenraming",
+  "Project Schedule": "Projectplanning",
+  "Construction Administration & Reporting": "Bouwadministratie en rapportage",
+  "Developers, government bodies, and private accounts — and their full proposal-to-project history.":
+    "Ontwikkelaars, overheden en particuliere accounts — met hun volledige historie van offerte tot project.",
+  "Select a project to open its bill-of-quantities estimate — labor norms, materials, equipment and subcontractor costs roll up by section, with profit and overhead applied to the total.":
+    "Kies een project om de hoeveelhedenbegroting te openen: arbeidsnormen, materialen, materieel en onderaannemers tellen per sectie op, met winst en algemene kosten over het totaal.",
+  "Pick a project to view its programme — phase timelines and dependencies.":
+    "Kies een project om de planning te bekijken: faseplanning en afhankelijkheden.",
+  "Fee proposals from draft to approval — pipeline value, follow-ups, and win rate.":
+    "Offertes van concept tot goedkeuring: pijplijnwaarde, opvolging en winratio.",
+  "Live delivery across disciplines — phases, progress, and project teams.":
+    "Lopende uitvoering over disciplines heen: fasen, voortgang en projectteams.",
+  "Project controls across change orders, RFIs, progress reports and lender certifications.":
+    "Projectbeheersing: meerwerk, RFI's, voortgangsrapporten en certificeringen voor financiers.",
+  "Record meetings, decisions, and follow-up actions across every project.":
+    "Leg vergaderingen, besluiten en actiepunten vast voor elk project.",
+  "Pick a project to open its drawing set — every plan and sheet by discipline and revision.":
+    "Kies een project om de tekeningenset te openen: elke tekening en blad per discipline en revisie.",
+  "Manage your practice profile, proposal templates, members, and preferences.":
+    "Beheer je bureauprofiel, offertesjablonen, leden en voorkeuren.",
+  "Handy personal tools — punch clock, world clocks, and a quick Kanban board. Saved in your browser.":
+    "Handige persoonlijke tools: prikklok, wereldklokken en een snel Kanban-bord. Opgeslagen in je browser.",
+  "Bug reports and wishes sent by beta testers from the in-app Feedback button.":
+    "Bugmeldingen en wensen verstuurd door beta-testers via de Feedback-knop in de app.",
+  "Practice analytics across proposals and project delivery.":
+    "Bureau-analyses over offertes en projectuitvoering.",
 };
 
 export const DICT: Record<Lang, Dict> = { en: {}, es, nl };
