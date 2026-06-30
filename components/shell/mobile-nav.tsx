@@ -5,11 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { navSections } from "@/lib/nav";
+import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <>
@@ -35,8 +37,8 @@ export function MobileNav() {
           <aside className="absolute left-0 top-0 flex h-full w-64 flex-col bg-sidebar text-sidebar-fg shadow-xl">
             <div className="flex h-16 items-center justify-between px-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-brand-fg font-bold">
-                  Z
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-[13px] font-bold text-brand-fg">
+                  AF
                 </div>
                 <div className="leading-tight">
                   <div className="text-sm font-semibold text-white">AEC-flow</div>
@@ -58,7 +60,7 @@ export function MobileNav() {
                 <div key={i}>
                   {section.title ? (
                     <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
-                      {section.title}
+                      {t(section.title)}
                     </div>
                   ) : null}
                   <ul className="space-y-0.5">
@@ -73,9 +75,9 @@ export function MobileNav() {
                               className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-muted/50"
                             >
                               <Icon className="h-[18px] w-[18px] shrink-0 text-sidebar-muted/40" strokeWidth={2} />
-                              <span className="flex-1">{item.label}</span>
+                              <span className="flex-1">{t(item.label)}</span>
                               <span className="rounded bg-sidebar-2/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sidebar-muted/70">
-                                Soon
+                                {t("Soon")}
                               </span>
                             </div>
                           </li>
@@ -102,7 +104,7 @@ export function MobileNav() {
                               )}
                               strokeWidth={2}
                             />
-                            {item.label}
+                            {t(item.label)}
                           </Link>
                         </li>
                       );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { navSections } from "@/lib/nav";
+import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -28,6 +29,7 @@ function initials(name?: string | null): string {
 export function Sidebar({ version, collapsed = false }: { version?: string; collapsed?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const t = useT();
   const user = session?.user;
   const displayName = user?.name ?? "Account";
   const roleLabel = user?.role ? ROLE_LABEL[user.role] ?? user.role : "Beta tester";
@@ -56,7 +58,7 @@ export function Sidebar({ version, collapsed = false }: { version?: string; coll
           <div key={i}>
             {section.title ? (
               <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
-                {section.title}
+                {t(section.title)}
               </div>
             ) : null}
             <ul className="space-y-0.5">
@@ -71,9 +73,9 @@ export function Sidebar({ version, collapsed = false }: { version?: string; coll
                         className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-muted/50"
                       >
                         <Icon className="h-[18px] w-[18px] shrink-0 text-sidebar-muted/40" strokeWidth={2} />
-                        <span className="flex-1">{item.label}</span>
+                        <span className="flex-1">{t(item.label)}</span>
                         <span className="rounded bg-sidebar-2/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sidebar-muted/70">
-                          Soon
+                          {t("Soon")}
                         </span>
                       </div>
                     </li>
@@ -99,7 +101,7 @@ export function Sidebar({ version, collapsed = false }: { version?: string; coll
                         )}
                         strokeWidth={2}
                       />
-                      {item.label}
+                      {t(item.label)}
                     </Link>
                   </li>
                 );
