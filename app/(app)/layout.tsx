@@ -7,6 +7,7 @@ import { SystemCurrencyInit } from "@/components/shell/system-currency-init";
 import { getNotificationsForCurrentUser } from "@/lib/data/notifications";
 import { getSystemCurrency } from "@/lib/server/practice-config";
 import { setSystemCurrency } from "@/lib/format";
+import { appVersionLabel } from "@/lib/version";
 
 // Every route in this group is auth-gated and reads per-request data (the
 // session, project/DB-backed lists), so it must render on-demand. Forcing the
@@ -25,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex h-full">
       {/* …and on the client, before anything formats money. */}
       <SystemCurrencyInit currency={systemCurrency} />
-      <Sidebar />
+      <Sidebar version={appVersionLabel()} />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Topbar reads useSearchParams (search prefill) — needs a Suspense
             boundary so static prerendering doesn't bail the build. */}

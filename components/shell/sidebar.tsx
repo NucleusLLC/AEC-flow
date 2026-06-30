@@ -25,7 +25,7 @@ function initials(name?: string | null): string {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ version }: { version?: string }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
@@ -115,6 +115,11 @@ export function Sidebar() {
             <div className="truncate text-[11px] text-sidebar-muted">{roleLabel}</div>
           </div>
         </div>
+        {version ? (
+          <div className="px-2 pt-1 font-mono text-[10px] tracking-tight text-sidebar-muted/60" title="Deployed version · build">
+            {version}
+          </div>
+        ) : null}
       </div>
     </aside>
   );
