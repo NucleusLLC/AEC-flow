@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { ArrowUpRight, ArrowDownRight, Minus, BarChart3 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock } from "lucide-react";
 import { authOptions } from "@/lib/auth";
+import { getBetaMembership } from "@/lib/data/account";
 import { Greeting } from "@/components/dashboard/greeting";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
@@ -36,11 +37,39 @@ export default async function DashboardPage() {
   const recentActivity = await getRecentActivity(8);
   const session = await getServerSession(authOptions);
   const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? "";
+  const beta = session?.user?.id ? await getBetaMembership(session.user.id) : null;
+  const betaUntil = beta?.betaAccessUntil ? new Date(beta.betaAccessUntil) : null;
+  // eslint-disable-next-line react-hooks/purity -- async server component; per-request time is intended
+  const nowMs = Date.now();
+  const betaDaysLeft =
+    betaUntil && !Number.isNaN(betaUntil.getTime())
+      ? Math.max(0, Math.ceil((betaUntil.getTime() - nowMs) / 86_400_000))
+      : null;
   const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
   const pipelineMax = Math.max(...pipeline.map((s) => s.value));
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      {/* Beta access countdown (beta testers only) */}
+      {betaDaysLeft !== null && betaUntil ? (
+        <div
+          className={`flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border px-4 py-2.5 text-sm ${
+            betaDaysLeft <= 14
+              ? "border-amber-300 bg-amber-50 text-amber-800"
+              : "border-brand/20 bg-brand/5 text-fg"
+          }`}
+        >
+          <CalendarClock className={`h-4 w-4 shrink-0 ${betaDaysLeft <= 14 ? "text-amber-600" : "text-brand"}`} />
+          <span>
+            <strong className="font-semibold">{betaDaysLeft} {betaDaysLeft === 1 ? "day" : "days"}</strong> left in your free beta access
+          </span>
+          <span className={betaDaysLeft <= 14 ? "text-amber-700" : "text-muted"}>
+            · through {betaUntil.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+          </span>
+          <span className="ml-auto text-xs text-muted">Tap “New Bug/Wish” anytime to send feedback.</span>
+        </div>
+      ) : null}
+
       {/* Greeting */}
       <div className="flex items-start justify-between gap-4">
         <div>
