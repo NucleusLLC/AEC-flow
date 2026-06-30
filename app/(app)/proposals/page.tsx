@@ -38,7 +38,7 @@ export default async function ProposalsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="w-full space-y-5">
       <PageHeading
         title="Proposals"
         subtitle="Fee proposals from draft to approval — pipeline value, follow-ups, and win rate."

@@ -13,7 +13,7 @@ export default async function ProjectWorkspaceLayout({ children, params }: Layou
   if (!project) notFound();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="w-full space-y-5">
       <Link
         href="/projects"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

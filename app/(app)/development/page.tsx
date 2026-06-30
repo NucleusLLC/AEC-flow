@@ -11,7 +11,7 @@ export const metadata = { title: "Land Development · AEC-flow" };
 export default async function DevelopmentListPage() {
   const projects = await listDevelopmentProjects();
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold text-fg">

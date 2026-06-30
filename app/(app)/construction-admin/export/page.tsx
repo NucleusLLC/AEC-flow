@@ -49,7 +49,7 @@ export default async function ExportCenterPage() {
   const punchProjects = [...punchByProject.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-fg">Report Export Center</h2>
         <p className="text-sm text-muted">

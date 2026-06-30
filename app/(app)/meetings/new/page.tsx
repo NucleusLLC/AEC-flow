@@ -13,7 +13,7 @@ export default async function NewMeetingPage() {
   const users = team.map((u) => ({ name: u.name }));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href="/meetings"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

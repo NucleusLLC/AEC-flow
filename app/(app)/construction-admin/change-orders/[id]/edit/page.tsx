@@ -21,7 +21,7 @@ export default async function EditChangeOrderPage({ params }: PageProps) {
   const options = projects.map((p) => ({ id: p.id, name: p.name, value: p.value }));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <Link href={`/construction-admin/change-orders/${co.id}`} className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
         Back to change order

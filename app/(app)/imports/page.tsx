@@ -4,7 +4,7 @@ export const metadata = { title: "Import Data · AEC-flow" };
 
 export default function ImportsPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-fg">Import Clients</h2>
         <p className="text-sm text-muted">

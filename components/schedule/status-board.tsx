@@ -13,31 +13,31 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ScheduleHealth, TaskHealth } from "@/lib/data/schedule";
 
-// Dark-tinted alert strips so they read correctly in dark mode (the critical
-// state is a deep burgundy red, not a washed-out light pink).
+// Light mode keeps the original soft tints; dark mode uses deep tints (the
+// critical state is a burgundy red) so the strip isn't a washed-out light box.
 const OVERALL = {
   "on-track": {
     label: "ON TRACK",
     ring: "border-emerald-500",
-    chip: "bg-emerald-600",
-    text: "text-emerald-200",
-    bg: "bg-emerald-950",
+    chip: "bg-emerald-500",
+    text: "text-emerald-700 dark:text-emerald-200",
+    bg: "bg-emerald-50 dark:bg-emerald-950",
     Icon: ShieldCheck,
   },
   watch: {
     label: "SCHEDULE WATCH",
     ring: "border-amber-500",
     chip: "bg-amber-500",
-    text: "text-amber-200",
-    bg: "bg-amber-950",
+    text: "text-amber-700 dark:text-amber-200",
+    bg: "bg-amber-50 dark:bg-amber-950",
     Icon: Shield,
   },
   "at-risk": {
     label: "CRITICAL PATH AT RISK",
-    ring: "border-red-600",
-    chip: "bg-red-600",
-    text: "text-rose-100",
-    bg: "bg-rose-950",
+    ring: "border-red-500",
+    chip: "bg-red-500",
+    text: "text-red-700 dark:text-rose-100",
+    bg: "bg-red-50 dark:bg-rose-950",
     Icon: ShieldAlert,
   },
 } as const;
@@ -100,7 +100,7 @@ export function StatusBoard({
           <div className={cn("font-mono text-sm font-bold tracking-wide", o.text)}>
             {o.label}
           </div>
-          <div className="text-xs text-white/75">{headline}</div>
+          <div className="text-xs text-fg">{headline}</div>
         </div>
 
         <div className="ml-auto flex items-center gap-2">

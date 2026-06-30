@@ -21,7 +21,7 @@ export default async function AccountPage() {
   const beta = userId ? await getBetaMembership(userId) : null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-fg">My Account</h2>
         <p className="text-sm text-muted">Update your profile and sign-in password.</p>

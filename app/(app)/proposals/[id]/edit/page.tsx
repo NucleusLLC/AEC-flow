@@ -46,7 +46,7 @@ export default async function EditProposalPage({ params }: PageProps) {
   const backHref = `/proposals/${proposal.id}`;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

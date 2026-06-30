@@ -6,7 +6,7 @@ export const metadata = { title: "Widgets · AEC-flow" };
 
 export default function WidgetsPage() {
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
+    <div className="w-full space-y-5">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-fg">Widgets</h2>
         <p className="mt-1 text-sm text-muted">

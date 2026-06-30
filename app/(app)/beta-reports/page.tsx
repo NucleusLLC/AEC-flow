@@ -41,7 +41,7 @@ export default async function BetaReportsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="w-full space-y-5">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-fg">Beta Reports</h2>
         <p className="mt-1 text-sm text-muted">
