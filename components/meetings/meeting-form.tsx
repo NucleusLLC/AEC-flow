@@ -229,7 +229,7 @@ export function MeetingForm({
                 <label className={labelCls}>Participants (comma-separated)</label>
                 <input
                   className={inputCls}
-                  placeholder="Greg Lacle, Sara Khan, Client rep…"
+                  placeholder="e.g. Jane Smith, Site engineer, Client rep…"
                   {...register("participants")}
                 />
               </div>

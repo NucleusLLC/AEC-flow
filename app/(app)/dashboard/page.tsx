@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
 import { ArrowUpRight, ArrowDownRight, Minus, BarChart3 } from "lucide-react";
+import { authOptions } from "@/lib/auth";
+import { Greeting } from "@/components/dashboard/greeting";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
@@ -31,6 +34,8 @@ function TrendPill({ trend }: { trend?: Trend }) {
 export default async function DashboardPage() {
   const { stats, pipeline, projects, onLeave } = await getDashboardData();
   const recentActivity = await getRecentActivity(8);
+  const session = await getServerSession(authOptions);
+  const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? "";
   const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
   const pipelineMax = Math.max(...pipeline.map((s) => s.value));
 
@@ -39,7 +44,7 @@ export default async function DashboardPage() {
       {/* Greeting */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Good afternoon, Greg</h2>
+          <Greeting name={firstName} />
           <p className="text-sm text-muted">
             Here&apos;s what&apos;s happening across the practice today.
           </p>
