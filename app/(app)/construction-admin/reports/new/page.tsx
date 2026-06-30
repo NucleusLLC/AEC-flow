@@ -18,7 +18,7 @@ export default async function NewReportPage({ searchParams }: PageProps) {
   const defaultType = (VALID as string[]).includes(type ?? "") ? (type as CaReportType) : "WEEKLY";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <Link href="/construction-admin/reports" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
         Reports

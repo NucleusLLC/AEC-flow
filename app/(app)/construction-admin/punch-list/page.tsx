@@ -9,7 +9,7 @@ export const metadata = { title: "Punch List · AEC-flow" };
 export default async function PunchListPage() {
   const items = await listPunchItems();
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-fg">Punch List</h2>

@@ -31,7 +31,7 @@ export default async function RfiDetailPage({ params }: PageProps) {
   if (!rfi) notFound();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <Link href="/construction-admin/rfis" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
         RFIs

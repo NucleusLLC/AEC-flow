@@ -45,7 +45,7 @@ export default async function EditOrderPage({ params }: PageProps) {
   const backHref = `/orders/${order.id}`;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

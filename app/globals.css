@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Make `dark:` utilities respond to our `.dark` class (set by the theme toggle),
+ * not the OS prefers-color-scheme. Lets components opt into mode-specific colors. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * ZenArch AEC Suite — design tokens.
  *

@@ -10,7 +10,7 @@ export default async function NewOrderPage() {
   const clientNames = clients.map((c) => c.name);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href="/orders"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

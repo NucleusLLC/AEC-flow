@@ -25,7 +25,7 @@ function initials(name?: string | null): string {
   );
 }
 
-export function Sidebar({ version }: { version?: string }) {
+export function Sidebar({ version, collapsed = false }: { version?: string; collapsed?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user;
@@ -33,7 +33,12 @@ export function Sidebar({ version }: { version?: string }) {
   const roleLabel = user?.role ? ROLE_LABEL[user.role] ?? user.role : "Beta tester";
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-sidebar-fg md:flex print:!hidden">
+    <aside
+      className={cn(
+        "hidden shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-fg transition-[width] duration-200 ease-in-out md:flex print:!hidden",
+        collapsed ? "w-0" : "w-64",
+      )}
+    >
       {/* Brand */}
       <div className="flex h-16 items-center gap-3 px-5">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-[13px] font-bold text-brand-fg">

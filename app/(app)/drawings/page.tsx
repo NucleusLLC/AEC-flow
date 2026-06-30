@@ -10,7 +10,7 @@ export default async function DrawingsPage() {
   const [drawings, directory] = await Promise.all([getDrawings(), getProjectDirectory()]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-fg">Drawings</h2>

@@ -32,7 +32,7 @@ export default async function ExportsPage() {
   const PRINTABLE = new Set(["clients", "projects", "proposals", "orders", "team", "leave"]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-fg">Data Export</h2>
         <p className="text-sm text-muted">

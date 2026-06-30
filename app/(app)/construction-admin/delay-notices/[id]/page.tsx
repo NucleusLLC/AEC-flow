@@ -31,7 +31,7 @@ export default async function DelayNoticeDetailPage({ params }: PageProps) {
   if (!dn) notFound();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <Link href="/construction-admin/delay-notices" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
         Delay Notices

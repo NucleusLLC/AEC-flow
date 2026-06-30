@@ -67,7 +67,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
   const printHref = `/print/proposals/${proposal.id}`;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="w-full space-y-5">
       <Link
         href="/proposals"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-fg"

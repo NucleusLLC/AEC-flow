@@ -141,7 +141,7 @@ export default async function SearchPage({
   const totalResults = groups.reduce((n, g) => n + g.results.length, 0);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-fg">Search</h2>
         {q ? (

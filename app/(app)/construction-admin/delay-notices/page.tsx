@@ -9,7 +9,7 @@ export const metadata = { title: "Delay Notices · AEC-flow" };
 export default async function DelayNoticesPage() {
   const notices = await listDelayNotices();
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-fg">Delay Notices</h2>

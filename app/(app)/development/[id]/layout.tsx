@@ -14,7 +14,7 @@ export default async function DevelopmentWorkspaceLayout({ params, children }: P
   if (!project) notFound();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="w-full space-y-5">
       <Link href="/development" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" /> Land Development
       </Link>

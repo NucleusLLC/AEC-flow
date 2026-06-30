@@ -49,7 +49,7 @@ export default async function DashboardPage() {
   const pipelineMax = Math.max(...pipeline.map((s) => s.value));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       {/* Beta access countdown (beta testers only) */}
       {betaDaysLeft !== null && betaUntil ? (
         <div

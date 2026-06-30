@@ -6,7 +6,7 @@ export const metadata = { title: "New Client · AEC-flow" };
 
 export default function NewClientPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href="/clients"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

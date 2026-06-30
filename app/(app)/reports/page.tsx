@@ -87,7 +87,7 @@ export default async function ReportsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-fg">Reports</h2>

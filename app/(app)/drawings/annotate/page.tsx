@@ -6,7 +6,7 @@ export const metadata = { title: "Annotate · AEC-flow" };
 
 export default function AnnotatePage() {
   return (
-    <div className="mx-auto max-w-7xl space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-fg">Annotate drawing</h2>

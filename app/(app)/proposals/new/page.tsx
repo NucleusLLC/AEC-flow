@@ -33,7 +33,7 @@ export default async function NewProposalPage() {
   const clientOptions = clients.map((c) => ({ id: c.id, name: c.name }));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href="/proposals"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"

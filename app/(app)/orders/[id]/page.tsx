@@ -30,7 +30,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   if (!order) notFound();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <Link
         href="/orders"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
