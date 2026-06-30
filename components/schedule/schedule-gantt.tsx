@@ -776,7 +776,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                         className={cn(
                           "h-7 w-7 rounded text-[10px] font-medium transition-colors",
                           offDays.includes(i)
-                            ? "bg-slate-200 text-slate-700"
+                            ? "bg-surface-2 text-fg ring-1 ring-inset ring-border"
                             : "text-faint hover:bg-surface-2",
                         )}
                         title={d}
@@ -1063,7 +1063,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                     key={task.id}
                     className={cn(
                       "group flex items-center gap-1 border-b border-r border-border px-3",
-                      i % 2 === 1 && selId !== task.id && "bg-slate-100/80",
+                      i % 2 === 1 && selId !== task.id && "bg-surface-2/60",
                       selId === task.id && "bg-surface-2",
                     )}
                     style={{ height: ROW_H, paddingLeft: 12 + depth * 16 }}
@@ -1150,7 +1150,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 i % 2 === 1 ? (
                   <div
                     key={`z${i}`}
-                    className="absolute bg-slate-100/80"
+                    className="absolute bg-surface-2/60"
                     style={{ left: 0, top: HEADER_H + i * ROW_H, width: timelineWidth, height: ROW_H }}
                   />
                 ) : null,
