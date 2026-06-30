@@ -93,7 +93,7 @@ export function SignupForm() {
         <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
           className="mt-0.5 h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
         <span>
-          I understand my <strong className="font-medium text-fg">12 months of free beta access</strong> comes
+          I understand my <strong className="font-medium text-fg">6 months of free beta access</strong> comes
           with sharing feedback — reporting bugs and wishes via the in-app Feedback button.
         </span>
       </label>

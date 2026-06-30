@@ -25,7 +25,7 @@ export default function LoginPage() {
           <p className="mt-4 border-t border-border pt-4 text-center text-sm text-muted">
             New to AEC-flow?{" "}
             <Link href="/signup" className="font-medium text-brand hover:underline">
-              Join the beta — 12 months free
+              Join the beta — 6 months free
             </Link>
           </p>
         </div>
