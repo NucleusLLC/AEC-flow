@@ -8,7 +8,17 @@
 // Initialised once per process (server) and on the client by <SystemCurrencyInit>
 // from the value persisted in Settings → Practice. Single-tenant, so a module
 // global is the right fit; per-record currencies still override by passing `currency`.
-let SYSTEM_CURRENCY = "AED";
+//
+// IMPORTANT (RSC ordering): server pages render BEFORE the (app) layout's
+// setSystemCurrency runs, so on a cold render they'd format with this default.
+// Seed the default from the SYSTEM_CURRENCY env on the server so server-rendered
+// money (KPI tiles, etc.) matches the configured currency instead of falling back
+// to AED. The client still gets the live DB value via <SystemCurrencyInit>.
+const ENV_SYSTEM_CURRENCY =
+  typeof process !== "undefined" && /^[A-Za-z]{3}$/.test(process.env.SYSTEM_CURRENCY ?? "")
+    ? (process.env.SYSTEM_CURRENCY as string).toUpperCase()
+    : null;
+let SYSTEM_CURRENCY = ENV_SYSTEM_CURRENCY ?? "AED";
 export function setSystemCurrency(currency: string | null | undefined): void {
   if (currency && /^[A-Za-z]{3}$/.test(currency)) SYSTEM_CURRENCY = currency.toUpperCase();
 }
