@@ -2,18 +2,42 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { navSections } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: "Admin",
+  DIRECTOR: "Director",
+  MANAGER: "Manager",
+  STAFF: "Staff",
+  VIEWER: "Viewer",
+};
+
+function initials(name?: string | null): string {
+  if (!name) return "?";
+  return (
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("") || "?"
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const displayName = user?.name ?? "Account";
+  const roleLabel = user?.role ? ROLE_LABEL[user.role] ?? user.role : "Beta tester";
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-sidebar-fg md:flex print:!hidden">
       {/* Brand */}
       <div className="flex h-16 items-center gap-3 px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-brand-fg font-bold">
-          Z
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-[13px] font-bold text-brand-fg">
+          AF
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold text-white">AEC-flow</div>
@@ -80,15 +104,15 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* User */}
+      {/* User — the actual signed-in account */}
       <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-2 text-xs font-semibold text-white">
-            GL
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-2 text-xs font-semibold text-white">
+            {initials(user?.name)}
           </div>
           <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-medium text-white">Greg Lacle</div>
-            <div className="truncate text-[11px] text-sidebar-muted">Director</div>
+            <div className="truncate text-sm font-medium text-white">{displayName}</div>
+            <div className="truncate text-[11px] text-sidebar-muted">{roleLabel}</div>
           </div>
         </div>
       </div>
