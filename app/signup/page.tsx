@@ -5,7 +5,7 @@ import { SignupForm } from "@/components/auth/signup-form";
 export const metadata: Metadata = { title: "Join the Beta · AEC-flow" };
 
 const PERKS = [
-  "12 months of free access to the full suite",
+  "6 months of free access to the full suite",
   "Help shape the product — your bugs & wishes go straight to the team",
   "Early access to new modules as they ship",
 ];
@@ -24,7 +24,7 @@ export default function SignupPage() {
             Join the AEC-flow Beta
           </h1>
           <p className="mt-3 text-sm text-muted">
-            Get <strong className="text-fg">12 months free</strong> while we build. In return, we
+            Get <strong className="text-fg">6 months free</strong> while we build. In return, we
             ask one thing: tell us what&apos;s broken and what you wish it did — right inside the app.
           </p>
           <ul className="mt-6 space-y-3">
@@ -50,7 +50,7 @@ export default function SignupPage() {
           <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 shadow-sm">
             <h2 className="mb-1 text-lg font-semibold text-fg">Create your beta account</h2>
             <p className="mb-5 text-sm text-muted">
-              12 months free · feedback welcome anytime.
+              6 months free · feedback welcome anytime.
             </p>
             <SignupForm />
           </div>
