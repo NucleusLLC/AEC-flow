@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { getBetaMembership } from "@/lib/data/account";
+import { getServerT } from "@/lib/i18n/server";
 import { Greeting } from "@/components/dashboard/greeting";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ export default async function DashboardPage() {
       : null;
   const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
   const pipelineMax = Math.max(...pipeline.map((s) => s.value));
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
@@ -61,12 +63,12 @@ export default async function DashboardPage() {
         >
           <CalendarClock className={`h-4 w-4 shrink-0 ${betaDaysLeft <= 14 ? "text-amber-600" : "text-brand"}`} />
           <span>
-            <strong className="font-semibold">{betaDaysLeft} {betaDaysLeft === 1 ? "day" : "days"}</strong> left in your free beta access
+            <strong className="font-semibold">{betaDaysLeft} {betaDaysLeft === 1 ? "day" : "days"}</strong> {t("left in your free beta access")}
           </span>
           <span className={betaDaysLeft <= 14 ? "text-amber-700" : "text-muted"}>
             · through {betaUntil.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
           </span>
-          <span className="ml-auto text-xs text-muted">Tap “New Bug/Wish” anytime to send feedback.</span>
+          <span className="ml-auto text-xs text-muted">{t('Tap "New Bug/Wish" anytime to send feedback.')}</span>
         </div>
       ) : null}
 
@@ -75,7 +77,7 @@ export default async function DashboardPage() {
         <div>
           <Greeting name={firstName} />
           <p className="text-sm text-muted">
-            Here&apos;s what&apos;s happening across the practice today.
+            {t("Here's what's happening across the practice today.")}
           </p>
         </div>
         <Link
@@ -83,7 +85,7 @@ export default async function DashboardPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
           <BarChart3 className="h-4 w-4 text-muted" />
-          View reports
+          {t("View reports")}
         </Link>
       </div>
 
@@ -92,7 +94,7 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <Card key={stat.key} className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted">{stat.label}</span>
+              <span className="text-sm text-muted">{t(stat.label)}</span>
               <TrendPill trend={stat.trend} />
             </div>
             <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{stat.value}</div>
@@ -105,11 +107,11 @@ export default async function DashboardPage() {
         {/* Active projects */}
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Active Projects"
-            subtitle="Live delivery across the studio"
+            title={t("Active Projects")}
+            subtitle={t("Live delivery across the studio")}
             action={
               <Link href="/projects" className="text-xs font-medium text-brand hover:underline">
-                View all
+                {t("View all")}
               </Link>
             }
           />
@@ -148,11 +150,11 @@ export default async function DashboardPage() {
         {/* On leave today */}
         <Card>
           <CardHeader
-            title="Out of Office"
-            subtitle="On leave this week"
+            title={t("Out of Office")}
+            subtitle={t("On leave this week")}
             action={
               <Link href="/leave" className="text-xs font-medium text-brand hover:underline">
-                View all
+                {t("View all")}
               </Link>
             }
           />
@@ -177,14 +179,14 @@ export default async function DashboardPage() {
         {/* Proposals pipeline */}
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Proposals Pipeline"
+            title={t("Proposals Pipeline")}
             subtitle={`${formatCurrencyCompact(pipelineTotal)} across ${pipeline.reduce(
               (n, s) => n + s.count,
               0,
             )} proposals`}
             action={
               <Link href="/proposals" className="text-xs font-medium text-brand hover:underline">
-                View all
+                {t("View all")}
               </Link>
             }
           />
@@ -211,16 +213,16 @@ export default async function DashboardPage() {
         {/* Recent activity — real ActivityLog feed */}
         <Card>
           <CardHeader
-            title="Recent Activity"
+            title={t("Recent Activity")}
             action={
               <Link href="/activity" className="text-xs font-medium text-brand hover:underline">
-                View all
+                {t("View all")}
               </Link>
             }
           />
           <CardBody>
             {recentActivity.length === 0 ? (
-              <p className="text-sm text-muted">No recent activity.</p>
+              <p className="text-sm text-muted">{t("No recent activity.")}</p>
             ) : (
               <ol className="space-y-4">
                 {recentActivity.map((entry) => (

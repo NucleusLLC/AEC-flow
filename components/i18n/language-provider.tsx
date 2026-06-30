@@ -36,8 +36,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate after mount
-      if (isLang(saved)) setLangState(saved);
+      if (isLang(saved)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate after mount
+        setLangState(saved);
+        // Mirror to a cookie so SERVER components (page bodies) translate too.
+        document.cookie = `lang=${saved}; path=/; max-age=31536000; samesite=lax`;
+      }
     } catch {
       /* ignore */
     }
@@ -47,6 +51,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLangState(l);
     try {
       localStorage.setItem(STORAGE_KEY, l);
+      document.cookie = `lang=${l}; path=/; max-age=31536000; samesite=lax`;
     } catch {
       /* ignore */
     }
