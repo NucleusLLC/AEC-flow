@@ -9,6 +9,7 @@ import type { FooterSettings } from "@/lib/server/practice-config";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmailButton } from "@/components/email/email-button";
+import { SectionCopy } from "./section-copy";
 import {
   ESTIMATE_UNITS,
   type CostEstimate,
@@ -573,7 +574,14 @@ ${pcHideCss}`;
               </span>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <SectionCopy
+              categories={est.categories}
+              onPaste={(cats) => {
+                setEst((e) => ({ ...e, categories: [...e.categories, ...cats] }));
+                setSaved(false);
+              }}
+            />
             <EmailButton subject={`Estimate — ${est.projectName} (${est.version})`} attachment={`${est.projectName} — Estimate ${est.version}.pdf`} />
             <button onClick={() => setPreview(true)} type="button" className={ghostBtn}><Eye className="h-4 w-4" /> Preview &amp; Print</button>
             <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? "Saving…" : "Save"}</button>

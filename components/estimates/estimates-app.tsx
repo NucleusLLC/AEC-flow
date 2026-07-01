@@ -39,7 +39,29 @@ export function EstimatesApp({ projects, baseEstimate, priceBook, normSet, gener
           version: p.version,
           date: p.date,
           currency: p.currency || getSystemCurrency(),
-          categories: [],
+          // A brand-new estimate starts with one section + one placeholder line
+          // so there's something to build on (not a blank sheet).
+          categories: [
+            {
+              id: "sec-1",
+              name: "Section 1",
+              code: "",
+              items: [
+                {
+                  id: "item-1",
+                  task: "Etc.",
+                  qty: 0,
+                  unit: "",
+                  laborNorm: 0,
+                  materialUnitCost: 0,
+                  equipmentUnitCost: 0,
+                  subcontractUnitCost: 0,
+                  poc: 0,
+                  code: "",
+                },
+              ],
+            },
+          ],
         },
       );
     });
