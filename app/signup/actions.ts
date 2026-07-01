@@ -66,11 +66,25 @@ export async function registerBetaTester(input: {
     const now = new Date();
     const accessUntil = addMonths(now, BETA_ACCESS_MONTHS);
 
+    // Each signup gets its OWN isolated company (tenant); the beta window becomes
+    // the company's time-based license.
+    const co = await prisma.company.create({
+      data: {
+        name: company || `${name}'s company`,
+        plan: "BETA",
+        seatLimit: 5,
+        expiresAt: accessUntil,
+        modules: [],
+      },
+      select: { id: true },
+    });
+
     await prisma.user.create({
       data: {
         email,
         name,
         passwordHash,
+        companyId: co.id,
         role: "STAFF",
         status: "ACTIVE",
         // Beta-program metadata lives in the preferences JSON blob — no schema

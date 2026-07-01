@@ -126,11 +126,39 @@ enum ActionStatus {
   CANCELLED
 }
 
+enum CompanyPlan {
+  BETA
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+/// Tenant. Every company-owned row carries `companyId`; queries scope to the
+/// signed-in user's company so tenants never see each other's data.
+model Company {
+  id        String      @id @default(cuid())
+  name      String
+  slug      String?     @unique
+  plan      CompanyPlan @default(BETA)
+  seatLimit Int         @default(5) // license: max users
+  expiresAt DateTime? // license: time-based access window (null = no expiry)
+  modules   String[] // license: enabled module keys; empty = all modules
+  isFounder Boolean     @default(false) // the founder's own company
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  users User[]
+
+  @@map("companies")
+}
+
 model User {
   id              String      @id @default(cuid())
   email           String      @unique
   passwordHash    String?
   name            String
+  companyId       String?
+  company         Company?    @relation(fields: [companyId], references: [id])
   phone           String?
   avatarUrl       String?
   role            UserRole    @default(STAFF)
@@ -172,6 +200,7 @@ model Session {
 }
 
 model Client {
+  companyId String?
   id            String        @id @default(cuid())
   name          String
   companyName   String?
@@ -208,6 +237,7 @@ model ClientAddress {
 }
 
 model Proposal {
+  companyId String?
   id                String         @id @default(cuid())
   refNumber         String         @unique
   title             String
@@ -266,6 +296,7 @@ model ProposalMilestone {
 }
 
 model ProposalTemplate {
+  companyId String?
   id         String      @id @default(cuid())
   name       String
   discipline Discipline?
@@ -276,6 +307,7 @@ model ProposalTemplate {
 }
 
 model Order {
+  companyId String?
   id                String      @id @default(cuid())
   orderNumber       String      @unique
   clientId          String
@@ -300,6 +332,7 @@ model Order {
 }
 
 model Project {
+  companyId String?
   id            String        @id @default(cuid())
   projectNumber String        @unique
   name          String
@@ -376,6 +409,7 @@ model PhaseAssignment {
 }
 
 model MeetingMinute {
+  companyId String?
   id           String      @id @default(cuid())
   projectId    String
   authorId     String
@@ -410,6 +444,7 @@ model ActionItem {
 }
 
 model LeaveRequest {
+  companyId String?
   id         String      @id @default(cuid())
   userId     String
   type       LeaveType
@@ -451,6 +486,7 @@ model Attachment {
 }
 
 model ActivityLog {
+  companyId String?
   id         String   @id @default(cuid())
   userId     String
   action     String
@@ -587,6 +623,7 @@ enum PunchStatus {
 }
 
 model CaReport {
+  companyId String?
   id                    String         @id @default(cuid())
   projectId             String
   projectName           String?
@@ -622,6 +659,7 @@ model CaReport {
 }
 
 model ChangeOrder {
+  companyId String?
   id                        String            @id @default(cuid())
   projectId                 String
   projectName               String?
@@ -672,6 +710,7 @@ model ChangeOrder {
 }
 
 model RfiLog {
+  companyId String?
   id            String       @id @default(cuid())
   projectId     String
   projectName   String?
@@ -699,6 +738,7 @@ model RfiLog {
 }
 
 model SiteInstruction {
+  companyId String?
   id                  String                @id @default(cuid())
   projectId           String
   projectName         String?
@@ -723,6 +763,7 @@ model SiteInstruction {
 }
 
 model SubmittalLog {
+  companyId String?
   id               String          @id @default(cuid())
   projectId        String
   projectName      String?
@@ -747,6 +788,7 @@ model SubmittalLog {
 }
 
 model DelayNotice {
+  companyId String?
   id                String      @id @default(cuid())
   projectId         String
   projectName       String?
@@ -771,6 +813,7 @@ model DelayNotice {
 }
 
 model ProgressCertification {
+  companyId String?
   id                        String              @id @default(cuid())
   projectId                 String
   projectName               String?
@@ -802,6 +845,7 @@ model ProgressCertification {
 }
 
 model PunchListItem {
+  companyId String?
   id               String      @id @default(cuid())
   projectId        String
   projectName      String?
@@ -951,6 +995,7 @@ enum DevDocumentKind {
 }
 
 model DevelopmentProject {
+  companyId String?
   id                    String           @id @default(cuid())
   projectNumber         String           @unique
   name                  String
@@ -1204,6 +1249,7 @@ enum EstimateStatus {
 }
 
 model CostEstimate {
+  companyId String?
   id            String         @id @default(cuid())
   projectId     String?
   projectNumber String?
@@ -1274,6 +1320,7 @@ model EstimateItem {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model ProjectSchedule {
+  companyId String?
   id            String         @id @default(cuid())
   projectId     String         @unique
   projectNumber String
@@ -1322,6 +1369,7 @@ enum PriceKind {
 }
 
 model PriceItem {
+  companyId String?
   id        String    @id @default(cuid())
   kind      PriceKind
   code      String
@@ -1347,6 +1395,7 @@ model PriceItem {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model NormSetTask {
+  companyId String?
   id                  String  @id @default(cuid())
   trade               String
   task                String
@@ -1397,6 +1446,7 @@ enum DevSalesContractStatus {
 }
 
 model Vendor {
+  companyId String?
   id        String  @id @default(cuid())
   projectId String
   name      String
@@ -1498,6 +1548,7 @@ model SalesContract {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model GeneralConditionItem {
+  companyId String?
   id        String   @id @default(cuid())
   name      String
   unit      String
@@ -1519,6 +1570,7 @@ model GeneralConditionItem {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model EstimateTemplate {
+  companyId String?
   id          String   @id
   name        String
   description String   @default("")
@@ -1536,6 +1588,7 @@ model EstimateTemplate {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model WikiArticle {
+  companyId String?
   id        String   @id @default(cuid())
   title     String
   category  String
@@ -1583,6 +1636,7 @@ enum TaskStatus {
 }
 
 model Task {
+  companyId String?
   id        String     @id @default(cuid())
   title     String
   notes     String?
@@ -1603,6 +1657,7 @@ model Task {
 // which isn't writable on serverless. Single row keyed "singleton" today; becomes
 // per-company when multi-tenant. Read/written via lib/server/app-config-store.
 model AppConfig {
+  companyId String?
   id        String   @id
   data      Json
   updatedAt DateTime @updatedAt
