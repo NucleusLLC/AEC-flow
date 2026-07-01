@@ -53,6 +53,14 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.companyId = user.companyId ?? null;
+      } else if (token.id && token.companyId === undefined) {
+        // Token issued before multi-tenancy — backfill companyId so existing
+        // sessions don't scope to nothing after Phase 2 goes live.
+        const u = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { companyId: true },
+        });
+        token.companyId = u?.companyId ?? null;
       }
       return token;
     },
