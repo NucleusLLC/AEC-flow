@@ -9,7 +9,8 @@
 import { cookies } from "next/headers";
 import { DEFAULT_LANG, translate, type Lang } from "./dictionaries";
 
-const isLang = (v: unknown): v is Lang => v === "en" || v === "es" || v === "nl";
+const LANG_CODES = ["en", "es", "nl", "de", "zh", "pt"];
+const isLang = (v: unknown): v is Lang => typeof v === "string" && LANG_CODES.includes(v);
 
 export async function getServerLang(): Promise<Lang> {
   try {
