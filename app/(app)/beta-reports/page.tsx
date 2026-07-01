@@ -1,4 +1,5 @@
 import { Bug, Lightbulb, Inbox, MessageSquarePlus } from "lucide-react";
+import { getServerT } from "@/lib/i18n/server";
 import { Card } from "@/components/ui/card";
 import { BetaReportsView } from "@/components/beta-report/beta-reports-view";
 import { getBetaReports, summarizeBetaReports } from "@/lib/data/beta-reports";
@@ -6,6 +7,7 @@ import { getBetaReports, summarizeBetaReports } from "@/lib/data/beta-reports";
 export const metadata = { title: "Beta Reports · AEC-flow" };
 
 export default async function BetaReportsPage() {
+  const tr = await getServerT();
   const reports = await getBetaReports();
   const summary = await summarizeBetaReports(reports);
 
@@ -43,9 +45,9 @@ export default async function BetaReportsPage() {
   return (
     <div className="w-full space-y-5">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-fg">Beta Reports</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-fg">{tr("Beta Reports")}</h2>
         <p className="mt-1 text-sm text-muted">
-          Bug reports and wishes sent by beta testers from the in-app Feedback button.
+          {tr("Bug reports and wishes sent by beta testers from the in-app Feedback button.")}
         </p>
       </div>
 

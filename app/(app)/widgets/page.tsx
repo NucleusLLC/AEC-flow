@@ -1,16 +1,18 @@
 import { PunchClock } from "@/components/widgets/punch-clock";
+import { getServerT } from "@/lib/i18n/server";
 import { WorldClocks } from "@/components/widgets/world-clocks";
 import { KanbanBoard } from "@/components/widgets/kanban-board";
 
 export const metadata = { title: "Widgets · AEC-flow" };
 
-export default function WidgetsPage() {
+export default async function WidgetsPage() {
+  const tr = await getServerT();
   return (
     <div className="w-full space-y-5">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-fg">Widgets</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-fg">{tr("Widgets")}</h2>
         <p className="mt-1 text-sm text-muted">
-          Handy personal tools — punch clock, world clocks, and a quick Kanban board. Saved in your browser.
+          {tr("Handy personal tools — punch clock, world clocks, and a quick Kanban board. Saved in your browser.")}
         </p>
       </div>
 

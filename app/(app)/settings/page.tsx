@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { getServerT } from "@/lib/i18n/server";
 import { SettingsView } from "@/components/settings/settings-view";
 import { rolesFromMembers, type Member } from "@/lib/data/settings";
 import { getUserPreferences } from "@/lib/data/preferences";
@@ -12,6 +13,7 @@ import { authOptions } from "@/lib/auth";
 export const metadata = { title: "Settings · AEC-flow" };
 
 export default async function SettingsPage() {
+  const tr = await getServerT();
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
   const isFounder = isFounderEmail(session?.user?.email);
@@ -38,9 +40,9 @@ export default async function SettingsPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Settings</h2>
+        <h2 className="text-xl font-semibold text-fg">{tr("Settings")}</h2>
         <p className="text-sm text-muted">
-          Manage your practice profile, proposal templates, members, and preferences.
+          {tr("Manage your practice profile, proposal templates, members, and preferences.")}
         </p>
       </div>
 
