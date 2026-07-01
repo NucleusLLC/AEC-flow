@@ -11,6 +11,7 @@
 import bcrypt from "bcryptjs";
 import { addMonths } from "date-fns";
 import { prisma } from "@/lib/db";
+import { seedCompany } from "@/lib/data/company-seed";
 
 /** Free beta-access length, in months. (Local: a "use server" file may only
  * export async functions, so this stays module-private.) */
@@ -98,6 +99,9 @@ export async function registerBetaTester(input: {
         },
       },
     });
+
+    // Give the new company a little sample data so it isn't empty on first login.
+    await seedCompany(co.id);
 
     return { ok: true };
   } catch (e) {
