@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, X, Trash2, CalendarClock, User, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 import { saveTask, moveTask, removeTask } from "@/app/(app)/tasks/actions";
 import {
   TASK_STATUS_LABEL,
@@ -31,6 +32,7 @@ function isOverdue(due: string | null): boolean {
 
 export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
   const router = useRouter();
+  const tr = useT();
   const [pending, startTransition] = useTransition();
   const [drafts, setDrafts] = useState<Record<TaskStatus, string>>({ TODO: "", IN_PROGRESS: "", DONE: "" });
   const [dragId, setDragId] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
               className={cn("flex min-h-[200px] flex-col rounded-[var(--radius-card)] border border-t-2 border-border bg-surface-2/30 p-3", col.accent)}
             >
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-sm font-semibold text-fg">{TASK_STATUS_LABEL[col.id]}</span>
+                <span className="text-sm font-semibold text-fg">{tr(TASK_STATUS_LABEL[col.id])}</span>
                 <span className="rounded-full bg-surface px-1.5 text-[10px] text-muted ring-1 ring-border">{colTasks.length}</span>
               </div>
 
@@ -109,7 +111,7 @@ export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
                   value={drafts[col.id]}
                   onChange={(e) => setDrafts((d) => ({ ...d, [col.id]: e.target.value }))}
                   onKeyDown={(e) => { if (e.key === "Enter") quickAdd(col.id); }}
-                  placeholder="Add a task…"
+                  placeholder={tr("Add a task…")}
                   className="h-8 w-full rounded-md border border-border bg-surface px-2 text-sm text-fg outline-none placeholder:text-faint focus:ring-1 focus:ring-brand/30"
                 />
                 <button type="button" onClick={() => quickAdd(col.id)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-white hover:bg-brand/90" aria-label="Add task">
@@ -123,7 +125,7 @@ export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
 
       {pending ? (
         <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full bg-fg/80 px-3 py-1 text-xs text-white">
-          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Saving…
+          <Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> {tr("Saving…")}
         </div>
       ) : null}
 
@@ -143,6 +145,7 @@ function TaskEditor({ task, onClose, onDone }: { task: TaskItem; onClose: () => 
   const [assignee, setAssignee] = useState(task.assignee ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tr = useT();
 
   const save = async () => {
     setBusy(true); setError(null);
@@ -161,27 +164,27 @@ function TaskEditor({ task, onClose, onDone }: { task: TaskItem; onClose: () => 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-fg">Edit task</h3>
+          <h3 className="text-sm font-semibold text-fg">{tr("Edit task")}</h3>
           <button type="button" onClick={onClose} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-3">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={field} />
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Notes (optional)" className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20" />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={tr("Title")} className={field} />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder={tr("Notes (optional)")} className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20" />
           <div className="grid grid-cols-2 gap-3">
-            <label className="block"><span className="mb-1 block text-xs text-muted">Status</span>
+            <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Status")}</span>
               <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)} className={field}>
-                {(["TODO", "IN_PROGRESS", "DONE"] as TaskStatus[]).map((s) => <option key={s} value={s}>{TASK_STATUS_LABEL[s]}</option>)}
+                {(["TODO", "IN_PROGRESS", "DONE"] as TaskStatus[]).map((s) => <option key={s} value={s}>{tr(TASK_STATUS_LABEL[s])}</option>)}
               </select>
             </label>
-            <label className="block"><span className="mb-1 block text-xs text-muted">Priority</span>
+            <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Priority")}</span>
               <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className={field}>
                 {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p.toLowerCase()}</option>)}
               </select>
             </label>
-            <label className="block"><span className="mb-1 block text-xs text-muted">Due date</span>
+            <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Due date")}</span>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={field} />
             </label>
-            <label className="block"><span className="mb-1 block text-xs text-muted">Assignee</span>
+            <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Assignee")}</span>
               <input value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="Name" className={field} />
             </label>
           </div>
@@ -189,10 +192,10 @@ function TaskEditor({ task, onClose, onDone }: { task: TaskItem; onClose: () => 
         </div>
         <div className="mt-4 flex items-center justify-between">
           <button type="button" onClick={del} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">
-            <Trash2 className="h-4 w-4" /> Delete
+            <Trash2 className="h-4 w-4" /> {tr("Delete")}
           </button>
           <button type="button" onClick={save} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-1.5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {tr("Save")}
           </button>
         </div>
       </div>
