@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
 import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ClientsView } from "@/components/clients/clients-view";
@@ -8,6 +9,7 @@ import { formatCurrencyCompact } from "@/lib/format";
 export const metadata = { title: "Clients · AEC-flow" };
 
 export default async function ClientsPage() {
+  const tr = await getServerT();
   const clients = await getClients();
   const summary = summarizeClients(clients);
 
@@ -22,9 +24,9 @@ export default async function ClientsPage() {
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Clients</h2>
+          <h2 className="text-xl font-semibold text-fg">{tr("Clients")}</h2>
           <p className="text-sm text-muted">
-            Developers, government bodies, and private accounts — and their full proposal-to-project history.
+            {tr("Developers, government bodies, and private accounts — and their full proposal-to-project history.")}
           </p>
         </div>
         <Link

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
 import { Upload, PenTool } from "lucide-react";
 import { DrawingsApp } from "@/components/drawings/drawings-app";
 import { getDrawings } from "@/lib/data/drawings";
@@ -7,15 +8,16 @@ import { getProjectDirectory } from "@/lib/data/projects";
 export const metadata = { title: "Drawings · AEC-flow" };
 
 export default async function DrawingsPage() {
+  const tr = await getServerT();
   const [drawings, directory] = await Promise.all([getDrawings(), getProjectDirectory()]);
 
   return (
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Drawings</h2>
+          <h2 className="text-xl font-semibold text-fg">{tr("Drawings")}</h2>
           <p className="text-sm text-muted">
-            Pick a project to open its drawing set — every plan and sheet by discipline and revision.
+            {tr("Pick a project to open its drawing set — every plan and sheet by discipline and revision.")}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

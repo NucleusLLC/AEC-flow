@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { getServerT } from "@/lib/i18n/server";
 import { EmailButton } from "@/components/email/email-button";
 import { ReportsCharts, type NameValue, type MonthValue } from "@/components/reports/reports-charts";
 import {
@@ -22,6 +23,7 @@ export const metadata = { title: "Reports · AEC-flow" };
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default async function ReportsPage() {
+  const tr = await getServerT();
   const [proposals, projects] = await Promise.all([getProposals(), getProjects()]);
   const propSummary = summarizeProposals(proposals);
   const projSummary = summarizeProjects(projects);
@@ -90,9 +92,9 @@ export default async function ReportsPage() {
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Reports</h2>
+          <h2 className="text-xl font-semibold text-fg">{tr("Reports")}</h2>
           <p className="text-sm text-muted">
-            Practice analytics across proposals and project delivery.
+            {tr("Practice analytics across proposals and project delivery.")}
           </p>
         </div>
         <EmailButton subject="AEC-flow — Practice Report" attachment="Practice Report.pdf" />

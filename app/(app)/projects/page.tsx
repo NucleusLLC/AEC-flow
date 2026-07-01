@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
 import { Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ProjectsView } from "@/components/projects/projects-view";
@@ -8,6 +9,7 @@ import { formatCurrencyCompact } from "@/lib/format";
 export const metadata = { title: "Projects · AEC-flow" };
 
 export default async function ProjectsPage() {
+  const tr = await getServerT();
   const projects = await getProjects();
   const summary = summarizeProjects(projects);
 
@@ -26,9 +28,9 @@ export default async function ProjectsPage() {
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Projects</h2>
+          <h2 className="text-xl font-semibold text-fg">{tr("Projects")}</h2>
           <p className="text-sm text-muted">
-            Live delivery across disciplines — phases, progress, and project teams.
+            {tr("Live delivery across disciplines — phases, progress, and project teams.")}
           </p>
         </div>
         <Link

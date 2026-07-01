@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
 import {
   FileSignature,
   MessageSquareWarning,
@@ -37,6 +38,7 @@ function ToneIcon({ tone }: { tone?: "up" | "down" | "flat" }) {
 }
 
 export default async function ConstructionAdminPage() {
+  const tr = await getServerT();
   const [dash, changeOrders, rfis, certs, punchItems] = await Promise.all([
     getCaDashboard(),
     listChangeOrders(),
@@ -81,9 +83,9 @@ export default async function ConstructionAdminPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Construction Administration &amp; Reporting</h2>
+        <h2 className="text-xl font-semibold text-fg">{tr("Construction Administration & Reporting")}</h2>
         <p className="text-sm text-muted">
-          Project controls across change orders, RFIs, progress reports and lender certifications.
+          {tr("Project controls across change orders, RFIs, progress reports and lender certifications.")}
         </p>
       </div>
 

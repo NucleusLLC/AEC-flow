@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
 import { Plus, NotebookPen, CalendarRange, ListChecks } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { MeetingsView } from "@/components/meetings/meetings-view";
@@ -7,6 +8,7 @@ import { getMeetings, summarizeMeetings } from "@/lib/data/meetings";
 export const metadata = { title: "Meeting Minutes · AEC-flow" };
 
 export default async function MeetingsPage() {
+  const tr = await getServerT();
   const meetings = await getMeetings();
   const summary = summarizeMeetings(meetings);
 
@@ -38,9 +40,9 @@ export default async function MeetingsPage() {
     <div className="w-full space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-fg">Meeting Minutes</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-fg">{tr("Meeting Minutes")}</h2>
           <p className="mt-1 text-sm text-muted">
-            Record meetings, decisions, and follow-up actions across every project.
+            {tr("Record meetings, decisions, and follow-up actions across every project.")}
           </p>
         </div>
         <Link

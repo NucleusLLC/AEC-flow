@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
 import { Plus, TrendingUp, Clock3, Trophy, Percent } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeading } from "@/components/proposals/ui";
@@ -9,6 +10,7 @@ import { formatCurrencyCompact } from "@/lib/format";
 export const metadata = { title: "Proposals · AEC-flow" };
 
 export default async function ProposalsPage() {
+  const tr = await getServerT();
   const proposals = await getProposalRecords();
   const summary = summarizeProposals(proposals);
 
@@ -40,8 +42,8 @@ export default async function ProposalsPage() {
   return (
     <div className="w-full space-y-5">
       <PageHeading
-        title="Proposals"
-        subtitle="Fee proposals from draft to approval — pipeline value, follow-ups, and win rate."
+        title={tr("Proposals")}
+        subtitle={tr("Fee proposals from draft to approval — pipeline value, follow-ups, and win rate.")}
       >
         <Link
           href="/proposals/new"

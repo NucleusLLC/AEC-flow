@@ -6,6 +6,7 @@ import { getGeneralConditions } from "@/lib/data/general-conditions-db";
 import { getTemplates } from "@/lib/data/estimate-templates";
 import { getWikiArticles } from "@/lib/data/estimating-wiki-db";
 import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Cost Estimation · AEC-flow" };
 
@@ -20,14 +21,16 @@ export default async function EstimatesPage() {
     getWikiArticles(),
     getPracticeSettings(),
   ]);
+  const tr = await getServerT();
 
   return (
-    <div className="mx-auto max-w-[1280px] space-y-6">
+    <div className="w-full space-y-6">
       <div className="no-print">
-        <h2 className="text-xl font-semibold text-fg">Cost Estimation</h2>
+        <h2 className="text-xl font-semibold text-fg">{tr("Cost Estimation")}</h2>
         <p className="text-sm text-muted">
-          Select a project to open its bill-of-quantities estimate — labor norms, materials, equipment and
-          subcontractor costs roll up by section, with profit and overhead applied to the total.
+          {tr(
+            "Select a project to open its bill-of-quantities estimate — labor norms, materials, equipment and subcontractor costs roll up by section, with profit and overhead applied to the total.",
+          )}
         </p>
       </div>
 
