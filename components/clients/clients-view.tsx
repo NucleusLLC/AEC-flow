@@ -13,6 +13,7 @@ import {
 } from "@/lib/data/clients.types";
 import { formatCurrencyCompact, formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 
 type SortKey = "recent" | "name" | "pipeline";
 
@@ -24,6 +25,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | ClientStatus; label: string }> = [
 ];
 
 export function ClientsView({ clients }: { clients: ClientListItem[] }) {
+  const tr = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | ClientStatus>("ALL");
   const [type, setType] = useState<"ALL" | ClientType>("ALL");
@@ -65,7 +67,7 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {tr(f.label)}
             </button>
           ))}
         </div>
@@ -77,7 +79,7 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search clients…"
+              placeholder={tr("Search clients…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -86,10 +88,10 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
             onChange={(e) => setType(e.target.value as "ALL" | ClientType)}
             className="h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
-            <option value="ALL">All types</option>
+            <option value="ALL">{tr("All types")}</option>
             {(Object.keys(CLIENT_TYPE_LABEL) as ClientType[]).map((t) => (
               <option key={t} value={t}>
-                {CLIENT_TYPE_LABEL[t]}
+                {tr(CLIENT_TYPE_LABEL[t])}
               </option>
             ))}
           </select>
@@ -100,9 +102,9 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="h-9 rounded-lg border border-border bg-surface pl-7 pr-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             >
-              <option value="recent">Recent activity</option>
-              <option value="name">Name A–Z</option>
-              <option value="pipeline">Pipeline value</option>
+              <option value="recent">{tr("Recent activity")}</option>
+              <option value="name">{tr("Name A–Z")}</option>
+              <option value="pipeline">{tr("Pipeline value")}</option>
             </select>
           </div>
         </div>
@@ -114,13 +116,13 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Client</th>
-                <th className="px-3 py-2.5 font-medium">Type</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium">Location</th>
-                <th className="px-3 py-2.5 font-medium text-center">Projects</th>
-                <th className="px-3 py-2.5 font-medium text-right">Pipeline</th>
-                <th className="px-5 py-2.5 font-medium text-right">Last activity</th>
+                <th className="px-5 py-2.5 font-medium">{tr("Client")}</th>
+                <th className="px-3 py-2.5 font-medium">{tr("Type")}</th>
+                <th className="px-3 py-2.5 font-medium">{tr("Status")}</th>
+                <th className="px-3 py-2.5 font-medium">{tr("Location")}</th>
+                <th className="px-3 py-2.5 font-medium text-center">{tr("Projects")}</th>
+                <th className="px-3 py-2.5 font-medium text-right">{tr("Pipeline")}</th>
+                <th className="px-5 py-2.5 font-medium text-right">{tr("Last activity")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -171,7 +173,7 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <Building2 className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No clients match your filters</p>
+            <p className="text-sm font-medium text-fg">{tr("No clients match your filters")}</p>
             <p className="text-xs text-muted">Try a different search term or clear the filters.</p>
           </div>
         ) : null}
