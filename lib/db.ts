@@ -102,6 +102,44 @@ const createPrismaClient = () =>
           }
           return query(args);
         },
+        // Single-row writes: add companyId to the unique where (Prisma
+        // extendedWhereUnique). Targeting another tenant's row by id then yields
+        // "record not found" instead of mutating it.
+        async update({ model, args, query }) {
+          if (TENANT_MODELS.has(model)) {
+            const cid = await currentCompanyId();
+            if (cid !== undefined && args.where) (args.where as Record<string, unknown>).companyId = cid;
+          }
+          return query(args);
+        },
+        async delete({ model, args, query }) {
+          if (TENANT_MODELS.has(model)) {
+            const cid = await currentCompanyId();
+            if (cid !== undefined && args.where) (args.where as Record<string, unknown>).companyId = cid;
+          }
+          return query(args);
+        },
+        async upsert({ model, args, query }) {
+          if (TENANT_MODELS.has(model)) {
+            const cid = await currentCompanyId();
+            if (cid !== undefined && args.where) (args.where as Record<string, unknown>).companyId = cid;
+            if (cid) {
+              const create = args.create as Record<string, unknown> | undefined;
+              if (create && create.companyId === undefined) create.companyId = cid;
+            }
+          }
+          return query(args);
+        },
+        async findUniqueOrThrow({ model, args, query }) {
+          const row = await query(args);
+          if (!TENANT_MODELS.has(model) || !row) return row;
+          const cid = await currentCompanyId();
+          if (cid === undefined) return row;
+          if ((row as { companyId?: string | null }).companyId !== cid) {
+            throw new Error(`No ${model} found for this company`);
+          }
+          return row;
+        },
       },
     },
   });
