@@ -34,3 +34,29 @@ export async function getCurrentTenant(): Promise<CurrentTenant> {
   const companyId = session?.user?.companyId ?? (await getCurrentCompanyId());
   return { companyId, isFounder };
 }
+
+export type CompanyLicense = {
+  id: string;
+  name: string;
+  plan: string;
+  seatLimit: number;
+  expiresAt: Date | null;
+  modules: string[];
+  isFounder: boolean;
+};
+
+/** The signed-in user's company row (license fields), or null. */
+export async function getCurrentCompany(): Promise<CompanyLicense | null> {
+  const cid = await getCurrentCompanyId();
+  if (!cid) return null;
+  return prisma.company.findUnique({
+    where: { id: cid },
+    select: { id: true, name: true, plan: true, seatLimit: true, expiresAt: true, modules: true, isFounder: true },
+  });
+}
+
+/** A company's license has lapsed (founder companies never expire). */
+export function isLicenseExpired(company: Pick<CompanyLicense, "expiresAt" | "isFounder"> | null): boolean {
+  if (!company || company.isFounder) return false;
+  return company.expiresAt != null && company.expiresAt.getTime() < Date.now();
+}

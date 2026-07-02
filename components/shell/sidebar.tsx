@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { ShieldCheck } from "lucide-react";
 import { navSections } from "@/lib/nav";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ function initials(name?: string | null): string {
   );
 }
 
-export function Sidebar({ version, collapsed = false }: { version?: string; collapsed?: boolean }) {
+export function Sidebar({ version, collapsed = false, isFounder = false }: { version?: string; collapsed?: boolean; isFounder?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const t = useT();
@@ -110,6 +111,19 @@ export function Sidebar({ version, collapsed = false }: { version?: string; coll
           </div>
         ))}
       </nav>
+
+      {/* Founder super-admin — cross-company management (founder only) */}
+      {isFounder ? (
+        <div className="border-t border-white/10 px-3 py-2">
+          <Link
+            href="/admin"
+            className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-amber-300/90 hover:bg-white/5 hover:text-amber-200"
+          >
+            <ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />
+            {t("Admin")}
+          </Link>
+        </div>
+      ) : null}
 
       {/* User — the actual signed-in account */}
       <div className="border-t border-white/10 p-3">
