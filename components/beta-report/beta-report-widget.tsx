@@ -177,7 +177,7 @@ export function BetaReportWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition-transform hover:scale-[1.03] active:scale-95"
+          className="fixed bottom-5 right-24 z-40 inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition-transform hover:scale-[1.03] active:scale-95"
           aria-label="Report a new bug or wish"
         >
           <MessageSquarePlus className="h-4 w-4" />

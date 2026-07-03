@@ -11,6 +11,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getCurrentCompanyId } from "@/lib/server/tenant";
 
 export * from "./proposals.types";
 import type {
@@ -143,10 +144,13 @@ export async function getProposalRecords(): Promise<ProposalRecord[]> {
  * ────────────────────────────────────────────────────────────────────────── */
 
 async function resolveOwnerId(name: string): Promise<string> {
-  const byName = await prisma.user.findFirst({ where: { name }, select: { id: true } });
+  // Resolve within the current company only (User isn't tenant-scoped by the extension).
+  const companyId = await getCurrentCompanyId();
+  const byName = await prisma.user.findFirst({ where: { name, companyId }, select: { id: true } });
   if (byName) return byName.id;
-  // Fall back to a senior user so a write never fails on an unmatched name.
+  // Fall back to a senior user in this company so a write never fails on an unmatched name.
   const fallback = await prisma.user.findFirst({
+    where: { companyId },
     orderBy: { role: "asc" },
     select: { id: true },
   });
