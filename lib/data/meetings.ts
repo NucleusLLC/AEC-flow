@@ -9,6 +9,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getCurrentCompanyId } from "@/lib/server/tenant";
 
 export * from "./meetings.types";
 import {
@@ -147,10 +148,12 @@ export async function getMeeting(id: string): Promise<MeetingRecord | null> {
  * ────────────────────────────────────────────────────────────────────────── */
 
 async function resolveOwnerId(name: string): Promise<string> {
-  const byName = await prisma.user.findFirst({ where: { name }, select: { id: true } });
+  const companyId = await getCurrentCompanyId();
+  const byName = await prisma.user.findFirst({ where: { name, companyId }, select: { id: true } });
   if (byName) return byName.id;
-  // Fall back to a senior user so a write never fails on an unmatched name.
+  // Fall back to a senior user in this company so a write never fails on an unmatched name.
   const fallback = await prisma.user.findFirst({
+    where: { companyId },
     orderBy: { role: "asc" },
     select: { id: true },
   });

@@ -10,6 +10,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { getSystemCurrency } from "@/lib/format";
 import type {
   Discipline,
@@ -185,9 +186,11 @@ async function resolveClientId(name: string): Promise<string> {
  * unmatched name; throws only if no users exist at all.
  */
 async function resolveManagerId(name: string): Promise<string> {
-  const byName = await prisma.user.findFirst({ where: { name }, select: { id: true } });
+  const companyId = await getCurrentCompanyId();
+  const byName = await prisma.user.findFirst({ where: { name, companyId }, select: { id: true } });
   if (byName) return byName.id;
   const fallback = await prisma.user.findFirst({
+    where: { companyId },
     orderBy: { role: "asc" },
     select: { id: true },
   });

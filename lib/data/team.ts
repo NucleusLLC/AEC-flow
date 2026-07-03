@@ -4,6 +4,8 @@
  */
 
 import { prisma } from "@/lib/db";
+import { getCurrentCompanyId } from "@/lib/server/tenant";
+import { getSeatUsage } from "@/lib/data/invitations";
 import type {
   UserRole,
   Discipline,
@@ -32,7 +34,11 @@ export async function getTeam(): Promise<TeamMember[]> {
     VIEWER: 4,
   };
 
+  // User is intentionally excluded from the tenant query extension (login looks
+  // users up by email pre-session), so member lists MUST scope by company here.
+  const companyId = await getCurrentCompanyId();
   const users = await prisma.user.findMany({
+    where: { companyId },
     include: {
       managedProjects: true,
       phases: { include: { phase: true } },
@@ -113,12 +119,14 @@ function memberScalars(input: MemberInput) {
 }
 
 export async function createMember(input: MemberInput): Promise<{ id: string }> {
-  const u = await prisma.user.create({ data: memberScalars(input) });
+  const companyId = await getCurrentCompanyId();
+  const u = await prisma.user.create({ data: { ...memberScalars(input), companyId } });
   return { id: u.id };
 }
 
 export async function updateMember(id: string, input: MemberInput): Promise<{ id: string }> {
-  const u = await prisma.user.update({ where: { id }, data: memberScalars(input) });
+  const companyId = await getCurrentCompanyId();
+  const u = await prisma.user.update({ where: { id, companyId }, data: memberScalars(input) });
   return { id: u.id };
 }
 
@@ -154,8 +162,13 @@ function writeScalars(input: TeamMemberWriteInput) {
 
 /** Create a user from the member form; lets Prisma generate the cuid id. */
 export async function createTeamMember(input: TeamMemberWriteInput): Promise<string> {
+  const usage = await getSeatUsage();
+  if (usage.available <= 0) {
+    throw new Error("No seats available — raise the seat limit or free a seat before adding a member.");
+  }
+  const companyId = await getCurrentCompanyId();
   const u = await prisma.user.create({
-    data: { ...writeScalars(input), passwordHash: null },
+    data: { ...writeScalars(input), passwordHash: null, companyId },
   });
   return u.id;
 }
@@ -163,8 +176,9 @@ export async function createTeamMember(input: TeamMemberWriteInput): Promise<str
 /** Update an existing user from the member form. */
 export async function updateTeamMember(input: TeamMemberWriteInput): Promise<string> {
   if (!input.id) throw new Error("A member id is required to update.");
+  const companyId = await getCurrentCompanyId();
   const u = await prisma.user.update({
-    where: { id: input.id },
+    where: { id: input.id, companyId },
     data: writeScalars(input),
   });
   return u.id;
@@ -172,17 +186,20 @@ export async function updateTeamMember(input: TeamMemberWriteInput): Promise<str
 
 /** Settings → Members & Roles: change just a member's role. */
 export async function setMemberRole(id: string, role: UserRole): Promise<void> {
-  await prisma.user.update({ where: { id }, data: { role } });
+  const companyId = await getCurrentCompanyId();
+  await prisma.user.update({ where: { id, companyId }, data: { role } });
 }
 
 /** Settings → Members & Roles: change just a member's status. */
 export async function setMemberStatus(id: string, status: UserStatus): Promise<void> {
-  await prisma.user.update({ where: { id }, data: { status } });
+  const companyId = await getCurrentCompanyId();
+  await prisma.user.update({ where: { id, companyId }, data: { status } });
 }
 
 export async function getTeamMember(id: string): Promise<TeamMemberRecord | null> {
-  const u = await prisma.user.findUnique({
-    where: { id },
+  const companyId = await getCurrentCompanyId();
+  const u = await prisma.user.findFirst({
+    where: { id, companyId },
     include: {
       managedProjects: true,
       phases: { include: { phase: { include: { project: true } } } },

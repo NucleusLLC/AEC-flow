@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { TODAY, isOut } from "./leave.types";
 import type {
   LeaveRequest,
@@ -122,7 +123,8 @@ function inclusiveDays(start: Date, end: Date): number {
 }
 
 export async function createLeave(input: LeaveInput): Promise<{ id: string }> {
-  const user = await prisma.user.findFirst({ where: { name: input.userName } });
+  const companyId = await getCurrentCompanyId();
+  const user = await prisma.user.findFirst({ where: { name: input.userName, companyId } });
   if (!user) throw new Error(`Unknown team member: ${input.userName}`);
 
   const startDate = new Date(input.startDate);
@@ -154,9 +156,11 @@ export async function createLeave(input: LeaveInput): Promise<{ id: string }> {
  * unmatched name. Mirrors resolveOwnerId() in lib/data/proposals.ts.
  */
 async function resolveLeaveUserId(name: string): Promise<string> {
-  const byName = await prisma.user.findFirst({ where: { name }, select: { id: true } });
+  const companyId = await getCurrentCompanyId();
+  const byName = await prisma.user.findFirst({ where: { name, companyId }, select: { id: true } });
   if (byName) return byName.id;
   const fallback = await prisma.user.findFirst({
+    where: { companyId },
     orderBy: { role: "asc" },
     select: { id: true },
   });

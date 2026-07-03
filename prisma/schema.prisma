@@ -152,6 +152,31 @@ model Company {
   @@map("companies")
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+/// A pending teammate invite into a company. NOT tenant-scoped by the query
+/// extension: the accept flow looks it up by token before the invitee has a
+/// session. Owner-facing lists scope by companyId in the data layer.
+model Invitation {
+  id            String           @id @default(cuid())
+  companyId     String
+  email         String
+  role          UserRole         @default(STAFF)
+  token         String           @unique
+  status        InvitationStatus @default(PENDING)
+  invitedByName String?
+  createdAt     DateTime         @default(now())
+  expiresAt     DateTime?
+  acceptedAt    DateTime?
+
+  @@index([companyId])
+  @@map("invitations")
+}
+
 model User {
   id              String      @id @default(cuid())
   email           String      @unique

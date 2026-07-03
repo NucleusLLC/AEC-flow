@@ -2,12 +2,20 @@ import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { TeamView } from "@/components/team/team-view";
+import { TeamInvites } from "@/components/team/team-invites";
 import { getTeam, summarizeTeam } from "@/lib/data/team";
+import { getSeatUsage, listInvitations } from "@/lib/data/invitations";
 
 export const metadata = { title: "Team · AEC-flow" };
 
+export const dynamic = "force-dynamic";
+
 export default async function TeamPage() {
-  const members = await getTeam();
+  const [members, seatUsage, invitations] = await Promise.all([
+    getTeam(),
+    getSeatUsage(),
+    listInvitations(),
+  ]);
   const summary = summarizeTeam(members);
 
   const tiles = [
@@ -48,6 +56,8 @@ export default async function TeamPage() {
           </Card>
         ))}
       </div>
+
+      <TeamInvites seatUsage={seatUsage} invitations={invitations} />
 
       <TeamView members={members} />
     </div>
