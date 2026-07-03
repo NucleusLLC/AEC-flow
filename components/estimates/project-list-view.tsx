@@ -15,7 +15,7 @@ const statusTone: Record<EstimateProject["status"], "slate" | "amber" | "green">
   approved: "green",
 };
 
-export function ProjectListView({ projects, onSelect }: { projects: EstimateProject[]; onSelect: (p: EstimateProject) => void }) {
+export function ProjectListView({ projects, startProjects = [], onSelect }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; onSelect: (p: EstimateProject) => void }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "date", dir: -1 });
   const [newOpen, setNewOpen] = useState(false);
@@ -57,10 +57,12 @@ export function ProjectListView({ projects, onSelect }: { projects: EstimateProj
                 <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-faint">
                   Choose a project to estimate
                 </div>
-                {projects.length === 0 ? (
-                  <div className="px-3 py-4 text-sm text-muted">No projects available.</div>
+                {startProjects.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-muted">
+                    Every project already has an estimate. Create the project first under Projects.
+                  </div>
                 ) : (
-                  projects.map((p) => (
+                  startProjects.map((p) => (
                     <button
                       key={p.id}
                       type="button"
