@@ -15,7 +15,7 @@ import { EstimateWorkspace } from "./estimate-workspace";
 
 type PriceBook = { materials: PriceItem[]; equipment: PriceItem[] };
 
-export function EstimatesApp({ projects, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, logoDataUrl, footer }: { projects: EstimateProject[]; baseEstimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: FooterSettings }) {
+export function EstimatesApp({ projects, startProjects, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, logoDataUrl, footer }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; baseEstimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: FooterSettings }) {
   const [selected, setSelected] = useState<EstimateProject | null>(null);
   // The selected estimate's OWN persisted sheet (loaded by id), not the base seed.
   const [working, setWorking] = useState<CostEstimate | null>(null);
@@ -73,7 +73,7 @@ export function EstimatesApp({ projects, baseEstimate, priceBook, normSet, gener
   };
 
   if (!selected) {
-    return <ProjectListView projects={projects} onSelect={openProject} />;
+    return <ProjectListView projects={projects} startProjects={startProjects ?? []} onSelect={openProject} />;
   }
 
   return (
