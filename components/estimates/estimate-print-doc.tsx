@@ -189,11 +189,15 @@ function buildPageSettings(
     // −1px so a rounded-up page can never exceed the physical sheet and spill a
     // blank page after each page when printing.
     pageHeight: Math.round(hMm * MM) - 1,
-    // Tight top margin — the header reserves only what the logo/title need.
-    marginTop: Math.round(4 * MM) - 5,
+    // Printer-safe margins. Physical printers have a ~5–8mm non-printable hardware
+    // border; with @page margin:0 (the engine owns layout), content inside this
+    // border would be clipped or rescaled on paper even though a PDF looks fine.
+    // Insetting content ≥8mm keeps it inside any printer's printable area, so the
+    // printout matches the preview/PDF exactly.
+    marginTop: Math.round(8 * MM),
     marginBottom: Math.round(11 * MM),
-    marginLeft: Math.round(7 * MM),
-    marginRight: Math.round(7 * MM),
+    marginLeft: Math.round(8 * MM),
+    marginRight: Math.round(8 * MM),
     headerHeight: Math.round(profile.titleHeight + profile.lineHeight * 2 + profile.verticalPadding * 3),
     footerHeight: Math.round(profile.lineHeight + profile.verticalPadding * 2),
   };
