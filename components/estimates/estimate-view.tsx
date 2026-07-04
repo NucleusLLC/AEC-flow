@@ -76,9 +76,13 @@ type EstimateViewProps = {
   logoDataUrl?: string | null;
   footer?: FooterSettings;
   newId: (p: string) => string;
+  /** Preview/print overlay is controlled by the parent so the workspace "Export"
+   * button opens the SAME EstimatePrintDoc — one renderer, so preview == print. */
+  preview: boolean;
+  setPreview: (v: boolean) => void;
 };
 
-export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, materials, equipment, schedule, payment, logoDataUrl, footer, newId }: EstimateViewProps) {
+export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, materials, equipment, schedule, payment, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -91,7 +95,6 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   // Optional secondary unit: show the grand total (and per-m² total) in USD too.
   const [usdSecondary, setUsdSecondary] = useState(false);
   const [usdRate, setUsdRate] = useState(1); // 1 {est.currency} = usdRate USD
-  const [preview, setPreview] = useState(false);
   const [paper, setPaper] = useState<"A4" | "A3">("A3");
   const [orient, setOrient] = useState<"landscape" | "portrait">("landscape");
   const [pvZoom, setPvZoom] = useState(0.65);
@@ -299,7 +302,14 @@ ${pageNumBoxes}
 .previewing .est-card table th, .previewing .est-card table td { font-size: ${printFont}px !important; padding-top: ${printPad}px !important; padding-bottom: ${printPad}px !important; }
 .previewing .est-card table input, .previewing .est-card table select { height: auto !important; font-size: ${printFont}px !important; line-height: 1.1 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 .print-doc { display: none; }
-${pcHideCss}`;
+.est-print-guard { display: none; }
+${pcHideCss}
+${!preview ? `@media print {
+  /* Raw Ctrl+P while editing must NOT print the working grid — it isn't the real
+     layout. Hide it and point the user at the one true print path (Print / PDF). */
+  .est-scroll, .est-card { display: none !important; }
+  .est-print-guard { display: block !important; margin: 45mm auto 0; max-width: 150mm; text-align: center; font-size: 15px; line-height: 1.7; color: #111827; }
+}` : ""}`;
 
   // Measure the unzoomed content height so the preview can slice it into real page-sized sheets.
   useEffect(() => {
@@ -1391,6 +1401,10 @@ ${pcHideCss}`;
   return (
     <>
       <style>{pageStyle}</style>
+      <div className="est-print-guard">
+        To print or save this estimate as a PDF, use the <b>Print&nbsp;/&nbsp;PDF</b> button (or
+        <b> Preview&nbsp;&amp;&nbsp;Print</b>). That preview is exactly what prints — this editing view is not.
+      </div>
       {preview ? (
         <div className="epd-overlay fixed inset-0 z-50 overflow-auto bg-white">
           {/* Print = exactly what's previewed: one rendered doc, un-zoomed and
