@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { FileSpreadsheet, Ruler, Tags, BookOpen, ListChecks, LayoutGrid, CalendarClock, HardHat, Grid2x2, FileDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +41,10 @@ type PriceBook = { materials: PriceItem[]; equipment: PriceItem[] };
 
 export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet, generalConditions: initialGC, templates: initialTemplates, wiki, logoDataUrl, footer }: { estimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: import("@/lib/server/practice-config").FooterSettings }) {
   const [tab, setTab] = useState<TabKey>("estimate");
+  // Print/PDF is ONE path: the EstimatePrintDoc preview overlay. "Export" opens it
+  // so the printed output always equals the preview. (Owned here so it survives
+  // tab switches.)
+  const [preview, setPreview] = useState(false);
   const [est, setEst] = useState<CostEstimate>(estimate);
   const [prices, setPrices] = useState<PriceBook>(priceBook);
   const [templates, setTemplates] = useState<EstimateTemplate[]>(initialTemplates);
@@ -97,15 +100,15 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           ) : (
             <Badge tone="slate">none — blank start</Badge>
           )}
-          <Link
-            href={`/print/estimates/${est.id}`}
-            target="_blank"
+          <button
+            type="button"
+            onClick={() => { setTab("estimate"); setPreview(true); }}
             className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-            title="Open the A4 cost-estimate document to print or save as PDF"
+            title="Open the print preview to print or save as PDF — exactly what prints"
           >
             <FileDown className="h-4 w-4" />
-            Export
-          </Link>
+            Print / PDF
+          </button>
         </div>
       </Card>
 
@@ -127,6 +130,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           logoDataUrl={logoDataUrl}
           footer={footer}
           newId={newId}
+          preview={preview}
+          setPreview={setPreview}
         />
       ) : tab === "budget" ? (
         <BudgetTimelineView
