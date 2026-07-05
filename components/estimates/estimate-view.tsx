@@ -42,6 +42,8 @@ const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 
 
 // Estimation Print Template — a saved bundle of print settings, kept in localStorage.
 const PRINT_TEMPLATES_KEY = "aec.estimate.print-templates";
+// Per-estimate local backup of unsaved work (belt-and-suspenders against data loss).
+const ESTIMATE_DRAFT_PREFIX = "aec.estimate.draft.";
 type PrintTemplate = {
   printSize: "normal" | "medium" | "small";
   paper: "A4" | "A3";
@@ -86,6 +88,23 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const draftKey = est.id ? ESTIMATE_DRAFT_PREFIX + est.id : null;
+  // On mount, surface a local backup of unsaved work from a previous session
+  // (e.g. a crash/refresh before the server save landed). Captured in memory now,
+  // before the backup effect below overwrites the stored copy.
+  const [pendingDraft, setPendingDraft] = useState<{ est: CostEstimate; schedule: ScheduleConfig; payment: PaymentConfig; ts: number } | null>(() => {
+    if (typeof window === "undefined" || !est.id) return null;
+    try {
+      const raw = window.localStorage.getItem(ESTIMATE_DRAFT_PREFIX + est.id);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      // Only offer it if it actually differs from what we just loaded.
+      if (d?.est && JSON.stringify(d.est.categories) !== JSON.stringify(est.categories)) return d;
+      return null;
+    } catch {
+      return null;
+    }
+  });
   const [gcActive, setGcActive] = useState(false);
   const trades = normTrades(normSet);
   const normById = (id: string) => normSet.find((n) => n.id === id);
@@ -541,6 +560,66 @@ ${!preview ? `@media print {
     setSaving(false);
     if (res.ok) setSaved(true);
     else setSaveError(res.error);
+  }
+
+  // ── Data-loss protection ────────────────────────────────────────────────
+  // 1) Debounced local backup + server autosave. 2.5s after the last edit we
+  //    write a local copy (instant, offline-proof) and push to the server, so
+  //    work is never more than a few seconds from being persisted.
+  useEffect(() => {
+    if (saved) return;
+    const t = window.setTimeout(() => {
+      if (draftKey) {
+        try {
+          window.localStorage.setItem(draftKey, JSON.stringify({ est, schedule, payment, ts: Date.now() }));
+        } catch {
+          /* storage full/unavailable — server autosave below still runs */
+        }
+      }
+      if (est.id && !saving) void onSave();
+    }, 2500);
+    return () => window.clearTimeout(t);
+    // onSave omitted intentionally: it is redefined each render with fresh state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [est, schedule, payment, saved, saving, draftKey]);
+
+  // 2) Once the server confirms the save, drop the local backup.
+  useEffect(() => {
+    if (saved && draftKey) {
+      try {
+        window.localStorage.removeItem(draftKey);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [saved, draftKey]);
+
+  // 3) Warn before leaving/refreshing with unsaved changes (covers the debounce gap).
+  useEffect(() => {
+    if (saved) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [saved]);
+
+  function restoreDraft() {
+    if (!pendingDraft) return;
+    setEst(pendingDraft.est);
+    setSaved(false);
+    setPendingDraft(null);
+  }
+  function dismissDraft() {
+    setPendingDraft(null);
+    if (draftKey) {
+      try {
+        window.localStorage.removeItem(draftKey);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   const body = (
@@ -1405,6 +1484,17 @@ ${!preview ? `@media print {
         To print or save this estimate as a PDF, use the <b>Print&nbsp;/&nbsp;PDF</b> button (or
         <b> Preview&nbsp;&amp;&nbsp;Print</b>). That preview is exactly what prints — this editing view is not.
       </div>
+      {!preview && pendingDraft ? (
+        <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm">
+          <span className="text-amber-900">
+            An <b>unsaved backup</b> of this estimate was found from a previous session. Restore it?
+          </span>
+          <span className="flex gap-2">
+            <button type="button" onClick={restoreDraft} className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700">Restore</button>
+            <button type="button" onClick={dismissDraft} className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100">Dismiss</button>
+          </span>
+        </div>
+      ) : null}
       {preview ? (
         <div className="epd-overlay fixed inset-0 z-50 overflow-auto bg-white">
           {/* Print = exactly what's previewed: one rendered doc, un-zoomed and

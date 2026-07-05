@@ -167,42 +167,51 @@ export async function saveEstimate(input: CostEstimate, amount: number): Promise
     budget: input.budget ? (input.budget as unknown as Prisma.InputJsonValue) : undefined,
   };
 
-  const saved = await prisma.costEstimate.upsert({
-    where: { id: input.id || "__new__" },
-    update: header,
-    create: { ...(input.id ? { id: input.id } : {}), ...header },
-  });
+  // ATOMIC: upsert the header, then replace categories/items, all in ONE
+  // transaction. Previously this was a bare deleteMany + recreate loop — if it
+  // failed midway the estimate was left with NO lines (silent data loss). Now a
+  // failure rolls the whole thing back and the previously-saved sheet survives.
+  return prisma.$transaction(
+    async (tx) => {
+      const saved = await tx.costEstimate.upsert({
+        where: { id: input.id || "__new__" },
+        update: header,
+        create: { ...(input.id ? { id: input.id } : {}), ...header },
+      });
 
-  await prisma.estimateCategory.deleteMany({ where: { estimateId: saved.id } });
-  for (let ci = 0; ci < input.categories.length; ci++) {
-    const c = input.categories[ci];
-    await prisma.estimateCategory.create({
-      data: {
-        estimateId: saved.id,
-        name: c.name,
-        code: c.code ?? null,
-        sortOrder: ci,
-        items: {
-          create: c.items.map((it, ii) => ({
-            task: it.task,
-            qty: it.qty,
-            unit: it.unit,
-            laborNorm: it.laborNorm,
-            materialUnitCost: it.materialUnitCost,
-            equipmentUnitCost: it.equipmentUnitCost,
-            subcontractUnitCost: it.subcontractUnitCost,
-            poc: it.poc,
-            code: it.code ?? null,
-            calculationMethod: it.calculationMethod ?? null,
-            laborRatePerUnit: it.laborRatePerUnit ?? null,
-            // Json column: store the component array, or skip (→ NULL) when absent.
-            assembly: it.assembly ? (it.assembly as unknown as Prisma.InputJsonValue) : undefined,
-            sortOrder: ii,
-          })),
-        },
-      },
-    });
-  }
+      await tx.estimateCategory.deleteMany({ where: { estimateId: saved.id } });
+      for (let ci = 0; ci < input.categories.length; ci++) {
+        const c = input.categories[ci];
+        await tx.estimateCategory.create({
+          data: {
+            estimateId: saved.id,
+            name: c.name,
+            code: c.code ?? null,
+            sortOrder: ci,
+            items: {
+              create: c.items.map((it, ii) => ({
+                task: it.task,
+                qty: it.qty,
+                unit: it.unit,
+                laborNorm: it.laborNorm,
+                materialUnitCost: it.materialUnitCost,
+                equipmentUnitCost: it.equipmentUnitCost,
+                subcontractUnitCost: it.subcontractUnitCost,
+                poc: it.poc,
+                code: it.code ?? null,
+                calculationMethod: it.calculationMethod ?? null,
+                laborRatePerUnit: it.laborRatePerUnit ?? null,
+                // Json column: store the component array, or skip (→ NULL) when absent.
+                assembly: it.assembly ? (it.assembly as unknown as Prisma.InputJsonValue) : undefined,
+                sortOrder: ii,
+              })),
+            },
+          },
+        });
+      }
 
-  return { id: saved.id };
+      return { id: saved.id };
+    },
+    { timeout: 30000, maxWait: 10000 },
+  );
 }
