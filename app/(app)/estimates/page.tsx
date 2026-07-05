@@ -12,7 +12,8 @@ import { getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Cost Estimation · AEC-flow" };
 
-export default async function EstimatesPage() {
+export default async function EstimatesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+  const { project: initialProjectId } = await searchParams;
   const [projects, allProjects, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, practice] = await Promise.all([
     getEstimateProjects(),
     getProjects(),
@@ -59,6 +60,7 @@ export default async function EstimatesPage() {
       <EstimatesApp
         projects={projects}
         startProjects={startProjects}
+        initialProjectId={initialProjectId}
         baseEstimate={baseEstimate}
         priceBook={priceBook}
         normSet={normSet}

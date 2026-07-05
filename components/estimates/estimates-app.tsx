@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import type { CostEstimate, EstimateProject } from "@/lib/data/estimates";
 import type { PriceItem } from "@/lib/data/price-lists.types";
@@ -15,7 +15,7 @@ import { EstimateWorkspace } from "./estimate-workspace";
 
 type PriceBook = { materials: PriceItem[]; equipment: PriceItem[] };
 
-export function EstimatesApp({ projects, startProjects, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, logoDataUrl, footer }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; baseEstimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: FooterSettings }) {
+export function EstimatesApp({ projects, startProjects, initialProjectId, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, logoDataUrl, footer }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; initialProjectId?: string; baseEstimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: FooterSettings }) {
   const [selected, setSelected] = useState<EstimateProject | null>(null);
   // The selected estimate's OWN persisted sheet (loaded by id), not the base seed.
   const [working, setWorking] = useState<CostEstimate | null>(null);
@@ -71,6 +71,16 @@ export function EstimatesApp({ projects, startProjects, baseEstimate, priceBook,
     setSelected(null);
     setWorking(null);
   };
+
+  // Deep-link from a Project → "Create/Open estimate": auto-open that project's
+  // estimate (existing one in the table, or a fresh sheet from startProjects).
+  useEffect(() => {
+    if (!initialProjectId) return;
+    const match = [...(startProjects ?? []), ...projects].find((p) => p.id === initialProjectId);
+    if (match) openProject(match);
+    // Run once for the incoming project id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProjectId]);
 
   if (!selected) {
     return <ProjectListView projects={projects} startProjects={startProjects ?? []} onSelect={openProject} />;
