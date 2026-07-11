@@ -61,7 +61,8 @@ export type Discipline =
   | "STRUCTURAL"
   | "INTERIOR"
   | "MEP"
-  | "PROJECT_MANAGEMENT";
+  | "PROJECT_MANAGEMENT"
+  | "CONSTRUCTION";
 
 export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   ARCHITECTURE: "Architecture",
@@ -69,6 +70,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   INTERIOR: "Interior",
   MEP: "MEP",
   PROJECT_MANAGEMENT: "Project Management",
+  CONSTRUCTION: "Construction",
 };
 
 export type ProposalLineItem = {

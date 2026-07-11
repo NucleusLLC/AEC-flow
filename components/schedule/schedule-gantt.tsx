@@ -68,6 +68,7 @@ const DISCIPLINE_TO_CAT: Record<Discipline, string> = {
   INTERIOR: "interior",
   MEP: "mep",
   PROJECT_MANAGEMENT: "project-mgmt",
+  CONSTRUCTION: "construction",
 };
 
 // Editable sub-categories per category. Seeded with construction activities;

@@ -13,7 +13,8 @@ export type Discipline =
   | "STRUCTURAL"
   | "INTERIOR"
   | "MEP"
-  | "PROJECT_MANAGEMENT";
+  | "PROJECT_MANAGEMENT"
+  | "CONSTRUCTION";
 export type FileType = "PDF" | "DWG" | "RVT";
 
 export type Drawing = {
@@ -45,6 +46,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   INTERIOR: "Interior",
   MEP: "MEP",
   PROJECT_MANAGEMENT: "Project Mgmt",
+  CONSTRUCTION: "Construction",
 };
 
 export const DRAWING_STATUS_LABEL: Record<DrawingStatus, string> = {
