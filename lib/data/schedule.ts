@@ -13,7 +13,8 @@ export type Discipline =
   | "STRUCTURAL"
   | "INTERIOR"
   | "MEP"
-  | "PROJECT_MANAGEMENT";
+  | "PROJECT_MANAGEMENT"
+  | "CONSTRUCTION";
 
 export type ScheduleTask = {
   id: string;
@@ -62,6 +63,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   INTERIOR: "Interior",
   MEP: "MEP",
   PROJECT_MANAGEMENT: "Project Mgmt",
+  CONSTRUCTION: "Construction",
 };
 
 const SCHEDULES: Omit<ProjectSchedule, "start" | "end">[] = [

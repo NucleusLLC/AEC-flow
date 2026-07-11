@@ -23,6 +23,7 @@ enum Discipline {
   INTERIOR
   MEP
   PROJECT_MANAGEMENT
+  CONSTRUCTION
 }
 
 enum Department {

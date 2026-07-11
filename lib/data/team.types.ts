@@ -11,7 +11,8 @@ export type Discipline =
   | "STRUCTURAL"
   | "INTERIOR"
   | "MEP"
-  | "PROJECT_MANAGEMENT";
+  | "PROJECT_MANAGEMENT"
+  | "CONSTRUCTION";
 export type Department = "DESIGN" | "ENGINEERING" | "MANAGEMENT" | "ADMIN" | "FINANCE";
 export type UserStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE";
 
@@ -53,6 +54,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   INTERIOR: "Interior",
   MEP: "MEP",
   PROJECT_MANAGEMENT: "Project Mgmt",
+  CONSTRUCTION: "Construction",
 };
 
 export const DEPARTMENT_LABEL: Record<Department, string> = {

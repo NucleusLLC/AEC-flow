@@ -14,7 +14,8 @@ export type Discipline =
   | "STRUCTURAL"
   | "INTERIOR"
   | "MEP"
-  | "PROJECT_MANAGEMENT";
+  | "PROJECT_MANAGEMENT"
+  | "CONSTRUCTION";
 export type PhaseStatus =
   | "NOT_STARTED"
   | "IN_PROGRESS"
@@ -118,6 +119,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   INTERIOR: "Interior",
   MEP: "MEP",
   PROJECT_MANAGEMENT: "Project Mgmt",
+  CONSTRUCTION: "Construction",
 };
 
 /**

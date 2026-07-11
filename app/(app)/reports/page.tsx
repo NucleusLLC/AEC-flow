@@ -60,6 +60,7 @@ export default async function ReportsPage() {
     "INTERIOR",
     "MEP",
     "PROJECT_MANAGEMENT",
+    "CONSTRUCTION",
   ];
   const projectsByDiscipline: NameValue[] = disciplines
     .map((d) => ({

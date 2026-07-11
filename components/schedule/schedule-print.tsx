@@ -40,6 +40,7 @@ const DISCIPLINE_COLOR: Record<Discipline, string> = {
   INTERIOR: "#db2777",
   MEP: "#0891b2",
   PROJECT_MANAGEMENT: "#16a34a",
+  CONSTRUCTION: "#ea580c",
 };
 const DISCIPLINES = Object.keys(DISCIPLINE_COLOR) as Discipline[];
 
