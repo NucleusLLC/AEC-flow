@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { submitBetaReport } from "@/app/(app)/beta-reports/actions";
+import { BETA_REPORT_OPEN_EVENT } from "@/components/beta-report/open-beta-report";
 import { MAX_SCREENSHOT_CHARS, type BetaReportKind } from "@/lib/data/beta-reports.types";
 
 /** Longest edge of the saved screenshot, in px. Downscaling keeps the JPEG well
@@ -25,10 +26,15 @@ const SCREENSHOT_MAX_EDGE = 1600;
 type Phase = "form" | "sending" | "done";
 
 /**
- * Floating BETA-Report widget — mounted once in the (app) layout. Lets beta
- * testers send a Bug or a Wish, optionally with a screenshot of the current
- * screen (captured via the browser's native screen-capture API — no extra
- * dependency, and unlike html2canvas it copes with Tailwind v4's oklch colors).
+ * BETA-Report widget — mounted once in the (app) layout. Lets beta testers send a
+ * Bug or a Wish, optionally with a screenshot of the current screen (captured via
+ * the browser's native screen-capture API — no extra dependency, and unlike
+ * html2canvas it copes with Tailwind v4's oklch colors).
+ *
+ * It has no launcher of its own: the panel is opened from the sidebar (desktop) and
+ * the mobile drawer, which reach it through the BETA_REPORT_OPEN_EVENT window event.
+ * It used to float over the bottom-right corner, where it collided with page content
+ * and the save/action buttons.
  */
 export function BetaReportWidget() {
   const pathname = usePathname();
@@ -59,6 +65,13 @@ export function BetaReportWidget() {
     // Defer the reset so it doesn't flash during the close transition.
     setTimeout(resetForm, 200);
   }, [resetForm]);
+
+  // Opened from the sidebar / mobile drawer, which live in a different subtree.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(BETA_REPORT_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(BETA_REPORT_OPEN_EVENT, onOpen);
+  }, []);
 
   // Esc closes the panel; focus the summary when it opens.
   useEffect(() => {
@@ -172,25 +185,12 @@ export function BetaReportWidget() {
 
   return (
     <>
-      {/* Floating launcher */}
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-24 z-40 inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/20 transition-transform hover:scale-[1.03] active:scale-95"
-          aria-label="Report a new bug or wish"
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-          <span className="hidden sm:inline">New Bug/Wish</span>
-        </button>
-      ) : null}
-
       {open ? (
         <>
           {/* Backdrop (click to dismiss) — invisible while capturing so it's not in the shot */}
           <div
             className={cn(
-              "fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]",
+              "no-print fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] print:hidden",
               capturing && "invisible",
             )}
             onClick={close}
@@ -202,7 +202,7 @@ export function BetaReportWidget() {
             aria-modal="true"
             aria-label="Beta feedback"
             className={cn(
-              "fixed bottom-4 right-4 z-50 flex max-h-[calc(100dvh-2rem)] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl",
+              "no-print fixed bottom-4 right-4 z-50 flex max-h-[calc(100dvh-2rem)] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl print:hidden",
               capturing && "invisible",
             )}
           >

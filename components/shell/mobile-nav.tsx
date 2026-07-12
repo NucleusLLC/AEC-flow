@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, MessageSquarePlus, X } from "lucide-react";
 import { navSections } from "@/lib/nav";
+import { openBetaReport } from "@/components/beta-report/open-beta-report";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +114,22 @@ export function MobileNav() {
                 </div>
               ))}
             </nav>
+
+            {/* Beta feedback — the sidebar is desktop-only, so the drawer carries the
+             * other launcher for the Bug/Wish panel. */}
+            <div className="border-t border-white/10 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  openBetaReport();
+                }}
+                className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-fg transition-colors hover:bg-sidebar-2/60 hover:text-white"
+              >
+                <MessageSquarePlus className="h-[18px] w-[18px] shrink-0 text-sidebar-muted" strokeWidth={2} />
+                {t("New Bug/Wish")}
+              </button>
+            </div>
           </aside>
         </div>
       ) : null}

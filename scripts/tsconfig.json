@@ -1,0 +1,17 @@
+{
+  // ts-node config for the standalone verification scripts. The root tsconfig targets
+  // the Next bundler (esnext / "bundler" resolution), which Node can't execute directly;
+  // this overrides just enough to run under plain Node. Kept as a file rather than inline
+  // --compiler-options JSON because npm/sh strip the quotes out of the argument.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "isolatedModules": false,
+    "jsx": "react"
+  },
+  "ts-node": {
+    "transpileOnly": true
+  }
+}

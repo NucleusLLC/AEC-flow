@@ -5,8 +5,10 @@ import { Clock, Landmark, Users, Plus, Trash2, CalendarClock, Coins, SlidersHori
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { CostEstimate } from "@/lib/data/estimates";
+import { sumGeneralConditions, type GeneralConditionItem } from "@/lib/data/general-conditions";
 import {
   computeSchedule,
+  computeDevelopmentCost,
   type Phase,
   type ScheduleConfig,
   type PaymentConfig,
@@ -21,14 +23,24 @@ export function BudgetTimelineView({
   setSchedule,
   payment,
   setPayment,
+  generalConditions = [],
+  gcActive = false,
 }: {
   est: CostEstimate;
   schedule: ScheduleConfig;
   setSchedule: React.Dispatch<React.SetStateAction<ScheduleConfig>>;
   payment: PaymentConfig;
   setPayment: React.Dispatch<React.SetStateAction<PaymentConfig>>;
+  generalConditions?: GeneralConditionItem[];
+  gcActive?: boolean;
 }) {
   const money = (n: number) => `${est.currency} ${nf0(n)}`;
+
+  // Total Development Cost — the contract price the disbursement draws against:
+  // direct cost + General Conditions (when active), marked up by Risk & Profit + BBO.
+  // Mirrors the estimate summary's Grand Total, so draws sum to what the client pays.
+  const gcAmount = gcActive ? sumGeneralConditions(generalConditions) : 0;
+  const developmentCost = computeDevelopmentCost(est, gcAmount);
 
   // ---- Time-Schedule coupler (controlled config — shared with the print doc) ----
   const { hoursPerDay, crew, startDate, workingDaysPerWeek, overlapPct, contingencyDays } = schedule;
@@ -66,7 +78,7 @@ export function BudgetTimelineView({
   const phaseRetPct = (p: Phase) => (retEnabled ? (payManual ? p.retentionPct ?? retention : retention) : 0);
   const sumPct = phases.reduce((a, p) => a + p.pct, 0);
   const rows = phases.map((p) => {
-    const amount = (grandCost * p.pct) / 100;
+    const amount = (developmentCost * p.pct) / 100;
     const rpct = phaseRetPct(p);
     const held = (amount * rpct) / 100;
     return { p, amount, rpct, held, net: amount - held };
@@ -78,7 +90,7 @@ export function BudgetTimelineView({
     <div className="space-y-4">
       {/* Summary band */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Total budget" value={money(grandCost)} tone="text-fg" icon={<Coins className="h-4 w-4 text-emerald-600" />} />
+        <Stat label="Total Development Cost" value={money(developmentCost)} tone="text-fg" sub={`Direct ${money(grandCost)}${gcAmount ? ` + GC ${money(gcAmount)}` : ""} + Risk&Profit ${est.profitPct}% + BBO ${est.bboPct}%`} icon={<Coins className="h-4 w-4 text-emerald-600" />} />
         <Stat label="Labour hours" value={`${nf0(totalHours)} h`} tone="text-fg" icon={<Clock className="h-4 w-4 text-blue-600" />} />
         <Stat label="Duration" value={`${totalDays} d · ${nf1(weeks)} wk`} tone="text-fg" icon={<CalendarClock className="h-4 w-4 text-amber-600" />} />
         <Stat label="Draw phases" value={`${phases.length}`} tone={sumPct === 100 ? "text-emerald-400" : "text-red-600"} icon={<Landmark className="h-4 w-4 text-violet-600" />} sub={`${nf1(sumPct)}% allocated`} />
@@ -302,6 +314,7 @@ export function BudgetTimelineView({
             <button type="button" onClick={addPhase} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2"><Plus className="h-3.5 w-3.5" /> Add draw phase</button>
           ) : null}
           <p className="text-[11px] text-faint">
+            <span className="text-muted">Draws are % of the Total Development Cost ({money(developmentCost)}) — direct cost{gcAmount ? " + General Conditions" : ""} + Risk&nbsp;&amp;&nbsp;Profit + BBO.</span>{" "}
             {!retEnabled
               ? "Retainage is OFF — full draws are released. Turn it on to hold a % when no performance bond / bank guarantee is posted."
               : payManual

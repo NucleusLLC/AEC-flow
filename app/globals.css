@@ -48,6 +48,14 @@
   --c-brand: #3b82f6;
   --c-brand-fg: #ffffff;
   --c-accent: #60a5fa;
+
+  /* Dropdowns get their own military (olive drab / gunmetal) palette in dark mode —
+   * deliberately distinct from the navy surfaces above. Scoped to <select> only. */
+  --c-select: #232a1e;
+  --c-select-hover: #2b3325;
+  --c-select-border: #4b5540;
+  --c-select-fg: #e4e8dc;
+  --c-select-accent: #8a9a5b;
 }
 
 @theme inline {
@@ -98,4 +106,57 @@ body,
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--c-faint) transparent;
+}
+
+/*
+ * Dark-mode dropdowns — military palette.
+ *
+ * Two separate problems are solved here:
+ *
+ * 1. The POPUP. A native <option> list is painted by the browser, not by us, so
+ *    Tailwind classes on the <select> never reach it. Without `color-scheme: dark`
+ *    the popup renders on the OS light background — a white list under a dark
+ *    trigger. Setting color-scheme flips the UA rendering (and the dropdown arrow);
+ *    the explicit `option` colours then pin it to the olive palette on the browsers
+ *    that honour them (Chrome 125+, Firefox).
+ *
+ * 2. The TRIGGER. ~100 selects across 56 files carry `bg-surface`/`border-border`
+ *    inline, so recolouring them per-file would mean touching every one. These rules
+ *    are UNLAYERED, and unlayered CSS outranks Tailwind's layered utilities no matter
+ *    their specificity — so one block re-skins every dropdown in the app at once.
+ *
+ * `:not(.bg-transparent)` spares the borderless selects embedded in table cells
+ * (estimate line items, norm-set, general conditions), which are meant to read as
+ * plain text until hovered. They still get the dark popup from the `option` rules.
+ */
+.dark select {
+  color-scheme: dark;
+}
+
+.dark select:not(.bg-transparent) {
+  background-color: var(--c-select);
+  border-color: var(--c-select-border);
+  color: var(--c-select-fg);
+}
+
+.dark select:not(.bg-transparent):hover {
+  background-color: var(--c-select-hover);
+}
+
+.dark select:not(.bg-transparent):focus {
+  border-color: var(--c-select-accent);
+  box-shadow: 0 0 0 2px rgb(138 154 91 / 0.3);
+  outline: none;
+}
+
+/* The popup list itself. */
+.dark select option {
+  background-color: var(--c-select);
+  color: var(--c-select-fg);
+}
+
+.dark select option:checked,
+.dark select option:hover {
+  background-color: var(--c-select-accent);
+  color: #10140c;
 }

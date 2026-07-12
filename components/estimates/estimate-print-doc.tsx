@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo } from "react";
 import type { CostEstimate } from "@/lib/data/estimates";
-import type { GeneralConditionItem } from "@/lib/data/general-conditions";
+import { sumGeneralConditions, type GeneralConditionItem } from "@/lib/data/general-conditions";
 import { calcItem } from "@/lib/estimates/calc";
 import {
   computeSchedule,
@@ -472,7 +472,10 @@ function buildAppendixBlocks(
   }
 
   if (pc.phaseDisbursement && payment) {
-    const d = computeDraws(est, payment, pc.importedMaterials ? props.importedAmount ?? 0 : 0);
+    // Disbursement draws against the Total Development Cost — include enabled General
+    // Conditions when the GC line is active, mirroring the summary's Grand Total.
+    const gcAmount = props.gcActive ? sumGeneralConditions(props.generalConditions ?? []) : 0;
+    const d = computeDraws(est, payment, pc.importedMaterials ? props.importedAmount ?? 0 : 0, gcAmount);
     const rows = d.rows.map((p, i) => [
       { v: String(i + 1), align: "left" as const },
       { v: p.name, align: "left" as const },
