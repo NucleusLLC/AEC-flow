@@ -5,6 +5,7 @@ import { FileSpreadsheet, Ruler, Tags, BookOpen, ListChecks, LayoutGrid, Calenda
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { CostEstimate, EstimateItem } from "@/lib/data/estimates";
+import type { TakeoffRow } from "@/lib/data/estimates.types";
 import type { PriceItem } from "@/lib/data/price-lists.types";
 import { type EstimateTemplate, type NormSetTask } from "@/lib/data/estimate-presets";
 import type { GeneralConditionItem } from "@/lib/data/general-conditions";
@@ -23,6 +24,7 @@ import { RebarCalculatorView } from "./rebar-calculator-view";
 import { GeneralConditionsView } from "./general-conditions-view";
 import { PriceListView } from "./price-list-view";
 import { WikiView } from "./wiki-view";
+import { saveEstimateAction } from "@/app/(app)/estimates/actions";
 
 type TabKey = "estimate" | "budget" | "takeoff" | "rebar" | "normset" | "prices" | "general" | "wiki";
 
@@ -39,6 +41,13 @@ const TABS: { key: TabKey; label: string; icon: typeof FileSpreadsheet }[] = [
 
 type PriceBook = { materials: PriceItem[]; equipment: PriceItem[] };
 
+/** Sample measurements, shown only on an estimate that has never had a take-off saved. */
+const SEED_TAKEOFF: TakeoffRow[] = [
+  { id: "to-seed1", desc: "External walls — block", normId: "n-blk200", method: "area", unit: "m²", length: 42, width: 3.2, height: 0, count: 1, waste: 5 },
+  { id: "to-seed2", desc: "Ground slab", normId: "n-sog", method: "area", unit: "m²", length: 12, width: 15, height: 0, count: 1, waste: 3 },
+  { id: "to-seed3", desc: "Footings concrete", normId: "n-foot", method: "volume", unit: "m³", length: 42, width: 0.6, height: 0.8, count: 1, waste: 5 },
+];
+
 export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet, generalConditions: initialGC, templates: initialTemplates, wiki, logoDataUrl, footer }: { estimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: import("@/lib/server/practice-config").FooterSettings }) {
   const [tab, setTab] = useState<TabKey>("estimate");
   // Print/PDF is ONE path: the EstimatePrintDoc preview overlay. "Export" opens it
@@ -51,12 +60,47 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const [normSet, setNormSet] = useState<NormSetTask[]>(initialNormSet);
   const [generalConditions, setGeneralConditions] = useState<GeneralConditionItem[]>(initialGC);
+  // General Conditions / Overhead active flag — lifted here so the summary (EstimateView),
+  // the Budget disbursement tab, and the print doc all agree on whether GC is part of the
+  // Total Development Cost that draws are computed against.
+  const [gcActive, setGcActive] = useState(false);
   // Budget & Timeline config — lifted here so it survives tab switches and is
   // available to the Estimate print document (Timeline / Phase Disbursement pages).
   const [schedule, setSchedule] = useState<ScheduleConfig>(() => estimate.budget?.schedule ?? defaultSchedule(estimate));
   const [payment, setPayment] = useState<PaymentConfig>(() => estimate.budget?.payment ?? defaultPayment());
+  // Quantity Take-Off — lifted here for the same reason as the budget config: the tabs
+  // are a ternary, so leaving the Take-Off tab used to unmount the sheet and destroy
+  // every measurement. `?? SEED_TAKEOFF` only fires when the key is absent, so an
+  // estimate whose rows were all deliberately deleted stays empty instead of re-seeding.
+  const [takeoff, setTakeoff] = useState<TakeoffRow[]>(() => estimate.budget?.takeoff ?? SEED_TAKEOFF);
+  const [takeoffSection, setTakeoffSection] = useState<string>(() => estimate.budget?.takeoffSection ?? "Take-Off");
   const seq = useRef(100);
   const newId = (p: string) => `${p}-${seq.current++}`;
+
+  // Explicit Save on the Take-Off tab. It writes the WHOLE estimate through the same
+  // atomic server action the sheet uses — the take-off rows ride in the `budget` JSON
+  // next to schedule/payment, so there's one write path and no second save to keep in
+  // sync. (Edits also autosave via EstimateView, which carries the same payload.)
+  const [takeoffSaving, setTakeoffSaving] = useState(false);
+  const [takeoffSaved, setTakeoffSaved] = useState(false);
+
+  // Re-arm the Save button on any edit. Wrapping the setters (rather than watching the
+  // rows in an effect) keeps it a plain event-time update — no cascading render.
+  const editTakeoff: React.Dispatch<React.SetStateAction<TakeoffRow[]>> = (v) => {
+    setTakeoffSaved(false);
+    setTakeoff(v);
+  };
+  const editTakeoffSection: React.Dispatch<React.SetStateAction<string>> = (v) => {
+    setTakeoffSaved(false);
+    setTakeoffSection(v);
+  };
+
+  const saveTakeoff = async () => {
+    setTakeoffSaving(true);
+    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection } });
+    setTakeoffSaving(false);
+    setTakeoffSaved(res.ok);
+  };
 
   // Take-Off → estimate: append a new section of computed, costed line items.
   const pushFromTakeoff = (sectionName: string, items: Omit<EstimateItem, "id">[]) => {
@@ -123,10 +167,14 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           setActiveTemplate={setActiveTemplate}
           normSet={normSet}
           generalConditions={generalConditions}
+          gcActive={gcActive}
+          setGcActive={setGcActive}
           materials={prices.materials}
           equipment={prices.equipment}
           schedule={schedule}
           payment={payment}
+          takeoff={takeoff}
+          takeoffSection={takeoffSection}
           logoDataUrl={logoDataUrl}
           footer={footer}
           newId={newId}
@@ -140,9 +188,22 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           setSchedule={setSchedule}
           payment={payment}
           setPayment={setPayment}
+          generalConditions={generalConditions}
+          gcActive={gcActive}
         />
       ) : tab === "takeoff" ? (
-        <TakeoffView onPush={pushFromTakeoff} onGoToEstimate={() => setTab("estimate")} normSet={normSet} />
+        <TakeoffView
+          onPush={pushFromTakeoff}
+          onGoToEstimate={() => setTab("estimate")}
+          normSet={normSet}
+          rows={takeoff}
+          setRows={editTakeoff}
+          section={takeoffSection}
+          setSection={editTakeoffSection}
+          onSave={saveTakeoff}
+          saving={takeoffSaving}
+          saved={takeoffSaved}
+        />
       ) : tab === "rebar" ? (
         <RebarCalculatorView />
       ) : tab === "normset" ? (

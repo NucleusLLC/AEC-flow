@@ -1,24 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Plus, Trash2, ArrowRightToLine, Ruler } from "lucide-react";
+import { Plus, Trash2, ArrowRightToLine, Ruler, Save, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { normTrades, type NormSetTask } from "@/lib/data/estimate-presets";
-import { ESTIMATE_UNITS, type EstimateItem } from "@/lib/data/estimates.types";
-
-type Method = "area" | "volume" | "linear" | "count";
-type TakeoffRow = {
-  id: string;
-  desc: string;
-  normId: string;
-  method: Method;
-  unit: string;
-  length: number;
-  width: number;
-  height: number;
-  count: number;
-  waste: number; // %
-};
+import {
+  ESTIMATE_UNITS,
+  type EstimateItem,
+  type TakeoffMethod as Method,
+  type TakeoffRow,
+} from "@/lib/data/estimates.types";
 
 const METHOD_UNIT: Record<Method, string> = { area: "m²", volume: "m³", linear: "m", count: "no" };
 const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -39,26 +30,41 @@ export function TakeoffView({
   onPush,
   onGoToEstimate,
   normSet,
+  rows,
+  setRows,
+  section,
+  setSection,
+  onSave,
+  saving = false,
+  saved = false,
 }: {
   onPush: (sectionName: string, items: Omit<EstimateItem, "id">[]) => void;
   onGoToEstimate: () => void;
   normSet: NormSetTask[];
+  /** Rows live in the workspace so they survive a tab switch and can be persisted. */
+  rows: TakeoffRow[];
+  setRows: React.Dispatch<React.SetStateAction<TakeoffRow[]>>;
+  section: string;
+  setSection: React.Dispatch<React.SetStateAction<string>>;
+  onSave: () => void;
+  saving?: boolean;
+  saved?: boolean;
 }) {
-  const seq = useRef(1);
-  const nid = () => `to-${seq.current++}`;
   const trades = normTrades(normSet);
   const normById = (id: string) => normSet.find((n) => n.id === id);
-  const [section, setSection] = useState("Take-Off");
-  const [rows, setRows] = useState<TakeoffRow[]>([
-    { id: "to-seed1", desc: "External walls — block", normId: "n-blk200", method: "area", unit: "m²", length: 42, width: 3.2, height: 0, count: 1, waste: 5 },
-    { id: "to-seed2", desc: "Ground slab", normId: "n-sog", method: "area", unit: "m²", length: 12, width: 15, height: 0, count: 1, waste: 3 },
-    { id: "to-seed3", desc: "Footings concrete", normId: "n-foot", method: "volume", unit: "m³", length: 42, width: 0.6, height: 0.8, count: 1, waste: 5 },
-  ]);
 
   const patch = (id: string, p: Partial<TakeoffRow>) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...p } : r)));
+  // Mint the id from the rows in hand rather than a counter: rows now come back from the
+  // database, so a counter restarting at 1 would re-issue an id a restored row already has.
   const addRow = () =>
-    setRows((rs) => [...rs, { id: nid(), desc: "", normId: "", method: "area", unit: "m²", length: 0, width: 0, height: 0, count: 1, waste: 0 }]);
+    setRows((rs) => {
+      const highest = rs.reduce((max, r) => {
+        const n = Number(/^to-(\d+)$/.exec(r.id)?.[1] ?? 0);
+        return n > max ? n : max;
+      }, 0);
+      return [...rs, { id: `to-${highest + 1}`, desc: "", normId: "", method: "area", unit: "m²", length: 0, width: 0, height: 0, count: 1, waste: 0 }];
+    });
   const removeRow = (id: string) => setRows((rs) => rs.filter((r) => r.id !== id));
 
   // When a Norm Set task is linked, fix the unit and prefill the description.
@@ -116,6 +122,26 @@ export function TakeoffView({
             onChange={(e) => setSection(e.target.value)}
             className="h-8 w-40 rounded-lg border border-border bg-surface px-2 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30"
           />
+          {/* Save — olive drab, matching the military dropdowns. Explicit hexes rather than
+           * theme tokens: the military palette is deliberately its own thing, and these
+           * read correctly on both the light and the dark canvas. */}
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            title="Save the take-off measurements to the server"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#5c6633] bg-[#4b5320] px-3 text-xs font-semibold text-[#e4e8dc] shadow-sm transition-colors hover:bg-[#3f4a1c] focus:outline-none focus:ring-2 focus:ring-[#8a9a5b]/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saved && !saving ? (
+              <>
+                <Check className="h-4 w-4 text-[#c5d18a]" /> Saved
+              </>
+            ) : (
+              <>
+                <Save className={cn("h-4 w-4", saving && "animate-pulse")} /> {saving ? "Saving…" : "Save"}
+              </>
+            )}
+          </button>
           <button
             type="button"
             onClick={push}

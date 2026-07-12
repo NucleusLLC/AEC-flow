@@ -114,6 +114,22 @@ export function computeGrandCost(est: CostEstimate): number {
   return computeSections(est).reduce((a, s) => a + s.cost, 0);
 }
 
+/**
+ * Total Development Cost — the full contract price the disbursement schedule must draw
+ * against. Mirrors the estimate summary's Grand Total buildup exactly:
+ *   (direct cost + General Conditions / Overhead) × (1 + Risk&Profit% + BBO%)
+ * so every phase draw is a share of what the client actually pays — labour, material,
+ * equipment, subs, overhead, General Conditions, plus BBO and Risk & Profit — not the
+ * bare direct cost. `gcAmount` is the enabled General Conditions total (0 when the
+ * estimate's GC line is inactive), passed in because that data lives outside CostEstimate.
+ */
+export function computeDevelopmentCost(est: CostEstimate, gcAmount = 0): number {
+  const base = computeGrandCost(est) + gcAmount;
+  const profit = (base * (est.profitPct || 0)) / 100;
+  const bbo = (base * (est.bboPct || 0)) / 100;
+  return base + profit + bbo;
+}
+
 export interface ScheduledSection extends SectionCost {
   crew: number;
   days: number;
@@ -185,8 +201,11 @@ export interface DrawResult {
  * double-paid through the regular phases. With `importedAmount` = 0 this is
  * identical to the plain phase schedule.
  */
-export function computeDraws(est: CostEstimate, payment: PaymentConfig, importedAmount = 0): DrawResult {
-  const grandCost = computeGrandCost(est);
+export function computeDraws(est: CostEstimate, payment: PaymentConfig, importedAmount = 0, gcAmount = 0): DrawResult {
+  // Draws are shares of the Total Development Cost (direct + General Conditions,
+  // marked up by Risk & Profit + BBO) — the actual contract price — NOT the bare
+  // direct cost. Keeps the disbursement total equal to the estimate's Grand Total.
+  const grandCost = computeDevelopmentCost(est, gcAmount);
   const imported = Math.max(0, Math.min(importedAmount, grandCost));
   const base = grandCost - imported; // non-imported cost spread across the normal phases
   const pctOf = (amount: number) => (grandCost > 0 ? (amount / grandCost) * 100 : 0);

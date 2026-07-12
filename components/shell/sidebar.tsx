@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ShieldCheck } from "lucide-react";
+import { MessageSquarePlus, ShieldCheck } from "lucide-react";
 import { navSections } from "@/lib/nav";
+import { openBetaReport } from "@/components/beta-report/open-beta-report";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +112,23 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
           </div>
         ))}
       </nav>
+
+      {/* Beta feedback — opens the Bug/Wish panel (mounted in the (app) layout).
+       * Lives here rather than floating over the page, where it used to overlap
+       * content and the save/action buttons in the bottom-right corner. */}
+      <div className="border-t border-white/10 px-3 py-2">
+        <button
+          type="button"
+          onClick={openBetaReport}
+          className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-fg transition-colors hover:bg-sidebar-2/60 hover:text-white"
+        >
+          <MessageSquarePlus
+            className="h-[18px] w-[18px] shrink-0 text-sidebar-muted group-hover:text-sidebar-fg"
+            strokeWidth={2}
+          />
+          {t("New Bug/Wish")}
+        </button>
+      </div>
 
       {/* Founder super-admin — cross-company management (founder only) */}
       {isFounder ? (

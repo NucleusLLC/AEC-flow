@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, Fragment } from "react";
 import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, Bug } from "lucide-react";
 import { EstimatePrintDoc, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
-import type { ScheduleConfig, PaymentConfig } from "@/lib/estimates/budget-timeline";
+import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
+import { CostSummaryCharts } from "./cost-summary-charts";
 import type { FooterSettings } from "@/lib/server/practice-config";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
   type CalculationMethod,
   type AssemblyComponent,
   type AssemblyComponentType,
+  type TakeoffRow,
 } from "@/lib/data/estimates.types";
 import {
   normTrades,
@@ -71,10 +73,18 @@ type EstimateViewProps = {
   setActiveTemplate: (name: string | null) => void;
   normSet: NormSetTask[];
   generalConditions: GeneralConditionItem[];
+  /** General Conditions / Overhead active flag — lifted to the workspace so the Budget
+   * disbursement tab and the print doc share the same Total Development Cost buildup. */
+  gcActive: boolean;
+  setGcActive: (v: boolean) => void;
   materials: PriceItem[];
   equipment: PriceItem[];
   schedule: ScheduleConfig;
   payment: PaymentConfig;
+  /** Take-Off measurements — not rendered here, but carried into the save payload so
+   * this sheet's autosave doesn't clobber the `budget` JSON the Take-Off tab writes. */
+  takeoff: TakeoffRow[];
+  takeoffSection: string;
   logoDataUrl?: string | null;
   footer?: FooterSettings;
   newId: (p: string) => string;
@@ -84,7 +94,7 @@ type EstimateViewProps = {
   setPreview: (v: boolean) => void;
 };
 
-export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, materials, equipment, schedule, payment, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
+export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, takeoff, takeoffSection, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -105,7 +115,6 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
       return null;
     }
   });
-  const [gcActive, setGcActive] = useState(false);
   const trades = normTrades(normSet);
   const normById = (id: string) => normSet.find((n) => n.id === id);
   const codeOfTask = (task: string) => normSet.find((n) => n.task.toLowerCase() === task.toLowerCase())?.code ?? "";
@@ -555,8 +564,11 @@ ${!preview ? `@media print {
   async function onSave() {
     setSaving(true);
     setSaveError(null);
-    // Persist the Budget & Timeline config (schedule coupler + payment/retainage) with the sheet.
-    const res = await saveEstimateAction({ ...est, budget: { schedule, payment } });
+    // Persist the sheet's structured extras alongside it: the Budget & Timeline config
+    // (schedule coupler + payment/retainage) and the Quantity Take-Off measurements.
+    // Take-off MUST be included — this autosave overwrites the whole `budget` object, so
+    // omitting the key would silently erase rows saved from the Take-Off tab.
+    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection } });
     setSaving(false);
     if (res.ok) setSaved(true);
     else setSaveError(res.error);
@@ -571,7 +583,7 @@ ${!preview ? `@media print {
     const t = window.setTimeout(() => {
       if (draftKey) {
         try {
-          window.localStorage.setItem(draftKey, JSON.stringify({ est, schedule, payment, ts: Date.now() }));
+          window.localStorage.setItem(draftKey, JSON.stringify({ est, schedule, payment, takeoff, takeoffSection, ts: Date.now() }));
         } catch {
           /* storage full/unavailable — server autosave below still runs */
         }
@@ -581,7 +593,7 @@ ${!preview ? `@media print {
     return () => window.clearTimeout(t);
     // onSave omitted intentionally: it is redefined each render with fresh state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [est, schedule, payment, saved, saving, draftKey]);
+  }, [est, schedule, payment, takeoff, takeoffSection, saved, saving, draftKey]);
 
   // 2) Once the server confirms the save, drop the local backup.
   useEffect(() => {
@@ -1220,6 +1232,16 @@ ${!preview ? `@media print {
           </table>
         </div>
 
+        {/* TOTAL DIRECT COSTS — standing footer line under the sheet. The tfoot above
+         * breaks the same figure out per column; this is the single headline number,
+         * always shown. Screen-only: the print document renders its own totals block,
+         * so printing this too would state the figure twice. */}
+        <div className="no-print flex items-baseline gap-3 border-t-2 border-border bg-surface-2/60 px-4 py-2.5 print:hidden">
+          <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-fg">Total Direct Costs</span>
+          <span aria-hidden className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-faint/60" />
+          <span className="shrink-0 tabular-nums text-sm font-bold text-fg">{dualMoney(direct)}</span>
+        </div>
+
         <div className="no-print border-t border-border p-3">
           <button type="button" onClick={addCategory} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
             <Plus className="h-3.5 w-3.5" /> Add section
@@ -1429,6 +1451,17 @@ ${!preview ? `@media print {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Quick-access charts — always on. The print doc renders its own chart, gated
+           * by the "Chart" switch in Print Control, so this one is screen-only to avoid
+           * printing the breakdown twice. Both read the same `chartData` segments. */}
+          <div className="no-print border-t border-border px-4 py-3 print:hidden">
+            <CostSummaryCharts
+              segments={chartData}
+              sections={computeSections(est).map((s) => ({ name: s.name, cost: s.cost }))}
+              money={money}
+            />
           </div>
 
           {/* Memo / Remark — full-width editable area; printed on the cover page when enabled in Print Control. */}

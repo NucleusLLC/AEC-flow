@@ -83,13 +83,43 @@ export type CostEstimate = {
   categories: EstimateCategory[];
 };
 
-/** Persisted Budget & Timeline configuration for an estimate (see lib/estimates/budget-timeline). */
+/** How a take-off row derives its quantity from the dimensions entered. */
+export type TakeoffMethod = "area" | "volume" | "linear" | "count";
+
+/**
+ * One measured element on the Quantity Take-Off sheet. Persisted so the MEASUREMENTS
+ * survive — pushing to the estimate is lossy by design (it carries only the computed
+ * task/qty/cost), which meant the dimensions behind a quantity were previously gone
+ * the moment you left the tab.
+ */
+export type TakeoffRow = {
+  id: string;
+  desc: string;
+  normId: string;
+  method: TakeoffMethod;
+  unit: string;
+  length: number;
+  width: number;
+  height: number;
+  count: number;
+  waste: number; // %
+};
+
+/**
+ * Persisted sub-config for an estimate, stored in the `budget` Json column.
+ * Despite the name it carries every structured extra that hangs off the sheet.
+ */
 export type EstimateBudget = {
   schedule?: import("@/lib/estimates/budget-timeline").ScheduleConfig;
   payment?: import("@/lib/estimates/budget-timeline").PaymentConfig;
+  /** Quantity Take-Off measurements. */
+  takeoff?: TakeoffRow[];
+  /** Estimate section the take-off pushes into. */
+  takeoffSection?: string;
 };
 
-export const ESTIMATE_UNITS = ["m³", "m²", "m", "lm", "no", "kg", "ton", "ls", "set", "day"];
+/** Imperial additions: `y³` = cubic yard (US-spec concrete), `bf` = board feet (lumber). */
+export const ESTIMATE_UNITS = ["m³", "y³", "m²", "m", "lm", "bf", "no", "kg", "ton", "ls", "set", "day"];
 
 /* Estimate projects — the list shown when entering the Estimates area. */
 export type EstimateProject = {

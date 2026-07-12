@@ -5,10 +5,13 @@
  *   2. Labor/Rate decouples labour COST from labour HOURS, so the Schedule Coupler
  *      (which reads hours) stays consistent across methods.
  *
- * Run:  TS_NODE_COMPILER_OPTIONS='{"module":"commonjs"}' npx ts-node scripts/verify-calc.ts
+ * Run:  npm run verify:calc
+ *
+ * (The lib now imports through the `@/` alias, so ts-node needs tsconfig-paths —
+ * without it the run dies on "Cannot find module '@/lib/data/general-conditions'".)
  */
 import { calcItem, resolveLineLabor, estimateTotals } from "../lib/estimates/calc";
-import { computeSections, computeDraws } from "../lib/estimates/budget-timeline";
+import { computeSections, computeDraws, computeDevelopmentCost, computeGrandCost } from "../lib/estimates/budget-timeline";
 import type { PaymentConfig } from "../lib/estimates/budget-timeline";
 import type { CostEstimate, EstimateItem } from "../lib/data/estimates";
 
@@ -190,6 +193,31 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
     retentionEnabled: true, retentionMode: "manual", // phase has no retentionPct → falls back to global 10%
   }));
   check("retainage MANUAL fallback → global rate when phase % unset", Math.abs(manualFallback.rows[0].held - manualFallback.rows[0].amount * 0.1) < 1e-9);
+}
+
+// 9. Disbursement base = Total Development Cost (direct + GC, marked up by Risk&Profit + BBO).
+{
+  const est: CostEstimate = {
+    id: "ed", projectId: null, projectName: "DevCost", version: "V1", date: "2026-01-01",
+    location: "—", currency: "AED", avgLaborRate: RATE, profitPct: 10, bboPct: 6,
+    categories: [{ id: "c1", name: "S", items: [baseItem()] }], // one item → direct 1090
+  };
+  const direct = computeGrandCost(est);
+  const gc = 500;
+  // (direct + gc) × (1 + 0.10 + 0.06)
+  const expected = (direct + gc) * 1.16;
+  check("development cost = (direct + GC) × (1 + Risk&Profit% + BBO%)",
+    Math.abs(computeDevelopmentCost(est, gc) - expected) < 1e-6);
+  check("development cost with no GC still applies markups",
+    Math.abs(computeDevelopmentCost(est) - direct * 1.16) < 1e-6);
+
+  const pay: PaymentConfig = {
+    retention: 0, retentionEnabled: false, retentionMode: "auto",
+    phases: [{ id: "p1", name: "All", pct: 100, milestone: "" }],
+  };
+  const d = computeDraws(est, pay, 0, gc);
+  check("draws sum to Total Development Cost, not bare direct cost",
+    Math.abs(d.totalAmount - expected) < 1e-6 && d.totalAmount > direct);
 }
 
 if (failures > 0) {
