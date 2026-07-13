@@ -116,7 +116,23 @@ export type EstimateBudget = {
   takeoff?: TakeoffRow[];
   /** Estimate section the take-off pushes into. */
   takeoffSection?: string;
+  /** USD secondary unit: whether it's shown, and the rate used to convert. */
+  fx?: { usd?: boolean; rate?: number };
 };
+
+/**
+ * Default USD rate per system currency — `1 <currency> = n USD`. The Aruban and
+ * Antillean guilders are pegged (1.79 AWG / 1.79 ANG = 1 USD), so their rate is a
+ * constant, not a market quote. Anything unlisted falls back to 1 and the user
+ * types the rate in the Cost Summary.
+ */
+export const USD_RATE_BY_CURRENCY: Record<string, number> = {
+  USD: 1,
+  AWG: 1 / 1.79,
+  ANG: 1 / 1.79,
+  EUR: 1.08,
+};
+export const defaultUsdRate = (currency: string) => USD_RATE_BY_CURRENCY[currency.toUpperCase()] ?? 1;
 
 /** Imperial additions: `y³` = cubic yard (US-spec concrete), `bf` = board feet (lumber). */
 export const ESTIMATE_UNITS = ["m³", "y³", "m²", "m", "lm", "bf", "no", "kg", "ton", "ls", "set", "day"];

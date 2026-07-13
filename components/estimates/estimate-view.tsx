@@ -85,6 +85,11 @@ type EstimateViewProps = {
    * this sheet's autosave doesn't clobber the `budget` JSON the Take-Off tab writes. */
   takeoff: TakeoffRow[];
   takeoffSection: string;
+  /** USD secondary unit — lifted to the workspace so it persists in the `budget` JSON. */
+  usdSecondary: boolean;
+  setUsdSecondary: (v: boolean) => void;
+  usdRate: number;
+  setUsdRate: (v: number) => void;
   logoDataUrl?: string | null;
   footer?: FooterSettings;
   newId: (p: string) => string;
@@ -94,7 +99,7 @@ type EstimateViewProps = {
   setPreview: (v: boolean) => void;
 };
 
-export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, takeoff, takeoffSection, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
+export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -120,9 +125,6 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   const codeOfTask = (task: string) => normSet.find((n) => n.task.toLowerCase() === task.toLowerCase())?.code ?? "";
   const [showProgress, setShowProgress] = useState(true);
   const [clientVersion, setClientVersion] = useState(false);
-  // Optional secondary unit: show the grand total (and per-m² total) in USD too.
-  const [usdSecondary, setUsdSecondary] = useState(false);
-  const [usdRate, setUsdRate] = useState(1); // 1 {est.currency} = usdRate USD
   const [paper, setPaper] = useState<"A4" | "A3">("A3");
   const [orient, setOrient] = useState<"landscape" | "portrait">("landscape");
   const [pvZoom, setPvZoom] = useState(0.65);
@@ -517,10 +519,14 @@ ${!preview ? `@media print {
   const importedAmount = grand.equip;
   const imOn = pc.importedMaterials;
   const money = (n: number) => `${est.currency} ${nf0(n)}`;
-  // When the USD secondary unit is on, show "USD … · <system unit> …" — the USD
+  // When the USD secondary unit is on, show "$ … · <system unit> …" — the USD
   // equivalent printed to the LEFT of the main system unit (e.g. AWG).
   const dualMoney = (n: number) =>
-    usdSecondary ? `USD ${nf0(n * usdRate)} · ${est.currency} ${nf0(n)}` : money(n);
+    usdSecondary ? `$ ${nf0(n * usdRate)} · ${est.currency} ${nf0(n)}` : money(n);
+  // The FX state lives in the workspace (so it persists), which means changing it does
+  // not touch `est` — re-arm the autosave by hand, or the new rate would never be written.
+  const editUsdSecondary = (v: boolean) => { setSaved(false); setUsdSecondary(v); };
+  const editUsdRate = (v: number) => { setSaved(false); setUsdRate(v); };
 
   // Grand-total rows fed to the Smart Page-Break Engine renderer (kept as one block).
   // When Imported Materials is on, the equipment portion is split out of Direct Cost
@@ -568,7 +574,7 @@ ${!preview ? `@media print {
     // (schedule coupler + payment/retainage) and the Quantity Take-Off measurements.
     // Take-off MUST be included — this autosave overwrites the whole `budget` object, so
     // omitting the key would silently erase rows saved from the Take-Off tab.
-    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection } });
+    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection, fx: { usd: usdSecondary, rate: usdRate } } });
     setSaving(false);
     if (res.ok) setSaved(true);
     else setSaveError(res.error);
@@ -593,7 +599,7 @@ ${!preview ? `@media print {
     return () => window.clearTimeout(t);
     // onSave omitted intentionally: it is redefined each render with fresh state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [est, schedule, payment, takeoff, takeoffSection, saved, saving, draftKey]);
+  }, [est, schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, saved, saving, draftKey]);
 
   // 2) Once the server confirms the save, drop the local backup.
   useEffect(() => {
@@ -750,7 +756,7 @@ ${!preview ? `@media print {
               // columns (restored when Client mode is turned back off).
               setPc((p) => ({ ...p, labor: !nv, material: !nv, equipment: !nv, subcontractor: !nv, qtyUnit: !nv }));
             }} label="Client" tone="brand" />
-            <Switch on={usdSecondary} onClick={() => setUsdSecondary((v) => !v)} label="USD" tone="brand" />
+            <Switch on={usdSecondary} onClick={() => editUsdSecondary(!usdSecondary)} label="$ USD" tone="brand" />
             <div className="relative">
               <button
                 type="button"
@@ -1347,7 +1353,7 @@ ${!preview ? `@media print {
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Cost Summary</h3>
             <span className="text-[11px] font-medium text-faint">
               All values in {est.currency}
-              {usdSecondary ? ` · USD @ ${nf2(usdRate)}` : ""}
+              {usdSecondary ? ` · $ @ 1 ${est.currency} = ${usdRate.toFixed(4)} USD` : ""}
             </span>
           </div>
 
@@ -1375,15 +1381,15 @@ ${!preview ? `@media print {
                     {sections.map((s) => (
                       <li key={s.key} className="flex items-center gap-2">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${s.dot}`} />
-                        <span className="flex-1 text-muted">{s.key}</span>
-                        <span className="w-9 text-right text-[11px] tabular-nums text-faint">{nf0(share(s.val))}%</span>
-                        <span className={`tabular-nums font-medium ${s.txt}`}>{money(s.val)}</span>
+                        <span className="min-w-0 flex-1 truncate text-muted">{s.key}</span>
+                        <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-faint">{nf0(share(s.val))}%</span>
+                        <span className={`shrink-0 whitespace-nowrap tabular-nums font-medium ${s.txt}`}>{dualMoney(s.val)}</span>
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm font-semibold text-fg">
+                  <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2 text-sm font-semibold text-fg">
                     <span>Direct cost</span>
-                    <span className="tabular-nums">{money(direct)}</span>
+                    <span className="whitespace-nowrap tabular-nums">{dualMoney(direct)}</span>
                   </div>
                 </div>
               );
@@ -1393,21 +1399,21 @@ ${!preview ? `@media print {
             <div className="border-t border-border px-4 py-3 lg:border-t-0">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">Mark-ups &amp; Total</div>
               <dl className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-muted">Direct cost</span>
-                  <span className="tabular-nums text-fg">{money(direct)}</span>
+                  <span className="whitespace-nowrap tabular-nums text-fg">{dualMoney(direct)}</span>
                 </div>
                 {/* Optional General Conditions — checkbox to activate; the recap line prints whenever GC is active. */}
-                <div className={`flex items-center justify-between ${gcActive ? "" : "no-print"}`}>
-                  <label className="flex items-center gap-2 text-muted">
+                <div className={`flex items-center justify-between gap-2 ${gcActive ? "" : "no-print"}`}>
+                  <label className="flex min-w-0 items-center gap-2 text-muted">
                     <input type="checkbox" checked={gcActive} onChange={(e) => setGcActive(e.target.checked)} className="no-print h-3.5 w-3.5 accent-brand" />
-                    General Conditions / Overhead{gcActive ? ` (${generalConditions.filter((g) => g.enabled).length})` : ""}
+                    <span className="truncate">General Conditions / Overhead{gcActive ? ` (${generalConditions.filter((g) => g.enabled).length})` : ""}</span>
                   </label>
-                  <span className="tabular-nums text-fg">{gcActive ? money(gcAmount) : "—"}</span>
+                  <span className="whitespace-nowrap tabular-nums text-fg">{gcActive ? dualMoney(gcAmount) : "—"}</span>
                 </div>
-                <MarkupRow label="Profit & Risk" pct={est.profitPct} amount={profit} currency={est.currency}
+                <MarkupRow label="Profit & Risk" pct={est.profitPct} amount={profit} money={dualMoney}
                   onPct={(v) => patchMeta({ profitPct: v })} />
-                <MarkupRow label="BBO" pct={est.bboPct} amount={bbo} currency={est.currency}
+                <MarkupRow label="BBO" pct={est.bboPct} amount={bbo} money={dualMoney}
                   onPct={(v) => patchMeta({ bboPct: v })} />
               </dl>
 
@@ -1419,7 +1425,7 @@ ${!preview ? `@media print {
 
               {/* Optional USD secondary unit on the grand total. */}
               {usdSecondary && (
-                <div className="mt-1 flex items-center justify-between rounded-lg border border-brand/30 bg-brand/5 px-3.5 py-1.5">
+                <div className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3.5 py-1.5">
                   <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand">
                     USD equivalent
                     <span className="no-print inline-flex items-center rounded border border-border bg-surface px-1 text-[10px] normal-case tracking-normal text-faint">
@@ -1427,14 +1433,14 @@ ${!preview ? `@media print {
                       <input
                         type="number"
                         min={0}
-                        step={0.01}
+                        step={0.0001}
                         value={usdRate}
-                        onChange={(e) => setUsdRate(Number(e.target.value) || 0)}
-                        className="w-12 bg-transparent py-0.5 text-center tabular-nums text-fg outline-none focus:bg-brand/10"
+                        onChange={(e) => editUsdRate(Number(e.target.value) || 0)}
+                        className="w-16 bg-transparent py-0.5 text-center tabular-nums text-fg outline-none focus:bg-brand/10"
                       />
                     </span>
                   </span>
-                  <span className="text-base font-bold tabular-nums text-brand">USD {nf0(usdAmt(grandTotal))}</span>
+                  <span className="whitespace-nowrap text-base font-bold tabular-nums text-brand">$ {nf0(usdAmt(grandTotal))}</span>
                 </div>
               )}
 
@@ -1460,7 +1466,7 @@ ${!preview ? `@media print {
             <CostSummaryCharts
               segments={chartData}
               sections={computeSections(est).map((s) => ({ name: s.name, cost: s.cost }))}
-              money={money}
+              money={dualMoney}
             />
           </div>
 
@@ -1829,17 +1835,18 @@ function MarkupRow({
   label,
   pct,
   amount,
-  currency,
+  money,
   onPct,
 }: {
   label: string;
   pct: number;
   amount: number;
-  currency: string;
+  /** Formatter, so the row follows the sheet's USD-secondary setting. */
+  money: (n: number) => string;
   onPct: (v: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-2">
       <span className="flex items-center gap-1.5 text-muted">
         {label}
         <span className="inline-flex items-center rounded-md border border-border bg-surface px-1.5">
@@ -1853,9 +1860,7 @@ function MarkupRow({
           <span className="text-xs text-faint">%</span>
         </span>
       </span>
-      <span className="tabular-nums text-fg">
-        {currency} {nf0(amount)}
-      </span>
+      <span className="whitespace-nowrap tabular-nums text-fg">{money(amount)}</span>
     </div>
   );
 }

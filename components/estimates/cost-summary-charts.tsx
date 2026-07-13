@@ -38,6 +38,28 @@ export type CostSection = { name: string; cost: number };
 /** Section bars cycle this palette — sections are user-defined, so there's no fixed map. */
 const SECTION_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "#0ea5e9", "#22c55e", "#64748b"];
 
+/** Horizontal room for a section name before it's clipped. */
+const NAME_W = 168;
+const NAME_MAX_CHARS = 30; // ~30 chars of 10px type fits NAME_W
+
+/**
+ * Single-line section label. Recharts' default tick is a <Text> that WRAPS to a second
+ * line once the name exceeds the axis width, which pushed the bars around and made the
+ * chart read as two rows per section. This renders one <text> run instead — no wrapping,
+ * ever — and ellipsises a name too long to fit; the full name stays in the SVG <title>
+ * (hover) and in the tooltip.
+ */
+function SectionTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string | number } }) {
+  const full = String(payload?.value ?? "");
+  const text = full.length > NAME_MAX_CHARS ? `${full.slice(0, NAME_MAX_CHARS - 1)}…` : full;
+  return (
+    <text x={x} y={y} dy={4} textAnchor="end" fill="currentColor" fontSize={10}>
+      <title>{full}</title>
+      {text}
+    </text>
+  );
+}
+
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -134,15 +156,16 @@ export function CostSummaryCharts({
         {sections.length ? (
           <div className="h-48 w-full text-faint">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sections} margin={{ top: 4, right: 8, bottom: 4, left: 8 }} layout="vertical">
+              <BarChart data={sections} margin={{ top: 4, right: 8, bottom: 4, left: 0 }} layout="vertical">
                 <XAxis type="number" hide />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={110}
+                  width={NAME_W}
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fill: "currentColor", fontSize: 11 }}
+                  interval={0}
+                  tick={<SectionTick />}
                 />
                 <Tooltip
                   cursor={{ fill: "currentColor", fillOpacity: 0.06 }}

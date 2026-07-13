@@ -5,7 +5,7 @@ import { FileSpreadsheet, Ruler, Tags, BookOpen, ListChecks, LayoutGrid, Calenda
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { CostEstimate, EstimateItem } from "@/lib/data/estimates";
-import type { TakeoffRow } from "@/lib/data/estimates.types";
+import { defaultUsdRate, type TakeoffRow } from "@/lib/data/estimates.types";
 import type { PriceItem } from "@/lib/data/price-lists.types";
 import { type EstimateTemplate, type NormSetTask } from "@/lib/data/estimate-presets";
 import type { GeneralConditionItem } from "@/lib/data/general-conditions";
@@ -74,6 +74,11 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   // estimate whose rows were all deliberately deleted stays empty instead of re-seeding.
   const [takeoff, setTakeoff] = useState<TakeoffRow[]>(() => estimate.budget?.takeoff ?? SEED_TAKEOFF);
   const [takeoffSection, setTakeoffSection] = useState<string>(() => estimate.budget?.takeoffSection ?? "Take-Off");
+  // USD secondary unit — lifted here (like the take-off rows) so it survives tab switches
+  // and rides in the same `budget` payload; the rate used to be local to the sheet and
+  // defaulted to 1, so it was both meaningless for a pegged currency and lost on reload.
+  const [usdSecondary, setUsdSecondary] = useState<boolean>(() => estimate.budget?.fx?.usd ?? false);
+  const [usdRate, setUsdRate] = useState<number>(() => estimate.budget?.fx?.rate ?? defaultUsdRate(estimate.currency));
   const seq = useRef(100);
   const newId = (p: string) => `${p}-${seq.current++}`;
 
@@ -97,7 +102,9 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
 
   const saveTakeoff = async () => {
     setTakeoffSaving(true);
-    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection } });
+    // `fx` rides along for the same reason take-off does: this write replaces the whole
+    // `budget` object, so any key left out here is erased.
+    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection, fx: { usd: usdSecondary, rate: usdRate } } });
     setTakeoffSaving(false);
     setTakeoffSaved(res.ok);
   };
@@ -175,6 +182,10 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           payment={payment}
           takeoff={takeoff}
           takeoffSection={takeoffSection}
+          usdSecondary={usdSecondary}
+          setUsdSecondary={setUsdSecondary}
+          usdRate={usdRate}
+          setUsdRate={setUsdRate}
           logoDataUrl={logoDataUrl}
           footer={footer}
           newId={newId}
