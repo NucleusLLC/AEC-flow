@@ -47,6 +47,34 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  events: {
+    // Beta activity signal. Without this a tester who signed up and never came back looks
+    // identical to a daily user — AEC-Flow has no other last-seen field. Best-effort: a failed
+    // write must never block a legitimate sign-in.
+    async signIn({ user }) {
+      if (!user?.id) return;
+      try {
+        const u = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { preferences: true },
+        });
+        const prefs = (u?.preferences ?? {}) as Record<string, unknown>;
+        if (!prefs.betaTester) return;
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            preferences: {
+              ...prefs,
+              lastSeenAt: new Date().toISOString(),
+              loginCount: Number(prefs.loginCount ?? 0) + 1,
+            },
+          },
+        });
+      } catch (e) {
+        console.error("beta last-seen update failed", e);
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

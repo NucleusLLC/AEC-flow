@@ -10,6 +10,7 @@
 
 import bcrypt from "bcryptjs";
 import { addMonths } from "date-fns";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { seedCompany } from "@/lib/data/company-seed";
 
@@ -67,6 +68,15 @@ export async function registerBetaTester(input: {
     const now = new Date();
     const accessUntil = addMonths(now, BETA_ACCESS_MONTHS);
 
+    // Signup origin. This runs on Vercel, so the real client IP/country only exist on the request
+    // headers — and for a tester who signs up but never returns, this is the ONLY signal we will
+    // ever have about where they are. Nucleus mirrors these into beta_testers via sync-aecflow.
+    const h = await headers();
+    const signupIp = h.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+      h.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+    const signupCountry = h.get("x-vercel-ip-country") || null;
+    const userAgent = h.get("user-agent")?.slice(0, 300) || null;
+
     // Each signup gets its OWN isolated company (tenant); the beta window becomes
     // the company's time-based license.
     const co = await prisma.company.create({
@@ -96,6 +106,9 @@ export async function registerBetaTester(input: {
           betaSignedUpAt: now.toISOString(),
           betaAccessUntil: accessUntil.toISOString(),
           betaFeedbackAgreed: true,
+          betaSignupIp: signupIp,
+          betaSignupCountry: signupCountry,
+          betaUserAgent: userAgent,
         },
       },
     });
