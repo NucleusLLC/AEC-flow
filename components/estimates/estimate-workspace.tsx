@@ -87,6 +87,9 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   // Rebar Calculator inputs — lifted for the same reason as take-off: the tabs are a
   // ternary, so the view unmounts on tab switch and everything it held was lost.
   const [rebar, setRebar] = useState<RebarState | undefined>(() => estimate.budget?.rebar as RebarState | undefined);
+  // Cover page — toggle + the project image/rendering. Persisted per-estimate.
+  const [coverOn, setCoverOn] = useState<boolean>(() => estimate.budget?.cover?.on ?? false);
+  const [coverImage, setCoverImage] = useState<string | null>(() => estimate.budget?.cover?.image ?? null);
   const seq = useRef(100);
   const newId = (p: string) => `${p}-${seq.current++}`;
 
@@ -107,8 +110,9 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
       fx: { usd: usdSecondary, rate: usdRate },
       gcActive,
       rebar,
+      cover: { on: coverOn, image: coverImage },
     }),
-    [schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, gcActive, rebar],
+    [schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, gcActive, rebar, coverOn, coverImage],
   );
 
   // Explicit Save on the Take-Off tab. It writes the WHOLE estimate through the same
@@ -395,6 +399,10 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           setUsdSecondary={setUsdSecondary}
           usdRate={usdRate}
           setUsdRate={setUsdRate}
+          coverOn={coverOn}
+          setCoverOn={setCoverOn}
+          coverImage={coverImage}
+          setCoverImage={setCoverImage}
           logoDataUrl={logoDataUrl}
           footer={footer}
           newId={newId}

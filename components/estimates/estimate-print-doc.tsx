@@ -188,6 +188,11 @@ export interface EstimatePrintDocProps {
   chartData?: { label: string; value: number; color: string; pctOverride?: number; amount?: string }[];
   /** Imported Materials, Equipment & Logistics total — drives the 50/50 disbursement carve-out. */
   importedAmount?: number;
+  /** Cover page — a leading title page with the project's headline facts + a rendering. */
+  coverPage?: boolean;
+  coverImage?: string | null;
+  /** Pre-formatted grand total for the cover (carries the dual-currency string when on). */
+  coverTotalDisplay?: string;
   nf0: (n: number) => string;
   debug?: boolean;
   /** Reports the computed page count back to the parent (for the preview chrome). */
@@ -667,15 +672,19 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [est, paper, orient, textSize, pc, showProgress, debug, props.grandTotalRows, props.rate, props.notes, props.generalConditions, props.gcActive, props.schedule, props.payment, props.memo, props.logoScale, props.chartData, props.importedAmount]);
 
-  // Validate (loud, never silent) + report page count to the parent.
+  // Validate (loud, never silent) + report page count to the parent (incl. the cover).
   useEffect(() => {
     validatePagination(pages, context);
-    onPages?.(pages.length);
+    onPages?.(pages.length + (props.coverPage ? 1 : 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pages]);
+  }, [pages, props.coverPage]);
 
   const { profile } = context;
-  const totalPages = pages.length;
+  // A cover page is prepended to the engine's pages, so every downstream page number
+  // shifts by one and the total grows by one.
+  const showCover = !!props.coverPage;
+  const coverOffset = showCover ? 1 : 0;
+  const totalPages = pages.length + coverOffset;
 
   return (
     <div className="epd-root">
@@ -695,6 +704,22 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
         .epd-dbg-tag { position: absolute; right: 2px; font-size: 8px; color: #ef4444; background: #fff; padding: 0 2px; }
         .epd-cont { font-size: .8em; font-style: italic; color: #475569; text-transform: none; letter-spacing: 0; }
       `}</style>
+
+      {showCover ? (
+        <CoverPage
+          pageSettings={pageSettings}
+          profile={profile}
+          est={est}
+          image={props.coverImage ?? null}
+          logoDataUrl={props.logoDataUrl}
+          totalDisplay={props.coverTotalDisplay ?? `${est.currency} ${props.nf0(0)}`}
+          footerText={props.footerText}
+          footerFontFamily={props.footerFontFamily}
+          footerFontSize={props.footerFontSize}
+          pageNum={pc.pageNum}
+          totalPages={totalPages}
+        />
+      ) : null}
 
       {pages.map((page) => (
         <div
@@ -847,7 +872,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
             </span>
             {pc.pageNum ? (
               <span>
-                Page {page.pageNumber} of {totalPages}
+                Page {page.pageNumber + coverOffset} of {totalPages}
               </span>
             ) : (
               <span />
@@ -855,6 +880,135 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The optional Cover Page — page 1 when Print Control → Cover Page is on. A rendering (if
+ * uploaded) fills the upper two-thirds; below it, the project name and a facts grid:
+ * Client, Project No., Location, Area, Total Cost. Same page geometry and footer as the
+ * rest of the document, so it prints and paginates identically.
+ */
+function CoverPage({
+  pageSettings,
+  profile,
+  est,
+  image,
+  logoDataUrl,
+  totalDisplay,
+  footerText,
+  footerFontFamily,
+  footerFontSize,
+  pageNum,
+  totalPages,
+}: {
+  pageSettings: PageSettings;
+  profile: ReturnType<typeof getTextSizeProfile>;
+  est: CostEstimate;
+  image: string | null;
+  logoDataUrl?: string | null;
+  totalDisplay: string;
+  footerText?: string;
+  footerFontFamily?: string;
+  footerFontSize?: number;
+  pageNum: boolean;
+  totalPages: number;
+}) {
+  const facts: { label: string; value: string }[] = [
+    { label: "Client", value: est.client?.trim() || "—" },
+    { label: "Project No.", value: est.projectNumber ?? est.projectId ?? "—" },
+    { label: "Location", value: est.location?.trim() || "—" },
+    { label: "Area", value: est.gfa ? `${est.gfa.toLocaleString()} m²` : "—" },
+  ];
+  const logoH = Math.round(46 * 1.2);
+
+  return (
+    <div
+      className="epd-page"
+      style={{
+        width: pageSettings.pageWidth,
+        height: pageSettings.pageHeight,
+        paddingTop: pageSettings.marginTop,
+        paddingBottom: pageSettings.marginBottom,
+        paddingLeft: pageSettings.marginLeft,
+        paddingRight: pageSettings.marginRight,
+        color: "#0f172a",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Masthead — logo right, "Cost Estimate" label left. */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", borderBottom: "0.5px dotted #64748b", paddingBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
+          Cost Estimate
+        </div>
+        {logoDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- data URL, print context
+          <img src={logoDataUrl} alt="" style={{ height: logoH, maxWidth: 300, objectFit: "contain", display: "block" }} />
+        ) : (
+          <EstimateLogo size={logoH} />
+        )}
+      </div>
+
+      {/* Hero image / rendering — the visual anchor. Placeholder frame when none uploaded. */}
+      <div style={{ flex: "1 1 auto", minHeight: 0, marginTop: 18, marginBottom: 18 }}>
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- data URL, print context
+          <img
+            src={image}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", display: "block" }}
+          />
+        ) : (
+          <div style={{ width: "100%", height: "100%", borderRadius: 6, border: "1px dashed #cbd5e1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13 }}>
+            Project image / rendering
+          </div>
+        )}
+      </div>
+
+      {/* Project name. */}
+      <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, color: "#0f172a" }}>
+        {est.projectName}
+      </div>
+      <div style={{ marginTop: 4, fontSize: 13, color: "#64748b" }}>
+        Version {est.version}
+        {est.date ? ` · ${est.date}` : ""}
+      </div>
+
+      {/* Facts grid + the total, banded to stand out. */}
+      <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px 32px" }}>
+        {facts.map((f) => (
+          <div key={f.label} style={{ borderTop: "1px solid #e2e8f0", paddingTop: 6 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94a3b8" }}>{f.label}</div>
+            <div style={{ marginTop: 2, fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{f.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 6, background: "#0f172a", color: "#fff", padding: "12px 16px" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.85 }}>Total Project Cost</span>
+        <span style={{ fontSize: 20, fontWeight: 800 }}>{totalDisplay}</span>
+      </div>
+
+      {/* Footer — matches the running footer on the rest of the document. */}
+      <div
+        style={{
+          marginTop: 14,
+          height: pageSettings.footerHeight,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          color: "#94a3b8",
+          fontSize: profile.fontSize - 2,
+          borderTop: "0.5px dotted #64748b",
+          paddingTop: 3,
+        }}
+      >
+        <span style={{ fontFamily: footerFontFamily || undefined, fontSize: footerFontSize || undefined }}>
+          {footerText ?? "AEC Management Suite"}
+        </span>
+        {pageNum ? <span>Page 1 of {totalPages}</span> : <span />}
+      </div>
     </div>
   );
 }

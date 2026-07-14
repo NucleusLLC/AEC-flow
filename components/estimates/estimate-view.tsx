@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, Bug } from "lucide-react";
+import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug } from "lucide-react";
 import { EstimatePrintDoc, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
 import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
@@ -92,6 +92,11 @@ type EstimateViewProps = {
   setUsdSecondary: (v: boolean) => void;
   usdRate: number;
   setUsdRate: (v: number) => void;
+  /** Cover page — toggle + the project image/rendering (data URL). Persisted per-estimate. */
+  coverOn: boolean;
+  setCoverOn: (v: boolean) => void;
+  coverImage: string | null;
+  setCoverImage: (v: string | null) => void;
   logoDataUrl?: string | null;
   footer?: FooterSettings;
   newId: (p: string) => string;
@@ -101,7 +106,7 @@ type EstimateViewProps = {
   setPreview: (v: boolean) => void;
 };
 
-export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, budget, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
+export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, budget, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, coverOn, setCoverOn, coverImage, setCoverImage, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -189,6 +194,44 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   // Overflow menu (occasional actions) + the Cost Database popover.
   const [moreOpen, setMoreOpen] = useState(false);
   const [costDbOpen, setCostDbOpen] = useState(false);
+
+  // Cover-image upload. Renderings can be large; a multi-MB data URL bloats every save of
+  // the `budget` JSON and slows the sheet. So we downscale to <=1600px on the long edge
+  // and re-encode as JPEG before storing — plenty for an A4/A3 hero image, a fraction of
+  // the bytes. Runs entirely in the browser (canvas), no upload endpoint needed.
+  const [coverErr, setCoverErr] = useState<string | null>(null);
+  const onCoverFile = (file: File | null) => {
+    setCoverErr(null);
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setCoverErr("Please choose an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1600;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          setCoverErr("Could not process this image.");
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        setCoverImage(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => setCoverErr("That image couldn't be read.");
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => setCoverErr("That file couldn't be read.");
+    reader.readAsDataURL(file);
+  };
 
   // Load saved print templates from localStorage once on mount.
   useEffect(() => {
@@ -907,6 +950,40 @@ ${!preview ? `@media print {
                         ))}
                       </div>
                     </div>
+                    {/* Cover Page — a leading title page with the project's headline facts
+                        and a rendering. Its own block (not just a toggle row) because when
+                        it's on it reveals an image uploader. */}
+                    <div className="mb-2.5 rounded-lg border border-border p-2">
+                      <PcRow label="Cover Page" on={coverOn} onToggle={() => setCoverOn(!coverOn)} />
+                      {coverOn ? (
+                        <div className="mt-1.5 border-t border-border pt-1.5">
+                          {coverImage ? (
+                            <div className="space-y-1.5">
+                              {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview */}
+                              <img src={coverImage} alt="Cover" className="h-20 w-full rounded-md border border-border object-cover" />
+                              <div className="flex gap-1.5">
+                                <label className="flex-1 cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-center text-[11px] font-medium text-fg hover:bg-surface-2">
+                                  Replace
+                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => onCoverFile(e.target.files?.[0] ?? null)} />
+                                </label>
+                                <button type="button" onClick={() => { setCoverImage(null); setCoverErr(null); }} className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-red-500 hover:bg-surface-2">
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed border-border px-2 py-3 text-center hover:bg-surface-2">
+                              <ImagePlus className="h-4 w-4 text-faint" />
+                              <span className="text-[11px] font-medium text-muted">Upload image / rendering</span>
+                              <span className="text-[10px] text-faint">Optional — the page still prints the project facts</span>
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => onCoverFile(e.target.files?.[0] ?? null)} />
+                            </label>
+                          )}
+                          {coverErr ? <div className="mt-1 text-[10px] text-red-500">{coverErr}</div> : null}
+                        </div>
+                      ) : null}
+                    </div>
+
                     <div className="mb-1 text-[11px] font-medium text-muted">Include in print</div>
                     <div className="space-y-0.5">
                       <PcRow label="Qty & Unit" on={pc.qtyUnit} onToggle={() => setPc((p) => ({ ...p, qtyUnit: !p.qtyUnit }))} />
@@ -1812,6 +1889,9 @@ ${!preview ? `@media print {
                 footerFontSize={footer?.fontSize}
                 chartData={chartData}
                 importedAmount={importedAmount}
+                coverPage={coverOn}
+                coverImage={coverImage}
+                coverTotalDisplay={dualMoney(grandTotal)}
                 nf0={nf0}
                 debug={pcDebug}
                 onPages={setEnginePages}

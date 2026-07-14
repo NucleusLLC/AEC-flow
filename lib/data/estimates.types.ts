@@ -127,6 +127,12 @@ export type EstimateBudget = {
   gcActive?: boolean;
   /** Rebar Calculator inputs (element, bar weights, strip/column/beam/slab). */
   rebar?: unknown;
+  /**
+   * Cover page: whether it prints, and the project image/rendering (data URL). Lives in
+   * `budget` because it's per-estimate content, not a firm-wide print preference — a
+   * rendering belongs to this project.
+   */
+  cover?: { on?: boolean; image?: string | null };
 };
 
 /**
