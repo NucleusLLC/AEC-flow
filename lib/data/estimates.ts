@@ -52,6 +52,7 @@ function toDto(e: EstimateRow): CostEstimate {
     date: ymd(e.date),
     location: e.location ?? "",
     client: e.client ?? undefined,
+    clientId: e.clientId ?? undefined,
     currency: e.currency,
     avgLaborRate: e.avgLaborRate,
     profitPct: e.profitPct,
@@ -143,17 +144,57 @@ export async function getEstimateProjects(): Promise<EstimateProject[]> {
 }
 
 /**
+ * Work out which Client an estimate belongs to.
+ *
+ * The sheet has always stored the client as a free-text NAME, with no foreign key, so
+ * an estimate could never be found from the client side — the client page showed
+ * nothing. `clientId` is the real link; this resolves it, most-trustworthy source first:
+ *
+ *   1. an explicit id already on the sheet (set by the client picker);
+ *   2. the estimate's project — a project has a required clientId, and an estimate
+ *      started from a project is keyed by that project's own id, so both `projectId`
+ *      and the estimate's `id` are worth probing;
+ *   3. an exact (case-insensitive) match on the typed name.
+ *
+ * Returns null when nothing matches — an estimate may legitimately be drafted before
+ * its client exists as a record. Because this runs on every save, an unlinked estimate
+ * heals itself the moment the name matches a real client.
+ */
+async function resolveClientId(input: CostEstimate): Promise<string | null> {
+  if (input.clientId) return input.clientId;
+
+  for (const pid of [input.projectId, input.id]) {
+    if (!pid) continue;
+    const project = await prisma.project.findUnique({ where: { id: pid }, select: { clientId: true } });
+    if (project?.clientId) return project.clientId;
+  }
+
+  const name = input.client?.trim();
+  if (name) {
+    const match = await prisma.client.findFirst({
+      where: { name: { equals: name, mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (match) return match.id;
+  }
+
+  return null;
+}
+
+/**
  * Persist a full estimate (header + categories + items). Categories/items are
  * replaced wholesale (cascade delete + recreate) — the editor sends the whole
  * sheet. `amount` is the computed grand total (from lib/estimates/calc.ts),
  * stored so the list can show it without loading every line.
  */
 export async function saveEstimate(input: CostEstimate, amount: number): Promise<{ id: string }> {
+  const clientId = await resolveClientId(input);
   const header = {
     projectId: input.projectId ?? null,
     projectNumber: input.projectNumber ?? null,
     projectName: input.projectName,
     client: input.client ?? null,
+    clientId,
     location: input.location || null,
     version: input.version,
     date: input.date ? new Date(input.date) : null,

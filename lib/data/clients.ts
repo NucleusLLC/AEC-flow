@@ -21,6 +21,7 @@ import type {
   ClientContact,
   ClientProposal,
   ClientProject,
+  ClientEstimate,
   ClientRecord,
   ClientListItem,
   ClientWriteInput,
@@ -170,6 +171,7 @@ export async function getClient(id: string): Promise<ClientRecord | null> {
       addresses: true,
       proposals: { orderBy: { createdAt: "desc" } },
       projects: { include: { manager: true } },
+      estimates: { orderBy: { updatedAt: "desc" } },
     },
   });
   if (!c) return null;
@@ -213,9 +215,20 @@ export async function getClient(id: string): Promise<ClientRecord | null> {
     manager: p.manager.name,
   }));
 
+  const estimates: ClientEstimate[] = c.estimates.map((e) => ({
+    id: e.id,
+    number: e.projectNumber ?? "",
+    name: e.projectName,
+    status: e.status,
+    amount: e.amount,
+    currency: e.currency,
+    date: ymd(e.date ?? e.updatedAt),
+  }));
+
   const activityDates = [
     ...c.proposals.map((p) => p.updatedAt),
     ...c.projects.map((p) => p.updatedAt),
+    ...c.estimates.map((e) => e.updatedAt),
     c.updatedAt,
   ];
   const lastActivity = activityDates.length
@@ -241,6 +254,7 @@ export async function getClient(id: string): Promise<ClientRecord | null> {
     contacts,
     proposals,
     projects,
+    estimates,
     activity: [],
   };
 }

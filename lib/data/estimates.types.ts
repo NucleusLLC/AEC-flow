@@ -70,7 +70,10 @@ export type CostEstimate = {
   version: string;
   date: string;
   location: string;
+  /** Client name as typed/printed on the sheet. */
   client?: string;
+  /** Real FK to the Client — what makes this estimate visible on the client's page. */
+  clientId?: string;
   currency: string;
   avgLaborRate: number; // per hour
   profitPct: number;

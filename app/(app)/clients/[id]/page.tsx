@@ -11,6 +11,7 @@ import {
   Pencil,
   FileText,
   FolderKanban,
+  Calculator,
 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -35,6 +36,12 @@ const proposalTone: Record<ProposalStatus, Parameters<typeof Badge>[0]["tone"]> 
   ON_HOLD: "amber",
   REJECTED: "red",
   VOID: "slate",
+};
+
+const estimateTone: Record<string, Parameters<typeof Badge>[0]["tone"]> = {
+  DRAFT: "slate",
+  IN_REVIEW: "amber",
+  APPROVED: "green",
 };
 
 function InfoRow({ icon: Icon, children }: { icon: typeof Mail; children: React.ReactNode }) {
@@ -196,6 +203,44 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               </div>
             ) : (
               <CardBody className="text-sm text-muted">No projects yet.</CardBody>
+            )}
+          </Card>
+
+          {/* Estimates — links through to the estimate workspace. */}
+          <Card>
+            <CardHeader
+              title="Estimates"
+              subtitle={`${client.estimates.length} total`}
+              action={<Calculator className="h-4 w-4 text-faint" />}
+            />
+            {client.estimates.length ? (
+              <div className="divide-y divide-border">
+                {client.estimates.map((e) => (
+                  <Link
+                    key={e.id}
+                    href={`/estimates?project=${e.id}`}
+                    className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-surface-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-faint">{e.number || "—"}</span>
+                        <Badge tone={estimateTone[e.status] ?? "slate"}>
+                          {e.status.replace(/_/g, " ").toLowerCase()}
+                        </Badge>
+                      </div>
+                      <div className="mt-0.5 truncate text-sm font-medium text-fg">{e.name}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-sm font-medium text-fg">
+                        {e.currency} {Math.round(e.amount).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-faint">{formatDate(e.date)}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <CardBody className="text-sm text-muted">No estimates yet.</CardBody>
             )}
           </Card>
 

@@ -246,6 +246,7 @@ model Client {
   proposals    Proposal[]
   orders       Order[]
   projects     Project[]
+  estimates    CostEstimate[]
   activityLogs ActivityLog[]
 }
 
@@ -1280,7 +1281,13 @@ model CostEstimate {
   projectId     String?
   projectNumber String?
   projectName   String
+  /// Free-text client name as typed on the sheet — kept as the printed label.
   client        String?
+  /// Real link to the Client. Nullable: an estimate can be drafted before the client
+  /// exists as a record, and legacy rows predate this column. Resolved on save from
+  /// (in order) an explicit id, the estimate's project, then an exact name match.
+  clientId      String?
+  clientRef     Client?        @relation(fields: [clientId], references: [id])
   location      String?
   version       String         @default("V1.0")
   date          DateTime?
@@ -1298,6 +1305,7 @@ model CostEstimate {
   categories EstimateCategory[]
 
   @@index([projectId])
+  @@index([clientId])
   @@map("cost_estimates")
 }
 

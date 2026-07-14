@@ -66,6 +66,16 @@ export type ClientProject = {
   manager: string;
 };
 
+export type ClientEstimate = {
+  id: string;
+  number: string;
+  name: string;
+  status: string;
+  amount: number;
+  currency: string;
+  date: string;
+};
+
 export type ClientActivity = {
   id: string;
   action: string;
@@ -93,6 +103,7 @@ export type ClientRecord = {
   contacts: ClientContact[];
   proposals: ClientProposal[];
   projects: ClientProject[];
+  estimates: ClientEstimate[];
   activity: ClientActivity[];
 };
 

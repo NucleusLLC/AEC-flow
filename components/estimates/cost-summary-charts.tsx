@@ -38,25 +38,53 @@ export type CostSection = { name: string; cost: number };
 /** Section bars cycle this palette — sections are user-defined, so there's no fixed map. */
 const SECTION_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "#0ea5e9", "#22c55e", "#64748b"];
 
-/** Horizontal room for a section name before it's clipped. */
-const NAME_W = 168;
+/**
+ * The Y axis is one gutter holding TWO runs: the section name (left-aligned) and its
+ * share of the total (right-aligned, hard against the bars). Splitting the widths here
+ * keeps the % in its own visual column instead of drifting with the name length.
+ */
+const NAME_W = 170; // room for the name
+const PCT_W = 42; // room for the "12%" column between the name and the bar
+const AXIS_W = NAME_W + PCT_W;
 const NAME_MAX_CHARS = 30; // ~30 chars of 10px type fits NAME_W
 
+/** Vertical room per bar. Below ~30px the labels crowd each other. */
+const ROW_H = 34;
+const MIN_CHART_H = 192;
+
 /**
- * Single-line section label. Recharts' default tick is a <Text> that WRAPS to a second
+ * Section label + % share. Recharts' default tick is a <Text> that WRAPS to a second
  * line once the name exceeds the axis width, which pushed the bars around and made the
- * chart read as two rows per section. This renders one <text> run instead — no wrapping,
- * ever — and ellipsises a name too long to fit; the full name stays in the SVG <title>
- * (hover) and in the tooltip.
+ * chart read as two rows per section. This renders single <text> runs instead — no
+ * wrapping, ever — and ellipsises a name too long to fit; the full name stays in the
+ * SVG <title> (hover) and in the tooltip.
  */
-function SectionTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string | number } }) {
+function SectionTick({
+  x,
+  y,
+  payload,
+  pctOf,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string | number };
+  pctOf?: (name: string) => number;
+}) {
   const full = String(payload?.value ?? "");
   const text = full.length > NAME_MAX_CHARS ? `${full.slice(0, NAME_MAX_CHARS - 1)}…` : full;
+  const right = x ?? 0; // axis edge — the bars start here
+  const pct = pctOf?.(full) ?? 0;
   return (
-    <text x={x} y={y} dy={4} textAnchor="end" fill="currentColor" fontSize={10}>
-      <title>{full}</title>
-      {text}
-    </text>
+    <g fill="currentColor" fontSize={10}>
+      <text x={right - AXIS_W} y={y} dy={4} textAnchor="start">
+        <title>{full}</title>
+        {text}
+      </text>
+      {/* % sits between the name and the chart, right-aligned so the digits line up. */}
+      <text x={right - 8} y={y} dy={4} textAnchor="end" fontWeight={600} opacity={0.75}>
+        {pct.toFixed(0)}%
+      </text>
+    </g>
   );
 }
 
@@ -97,6 +125,15 @@ export function CostSummaryCharts({
 }) {
   const total = segments.reduce((a, s) => a + s.value, 0);
   const pctOf = (s: CostSegment) => (s.pctOverride != null ? s.pctOverride : total > 0 ? (s.value / total) * 100 : 0);
+
+  // Section shares are of the DIRECT-cost total (the sum of the bars), not the grand
+  // total — a section's % must be its share of the chart it's drawn in, or the bars and
+  // the numbers would disagree.
+  const sectionTotal = sections.reduce((a, s) => a + s.cost, 0);
+  const sectionPct = (name: string) => {
+    const s = sections.find((x) => x.name === name);
+    return s && sectionTotal > 0 ? (s.cost / sectionTotal) * 100 : 0;
+  };
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
@@ -154,18 +191,23 @@ export function CostSummaryCharts({
       {/* Per-section direct cost */}
       <Panel title="Cost by Section">
         {sections.length ? (
-          <div className="h-48 w-full text-faint">
+          // Height grows with the number of sections — a fixed 192px crammed the labels
+          // on top of each other once a sheet had more than ~5 sections.
+          <div
+            className="w-full text-faint"
+            style={{ height: Math.max(MIN_CHART_H, sections.length * ROW_H + 16) }}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sections} margin={{ top: 4, right: 8, bottom: 4, left: 0 }} layout="vertical">
                 <XAxis type="number" hide />
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={NAME_W}
+                  width={AXIS_W}
                   tickLine={false}
                   axisLine={false}
                   interval={0}
-                  tick={<SectionTick />}
+                  tick={<SectionTick pctOf={sectionPct} />}
                 />
                 <Tooltip
                   cursor={{ fill: "currentColor", fillOpacity: 0.06 }}

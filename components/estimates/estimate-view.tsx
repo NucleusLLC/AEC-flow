@@ -163,6 +163,13 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
     chart: false,
     importedMaterials: false, // break out Imported Materials, Equipment & Logistics
     methodDetail: false, // annotate each line with its calculation method (default OFF)
+    // Rate columns — the per-unit inputs behind each cost. OFF by default: they widen
+    // the sheet, and most clients only want the resulting costs.
+    laborNorm: false,
+    laborHrs: false,
+    materialUnit: false,
+    equipmentUnit: false,
+    subUnit: false,
   });
 
   // Load saved print templates from localStorage once on mount.
@@ -754,7 +761,12 @@ ${!preview ? `@media print {
               if (nv) setOrient("portrait");
               // Client mode = section subtotals only: auto-hide the per-row detail
               // columns (restored when Client mode is turned back off).
-              setPc((p) => ({ ...p, labor: !nv, material: !nv, equipment: !nv, subcontractor: !nv, qtyUnit: !nv }));
+              // Rate columns are internal build-up — never restored by leaving Client mode.
+              setPc((p) => ({
+                ...p,
+                labor: !nv, material: !nv, equipment: !nv, subcontractor: !nv, qtyUnit: !nv,
+                ...(nv ? { laborNorm: false, laborHrs: false, materialUnit: false, equipmentUnit: false, subUnit: false } : {}),
+              }));
             }} label="Client" tone="brand" />
             <Switch on={usdSecondary} onClick={() => editUsdSecondary(!usdSecondary)} label="$ USD" tone="brand" />
             <div className="relative">
@@ -823,9 +835,14 @@ ${!preview ? `@media print {
                     <div className="mb-1 text-[11px] font-medium text-muted">Include in print</div>
                     <div className="space-y-0.5">
                       <PcRow label="Qty & Unit" on={pc.qtyUnit} onToggle={() => setPc((p) => ({ ...p, qtyUnit: !p.qtyUnit }))} />
+                      <PcRow label="Labor Norm hrs/unit" on={!!pc.laborNorm} onToggle={() => setPc((p) => ({ ...p, laborNorm: !p.laborNorm }))} />
+                      <PcRow label="Labor Hrs" on={!!pc.laborHrs} onToggle={() => setPc((p) => ({ ...p, laborHrs: !p.laborHrs }))} />
                       <PcRow label="Labor" on={pc.labor} onToggle={() => setPc((p) => ({ ...p, labor: !p.labor }))} />
+                      <PcRow label="Material Unit Cost" on={!!pc.materialUnit} onToggle={() => setPc((p) => ({ ...p, materialUnit: !p.materialUnit }))} />
                       <PcRow label="Material" on={pc.material} onToggle={() => setPc((p) => ({ ...p, material: !p.material }))} />
+                      <PcRow label="Equipment Unit Cost" on={!!pc.equipmentUnit} onToggle={() => setPc((p) => ({ ...p, equipmentUnit: !p.equipmentUnit }))} />
                       <PcRow label="Equipment" on={pc.equipment} onToggle={() => setPc((p) => ({ ...p, equipment: !p.equipment }))} />
+                      <PcRow label="Subcontractor Unit Cost" on={!!pc.subUnit} onToggle={() => setPc((p) => ({ ...p, subUnit: !p.subUnit }))} />
                       <PcRow label="Subcontractor" on={pc.subcontractor} onToggle={() => setPc((p) => ({ ...p, subcontractor: !p.subcontractor }))} />
                       <PcRow label="Progress" on={showProgress} onToggle={() => setShowProgress((v) => !v)} />
                       <PcRow label="Page #" on={pc.pageNum} onToggle={() => setPc((p) => ({ ...p, pageNum: !p.pageNum }))} />

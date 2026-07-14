@@ -72,10 +72,24 @@ export interface PrintControl {
    * Assembly). OFF by default — the main table keeps its standard columns and labels.
    */
   methodDetail?: boolean;
+  /**
+   * Rate columns — the per-unit inputs BEHIND each cost column, printed next to the
+   * cost they produce (Norm hrs/u → Hrs → Labor, Mat./u → Material, …). All OFF by
+   * default: the standard sheet shows costs, and these widen the table. Optional so a
+   * print template saved before they existed still loads.
+   */
+  laborNorm?: boolean;
+  laborHrs?: boolean;
+  materialUnit?: boolean;
+  equipmentUnit?: boolean;
+  subUnit?: boolean;
 }
 
 /** Subtle, print-friendly band colour for alternating item rows. */
 const ZEBRA_FILL = "#f3f4f6";
+
+/** Rate columns are decimals (0.35 hrs/u, 12.50 /u) — the cost columns stay whole (nf0). */
+const nfRate = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Short label per calculation method — appended to a line only when the optional
  *  "method details" report setting is ON (pc.methodDetail). Default OFF → no tag. */
@@ -210,9 +224,16 @@ function buildColumns(pc: PrintControl, showProgress: boolean): ColDef[] {
     { key: "desc", label: "Description", width: 0, align: "left", flexible: true },
     pc.qtyUnit && { key: "qty", label: "Qty", width: 46, align: "right" },
     pc.qtyUnit && { key: "unit", label: "Unit", width: 46, align: "left" },
+    // Each optional rate column sits immediately LEFT of the cost it produces, so the
+    // sheet reads input → output across the row.
+    !!pc.laborNorm && { key: "norm", label: "Norm hrs/u", width: 62, align: "right" },
+    !!pc.laborHrs && { key: "hrs", label: "Hrs", width: 52, align: "right" },
     pc.labor && { key: "labor", label: "Labor", width: 82, align: "right" },
+    !!pc.materialUnit && { key: "matUnit", label: "Mat. /u", width: 66, align: "right" },
     pc.material && { key: "material", label: "Material", width: 82, align: "right" },
+    !!pc.equipmentUnit && { key: "equipUnit", label: "Equip. /u", width: 66, align: "right" },
     pc.equipment && { key: "equipment", label: "Equip.", width: 82, align: "right" },
+    !!pc.subUnit && { key: "subUnit", label: "Subc. /u", width: 66, align: "right" },
     pc.subcontractor && { key: "sub", label: "Subcont.", width: 82, align: "right" },
     { key: "total", label: "Total", width: 92, align: "right" },
     showProgress && { key: "poc", label: "POC%", width: 50, align: "right" },
@@ -248,6 +269,7 @@ function buildReportData(
       (a, it) => {
         const c = calc(it);
         return {
+          hrs: a.hrs + c.hrs,
           labor: a.labor + c.labor,
           mat: a.mat + c.mat,
           equip: a.equip + c.equip,
@@ -256,7 +278,7 @@ function buildReportData(
           prog: a.prog + c.prog,
         };
       },
-      { labor: 0, mat: 0, equip: 0, sub: 0, total: 0, prog: 0 },
+      { hrs: 0, labor: 0, mat: 0, equip: 0, sub: 0, total: 0, prog: 0 },
     );
     const pocPct = ct.total > 0 ? (ct.prog / ct.total) * 100 : 0;
     return {
@@ -279,9 +301,14 @@ function buildReportData(
             code: it.code ?? "",
             qty: it.qty ? nf0(it.qty) : "",
             unit: it.unit,
+            norm: nfRate(it.laborNorm),
+            hrs: nfRate(c.hrs),
             labor: nf0(c.labor),
+            matUnit: nfRate(it.materialUnitCost),
             material: nf0(c.mat),
+            equipUnit: nfRate(it.equipmentUnitCost),
             equipment: nf0(c.equip),
+            subUnit: nfRate(it.subcontractUnitCost),
             sub: nf0(c.sub),
             total: nf0(c.total),
             poc: `${nf0(it.poc)}%`,
@@ -293,6 +320,9 @@ function buildReportData(
         id: cat.id,
         label: `Subtotal — ${cat.name}`,
         values: {
+          // Hours add up; the per-unit RATE columns don't (a sum of rates is meaningless),
+          // so they're deliberately absent here and render blank.
+          hrs: nfRate(ct.hrs),
           labor: nf0(ct.labor),
           material: nf0(ct.mat),
           equipment: nf0(ct.equip),
