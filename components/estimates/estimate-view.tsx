@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, Bug } from "lucide-react";
+import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, Bug } from "lucide-react";
 import { EstimatePrintDoc, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
 import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
 import { CostSummaryCharts } from "./cost-summary-charts";
 import type { FooterSettings } from "@/lib/server/practice-config";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { EmailButton } from "@/components/email/email-button";
 import { SectionCopy } from "./section-copy";
 import {
@@ -187,6 +186,9 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   });
   const [pcCollapseOpen, setPcCollapseOpen] = useState(false);
   const printCollapsed = pc.collapsedSections ?? [];
+  // Overflow menu (occasional actions) + the Cost Database popover.
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [costDbOpen, setCostDbOpen] = useState(false);
 
   // Load saved print templates from localStorage once on mount.
   useEffect(() => {
@@ -677,51 +679,62 @@ ${!preview ? `@media print {
       <Card className="est-card no-print p-5">
         {/* Row 1 — title + primary actions */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          {/* Title only. The Template badge and Print/PDF used to live here too — both are
+              already in the workspace bar directly above, and a control shown twice reads
+              as two different controls. */}
           <div className="min-w-0">
             <input
               value={est.projectName}
               onChange={(e) => patchMeta({ projectName: e.target.value })}
               className="w-full max-w-md rounded-md bg-transparent text-xl font-semibold text-fg outline-none focus:bg-brand/5"
+              aria-label="Project name"
             />
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-              <span className="inline-flex items-center gap-2">
-                <span className="font-medium uppercase tracking-wide text-faint">Template</span>
-                {activeTemplate ? <Badge tone="green">{activeTemplate}</Badge> : <Badge tone="slate">none — blank start</Badge>}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="font-medium uppercase tracking-wide text-faint">Built-up Area</span>
-                <span className="inline-flex items-center rounded-md border border-border bg-surface px-1.5">
-                  <input
-                    type="number"
-                    min={0}
-                    value={area || ""}
-                    placeholder="0"
-                    onChange={(e) => patchMeta({ gfa: Number(e.target.value) || 0 })}
-                    className="w-20 bg-transparent py-0.5 text-right text-xs font-medium tabular-nums text-fg outline-none focus:bg-brand/5"
-                    aria-label="Built-up area in square metres"
-                  />
-                  <span className="text-[10px] text-faint">m²</span>
-                </span>
-              </span>
+            <div className="mt-0.5 text-xs text-faint">
+              {saving ? "Saving…" : saved ? "All changes saved" : "Autosaves as you type"}
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <SectionCopy
-              categories={est.categories}
-              onPaste={(cats) => {
-                setEst((e) => ({ ...e, categories: [...e.categories, ...cats] }));
-                setSaved(false);
-              }}
-            />
-            <EmailButton subject={`Estimate — ${est.projectName} (${est.version})`} attachment={`${est.projectName} — Estimate ${est.version}.pdf`} />
-            <button onClick={() => setPreview(true)} type="button" className={ghostBtn}><Eye className="h-4 w-4" /> Preview &amp; Print</button>
-            <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? "Saving…" : "Save"}</button>
+
+          {/* One primary action (Save). The occasional ones sit behind ⋯ so they stop
+              competing with it for attention. */}
+          <div className="flex shrink-0 items-center gap-2">
             {saveError ? <span className="self-center text-xs text-red-600" title={saveError}>Save failed</span> : null}
+            <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? "Saving…" : "Save"}</button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((v) => !v)}
+                aria-expanded={moreOpen}
+                aria-label="More actions"
+                title="More actions"
+                className={`${ghostBtn} px-2`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              {moreOpen ? (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
+                  <div className="absolute right-0 top-10 z-30 flex w-56 flex-col gap-1 rounded-lg border border-border bg-surface p-2 shadow-xl">
+                    <SectionCopy
+                      categories={est.categories}
+                      onPaste={(cats) => {
+                        setEst((e) => ({ ...e, categories: [...e.categories, ...cats] }));
+                        setSaved(false);
+                      }}
+                    />
+                    <EmailButton subject={`Estimate — ${est.projectName} (${est.version})`} attachment={`${est.projectName} — Estimate ${est.version}.pdf`} />
+                    <button onClick={() => { setMoreOpen(false); setPreview(true); }} type="button" className={`${ghostBtn} w-full justify-start`}>
+                      <Eye className="h-4 w-4" /> Preview &amp; Print
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {/* Row 2 — project identity */}
-        <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 sm:grid-cols-3 lg:grid-cols-5">
+        {/* Row 2 — project identity. Built-up Area joins the other fields instead of
+            floating in the title row: it's a field, so it belongs with the fields. */}
+        <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 sm:grid-cols-3 lg:grid-cols-6">
           <Field label="Project No.">
             <input value={est.projectId ?? ""} onChange={(e) => patchMeta({ projectId: e.target.value })} placeholder="—" className={metaInput} />
           </Field>
@@ -736,6 +749,16 @@ ${!preview ? `@media print {
           </Field>
           <Field label="Location">
             <input value={est.location} onChange={(e) => patchMeta({ location: e.target.value })} className={metaInput} />
+          </Field>
+          <Field label="Built-up Area (m²)">
+            <input
+              type="number"
+              min={0}
+              value={area || ""}
+              placeholder="0"
+              onChange={(e) => patchMeta({ gfa: Number(e.target.value) || 0 })}
+              className={metaInput}
+            />
           </Field>
         </div>
 
@@ -759,15 +782,50 @@ ${!preview ? `@media print {
             <button type="button" onClick={saveAsTemplate} className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg hover:bg-surface-2"><Save className="h-3 w-3" /> Save as…</button>
           </ToolGroup>
 
+          {/* Cost Database — four controls you set once per estimate, folded behind one
+              button that states the current source. Set-and-forget settings don't earn
+              permanent space next to the ones you flip while working. */}
           <ToolGroup label="Cost Database" className="min-w-0">
-            <select value={costSourceId} onChange={(e) => setCostSourceId(e.target.value)} title={costSources.find((s) => s.id === costSourceId)?.name} className="h-7 min-w-0 max-w-[150px] flex-1 truncate rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none">
-              {costSources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={applyIndex} onChange={(e) => setApplyIndex(e.target.checked)} className="accent-brand" /> Index</label>
-            <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={applyRegional} onChange={(e) => setApplyRegional(e.target.checked)} className="accent-brand" /> Adjust</label>
-            <select value={regionTarget} onChange={(e) => setRegionTarget(e.target.value)} disabled={!applyRegional} className="h-7 rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none disabled:opacity-50">
-              {REGION_TARGETS.map((t) => <option key={`${t.country}|${t.region}`} value={`${t.country}|${t.region}`}>{t.region}</option>)}
-            </select>
+            <div className="relative min-w-0">
+              <button
+                type="button"
+                onClick={() => setCostDbOpen((v) => !v)}
+                aria-expanded={costDbOpen}
+                title="Cost source, indexation and regional adjustment"
+                className={`inline-flex h-7 min-w-0 max-w-[190px] items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ${costDbOpen ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-fg hover:bg-surface-2"}`}
+              >
+                <Database className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{costSources.find((s) => s.id === costSourceId)?.name ?? "Source"}</span>
+                {applyIndex || applyRegional ? (
+                  <span className="shrink-0 rounded bg-brand/15 px-1 text-[10px] font-semibold text-brand">
+                    {[applyIndex && "idx", applyRegional && "adj"].filter(Boolean).join(" ")}
+                  </span>
+                ) : null}
+                <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+              </button>
+              {costDbOpen ? (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setCostDbOpen(false)} />
+                  <div className="absolute left-0 top-9 z-30 w-64 rounded-lg border border-border bg-surface p-2.5 shadow-xl">
+                    <label className="mb-1 block text-[11px] font-medium text-muted">Source</label>
+                    <select value={costSourceId} onChange={(e) => setCostSourceId(e.target.value)} className="mb-2 h-8 w-full rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none">
+                      {costSources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <label className="mb-1.5 flex items-center gap-2 text-xs text-fg">
+                      <input type="checkbox" checked={applyIndex} onChange={(e) => setApplyIndex(e.target.checked)} className="accent-brand" />
+                      Apply indexation
+                    </label>
+                    <label className="mb-1.5 flex items-center gap-2 text-xs text-fg">
+                      <input type="checkbox" checked={applyRegional} onChange={(e) => setApplyRegional(e.target.checked)} className="accent-brand" />
+                      Regional adjustment
+                    </label>
+                    <select value={regionTarget} onChange={(e) => setRegionTarget(e.target.value)} disabled={!applyRegional} className="h-8 w-full rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none disabled:opacity-40">
+                      {REGION_TARGETS.map((t) => <option key={`${t.country}|${t.region}`} value={`${t.country}|${t.region}`}>{t.region}</option>)}
+                    </select>
+                  </div>
+                </>
+              ) : null}
+            </div>
           </ToolGroup>
 
           <ToolGroup label="View" className="shrink-0">
