@@ -58,6 +58,7 @@ function toDto(e: EstimateRow): CostEstimate {
     profitPct: e.profitPct,
     bboPct: e.bboPct,
     gfa: e.gfa ?? undefined,
+    locked: e.locked,
     status: STATUS_TO_DTO[e.status],
     budget: (e.budget as CostEstimate["budget"]) ?? undefined,
     categories: e.categories.map((c) => ({
@@ -187,7 +188,98 @@ async function resolveClientId(input: CostEstimate): Promise<string | null> {
  * sheet. `amount` is the computed grand total (from lib/estimates/calc.ts),
  * stored so the list can show it without loading every line.
  */
+/**
+ * A locked estimate is FROZEN — a superseded version must not drift.
+ *
+ * Enforced here, server-side, rather than by disabling inputs: the sheet autosaves every
+ * 2.5s, so a tab left open from before the lock (or any stale client) would happily keep
+ * writing. This is the only gate every write path passes through.
+ */
+async function assertUnlocked(id: string | undefined): Promise<void> {
+  if (!id) return;
+  const row = await prisma.costEstimate.findUnique({ where: { id }, select: { locked: true } });
+  if (row?.locked) throw new Error("This version is locked. Unlock it before making changes.");
+}
+
+/** Lock / unlock a version. The ONLY writer of `locked` — saveEstimate never touches it. */
+export async function setEstimateLock(id: string, locked: boolean): Promise<void> {
+  await prisma.costEstimate.update({ where: { id }, data: { locked } });
+}
+
+/**
+ * Copy an estimate into a NEW version — a new row, new id, its own lines. The original is
+ * untouched (typically locked first), so the old number stays quotable while the new one
+ * is edited.
+ *
+ * Deliberately NOT a shallow header copy: categories and items are deep-copied with fresh
+ * ids, and `budget` (schedule / payment / take-off / fx) is carried over, so the new
+ * version opens as a true working duplicate rather than an empty shell. It starts DRAFT
+ * and unlocked whatever the source was.
+ */
+export async function duplicateEstimate(id: string, version: string): Promise<{ id: string }> {
+  const src = await prisma.costEstimate.findUnique({ where: { id }, include: WITH_LINES });
+  if (!src) throw new Error("Estimate not found.");
+
+  return prisma.$transaction(
+    async (tx) => {
+      const copy = await tx.costEstimate.create({
+        data: {
+          projectId: src.projectId,
+          projectNumber: src.projectNumber,
+          projectName: src.projectName,
+          client: src.client,
+          clientId: src.clientId,
+          location: src.location,
+          version,
+          date: src.date,
+          currency: src.currency,
+          avgLaborRate: src.avgLaborRate,
+          profitPct: src.profitPct,
+          bboPct: src.bboPct,
+          gfa: src.gfa,
+          status: "DRAFT",
+          locked: false,
+          amount: src.amount,
+          budget: (src.budget as Prisma.InputJsonValue) ?? undefined,
+        },
+      });
+
+      for (const [ci, c] of src.categories.entries()) {
+        await tx.estimateCategory.create({
+          data: {
+            estimateId: copy.id,
+            name: c.name,
+            code: c.code,
+            sortOrder: ci,
+            items: {
+              create: c.items.map((it, ii) => ({
+                task: it.task,
+                qty: it.qty,
+                unit: it.unit,
+                laborNorm: it.laborNorm,
+                materialUnitCost: it.materialUnitCost,
+                equipmentUnitCost: it.equipmentUnitCost,
+                subcontractUnitCost: it.subcontractUnitCost,
+                poc: it.poc,
+                code: it.code,
+                calculationMethod: it.calculationMethod,
+                laborRatePerUnit: it.laborRatePerUnit,
+                assembly: (it.assembly as Prisma.InputJsonValue) ?? undefined,
+                sortOrder: ii,
+              })),
+            },
+          },
+        });
+      }
+
+      return { id: copy.id };
+    },
+    { timeout: 30000, maxWait: 10000 },
+  );
+}
+
 export async function saveEstimate(input: CostEstimate, amount: number): Promise<{ id: string }> {
+  await assertUnlocked(input.id);
   const clientId = await resolveClientId(input);
   const header = {
     projectId: input.projectId ?? null,

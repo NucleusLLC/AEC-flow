@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, Bug } from "lucide-react";
+import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, Bug } from "lucide-react";
 import { EstimatePrintDoc, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
 import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
@@ -81,8 +81,11 @@ type EstimateViewProps = {
   equipment: PriceItem[];
   schedule: ScheduleConfig;
   payment: PaymentConfig;
-  /** Take-Off measurements — not rendered here, but carried into the save payload so
-   * this sheet's autosave doesn't clobber the `budget` JSON the Take-Off tab writes. */
+  /** The WHOLE `budget` JSON, built once by the workspace. This sheet's autosave replaces
+   * that column wholesale, so it must write every key — building it here (as this used to)
+   * is how take-off and fx each got silently erased in turn. */
+  budget: CostEstimate["budget"];
+  /** Take-Off measurements — not rendered here; kept for the local backup snapshot. */
   takeoff: TakeoffRow[];
   takeoffSection: string;
   /** USD secondary unit — lifted to the workspace so it persists in the `budget` JSON. */
@@ -99,7 +102,7 @@ type EstimateViewProps = {
   setPreview: (v: boolean) => void;
 };
 
-export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
+export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, budget, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -133,6 +136,15 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   // Smart Page-Break Engine: computed page count + optional visual debug overlay.
   const [enginePages, setEnginePages] = useState(1);
   const [pcDebug, setPcDebug] = useState(false);
+  // Collapsed sections (editor view only — Print Control has its own list, so what you
+  // fold away on screen doesn't silently change what the client receives).
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const isCollapsed = (id: string) => collapsed.has(id);
+  const toggleCollapse = (id: string) =>
+    setCollapsed((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const collapseAll = () => setCollapsed(new Set(est.categories.map((c) => c.id)));
+  const expandAll = () => setCollapsed(new Set());
+
   // Assembly-Based line items: which rows have their component editor expanded.
   const [openAsm, setOpenAsm] = useState<Set<string>>(new Set());
   const toggleAsm = (id: string) =>
@@ -170,7 +182,11 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
     materialUnit: false,
     equipmentUnit: false,
     subUnit: false,
+    // Section ids that print as header + subtotal only.
+    collapsedSections: [] as string[],
   });
+  const [pcCollapseOpen, setPcCollapseOpen] = useState(false);
+  const printCollapsed = pc.collapsedSections ?? [];
 
   // Load saved print templates from localStorage once on mount.
   useEffect(() => {
@@ -577,11 +593,8 @@ ${!preview ? `@media print {
   async function onSave() {
     setSaving(true);
     setSaveError(null);
-    // Persist the sheet's structured extras alongside it: the Budget & Timeline config
-    // (schedule coupler + payment/retainage) and the Quantity Take-Off measurements.
-    // Take-off MUST be included — this autosave overwrites the whole `budget` object, so
-    // omitting the key would silently erase rows saved from the Take-Off tab.
-    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection, fx: { usd: usdSecondary, rate: usdRate } } });
+    // `budget` is built by the workspace — one payload, every key, every writer.
+    const res = await saveEstimateAction({ ...est, budget });
     setSaving(false);
     if (res.ok) setSaved(true);
     else setSaveError(res.error);
@@ -592,7 +605,9 @@ ${!preview ? `@media print {
   //    write a local copy (instant, offline-proof) and push to the server, so
   //    work is never more than a few seconds from being persisted.
   useEffect(() => {
-    if (saved) return;
+    // A locked version is frozen: don't autosave it. The server would refuse the write
+    // anyway — this just stops a pointless request and a scary error toast every 2.5s.
+    if (saved || est.locked) return;
     const t = window.setTimeout(() => {
       if (draftKey) {
         try {
@@ -605,8 +620,10 @@ ${!preview ? `@media print {
     }, 2500);
     return () => window.clearTimeout(t);
     // onSave omitted intentionally: it is redefined each render with fresh state.
+    // `budget` covers schedule/payment/takeoff/fx/gcActive/rebar in one memoised object,
+    // so a new sub-config added there automatically re-arms this autosave.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [est, schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, saved, saving, draftKey]);
+  }, [est, budget, saved, saving, draftKey]);
 
   // 2) Once the server confirms the save, drop the local backup.
   useEffect(() => {
@@ -871,6 +888,59 @@ ${!preview ? `@media print {
                       <PcRow label="Memo/Remark" on={pc.memo} onToggle={() => setPc((p) => ({ ...p, memo: !p.memo }))} />
                       <PcRow label="Chart" on={pc.chart} onToggle={() => setPc((p) => ({ ...p, chart: !p.chart }))} />
                       <PcRow label="Calc. Method Details" on={!!pc.methodDetail} onToggle={() => setPc((p) => ({ ...p, methodDetail: !p.methodDetail }))} />
+
+                      {/* Collapsed Sections — which sections print as a header + subtotal
+                          only. Separate from the on-screen red arrows on purpose: folding
+                          a section away while you work must not silently drop its lines
+                          from the client's PDF. */}
+                      <div className="mt-1 border-t border-border pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setPcCollapseOpen((v) => !v)}
+                          aria-expanded={pcCollapseOpen}
+                          className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px] font-medium text-muted hover:bg-surface-2 hover:text-fg"
+                        >
+                          {pcCollapseOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                          Collapsed Sections
+                          <span className="ml-auto rounded bg-surface-2 px-1.5 text-[10px] tabular-nums text-faint">
+                            {printCollapsed.length}/{est.categories.length}
+                          </span>
+                        </button>
+                        {pcCollapseOpen ? (
+                          <div className="mt-0.5 space-y-0.5 pl-2">
+                            <div className="flex gap-2 px-2 pb-1">
+                              <button type="button" onClick={() => setPc((p) => ({ ...p, collapsedSections: est.categories.map((c) => c.id) }))} className="text-[10px] font-medium text-brand hover:underline">
+                                All
+                              </button>
+                              <button type="button" onClick={() => setPc((p) => ({ ...p, collapsedSections: [] }))} className="text-[10px] font-medium text-muted hover:underline">
+                                None
+                              </button>
+                            </div>
+                            {est.categories.length ? (
+                              est.categories.map((c) => (
+                                <PcRow
+                                  key={c.id}
+                                  label={c.name || "—"}
+                                  on={printCollapsed.includes(c.id)}
+                                  onToggle={() =>
+                                    setPc((p) => {
+                                      const cur = p.collapsedSections ?? [];
+                                      return {
+                                        ...p,
+                                        collapsedSections: cur.includes(c.id)
+                                          ? cur.filter((x) => x !== c.id)
+                                          : [...cur, c.id],
+                                      };
+                                    })
+                                  }
+                                />
+                              ))
+                            ) : (
+                              <div className="px-2 py-1 text-[11px] text-faint">No sections yet.</div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </>
@@ -971,6 +1041,23 @@ ${!preview ? `@media print {
                   <tr className="est-cat-head bg-surface-2">
                     <td colSpan={colCount} className="border-y border-border px-3 py-0.5">
                       <div className="flex items-center gap-2">
+                        {/* Collapse — folds the section down to its header + subtotal, so a
+                            long sheet can be read as a list of sections. View-only: it does
+                            not touch the data or what prints (Print Control owns that). */}
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapse(cat.id)}
+                          aria-label={isCollapsed(cat.id) ? "Expand section" : "Collapse section"}
+                          aria-expanded={!isCollapsed(cat.id)}
+                          title={isCollapsed(cat.id) ? "Expand section" : "Collapse section — show section rows only"}
+                          className="no-print flex h-5 w-4 shrink-0 items-center justify-center text-red-500 hover:text-red-400"
+                        >
+                          {isCollapsed(cat.id) ? (
+                            <ChevronRight className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </button>
                         <input
                           value={cat.code ?? ""}
                           onChange={(e) => patchCat(cat.id, { code: e.target.value.toUpperCase() })}
@@ -1035,8 +1122,8 @@ ${!preview ? `@media print {
                     </td>
                   </tr>
 
-                  {/* Items */}
-                  {cat.items.map((it) => {
+                  {/* Items — hidden while the section is collapsed (the subtotal stays). */}
+                  {(isCollapsed(cat.id) ? [] : cat.items).map((it) => {
                     const c = calcItem(it, rate);
                     const method = it.calculationMethod ?? "norm";
                     const isRate = method === "labor_rate";

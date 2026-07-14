@@ -1297,6 +1297,9 @@ model CostEstimate {
   bboPct        Float          @default(0)
   gfa           Float?
   status        EstimateStatus @default(DRAFT)
+  /// Locked = frozen. A superseded version must not drift: every write path refuses a
+  /// locked row SERVER-side, so a stale client or a rogue autosave can't edit it either.
+  locked        Boolean        @default(false)
   amount        Float          @default(0)
   budget        Json? // Budget & Timeline config (schedule coupler + payment/retainage)
   createdAt     DateTime       @default(now())

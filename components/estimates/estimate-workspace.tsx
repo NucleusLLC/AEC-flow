@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { FileSpreadsheet, Ruler, Tags, BookOpen, ListChecks, LayoutGrid, CalendarClock, HardHat, Grid2x2, FileDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FileSpreadsheet, Ruler, Tags, BookOpen, ListChecks, LayoutGrid, CalendarClock, HardHat, Grid2x2, FileDown, Lock, LockOpen, CopyPlus, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { CostEstimate, EstimateItem } from "@/lib/data/estimates";
@@ -20,11 +20,16 @@ import { EstimateView } from "./estimate-view";
 import { BudgetTimelineView } from "./budget-timeline-view";
 import { TakeoffView } from "./takeoff-view";
 import { NormSetView } from "./normset-view";
-import { RebarCalculatorView } from "./rebar-calculator-view";
+import { RebarCalculatorView, type RebarState } from "./rebar-calculator-view";
 import { GeneralConditionsView } from "./general-conditions-view";
 import { PriceListView } from "./price-list-view";
 import { WikiView } from "./wiki-view";
-import { saveEstimateAction } from "@/app/(app)/estimates/actions";
+import {
+  saveEstimateAction,
+  duplicateEstimateAction,
+  setEstimateLockAction,
+  loadEstimateAction,
+} from "@/app/(app)/estimates/actions";
 
 type TabKey = "estimate" | "budget" | "takeoff" | "rebar" | "normset" | "prices" | "general" | "wiki";
 
@@ -63,7 +68,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   // General Conditions / Overhead active flag — lifted here so the summary (EstimateView),
   // the Budget disbursement tab, and the print doc all agree on whether GC is part of the
   // Total Development Cost that draws are computed against.
-  const [gcActive, setGcActive] = useState(false);
+  const [gcActive, setGcActive] = useState<boolean>(() => estimate.budget?.gcActive ?? false);
   // Budget & Timeline config — lifted here so it survives tab switches and is
   // available to the Estimate print document (Timeline / Phase Disbursement pages).
   const [schedule, setSchedule] = useState<ScheduleConfig>(() => estimate.budget?.schedule ?? defaultSchedule(estimate));
@@ -79,8 +84,32 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   // defaulted to 1, so it was both meaningless for a pegged currency and lost on reload.
   const [usdSecondary, setUsdSecondary] = useState<boolean>(() => estimate.budget?.fx?.usd ?? false);
   const [usdRate, setUsdRate] = useState<number>(() => estimate.budget?.fx?.rate ?? defaultUsdRate(estimate.currency));
+  // Rebar Calculator inputs — lifted for the same reason as take-off: the tabs are a
+  // ternary, so the view unmounts on tab switch and everything it held was lost.
+  const [rebar, setRebar] = useState<RebarState | undefined>(() => estimate.budget?.rebar as RebarState | undefined);
   const seq = useRef(100);
   const newId = (p: string) => `${p}-${seq.current++}`;
+
+  /**
+   * THE budget payload — one definition, used by every writer.
+   *
+   * `budget` is a single Json column that each save REPLACES wholesale, so any key a
+   * writer forgets is a key that writer deletes. That trap has bitten twice (take-off,
+   * then fx). Building it in one place means a new sub-config can't be half-saved: add it
+   * here and every path carries it.
+   */
+  const budget = useMemo(
+    () => ({
+      schedule,
+      payment,
+      takeoff,
+      takeoffSection,
+      fx: { usd: usdSecondary, rate: usdRate },
+      gcActive,
+      rebar,
+    }),
+    [schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, gcActive, rebar],
+  );
 
   // Explicit Save on the Take-Off tab. It writes the WHOLE estimate through the same
   // atomic server action the sheet uses — the take-off rows ride in the `budget` JSON
@@ -101,23 +130,113 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   };
 
   const saveTakeoff = async () => {
+    if (est.locked) return; // frozen version — the server refuses this write too
     setTakeoffSaving(true);
-    // `fx` rides along for the same reason take-off does: this write replaces the whole
-    // `budget` object, so any key left out here is erased.
-    const res = await saveEstimateAction({ ...est, budget: { schedule, payment, takeoff, takeoffSection, fx: { usd: usdSecondary, rate: usdRate } } });
+    const res = await saveEstimateAction({ ...est, budget });
     setTakeoffSaving(false);
     setTakeoffSaved(res.ok);
   };
 
+  /**
+   * Workspace autosave — the fix for "the other tabs don't save".
+   *
+   * The estimate's autosave lives inside EstimateView, and the tabs are a ternary: open
+   * Budget & Timeline (or Rebar, or Take-Off) and EstimateView is UNMOUNTED, taking its
+   * autosave — and its beforeunload guard — with it. Edits made there reached Postgres
+   * only if you happened to click back onto the Estimate tab before leaving. Reload from
+   * the Budget tab and the schedule you just built was gone, silently.
+   *
+   * So: whenever we're NOT on the estimate tab, the workspace runs the debounced save
+   * itself. Exactly one autosave is ever armed — EstimateView's when it's mounted, this
+   * one otherwise — so the two can't race or clobber each other.
+   */
+  const [bgSaving, setBgSaving] = useState(false);
+  const [bgSaved, setBgSaved] = useState(true);
+  useEffect(() => {
+    if (tab === "estimate") return; // EstimateView owns the save while it's mounted
+    if (!est.id || est.locked) return;
+    setBgSaved(false);
+    const t = window.setTimeout(async () => {
+      setBgSaving(true);
+      const res = await saveEstimateAction({ ...est, budget });
+      setBgSaving(false);
+      setBgSaved(res.ok);
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [tab, est, budget]);
+
   // Take-Off → estimate: append a new section of computed, costed line items.
   const pushFromTakeoff = (sectionName: string, items: Omit<EstimateItem, "id">[]) => {
-    setEst((e) => ({
+    setEstGuarded((e) => ({
       ...e,
       categories: [
         ...e.categories,
         { id: newId("c"), name: sectionName, items: items.map((it) => ({ ...it, id: newId("i") })) },
       ],
     }));
+  };
+
+  /* ── Versioning & lock ──────────────────────────────────────────────────
+   * A locked version is frozen. The server refuses every write to it, so this
+   * client-side guard isn't the security boundary — it's what stops the editor
+   * from *looking* editable and then failing on save. It wraps setEst ONCE, at
+   * the root of the state, so every edit path in every tab is covered by one
+   * check rather than each input remembering to ask.
+   *
+   * The lock toggle itself must bypass the guard (unlocking is a change to a
+   * locked estimate, by definition), so it calls the raw setEst. */
+  const locked = !!est.locked;
+  const setEstGuarded: React.Dispatch<React.SetStateAction<CostEstimate>> = (v) =>
+    setEst((prev) =>
+      prev.locked ? prev : typeof v === "function" ? (v as (p: CostEstimate) => CostEstimate)(prev) : v,
+    );
+
+  const [lockBusy, setLockBusy] = useState(false);
+  const toggleLock = async () => {
+    if (!est.id) return;
+    setLockBusy(true);
+    const res = await setEstimateLockAction(est.id, !locked);
+    setLockBusy(false);
+    if (res.ok) setEst((p) => ({ ...p, locked: !locked }));
+    else window.alert(res.error);
+  };
+
+  // Version label suggestion: bump the minor (V1.0 → V1.1). Falls back to a suffix when
+  // the label isn't numeric, since versions are free text (e.g. "Client A — value eng.").
+  const nextVersion = (v: string) => {
+    const m = v.match(/^(.*?)(\d+)\.(\d+)\s*$/);
+    return m ? `${m[1]}${m[2]}.${Number(m[3]) + 1}` : `${v} (rev)`;
+  };
+
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupName, setDupName] = useState("");
+  const [dupBusy, setDupBusy] = useState(false);
+  const openDuplicate = () => {
+    setDupName(nextVersion(est.version));
+    setDupOpen(true);
+  };
+  const doDuplicate = async () => {
+    if (!est.id) return;
+    setDupBusy(true);
+    const res = await duplicateEstimateAction(est.id, dupName);
+    setDupBusy(false);
+    if (!res.ok) {
+      window.alert(res.error);
+      return;
+    }
+    setDupOpen(false);
+    // Open the copy: a fresh load, so the new id (not the source's) owns every save.
+    const copy = await loadEstimateAction(res.id);
+    if (copy) {
+      setEst(copy);
+      setSchedule(copy.budget?.schedule ?? defaultSchedule(copy));
+      setPayment(copy.budget?.payment ?? defaultPayment());
+      setTakeoff(copy.budget?.takeoff ?? []);
+      setTakeoffSection(copy.budget?.takeoffSection ?? "Take-Off");
+      setUsdSecondary(copy.budget?.fx?.usd ?? false);
+      setUsdRate(copy.budget?.fx?.rate ?? defaultUsdRate(copy.currency));
+      setTab("estimate");
+    }
   };
 
   return (
@@ -151,6 +270,84 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           ) : (
             <Badge tone="slate">none — blank start</Badge>
           )}
+
+          {/* Version — copy to a new version, and freeze the one being superseded. */}
+          <div className="relative flex items-center gap-1.5 border-l border-border pl-2">
+            <Badge tone={locked ? "amber" : "slate"}>{est.version}</Badge>
+            <button
+              type="button"
+              onClick={toggleLock}
+              disabled={!est.id || lockBusy}
+              title={locked ? "Unlock — allow edits to this version again" : "Lock this version — no edits, anywhere, until unlocked"}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
+                locked
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                  : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg"
+              }`}
+            >
+              {locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+              {locked ? "Locked" : "Lock"}
+            </button>
+            <button
+              type="button"
+              onClick={openDuplicate}
+              disabled={!est.id}
+              title="Copy this estimate into a new, editable version"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-40"
+            >
+              <CopyPlus className="h-4 w-4" />
+              New Version
+            </button>
+
+            {dupOpen ? (
+              <div className="absolute right-0 top-10 z-30 w-72 rounded-lg border border-border bg-surface p-3 shadow-xl">
+                <div className="mb-1 text-xs font-semibold text-fg">Copy to a new version</div>
+                <p className="mb-2 text-[11px] leading-snug text-muted">
+                  Copies every section, line item, take-off and budget setting into a new editable
+                  estimate. <b>{est.version}</b> is left untouched — lock it to freeze it.
+                </p>
+                <input
+                  autoFocus
+                  value={dupName}
+                  onChange={(e) => setDupName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && dupName.trim() && void doDuplicate()}
+                  placeholder="Version name"
+                  className="mb-2 w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-fg outline-none focus:ring-1 focus:ring-brand/40"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDupOpen(false)}
+                    className="rounded-md px-2.5 py-1 text-xs text-muted hover:text-fg"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void doDuplicate()}
+                    disabled={!dupName.trim() || dupBusy}
+                    className="rounded-md bg-brand px-2.5 py-1 text-xs font-medium text-brand-fg disabled:opacity-50"
+                  >
+                    {dupBusy ? "Copying…" : "Create"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Autosave state for the tabs the sheet's own indicator can't reach. */}
+          {tab !== "estimate" && est.id && !locked ? (
+            <span className="hidden items-center gap-1 text-[11px] text-faint sm:inline-flex" title="Changes on this tab autosave to the server">
+              {bgSaving ? "Saving…" : bgSaved ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Saved
+                </>
+              ) : (
+                "Unsaved…"
+              )}
+            </span>
+          ) : null}
+
           <button
             type="button"
             onClick={() => { setTab("estimate"); setPreview(true); }}
@@ -163,11 +360,22 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
         </div>
       </Card>
 
+      {locked ? (
+        <div className="no-print flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
+          <Lock className="h-4 w-4 shrink-0" />
+          <span>
+            <b>{est.version} is locked.</b> Nothing in this version can be changed — edits are
+            refused by the server, not just hidden. Unlock it, or use <b>New Version</b> to work on
+            a copy.
+          </span>
+        </div>
+      ) : null}
+
       {/* Active panel */}
       {tab === "estimate" ? (
         <EstimateView
           est={est}
-          setEst={setEst}
+          setEst={setEstGuarded}
           templates={templates}
           setTemplates={setTemplates}
           activeTemplate={activeTemplate}
@@ -180,6 +388,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           equipment={prices.equipment}
           schedule={schedule}
           payment={payment}
+          budget={budget}
           takeoff={takeoff}
           takeoffSection={takeoffSection}
           usdSecondary={usdSecondary}
@@ -216,7 +425,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           saved={takeoffSaved}
         />
       ) : tab === "rebar" ? (
-        <RebarCalculatorView />
+        <RebarCalculatorView value={rebar} onChange={setRebar} />
       ) : tab === "normset" ? (
         <NormSetView normSet={normSet} setNormSet={setNormSet} />
       ) : tab === "prices" ? (

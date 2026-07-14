@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { saveEstimate, getEstimateById } from "@/lib/data/estimates";
+import { saveEstimate, getEstimateById, duplicateEstimate, setEstimateLock } from "@/lib/data/estimates";
 import { savePriceBook } from "@/lib/data/price-lists";
 import { saveNormSet } from "@/lib/data/norm-set";
 import { saveGeneralConditions } from "@/lib/data/general-conditions-db";
@@ -40,6 +40,35 @@ export async function saveEstimateAction(estimate: CostEstimate): Promise<SaveRe
     return { ok: true, id };
   } catch (e) {
     return { ok: false, error: (e as Error)?.message ?? "Save failed" };
+  }
+}
+
+/**
+ * Copy an estimate into a new, editable version (new id, deep-copied lines). Lock the
+ * source first if it's the one being superseded — this action does not lock it for you,
+ * because duplicating is also how you branch a scenario you intend to keep editing.
+ */
+export async function duplicateEstimateAction(id: string, version: string): Promise<SaveResult> {
+  try {
+    const label = version.trim();
+    if (!label) return { ok: false, error: "A version name is required." };
+    const res = await duplicateEstimate(id, label);
+    revalidatePath("/estimates");
+    return { ok: true, id: res.id };
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message ?? "Could not duplicate this estimate." };
+  }
+}
+
+/** Freeze / unfreeze a version. Locked rows are refused by every server write path. */
+export async function setEstimateLockAction(id: string, locked: boolean): Promise<SaveResult> {
+  try {
+    if (!id) return { ok: false, error: "Save the estimate before locking it." };
+    await setEstimateLock(id, locked);
+    revalidatePath("/estimates");
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message ?? "Could not change the lock." };
   }
 }
 

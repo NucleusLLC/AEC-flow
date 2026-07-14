@@ -81,6 +81,8 @@ export type CostEstimate = {
   /** Gross built-up area in m² — drives the per-m² cost metrics in the summary. */
   gfa?: number;
   status?: EstimateStatus;
+  /** Frozen version: every server write path refuses it, and the editor goes read-only. */
+  locked?: boolean;
   /** Budget & Timeline config (schedule coupler + payment/retainage) — persisted as JSON. */
   budget?: EstimateBudget | null;
   categories: EstimateCategory[];
@@ -121,6 +123,10 @@ export type EstimateBudget = {
   takeoffSection?: string;
   /** USD secondary unit: whether it's shown, and the rate used to convert. */
   fx?: { usd?: boolean; rate?: number };
+  /** Whether General Conditions / Overhead is part of this estimate's total. */
+  gcActive?: boolean;
+  /** Rebar Calculator inputs (element, bar weights, strip/column/beam/slab). */
+  rebar?: unknown;
 };
 
 /**

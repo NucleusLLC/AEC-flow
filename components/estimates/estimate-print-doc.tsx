@@ -83,6 +83,12 @@ export interface PrintControl {
   materialUnit?: boolean;
   equipmentUnit?: boolean;
   subUnit?: boolean;
+  /**
+   * Section ids that print COLLAPSED — header + subtotal, no line items. Lets a client
+   * copy summarise a section (or the whole sheet) without deleting anything: the numbers
+   * still roll up from the real lines, they're just not itemised.
+   */
+  collapsedSections?: string[];
 }
 
 /** Subtle, print-friendly band colour for alternating item rows. */
@@ -281,13 +287,18 @@ function buildReportData(
       { hrs: 0, labor: 0, mat: 0, equip: 0, sub: 0, total: 0, prog: 0 },
     );
     const pocPct = ct.total > 0 ? (ct.prog / ct.total) * 100 : 0;
+    // Collapsed: the section prints as its header + subtotal only. The totals above are
+    // computed from the real items FIRST, so a collapsed section still carries its full
+    // cost into the subtotal, the summary and the grand total — nothing is dropped, only
+    // un-itemised.
+    const isCollapsed = (pc.collapsedSections ?? []).includes(cat.id);
     return {
       id: cat.id,
       code: cat.code,
       name: cat.name,
       subtotalDisplay: nf0(ct.total),
       sharePctDisplay: `${nf0(grandDirect > 0 ? (ct.total / grandDirect) * 100 : 0)}%`,
-      items: cat.items.map((it) => {
+      items: (isCollapsed ? [] : cat.items).map((it) => {
         const c = calc(it);
         return {
           id: it.id,

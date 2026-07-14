@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Grid2x2, AlertTriangle, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import {
@@ -52,13 +52,43 @@ const makeSlab = (): SlabInput => ({
   bottomX: slabDir(), bottomY: slabDir(), topEnabled: false, topX: slabDir(), topY: slabDir(),
 });
 
-export function RebarCalculatorView() {
-  const [elementKey, setElementKey] = useState("strip-1");
-  const [weights, setWeights] = useState<RebarWeights>({ ...DEFAULT_REBAR_WEIGHTS });
-  const [stripInput, setStripInput] = useState<StripInput>({ ...STRIP_PRESETS["strip-1"] });
-  const [columnInput, setColumnInput] = useState<ColumnInput>({ ...COLUMN_PRESET });
-  const [beamInput, setBeamInput] = useState<BeamInput>(makeBeam());
-  const [slabInput, setSlabInput] = useState<SlabInput>(makeSlab());
+/** Everything the calculator holds — lifted so it can be saved with the estimate. */
+export type RebarState = {
+  elementKey: string;
+  weights: RebarWeights;
+  stripInput: StripInput;
+  columnInput: ColumnInput;
+  beamInput: BeamInput;
+  slabInput: SlabInput;
+};
+
+/**
+ * `value` seeds the calculator from the saved estimate; `onChange` reports every edit back
+ * up. The state stays here (the inputs are chatty and local), but the workspace owns the
+ * copy that gets persisted — the tabs are a ternary, so this component UNMOUNTS the moment
+ * you leave the tab, and anything it alone remembered used to die right there.
+ */
+export function RebarCalculatorView({ value, onChange }: { value?: RebarState; onChange?: (v: RebarState) => void } = {}) {
+  const [elementKey, setElementKey] = useState(value?.elementKey ?? "strip-1");
+  const [weights, setWeights] = useState<RebarWeights>(value?.weights ?? { ...DEFAULT_REBAR_WEIGHTS });
+  const [stripInput, setStripInput] = useState<StripInput>(value?.stripInput ?? { ...STRIP_PRESETS["strip-1"] });
+  const [columnInput, setColumnInput] = useState<ColumnInput>(value?.columnInput ?? { ...COLUMN_PRESET });
+  const [beamInput, setBeamInput] = useState<BeamInput>(value?.beamInput ?? makeBeam());
+  const [slabInput, setSlabInput] = useState<SlabInput>(value?.slabInput ?? makeSlab());
+
+  // Report edits upward. The first run is skipped: on mount the state still equals what
+  // was passed in, so pushing it back would mark a freshly-loaded estimate as dirty and
+  // trigger a pointless save.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    onChange?.({ elementKey, weights, stripInput, columnInput, beamInput, slabInput });
+    // onChange is redefined each render by the parent; depending on it would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementKey, weights, stripInput, columnInput, beamInput, slabInput]);
 
   const element = REBAR_ELEMENTS.find((e) => e.key === elementKey) ?? REBAR_ELEMENTS[0];
   const isColumn = element.kind === "column";
