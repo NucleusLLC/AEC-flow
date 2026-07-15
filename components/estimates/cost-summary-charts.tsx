@@ -43,21 +43,50 @@ const SECTION_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "
  * share of the total (right-aligned, hard against the bars). Splitting the widths here
  * keeps the % in its own visual column instead of drifting with the name length.
  */
-const NAME_W = 170; // room for the name
+const NAME_W = 240; // room for the name — widened so long section names aren't clipped
 const PCT_W = 42; // room for the "12%" column between the name and the bar
 const AXIS_W = NAME_W + PCT_W;
-const NAME_MAX_CHARS = 30; // ~30 chars of 10px type fits NAME_W
+const PER_LINE_CHARS = 40; // ~chars of 10px type that fit NAME_W on one line
+const MAX_LINES = 2; // a name too long for one line wraps to a second before ellipsising
 
-/** Vertical room per bar. Below ~30px the labels crowd each other. */
-const ROW_H = 34;
-const MIN_CHART_H = 192;
+/** Vertical room per bar — enough for a two-line label without crowding. */
+const ROW_H = 40;
+const MIN_CHART_H = 200;
+
+/** Greedily pack words into at most MAX_LINES lines; ellipsise only if it still overflows. */
+function wrapName(name: string): string[] {
+  const words = name.split(/\s+/).filter(Boolean);
+  if (!words.length) return [name];
+  const lines: string[] = [];
+  let cur = "";
+  for (let i = 0; i < words.length; i++) {
+    const next = cur ? `${cur} ${words[i]}` : words[i];
+    if (next.length <= PER_LINE_CHARS || !cur) {
+      cur = next;
+    } else {
+      lines.push(cur);
+      if (lines.length === MAX_LINES - 1) {
+        // Final line takes every remaining word (ellipsised below if too long).
+        cur = words.slice(i).join(" ");
+        break;
+      }
+      cur = words[i];
+    }
+  }
+  lines.push(cur);
+  const capped = lines.slice(0, MAX_LINES);
+  const last = capped.length - 1;
+  if (capped[last].length > PER_LINE_CHARS) {
+    capped[last] = `${capped[last].slice(0, PER_LINE_CHARS - 1)}…`;
+  }
+  return capped;
+}
 
 /**
- * Section label + % share. Recharts' default tick is a <Text> that WRAPS to a second
- * line once the name exceeds the axis width, which pushed the bars around and made the
- * chart read as two rows per section. This renders single <text> runs instead — no
- * wrapping, ever — and ellipsises a name too long to fit; the full name stays in the
- * SVG <title> (hover) and in the tooltip.
+ * Section label + % share. Recharts' default tick is a <Text> that wraps unpredictably
+ * and shoved the bars around. This renders the name as up to two controlled <tspan>
+ * lines, then ellipsises — so a long name stays readable instead of being clipped mid-
+ * word. The full name is always in the SVG <title> (hover) and the tooltip.
  */
 function SectionTick({
   x,
@@ -71,14 +100,20 @@ function SectionTick({
   pctOf?: (name: string) => number;
 }) {
   const full = String(payload?.value ?? "");
-  const text = full.length > NAME_MAX_CHARS ? `${full.slice(0, NAME_MAX_CHARS - 1)}…` : full;
+  const lines = wrapName(full);
   const right = x ?? 0; // axis edge — the bars start here
   const pct = pctOf?.(full) ?? 0;
+  // Vertically center the block of lines on the tick's y.
+  const startDy = 4 - ((lines.length - 1) * 11) / 2;
   return (
     <g fill="currentColor" fontSize={10}>
-      <text x={right - AXIS_W} y={y} dy={4} textAnchor="start">
+      <text x={right - AXIS_W} y={y} textAnchor="start">
         <title>{full}</title>
-        {text}
+        {lines.map((ln, i) => (
+          <tspan key={i} x={right - AXIS_W} dy={i === 0 ? startDy : 11}>
+            {ln}
+          </tspan>
+        ))}
       </text>
       {/* % sits between the name and the chart, right-aligned so the digits line up. */}
       <text x={right - 8} y={y} dy={4} textAnchor="end" fontWeight={600} opacity={0.75}>
