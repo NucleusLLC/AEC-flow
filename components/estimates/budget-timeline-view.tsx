@@ -9,6 +9,7 @@ import { sumGeneralConditions, type GeneralConditionItem } from "@/lib/data/gene
 import {
   computeSchedule,
   computeDevelopmentCost,
+  computeGrandCost,
   type Phase,
   type ScheduleConfig,
   type PaymentConfig,
@@ -41,6 +42,7 @@ export function BudgetTimelineView({
   // Mirrors the estimate summary's Grand Total, so draws sum to what the client pays.
   const gcAmount = gcActive ? sumGeneralConditions(generalConditions) : 0;
   const developmentCost = computeDevelopmentCost(est, gcAmount);
+  const directCost = computeGrandCost(est);
 
   // ---- Time-Schedule coupler (controlled config — shared with the print doc) ----
   const { hoursPerDay, crew, startDate, workingDaysPerWeek, overlapPct, contingencyDays } = schedule;
@@ -54,7 +56,7 @@ export function BudgetTimelineView({
   // Customize gate: Automatic (read-only defaults) vs Manual (editable).
   const [schedManual, setSchedManual] = useState(false);
 
-  const { sched, grandCost, totalHours, totalDays, weeks, endDate } = computeSchedule(est, schedule);
+  const { sched, grandCost, totalHours, totalDays, weeks, endDate } = computeSchedule(est, schedule, gcAmount);
 
   // ---- PayApp (controlled config — shared with the print doc) ----
   const { retention, phases } = payment;
@@ -90,7 +92,7 @@ export function BudgetTimelineView({
     <div className="space-y-4">
       {/* Summary band */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Total Development Cost" value={money(developmentCost)} tone="text-fg" sub={`Direct ${money(grandCost)}${gcAmount ? ` + GC ${money(gcAmount)}` : ""} + Risk&Profit ${est.profitPct}% + BBO ${est.bboPct}%`} icon={<Coins className="h-4 w-4 text-emerald-600" />} />
+        <Stat label="Total Development Cost" value={money(developmentCost)} tone="text-fg" sub={`Direct ${money(directCost)}${gcAmount ? ` + GC ${money(gcAmount)}` : ""} + Risk&Profit ${est.profitPct}% + BBO ${est.bboPct}%`} icon={<Coins className="h-4 w-4 text-emerald-600" />} />
         <Stat label="Labour hours" value={`${nf0(totalHours)} h`} tone="text-fg" icon={<Clock className="h-4 w-4 text-blue-600" />} />
         <Stat label="Duration" value={`${totalDays} d · ${nf1(weeks)} wk`} tone="text-fg" icon={<CalendarClock className="h-4 w-4 text-amber-600" />} />
         <Stat label="Draw phases" value={`${phases.length}`} tone={sumPct === 100 ? "text-emerald-400" : "text-red-600"} icon={<Landmark className="h-4 w-4 text-violet-600" />} sub={`${nf1(sumPct)}% allocated`} />

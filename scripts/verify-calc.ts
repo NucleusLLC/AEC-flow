@@ -11,8 +11,8 @@
  * without it the run dies on "Cannot find module '@/lib/data/general-conditions'".)
  */
 import { calcItem, resolveLineLabor, estimateTotals } from "../lib/estimates/calc";
-import { computeSections, computeDraws, computeDevelopmentCost, computeGrandCost } from "../lib/estimates/budget-timeline";
-import type { PaymentConfig } from "../lib/estimates/budget-timeline";
+import { computeSections, computeDraws, computeDevelopmentCost, computeGrandCost, computeSchedule } from "../lib/estimates/budget-timeline";
+import type { PaymentConfig, ScheduleConfig } from "../lib/estimates/budget-timeline";
 import type { CostEstimate, EstimateItem } from "../lib/data/estimates";
 
 let failures = 0;
@@ -218,6 +218,38 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
   const d = computeDraws(est, pay, 0, gc);
   check("draws sum to Total Development Cost, not bare direct cost",
     Math.abs(d.totalAmount - expected) < 1e-6 && d.totalAmount > direct);
+}
+
+// 10. Time-Schedule Coupler spreads the FULL development cost (direct + GC + Risk&Profit +
+//     BBO) across sections proportionally — total == Grand Total, not bare direct cost.
+{
+  const est: CostEstimate = {
+    id: "esc", projectId: null, projectName: "SchedSpread", version: "V1", date: "2026-01-01",
+    location: "—", currency: "AWG", avgLaborRate: RATE, profitPct: 24, bboPct: 7,
+    categories: [
+      { id: "c1", name: "Sub", items: [baseItem({ id: "s1" })] },              // direct 1090
+      { id: "c2", name: "Fin", items: [baseItem({ id: "s2", qty: 4 })] },      // direct 436
+    ],
+  };
+  const cfg: ScheduleConfig = {
+    hoursPerDay: 8, workingDaysPerWeek: 5, overlapPct: 0, contingencyDays: 0, startDate: "", crew: {},
+  };
+  const gc = 300;
+  const dev = computeDevelopmentCost(est, gc);
+  const direct = computeGrandCost(est);
+  const r = computeSchedule(est, cfg, gc);
+  check("schedule total == Total Development Cost (not direct)",
+    Math.abs(r.grandCost - dev) < 1e-6 && r.grandCost > direct);
+  const sumSched = r.sched.reduce((a, s) => a + s.cost, 0);
+  check("schedule section costs sum to the development total",
+    Math.abs(sumSched - dev) < 1e-6);
+  // Each section keeps its proportional share (cost ratio preserved after scaling).
+  const directShares = computeSections(est).map((s) => s.cost / direct);
+  const schedShares = r.sched.map((s) => s.cost / r.grandCost);
+  check("schedule section shares unchanged by the markup spread",
+    directShares.every((d, i) => Math.abs(d - schedShares[i]) < 1e-9));
+  check("schedule hours unaffected by cost scaling",
+    r.totalHours === computeSections(est).reduce((a, s) => a + s.hours, 0));
 }
 
 if (failures > 0) {

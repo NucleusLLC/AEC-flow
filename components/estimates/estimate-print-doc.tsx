@@ -193,6 +193,13 @@ export interface EstimatePrintDocProps {
   coverImage?: string | null;
   /** Pre-formatted grand total for the cover (carries the dual-currency string when on). */
   coverTotalDisplay?: string;
+  /**
+   * USD secondary unit: when on, every total/amount prints as "$ <usd> · <currency> <n>"
+   * ($ to the LEFT of the system unit). Only the total/amount columns go dual — the
+   * labour/material/equipment/sub breakdown columns stay single-unit to remain legible.
+   */
+  usdSecondary?: boolean;
+  usdRate?: number;
   nf0: (n: number) => string;
   debug?: boolean;
   /** Reports the computed page count back to the parent (for the preview chrome). */
@@ -229,7 +236,7 @@ function buildPageSettings(
 }
 
 /** Active columns given the Print Control toggles + Progress. */
-function buildColumns(pc: PrintControl, showProgress: boolean): ColDef[] {
+function buildColumns(pc: PrintControl, showProgress: boolean, usd: boolean): ColDef[] {
   const cols: (ColDef | false)[] = [
     { key: "code", label: "Code", width: 84, align: "left" },
     { key: "desc", label: "Description", width: 0, align: "left", flexible: true },
@@ -246,11 +253,18 @@ function buildColumns(pc: PrintControl, showProgress: boolean): ColDef[] {
     pc.equipment && { key: "equipment", label: "Equip.", width: 82, align: "right" },
     !!pc.subUnit && { key: "subUnit", label: "Subc. /u", width: 66, align: "right" },
     pc.subcontractor && { key: "sub", label: "Subcont.", width: 82, align: "right" },
-    { key: "total", label: "Total", width: 92, align: "right" },
+    // The Total column goes dual-currency ("$ … · AWG …") when USD is on, so it needs
+    // room for both figures.
+    { key: "total", label: "Total", width: usd ? 148 : 92, align: "right" },
     showProgress && { key: "poc", label: "POC%", width: 50, align: "right" },
     showProgress && { key: "prog", label: "Prog.", width: 78, align: "right" },
   ];
   return cols.filter(Boolean) as ColDef[];
+}
+
+/** Money formatter for the print doc — dual-currency ($ left of the system unit) when USD is on. */
+function makeMoney(currency: string, nf0: (n: number) => string, usd?: boolean, rate?: number) {
+  return (n: number) => (usd ? `$ ${nf0(n * (rate ?? 0))} · ${currency} ${nf0(n)}` : `${currency} ${nf0(n)}`);
 }
 
 /** Convert the estimate into the engine's ReportData + measured column widths. */
@@ -260,6 +274,8 @@ function buildReportData(
   printableWidth: number,
 ): { reportData: ReportData; columnWidths: ColumnWidths } {
   const { est, rate, nf0, pc, grandTotalRows, notes, generalConditions, gcActive } = props;
+  // The Total/amount columns print dual-currency ($ left of the system unit) when USD is on.
+  const dualMoney = makeMoney(est.currency, nf0, props.usdSecondary, props.usdRate);
 
   const fixed = columns.filter((c) => !c.flexible).reduce((s, c) => s + c.width, 0);
   const descriptionWidth = Math.max(80, printableWidth - fixed);
@@ -301,7 +317,7 @@ function buildReportData(
       id: cat.id,
       code: cat.code,
       name: cat.name,
-      subtotalDisplay: nf0(ct.total),
+      subtotalDisplay: dualMoney(ct.total),
       sharePctDisplay: `${nf0(grandDirect > 0 ? (ct.total / grandDirect) * 100 : 0)}%`,
       items: (isCollapsed ? [] : cat.items).map((it) => {
         const c = calc(it);
@@ -326,7 +342,7 @@ function buildReportData(
             equipment: nf0(c.equip),
             subUnit: nfRate(it.subcontractUnitCost),
             sub: nf0(c.sub),
-            total: nf0(c.total),
+            total: dualMoney(c.total),
             poc: `${nf0(it.poc)}%`,
             prog: nf0(c.prog),
           },
@@ -343,7 +359,7 @@ function buildReportData(
           material: nf0(ct.mat),
           equipment: nf0(ct.equip),
           sub: nf0(ct.sub),
-          total: nf0(ct.total),
+          total: dualMoney(ct.total),
           poc: `${nf0(pocPct)}%`,
           prog: nf0(ct.prog),
         },
@@ -366,7 +382,7 @@ function buildReportData(
         id: "general-conditions",
         name: months ? `General Conditions / Overhead — ${nf0(months)} project months` : "General Conditions / Overhead",
         pageBreakBefore: true,
-        subtotalDisplay: nf0(gcTotal),
+        subtotalDisplay: dualMoney(gcTotal),
         items: enabled.map((g, i) => ({
           id: g.id,
           code: "",
@@ -376,13 +392,13 @@ function buildReportData(
           values: {
             qty: nf0(g.qty),
             unit: g.unit,
-            total: nf0(g.qty * g.unitCost),
+            total: dualMoney(g.qty * g.unitCost),
           },
         })),
         subtotal: {
           id: "gc",
           label: "Subtotal — General Conditions / Overhead",
-          values: { total: nf0(gcTotal) },
+          values: { total: dualMoney(gcTotal) },
         },
       });
     }
@@ -404,7 +420,7 @@ function buildReportData(
         id: "imported-materials",
         name: "Imported Materials, Equipment & Logistics",
         pageBreakBefore: true,
-        subtotalDisplay: nf0(imTotal),
+        subtotalDisplay: dualMoney(imTotal),
         items: imported.map(({ it, equip, section }, i) => ({
           id: `im-${it.id}`,
           code: it.code,
@@ -415,13 +431,13 @@ function buildReportData(
             code: it.code ?? "",
             qty: it.qty ? nf0(it.qty) : "",
             unit: it.unit,
-            total: nf0(equip),
+            total: dualMoney(equip),
           },
         })),
         subtotal: {
           id: "im",
           label: "Subtotal — Imported Materials, Equipment & Logistics",
-          values: { total: nf0(imTotal) },
+          values: { total: dualMoney(imTotal) },
         },
       });
     }
@@ -449,7 +465,9 @@ function buildAppendixBlocks(
 ): MeasuredBlock[] {
   const { est, pc, nf0, schedule, payment } = props;
   const currency = est.currency;
-  const money = (n: number) => `${currency} ${nf0(n)}`;
+  // Dual-currency ($ left of the system unit) when USD is on, matching the rest of the report.
+  const money = makeMoney(currency, nf0, props.usdSecondary, props.usdRate);
+  const usd = !!props.usdSecondary;
   const nf1 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
   const blocks: MeasuredBlock[] = [];
 
@@ -462,7 +480,10 @@ function buildAppendixBlocks(
   const tableHeight = (rows: number) => titleH + metaH + headH + rows * rowH + footH + pad;
 
   if (pc.timeline && schedule) {
-    const r = computeSchedule(est, schedule);
+    // Spread the full development cost (direct + GC + Risk&Profit + BBO) across sections,
+    // so the coupler's total is the Grand Total, not the bare direct cost.
+    const scheduleGc = props.gcActive ? sumGeneralConditions(props.generalConditions ?? []) : 0;
+    const r = computeSchedule(est, schedule, scheduleGc);
     const totalDays = r.totalDays || 1;
     const grandCost = r.grandCost || 1;
     const rows = r.sched.map((s) => {
@@ -492,7 +513,7 @@ function buildAppendixBlocks(
       data: {
         title: "Time-Schedule Coupler",
         meta,
-        gridTemplate: "150px 60px 44px 46px minmax(0,1fr) 52px 104px",
+        gridTemplate: `150px 60px 44px 46px minmax(0,1fr) 52px ${usd ? 168 : 104}px`,
         head: [
           { label: "Section", align: "left" },
           { label: "Hours", align: "right" },
@@ -546,7 +567,9 @@ function buildAppendixBlocks(
               ? `Per-phase retainage · total retained ${money(d.totalHeld)}`
               : `Retainage ${payment.retention}% held from each draw · total retained ${money(d.totalHeld)}`
         } · ${d.sumPct === 100 ? "balanced 100%" : `${nf1(d.sumPct)}% allocated`}`,
-        gridTemplate: "28px 150px minmax(0,1fr) 54px 116px 104px 116px",
+        gridTemplate: usd
+          ? "28px 130px minmax(0,1fr) 48px 168px 150px 168px"
+          : "28px 150px minmax(0,1fr) 54px 116px 104px 116px",
         head: [
           { label: "#", align: "left" },
           { label: "Draw phase", align: "left" },
@@ -597,7 +620,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
       printableWidth,
       showPageBreakDebug: debug,
     };
-    const columns = buildColumns(pc, showProgress);
+    const columns = buildColumns(pc, showProgress, !!pc && !!props.usdSecondary);
     const { reportData, columnWidths } = buildReportData(props, columns, printableWidth);
     // The recap (Direct Cost + Profit + BBO + Grand Total) ALWAYS prints FIRST, on its
     // own page. The detailed Direct Cost breakdown then follows on later pages WITHOUT

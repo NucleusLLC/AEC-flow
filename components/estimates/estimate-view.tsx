@@ -1904,6 +1904,8 @@ ${!preview ? `@media print {
                 coverPage={coverOn}
                 coverImage={coverImage}
                 coverTotalDisplay={dualMoney(grandTotal)}
+                usdSecondary={usdSecondary}
+                usdRate={usdRate}
                 nf0={nf0}
                 debug={pcDebug}
                 onPages={setEnginePages}

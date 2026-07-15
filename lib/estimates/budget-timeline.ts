@@ -147,10 +147,18 @@ export interface ScheduleResult {
   endDate: string;
 }
 
-export function computeSchedule(est: CostEstimate, cfg: ScheduleConfig): ScheduleResult {
+export function computeSchedule(est: CostEstimate, cfg: ScheduleConfig, gcAmount = 0): ScheduleResult {
   const sections = computeSections(est);
-  const grandCost = sections.reduce((a, s) => a + s.cost, 0);
+  const directTotal = sections.reduce((a, s) => a + s.cost, 0);
   const totalHours = sections.reduce((a, s) => a + s.hours, 0);
+
+  // The Cost column reflects the FULL Total Development Cost — direct + General Conditions,
+  // marked up by Risk & Profit + BBO — spread across sections in proportion to their direct
+  // cost. So the total equals the estimate's Grand Total (what the client pays), not the
+  // bare direct cost, and each section's % is its true share of the whole. Hours / days /
+  // crew stay driven by direct labour, which is what actually gets scheduled.
+  const developmentTotal = computeDevelopmentCost(est, gcAmount);
+  const costFactor = directTotal > 0 ? developmentTotal / directTotal : 1;
 
   const crewOf = (id: string) => cfg.crew[id] || 6;
   const daysOf = (id: string, hours: number) =>
@@ -165,6 +173,7 @@ export function computeSchedule(est: CostEstimate, cfg: ScheduleConfig): Schedul
   }, []);
   const sched: ScheduledSection[] = sections.map((s, i) => ({
     ...s,
+    cost: s.cost * costFactor, // section's share of the full development cost
     crew: crewOf(s.id),
     days: dayList[i],
     start: startList[i],
@@ -175,7 +184,7 @@ export function computeSchedule(est: CostEstimate, cfg: ScheduleConfig): Schedul
   const weeks = cfg.workingDaysPerWeek > 0 ? totalDays / cfg.workingDaysPerWeek : 0;
   const endDate = cfg.startDate ? addWorkingDays(cfg.startDate, totalDays, cfg.workingDaysPerWeek) : "";
 
-  return { sections, sched, grandCost, totalHours, totalDays, weeks, endDate };
+  return { sections, sched, grandCost: developmentTotal, totalHours, totalDays, weeks, endDate };
 }
 
 export interface DrawRow extends Phase {
