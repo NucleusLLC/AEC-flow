@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, Fragment } from "react";
 import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug } from "lucide-react";
 import { EstimatePrintDoc, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
@@ -291,9 +291,11 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   // Progress ON squeezes columns; OFF relaxes them. Order matches the <colgroup> below.
   // Order: Code·Task, Qty, Unit, Norm, TotalHrs, LaborCost, Mat-Unit, Mat-Total, Eq-Unit, Eq-Total, Sub-Unit, Sub-Total, ItemTotal, [POC, ProgAmt,] action.
   // Material/Equipment/Subcontractor "Unit Cost" columns are kept narrow.
+  // Code · Task gets the lion's share — descriptions are what actually get cramped; the
+  // numeric columns only need to fit a few digits, so width was trimmed off them.
   const COLW = showProgress
-    ? ["26.5%", "4%", "4%", "5%", "5%", "6.5%", "4%", "6%", "4%", "5.5%", "4%", "6%", "6.5%", "5%", "6%", "2%"]
-    : ["30.5%", "4.5%", "4.5%", "5.5%", "5.5%", "7.5%", "4.5%", "6.5%", "4.5%", "6%", "4.5%", "6.5%", "7.5%", "2%"];
+    ? ["34%", "4%", "4%", "4.5%", "4.5%", "5.5%", "4%", "5%", "4%", "5%", "4%", "5%", "5.5%", "4.5%", "4.5%", "2%"]
+    : ["38%", "4.5%", "4.5%", "5%", "5%", "6%", "4.5%", "5.5%", "4.5%", "5%", "4.5%", "5%", "6%", "2%"];
   // Print Control column-group tags, positionally aligned with COLW / the <colgroup> below.
   // Order: Code·Task, Qty, Unit, Norm, TotalHrs, LaborCost, Mat-U, Mat-T, Eq-U, Eq-T, Sub-U, Sub-T, ItemTotal, [POC, ProgAmt,] action.
   const colClass = showProgress
@@ -1267,9 +1269,9 @@ ${!preview ? `@media print {
                     return (
                       <Fragment key={it.id}>
                       <tr className="border-t border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-brand/5">
-                        <td className="sticky left-0 z-10 border-r border-border bg-surface px-2 py-0">
-                          <div className="flex items-center gap-1">
-                            <span className="no-print flex items-center text-faint">
+                        <td className="sticky left-0 z-10 border-r border-border bg-surface px-2 py-0.5">
+                          <div className="flex items-start gap-1">
+                            <span className="no-print flex items-center pt-px text-faint">
                               <button type="button" onClick={() => moveItem(cat.id, it.id, -1)} aria-label="Move row up" className="flex h-4 w-3.5 items-center justify-center hover:text-brand">
                                 <ChevronUp className="h-3 w-3" />
                               </button>
@@ -1285,12 +1287,11 @@ ${!preview ? `@media print {
                               title="Price-list code"
                               className={`w-[84px] shrink-0 rounded bg-surface-2 px-1 py-0 ${FIELD_H} text-left font-mono text-[10px] uppercase tracking-tight text-muted outline-none focus:bg-brand/5`}
                             />
-                          <input
+                          <TaskField
                             value={it.task}
                             placeholder="Description"
-                            list="normset-tasks"
-                            onChange={(e) => {
-                              const v = e.target.value;
+                            title={it.task}
+                            onChange={(v) => {
                               const m = normSet.find((n) => n.task.toLowerCase() === v.toLowerCase());
                               patchItem(cat.id, it.id, m
                                 ? {
@@ -1304,7 +1305,7 @@ ${!preview ? `@media print {
                                   }
                                 : { task: v });
                             }}
-                            className={`w-full min-w-0 rounded bg-transparent px-1 py-0 ${FIELD_H} text-left text-[11px] leading-none text-fg outline-none focus:bg-brand/5`}
+                            className="w-full min-w-0 resize-none overflow-hidden rounded bg-transparent px-1 py-0 text-left text-[11px] leading-snug text-fg outline-none focus:bg-brand/5"
                           />
                           <select
                             value={it.calculationMethod ?? "norm"}
@@ -1858,6 +1859,17 @@ ${!preview ? `@media print {
             <button type="button" onClick={() => window.print()} className={ghostBtn}>
               <Printer className="h-4 w-4" /> Print
             </button>
+            {/* Email the PDF straight from the preview. Compose is live; the browser's
+                "Save as PDF" produces the file to attach until server-side delivery is wired. */}
+            <EmailButton
+              variant="ghost"
+              label="Email PDF"
+              className="h-9 px-3 text-sm"
+              subject={`Estimate — ${est.projectName} (${est.version})`}
+              attachment={`${est.projectName} — Estimate ${est.version}.pdf`}
+              defaultTo={est.client?.includes("@") ? est.client : ""}
+              defaultBody={`Dear ${est.client?.trim() || "recipient"},\n\nPlease find attached our cost estimate for ${est.projectName}${est.projectNumber ? ` (No. ${est.projectNumber})` : ""}, version ${est.version}.\n\nKind regards,\nZenArch`}
+            />
             <button type="button" onClick={() => setPreview(false)} className={ghostBtn}>
               <X className="h-4 w-4" /> Close
             </button>
@@ -1906,6 +1918,38 @@ ${!preview ? `@media print {
         body
       )}
     </>
+  );
+}
+
+/**
+ * The line-item description field. A single-line <input> physically clipped long
+ * descriptions — this is a textarea that WRAPS and auto-grows to fit its content, so the
+ * whole task is always visible (and it prints in full). Height is measured off the
+ * content on every value change; `rows={1}` keeps a one-line row the same height as the
+ * numeric cells until the text actually needs a second line.
+ */
+function TaskField({
+  value,
+  onChange,
+  className,
+  ...rest
+}: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange" | "value"> & { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={className}
+      {...rest}
+    />
   );
 }
 
