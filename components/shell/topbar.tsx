@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { Search, Menu, Maximize2, Minimize2 } from "lucide-react";
-import { navSections } from "@/lib/nav";
+import { allModuleNavItems } from "@/lib/modules";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { NotificationsMenu } from "@/components/shell/notifications-menu";
 import { NewMenu } from "@/components/shell/new-menu";
@@ -14,7 +14,7 @@ import type { NotificationItem } from "@/lib/data/notifications.types";
 
 function usePageTitle(): string {
   const pathname = usePathname();
-  const items = navSections.flatMap((s) => s.items);
+  const items = allModuleNavItems();
   const match = items
     .filter((i) => pathname === i.href || pathname.startsWith(i.href + "/"))
     .sort((a, b) => b.href.length - a.href.length)[0];

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { BetaReportWidget } from "@/components/beta-report/beta-report-widget";
@@ -9,6 +10,7 @@ import { getCurrentCompany, isLicenseExpired } from "@/lib/server/tenant";
 import { isCurrentUserFounder } from "@/lib/server/founder";
 import { setSystemCurrency } from "@/lib/format";
 import { appVersionLabel } from "@/lib/version";
+import { MODULE_COOKIE } from "@/lib/modules";
 
 // Every route in this group is auth-gated and reads per-request data (the
 // session, project/DB-backed lists), so it must render on-demand. Forcing the
@@ -22,19 +24,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const company = await getCurrentCompany();
   if (isLicenseExpired(company)) redirect("/expired");
 
-  const [notifications, systemCurrency, isFounder] = await Promise.all([
+  const [notifications, systemCurrency, isFounder, cookieStore] = await Promise.all([
     getNotificationsForCurrentUser(),
     getSystemCurrency(),
     isCurrentUserFounder(),
+    cookies(),
   ]);
   // Seed the System Currency for server-rendered formatting this request…
   setSystemCurrency(systemCurrency);
+  // Active module persisted client-side; drives the sidebar nav on first paint.
+  const initialModule = cookieStore.get(MODULE_COOKIE)?.value;
   return (
     <>
       {/* …and on the client, before anything formats money. */}
       <SystemCurrencyInit currency={systemCurrency} />
       {/* Shell owns the collapsible "full screen" sidebar state (sidebar + topbar). */}
-      <AppShell notifications={notifications} version={appVersionLabel()} isFounder={isFounder}>
+      <AppShell notifications={notifications} version={appVersionLabel()} isFounder={isFounder} initialModule={initialModule}>
         {children}
       </AppShell>
       {/* Global ⌘K / Ctrl+K command palette (renders null until opened). */}

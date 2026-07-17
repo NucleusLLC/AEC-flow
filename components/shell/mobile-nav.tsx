@@ -4,14 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, MessageSquarePlus, X } from "lucide-react";
-import { navSections } from "@/lib/nav";
 import { openBetaReport } from "@/components/beta-report/open-beta-report";
+import { useModule } from "@/components/shell/module-provider";
+import { ModuleSwitcher } from "@/components/shell/module-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { module } = useModule();
   const t = useT();
 
   return (
@@ -56,8 +58,12 @@ export function MobileNav() {
               </button>
             </div>
 
+            <div className="pb-2">
+              <ModuleSwitcher />
+            </div>
+
             <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-              {navSections.map((section, i) => (
+              {module.nav.map((section, i) => (
                 <div key={i}>
                   {section.title ? (
                     <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">

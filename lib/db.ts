@@ -21,7 +21,7 @@ const TENANT_MODELS = new Set<string>([
   "SubmittalLog", "DelayNotice", "ProgressCertification", "PunchListItem",
   "DevelopmentProject", "CostEstimate", "ProjectSchedule", "PriceItem",
   "NormSetTask", "Vendor", "GeneralConditionItem", "EstimateTemplate",
-  "WikiArticle", "Task", "ActivityLog",
+  "WikiArticle", "Task", "ActivityLog", "GeneratedDocument",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

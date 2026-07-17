@@ -40,10 +40,10 @@ export type NavSection = {
 };
 
 /**
- * BETA launch scope (AEC Flow). Active modules: Clients, Estimates, Schedule,
- * Proposals, Construction Administration (which now houses Drawings, Documents and
- * Meeting Minutes) — plus Dashboard and Settings. Everything else is `disabled`
- * (grayed out) until it is production-ready.
+ * BETA launch scope (AEC Flow). Active modules: Clients, Meeting Minutes,
+ * Estimates, Schedule, Proposals, Construction Administration (which houses
+ * Drawings and Documents) — plus Dashboard and Settings. Everything else is
+ * `disabled` (grayed out) until it is production-ready.
  */
 export const navSections: NavSection[] = [
   {
@@ -53,6 +53,7 @@ export const navSections: NavSection[] = [
     title: "Business Development",
     items: [
       { label: "Clients", href: "/clients", icon: Users },
+      { label: "Meeting Minutes", href: "/meetings", icon: NotebookPen },
       { label: "Estimates", href: "/estimates", icon: Calculator },
       { label: "Cost Database", href: "/cost-database", icon: Database, disabled: true },
       { label: "Proposals", href: "/proposals", icon: FileText },
@@ -72,7 +73,6 @@ export const navSections: NavSection[] = [
     title: "Construction Administration",
     items: [
       { label: "Construction Admin", href: "/construction-admin", icon: HardHat },
-      { label: "Meeting Minutes", href: "/meetings", icon: NotebookPen },
       // Drawings & Documents are still placeholder (no persistence) — grayed until wired.
       { label: "Drawings", href: "/drawings", icon: FileStack },
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },

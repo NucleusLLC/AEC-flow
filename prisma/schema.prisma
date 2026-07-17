@@ -1722,3 +1722,37 @@ model BetaReport {
   @@index([createdAt])
   @@map("beta_reports")
 }
+
+/// Shared Document Generator output register (module integration layer).
+/// ADDITIVE, non-destructive: records documents generated FROM the protected
+/// Estimates/Schedule systems. It never stores or alters source records — only a
+/// reference to the source system, record id, its version, and an optional
+/// snapshot so an issued document never silently changes (spec §14).
+model GeneratedDocument {
+  companyId    String?
+  id           String   @id @default(cuid())
+  /// "estimates" | "schedule"
+  sourceSystem String
+  /// The document type produced (e.g. "cost_summary", "construction_schedule").
+  docType      String
+  title        String
+  /// Source record identity (estimate id, or schedule projectId).
+  sourceRecordId      String
+  /// Source record version when one exists (Estimates: "V1.0"; Schedule: null —
+  /// it has no version mechanism, see docs/protected-schedule-files.md §6).
+  sourceRecordVersion String?
+  /// Optional JSON snapshot / reference so the issued document is reproducible.
+  sourceSnapshot      Json?
+  /// The module active when the document was generated (e.g. "Module 3").
+  generatedInModule String?
+  moduleVersion     String?
+  /// URL the document was rendered from (an existing print route).
+  renderUrl String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  @@index([sourceSystem, sourceRecordId])
+  @@index([createdAt])
+  @@map("generated_documents")
+}

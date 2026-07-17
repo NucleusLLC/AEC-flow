@@ -28,6 +28,11 @@ export default function LoginPage() {
               Join the beta — 6 months free
             </Link>
           </p>
+          <p className="mt-1 text-center text-xs text-muted">
+            <Link href="/beta-portal" className="hover:text-fg hover:underline">
+              Learn more about the beta
+            </Link>
+          </p>
         </div>
 
         <p className="mt-4 text-center text-xs text-faint">

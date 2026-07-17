@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { MessageSquarePlus, ShieldCheck } from "lucide-react";
-import { navSections } from "@/lib/nav";
 import { openBetaReport } from "@/components/beta-report/open-beta-report";
+import { useModule } from "@/components/shell/module-provider";
+import { ModuleSwitcher } from "@/components/shell/module-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ function initials(name?: string | null): string {
 export function Sidebar({ version, collapsed = false, isFounder = false }: { version?: string; collapsed?: boolean; isFounder?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { module } = useModule();
   const t = useT();
   const user = session?.user;
   const displayName = user?.name ?? "Account";
@@ -54,9 +56,14 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Module switcher — swaps the nav groups below to the active module. */}
+      <div className="pb-2">
+        <ModuleSwitcher />
+      </div>
+
+      {/* Nav — reflects the active module. */}
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-        {navSections.map((section, i) => (
+        {module.nav.map((section, i) => (
           <div key={i}>
             {section.title ? (
               <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
@@ -142,6 +149,21 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
           </Link>
         </div>
       ) : null}
+
+      {/* Module identity panel (spec §24) — the active module + its Beta version.
+       * This is the MODULE version domain, distinct from Estimate/Schedule record
+       * versions and from the deployed app build below. */}
+      <div className="border-t border-white/10 px-3 py-2.5">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+          {t("Module")} {module.number}
+        </div>
+        <div className="mt-0.5 text-[12px] font-semibold leading-snug text-white">
+          {t(module.name)}
+        </div>
+        <div className="mt-1 font-mono text-[10px] tracking-tight text-brand/80">
+          {module.version}
+        </div>
+      </div>
 
       {/* User — the actual signed-in account */}
       <div className="border-t border-white/10 p-3">
