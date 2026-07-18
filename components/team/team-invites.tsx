@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Check, X, UserPlus } from "lucide-react";
+import { Copy, Check, X, UserPlus, Mail, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { createInviteAction, revokeInviteAction } from "@/app/(app)/team/invite-actions";
 import type { UserRole } from "@prisma/client";
@@ -17,7 +17,10 @@ export function TeamInvites({ seatUsage, invitations }: { seatUsage: SeatUsage; 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("STAFF");
   const [error, setError] = useState<string | null>(null);
-  const [newLink, setNewLink] = useState<string | null>(null);
+  const [sent, setSent] = useState<
+    | { link: string; email: string; emailed: boolean; emailError?: string }
+    | null
+  >(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -34,14 +37,20 @@ export function TeamInvites({ seatUsage, invitations }: { seatUsage: SeatUsage; 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setNewLink(null);
+    setSent(null);
+    const invitedEmail = email.trim();
     start(async () => {
-      const res = await createInviteAction(email.trim(), role);
+      const res = await createInviteAction(invitedEmail, role);
       if (!res.ok) {
         setError(res.error);
         return;
       }
-      setNewLink(linkFor(res.token));
+      setSent({
+        link: linkFor(res.token),
+        email: invitedEmail,
+        emailed: res.emailed,
+        emailError: res.emailError,
+      });
       setEmail("");
       router.refresh();
     });
@@ -116,15 +125,28 @@ export function TeamInvites({ seatUsage, invitations }: { seatUsage: SeatUsage; 
       ) : null}
       {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
 
-      {/* Freshly created link (no email is sent — share this link) */}
-      {newLink ? (
+      {/* Freshly created invite — emailed when possible, link always shown as fallback */}
+      {sent ? (
         <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-          <p className="text-xs font-medium text-emerald-800">Invite created — share this link with them:</p>
+          {sent.emailed ? (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
+              <Mail className="h-3.5 w-3.5" />
+              Invite emailed to {sent.email}. You can also share this link:
+            </p>
+          ) : (
+            <p className="flex items-start gap-1.5 text-xs font-medium text-amber-700">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Invite created, but the email couldn&rsquo;t be sent
+                {sent.emailError ? ` (${sent.emailError})` : ""}. Share this link with them:
+              </span>
+            </p>
+          )}
           <div className="mt-1.5 flex items-center gap-2">
-            <input readOnly value={newLink} className="h-8 flex-1 rounded border border-emerald-200 bg-white px-2 text-xs text-emerald-900" />
+            <input readOnly value={sent.link} className="h-8 flex-1 rounded border border-emerald-200 bg-white px-2 text-xs text-emerald-900" />
             <button
               type="button"
-              onClick={() => copy(newLink, "new")}
+              onClick={() => copy(sent.link, "new")}
               className="inline-flex h-8 items-center gap-1 rounded border border-emerald-300 px-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
             >
               {copied === "new" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

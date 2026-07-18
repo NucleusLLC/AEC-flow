@@ -11,9 +11,18 @@ import bcrypt from "bcryptjs";
 import { addDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getCurrentCompanyId, getCurrentCompany } from "@/lib/server/tenant";
+import { sendInviteEmail } from "@/lib/server/email";
 import type { UserRole } from "@prisma/client";
 
 const INVITE_TTL_DAYS = 14;
+
+/** Absolute base URL for links in emails (env — the request origin isn't
+ *  reliable in a server action). Falls back to the production host. */
+function appBaseUrl(): string {
+  const base =
+    process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://aec-flow.com";
+  return base.replace(/\/+$/, "");
+}
 
 export type SeatUsage = { used: number; pending: number; limit: number; available: number };
 
@@ -55,7 +64,9 @@ export async function listInvitations(): Promise<InviteRow[]> {
   }));
 }
 
-type CreateResult = { ok: true; token: string } | { ok: false; error: string };
+type CreateResult =
+  | { ok: true; token: string; emailed: boolean; emailError?: string }
+  | { ok: false; error: string };
 
 export async function createInvitation(emailRaw: string, role: UserRole, invitedByName?: string): Promise<CreateResult> {
   const companyId = await getCurrentCompanyId();
@@ -84,7 +95,22 @@ export async function createInvitation(emailRaw: string, role: UserRole, invited
       data: { companyId, email, role, token, status: "PENDING", invitedByName: invitedByName ?? null, expiresAt },
     });
   }
-  return { ok: true, token };
+
+  // Notify the invitee. The invite is valid regardless of whether the email
+  // sends — the owner can always fall back to sharing the link by hand.
+  const company = await getCurrentCompany();
+  const send = await sendInviteEmail({
+    to: email,
+    companyName: company?.name ?? "your team",
+    invitedByName,
+    role,
+    acceptUrl: `${appBaseUrl()}/invite/${token}`,
+    expiresAt,
+  });
+
+  return send.ok
+    ? { ok: true, token, emailed: true }
+    : { ok: true, token, emailed: false, emailError: send.error };
 }
 
 export async function revokeInvitation(id: string): Promise<void> {
