@@ -25,6 +25,9 @@ import {
   ListChecks,
   ShoppingCart,
   Boxes,
+  Building2,
+  PencilRuler,
+  Sofa,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +53,15 @@ export type NavSection = {
 export const navSections: NavSection[] = [
   {
     items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+  },
+  {
+    title: "Design",
+    items: [
+      { label: "Design Register", href: "/design", icon: FileStack },
+      { label: "Architecture", href: "/design/architecture", icon: Building2 },
+      { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
+      { label: "Interior Design", href: "/design/interior", icon: Sofa },
+    ],
   },
   {
     title: "Business Development",

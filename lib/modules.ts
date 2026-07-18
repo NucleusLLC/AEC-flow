@@ -113,9 +113,10 @@ const MODULE_1: AppModule = {
     {
       title: "Design",
       items: [
-        { label: "Architecture", href: "/design/architecture", icon: Building2, disabled: true },
-        { label: "Engineering", href: "/design/engineering", icon: PencilRuler, disabled: true },
-        { label: "Interior Design", href: "/design/interior", icon: Sofa, disabled: true },
+        { label: "Design Register", href: "/design", icon: FileStack },
+        { label: "Architecture", href: "/design/architecture", icon: Building2 },
+        { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
+        { label: "Interior Design", href: "/design/interior", icon: Sofa },
       ],
     },
     { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }] },

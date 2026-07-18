@@ -22,7 +22,7 @@ const TENANT_MODELS = new Set<string>([
   "DevelopmentProject", "CostEstimate", "ProjectSchedule", "PriceItem",
   "NormSetTask", "Vendor", "GeneralConditionItem", "EstimateTemplate",
   "WikiArticle", "Task", "ActivityLog", "GeneratedDocument", "PurchaseOrder",
-  "MaterialSelection",
+  "MaterialSelection", "DesignDeliverable",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

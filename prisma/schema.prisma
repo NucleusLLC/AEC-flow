@@ -1851,3 +1851,61 @@ model MaterialSelection {
   @@index([status])
   @@map("material_selections")
 }
+
+enum DesignDiscipline {
+  ARCHITECTURE
+  ENGINEERING
+  INTERIOR
+}
+
+enum DeliverableType {
+  DRAWING
+  SPECIFICATION
+  REPORT
+  MODEL
+  SCHEDULE
+}
+
+enum DeliverableStatus {
+  DRAFT
+  IN_REVIEW
+  ISSUED
+  SUPERSEDED
+  APPROVED
+}
+
+/// Design deliverables / drawing register (Module 1, Architecture / Engineering
+/// / Interior Design). A per-discipline register of drawings and design
+/// documents with revision + issue status. Additive and self-contained — it
+/// does not read or alter the protected Estimates/Schedule systems. `number`
+/// is user-entered (drawing numbering conventions e.g. A-101) and unique per
+/// company.
+model DesignDeliverable {
+  companyId     String?
+  id            String            @id @default(cuid())
+  number        String
+  title         String
+  discipline    DesignDiscipline
+  type          DeliverableType   @default(DRAWING)
+  revision      String            @default("-")
+  status        DeliverableStatus @default(DRAFT)
+  projectId     String?
+  projectName   String?
+  scale         String?
+  sheetSize     String?
+  issuedTo      String?
+  issuedDate    DateTime?
+  dueDate       DateTime?
+  fileLink      String?
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([companyId, number])
+  @@index([projectId])
+  @@index([discipline])
+  @@index([status])
+  @@map("design_deliverables")
+}
