@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   ListChecks,
   ShoppingCart,
+  Boxes,
   type LucideIcon,
 } from "lucide-react";
 
@@ -75,6 +76,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Construction Admin", href: "/construction-admin", icon: HardHat },
       { label: "Procurement", href: "/procurement", icon: ShoppingCart },
+      { label: "Material Selection", href: "/materials", icon: Boxes },
       // Drawings & Documents are still placeholder (no persistence) — grayed until wired.
       { label: "Drawings", href: "/drawings", icon: FileStack },
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },

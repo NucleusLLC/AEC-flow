@@ -143,7 +143,7 @@ const MODULE_2: AppModule = {
       items: [
         { label: "Construction Admin", href: "/construction-admin", icon: HardHat },
         { label: "Procurement", href: "/procurement", icon: ShoppingCart },
-        { label: "Material Selection", href: "/materials", icon: Boxes, disabled: true },
+        { label: "Material Selection", href: "/materials", icon: Boxes },
       ],
     },
     { title: "Documents", items: [DOC_GENERATOR, DOC_REGISTER] },

@@ -1802,3 +1802,52 @@ model PurchaseOrder {
   @@index([status])
   @@map("purchase_orders")
 }
+
+enum MaterialSelectionStatus {
+  PROPOSED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ORDERED
+  INSTALLED
+}
+
+/// Material / finish selections (Module 2, Construction Administration). A
+/// per-project selection register — the finish schedule. Additive and
+/// self-contained; it does not read or alter the protected systems. May
+/// optionally reference a PurchaseOrder once the item is ordered (loose id, no
+/// FK — keeps the tenant extension simple and the systems decoupled).
+model MaterialSelection {
+  companyId       String?
+  id              String                  @id @default(cuid())
+  tag             String
+  projectId       String?
+  projectName     String?
+  category        String
+  location        String?
+  productName     String
+  manufacturer    String?
+  modelNumber     String?
+  finish          String?
+  specification   String?
+  status          MaterialSelectionStatus @default(PROPOSED)
+  currency        String                  @default("USD")
+  quantity        Decimal                 @default(0)
+  unit            String?
+  unitCost        Decimal                 @default(0)
+  totalCost       Decimal                 @default(0)
+  supplier        String?
+  purchaseOrderId String?
+  approvedBy      String?
+  selectedDate    DateTime?
+  notes           String?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@unique([companyId, tag])
+  @@index([projectId])
+  @@index([status])
+  @@map("material_selections")
+}
