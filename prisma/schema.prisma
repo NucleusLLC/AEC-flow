@@ -1756,3 +1756,49 @@ model GeneratedDocument {
   @@index([createdAt])
   @@map("generated_documents")
 }
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  RECEIVED
+  CLOSED
+  CANCELLED
+}
+
+/// Procurement — purchase orders issued to suppliers (Module 2, Construction
+/// Administration). Additive and self-contained: it does not read or alter the
+/// protected Estimates/Schedule systems. Line items live as JSON on the order;
+/// subtotal/tax/total are denormalized from lib/procurement/calc.ts.
+model PurchaseOrder {
+  companyId     String?
+  id            String              @id @default(cuid())
+  poNumber      String
+  projectId     String?
+  projectName   String?
+  vendorName    String
+  vendorContact String?
+  vendorEmail   String?
+  status        PurchaseOrderStatus @default(DRAFT)
+  currency      String              @default("USD")
+  /// [{ description, quantity, unit, unitPrice }]
+  lineItems     Json?
+  subtotal      Decimal             @default(0)
+  taxPercentage Decimal             @default(0)
+  shipping      Decimal             @default(0)
+  total         Decimal             @default(0)
+  orderDate     DateTime?
+  expectedDate  DateTime?
+  receivedDate  DateTime?
+  terms         String?
+  notes         String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([companyId, poNumber])
+  @@index([projectId])
+  @@index([status])
+  @@map("purchase_orders")
+}

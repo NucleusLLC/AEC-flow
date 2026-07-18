@@ -23,6 +23,7 @@ import {
   Bug,
   LayoutGrid,
   ListChecks,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,6 +74,7 @@ export const navSections: NavSection[] = [
     title: "Construction Administration",
     items: [
       { label: "Construction Admin", href: "/construction-admin", icon: HardHat },
+      { label: "Procurement", href: "/procurement", icon: ShoppingCart },
       // Drawings & Documents are still placeholder (no persistence) — grayed until wired.
       { label: "Drawings", href: "/drawings", icon: FileStack },
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
