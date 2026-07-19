@@ -130,7 +130,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
             </CardBody>
           </Card>
 
-          <ProjectModulesRollupCard rollup={rollup} />
+          <ProjectModulesRollupCard rollup={rollup} projectId={id} />
 
           <Card>
             <CardHeader title="Project Team" subtitle={`${project.team.length} members`} />

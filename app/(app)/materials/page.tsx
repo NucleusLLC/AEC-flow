@@ -2,13 +2,22 @@ import Link from "next/link";
 import { Plus, Boxes, CircleCheck, Clock, CircleDollarSign, Printer, PackagePlus } from "lucide-react";
 import { listMaterialSelections, materialsSummary } from "@/lib/data/materials";
 import { MaterialList } from "@/components/materials/material-list";
+import { ProjectFilterBanner } from "@/components/projects/project-filter-banner";
+import { getProject } from "@/lib/data/projects";
 import { formatCurrency } from "@/lib/format";
 
 export const metadata = { title: "Material Selection · AEC-flow" };
 
-export default async function MaterialsPage() {
-  const [items, summary] = await Promise.all([listMaterialSelections(), materialsSummary()]);
-  const money = (n: number) => formatCurrency(n, summary.currency, { maximumFractionDigits: 0 });
+export default async function MaterialsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  const { project } = await searchParams;
+  const proj = project ? await getProject(project) : null;
+  const items = await listMaterialSelections(proj ? project : undefined);
+  const summary = proj ? null : await materialsSummary();
+  const money = (n: number) => formatCurrency(n, summary?.currency ?? "USD", { maximumFractionDigits: 0 });
   const orderable = items.filter((m) => m.status === "APPROVED" && !m.purchaseOrderId).length;
 
   return (
@@ -45,12 +54,16 @@ export default async function MaterialsPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile icon={Boxes} label="Selections" value={String(summary.total)} />
-        <Tile icon={Clock} label="Pending" value={String(summary.pending)} />
-        <Tile icon={CircleCheck} label="Approved+" value={String(summary.approved)} />
-        <Tile icon={CircleDollarSign} label="Selected value" value={money(summary.selectedValue)} />
-      </div>
+      {proj ? (
+        <ProjectFilterBanner projectName={proj.name} clearHref="/materials" />
+      ) : summary ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Tile icon={Boxes} label="Selections" value={String(summary.total)} />
+          <Tile icon={Clock} label="Pending" value={String(summary.pending)} />
+          <Tile icon={CircleCheck} label="Approved+" value={String(summary.approved)} />
+          <Tile icon={CircleDollarSign} label="Selected value" value={money(summary.selectedValue)} />
+        </div>
+      ) : null}
 
       <MaterialList items={items} />
     </div>

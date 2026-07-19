@@ -2,13 +2,23 @@ import Link from "next/link";
 import { Plus, ShoppingCart, PackageCheck, CircleDollarSign, ClipboardList, PackagePlus } from "lucide-react";
 import { listPurchaseOrders, procurementSummary } from "@/lib/data/procurement";
 import { PurchaseOrderList } from "@/components/procurement/purchase-order-list";
+import { ProjectFilterBanner } from "@/components/projects/project-filter-banner";
+import { getProject } from "@/lib/data/projects";
 import { formatCurrency } from "@/lib/format";
 
 export const metadata = { title: "Procurement · AEC-flow" };
 
-export default async function ProcurementPage() {
-  const [orders, summary] = await Promise.all([listPurchaseOrders(), procurementSummary()]);
-  const money = (n: number) => formatCurrency(n, summary.currency, { maximumFractionDigits: 0 });
+export default async function ProcurementPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  const { project } = await searchParams;
+  const proj = project ? await getProject(project) : null;
+  const allOrders = await listPurchaseOrders();
+  const orders = proj ? allOrders.filter((o) => o.projectId === project) : allOrders;
+  const summary = proj ? null : await procurementSummary();
+  const money = (n: number) => formatCurrency(n, summary?.currency ?? "USD", { maximumFractionDigits: 0 });
 
   return (
     <div className="w-full space-y-6">
@@ -35,12 +45,16 @@ export default async function ProcurementPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile icon={ClipboardList} label="Purchase orders" value={String(summary.total)} />
-        <Tile icon={ShoppingCart} label="Open" value={String(summary.open)} />
-        <Tile icon={CircleDollarSign} label="Open value" value={money(summary.openValue)} />
-        <Tile icon={PackageCheck} label="Received value" value={money(summary.receivedValue)} />
-      </div>
+      {proj ? (
+        <ProjectFilterBanner projectName={proj.name} clearHref="/procurement" />
+      ) : summary ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Tile icon={ClipboardList} label="Purchase orders" value={String(summary.total)} />
+          <Tile icon={ShoppingCart} label="Open" value={String(summary.open)} />
+          <Tile icon={CircleDollarSign} label="Open value" value={money(summary.openValue)} />
+          <Tile icon={PackageCheck} label="Received value" value={money(summary.receivedValue)} />
+        </div>
+      ) : null}
 
       <PurchaseOrderList orders={orders} />
     </div>

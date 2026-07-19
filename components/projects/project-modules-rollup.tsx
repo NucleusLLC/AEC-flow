@@ -4,10 +4,17 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
 import type { ProjectModulesRollup } from "@/lib/data/project-rollup";
 
-export function ProjectModulesRollupCard({ rollup }: { rollup: ProjectModulesRollup }) {
+export function ProjectModulesRollupCard({
+  rollup,
+  projectId,
+}: {
+  rollup: ProjectModulesRollup;
+  projectId: string;
+}) {
+  const q = `?project=${encodeURIComponent(projectId)}`;
   const rows = [
     {
-      href: "/procurement",
+      href: `/procurement${q}`,
       icon: ShoppingCart,
       label: "Purchase orders",
       value: rollup.purchaseOrders.total,
@@ -17,14 +24,14 @@ export function ProjectModulesRollupCard({ rollup }: { rollup: ProjectModulesRol
           : "None yet",
     },
     {
-      href: "/materials",
+      href: `/materials${q}`,
       icon: Boxes,
       label: "Material selections",
       value: rollup.materials.total,
       sub: rollup.materials.total > 0 ? `${rollup.materials.approved} approved+` : "None yet",
     },
     {
-      href: "/design",
+      href: `/design${q}`,
       icon: FileStack,
       label: "Design deliverables",
       value: rollup.deliverables.total,
