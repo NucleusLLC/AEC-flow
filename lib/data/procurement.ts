@@ -221,3 +221,64 @@ export async function procurementSummary(): Promise<ProcurementSummary> {
     byStatus,
   };
 }
+
+export interface PoFromSelectionsInput {
+  selectionIds: string[];
+  vendorName: string;
+  vendorContact?: string | null;
+  vendorEmail?: string | null;
+}
+
+/**
+ * Bridge: turn approved material selections into a draft purchase order.
+ * Each selection becomes a PO line; the selections are linked to the new PO
+ * and marked ORDERED. Only selections that aren't already on a PO are used
+ * (re-read here so the client can't order the same item twice). Both reads and
+ * writes are tenant-scoped by the Prisma extension.
+ */
+export async function createPurchaseOrderFromSelections(
+  input: PoFromSelectionsInput,
+): Promise<{ po: PurchaseOrderDTO; linked: number }> {
+  const session = await getServerSession(authOptions);
+  const sels = await prisma.materialSelection.findMany({
+    where: { id: { in: input.selectionIds }, purchaseOrderId: null },
+  });
+  if (sels.length === 0) {
+    throw new Error("No orderable selections found — they may already be on a purchase order.");
+  }
+  const lines: PurchaseOrderLine[] = sels.map((s) => ({
+    description: [s.productName, s.manufacturer, s.modelNumber, s.finish].filter(Boolean).join(" · "),
+    quantity: Number(s.quantity) || 0,
+    unit: s.unit ?? "",
+    unitPrice: Number(s.unitCost) || 0,
+  }));
+  const totals = poTotals({ lineItems: lines, taxPercentage: 0, shipping: 0 });
+  const existing = await listPurchaseOrders();
+  // Carry the project through only if every selection shares one.
+  const firstProject = sels[0].projectId;
+  const sameProject = sels.every((s) => s.projectId === firstProject);
+  const row = await prisma.purchaseOrder.create({
+    data: {
+      poNumber: nextPoNumber(existing.map((p) => p.poNumber), new Date().getFullYear()),
+      projectId: sameProject ? firstProject : null,
+      projectName: sameProject ? sels[0].projectName : null,
+      vendorName: input.vendorName.trim(),
+      vendorContact: input.vendorContact ?? null,
+      vendorEmail: input.vendorEmail ?? null,
+      status: "DRAFT",
+      currency: sels[0].currency ?? "USD",
+      lineItems: lines as unknown as Prisma.InputJsonValue,
+      subtotal: totals.subtotal,
+      taxPercentage: 0,
+      shipping: 0,
+      total: totals.total,
+      createdById: session?.user?.id ?? null,
+      createdByName: session?.user?.name ?? null,
+    },
+  });
+  const linked = await prisma.materialSelection.updateMany({
+    where: { id: { in: sels.map((s) => s.id) } },
+    data: { purchaseOrderId: row.id, status: "ORDERED" },
+  });
+  return { po: toDto(row), linked: linked.count };
+}

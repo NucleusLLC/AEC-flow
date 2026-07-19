@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Boxes, CircleCheck, Clock, CircleDollarSign, Printer } from "lucide-react";
+import { Plus, Boxes, CircleCheck, Clock, CircleDollarSign, Printer, PackagePlus } from "lucide-react";
 import { listMaterialSelections, materialsSummary } from "@/lib/data/materials";
 import { MaterialList } from "@/components/materials/material-list";
 import { formatCurrency } from "@/lib/format";
@@ -9,6 +9,7 @@ export const metadata = { title: "Material Selection · AEC-flow" };
 export default async function MaterialsPage() {
   const [items, summary] = await Promise.all([listMaterialSelections(), materialsSummary()]);
   const money = (n: number) => formatCurrency(n, summary.currency, { maximumFractionDigits: 0 });
+  const orderable = items.filter((m) => m.status === "APPROVED" && !m.purchaseOrderId).length;
 
   return (
     <div className="w-full space-y-6">
@@ -18,6 +19,14 @@ export default async function MaterialsPage() {
           <p className="text-sm text-muted">The finish &amp; product schedule — track selections from proposal to install.</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {orderable > 0 ? (
+            <Link
+              href="/procurement/from-selections"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+            >
+              <PackagePlus className="h-4 w-4" /> Create PO from approved ({orderable})
+            </Link>
+          ) : null}
           {items.length > 0 ? (
             <Link
               href="/print/materials"

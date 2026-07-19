@@ -5,6 +5,7 @@ import {
   createPurchaseOrder,
   updatePurchaseOrder,
   deletePurchaseOrder,
+  createPurchaseOrderFromSelections,
 } from "@/lib/data/procurement";
 import type { PurchaseOrderInput } from "@/lib/procurement/types";
 
@@ -53,4 +54,26 @@ export async function deletePurchaseOrderAction(id: string): Promise<{ ok: true 
   await deletePurchaseOrder(id);
   revalidatePath("/procurement");
   return { ok: true };
+}
+
+export async function createPoFromSelectionsAction(input: {
+  selectionIds: string[];
+  vendorName: string;
+  vendorContact?: string | null;
+  vendorEmail?: string | null;
+}): Promise<SaveResult> {
+  if (!input.vendorName || !input.vendorName.trim()) {
+    return { ok: false, error: "Enter a supplier / vendor name." };
+  }
+  if (!input.selectionIds || input.selectionIds.length === 0) {
+    return { ok: false, error: "Select at least one material selection." };
+  }
+  try {
+    const { po } = await createPurchaseOrderFromSelections(input);
+    revalidatePath("/procurement");
+    revalidatePath("/materials");
+    return { ok: true, id: po.id, poNumber: po.poNumber };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to create purchase order." };
+  }
 }

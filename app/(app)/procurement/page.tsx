@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, ShoppingCart, PackageCheck, CircleDollarSign, ClipboardList } from "lucide-react";
+import { Plus, ShoppingCart, PackageCheck, CircleDollarSign, ClipboardList, PackagePlus } from "lucide-react";
 import { listPurchaseOrders, procurementSummary } from "@/lib/data/procurement";
 import { PurchaseOrderList } from "@/components/procurement/purchase-order-list";
 import { formatCurrency } from "@/lib/format";
@@ -17,13 +17,22 @@ export default async function ProcurementPage() {
           <h2 className="text-xl font-semibold text-fg">Procurement</h2>
           <p className="text-sm text-muted">Purchase orders issued to suppliers — track ordering through delivery.</p>
         </div>
-        <Link
-          href="/procurement/new"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <Plus className="h-4 w-4" />
-          New Purchase Order
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/procurement/from-selections"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <PackagePlus className="h-4 w-4" />
+            From selections
+          </Link>
+          <Link
+            href="/procurement/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <Plus className="h-4 w-4" />
+            New Purchase Order
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
