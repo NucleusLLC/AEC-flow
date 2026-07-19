@@ -8,7 +8,14 @@ import { MODULE_MAP, type ModuleKey } from "@/lib/modules";
  * active nav items. Used by Modules 1, 2 and 4. (Module 3 has a richer, purpose-
  * built dashboard with Estimates/Schedule summaries.)
  */
-export function ModuleDashboard({ moduleKey }: { moduleKey: ModuleKey }) {
+export function ModuleDashboard({
+  moduleKey,
+  children,
+}: {
+  moduleKey: ModuleKey;
+  /** Optional stats section rendered between the header and the shortcut grid. */
+  children?: React.ReactNode;
+}) {
   const mod = MODULE_MAP[moduleKey];
 
   return (
@@ -23,6 +30,8 @@ export function ModuleDashboard({ moduleKey }: { moduleKey: ModuleKey }) {
           the shortcuts below.
         </p>
       </div>
+
+      {children}
 
       {mod.nav
         .filter((section) => section.title !== "Overview")
