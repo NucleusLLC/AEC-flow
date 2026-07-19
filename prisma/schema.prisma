@@ -148,9 +148,44 @@ model Company {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
+  // ── Nucleus licensing ────────────────────────────────────────────────────
+  // The claimed beta code IS the Nucleus licence key. Plaintext lives HERE (the product's own
+  // DB, like CAD-Flow); only its sha256 ever lands in Nucleus. Currently OBSERVE-ONLY: every
+  // validation is recorded but nothing blocks access — see lib/server/license.ts.
+  licenseKey          String? // plaintext Nucleus licence key (= the redeemed beta code)
+  licenseKeyPrefix    String? // e.g. AECFLOW-BETA-7Q4X — matches Nucleus licenses.key_prefix
+  licenseStatus       String? // last result: valid | <deny reason> | unreachable | unconfigured
+  licenseCheckedAt    DateTime? // when Nucleus was last consulted (drives the recheck interval)
+  licenseValidUntil   DateTime? // grace horizon; only consulted once enforcement is switched on
+  licenseEntitlements Json? // plan/modules/features/limits from the last good validation
+
   users User[]
 
   @@map("companies")
+}
+
+/// A beta access code for the AEC-Flow beta. A code IS a Nucleus licence key: the plaintext lives
+/// here so signup can redeem it, while only its sha256 exists in Nucleus. Both sides are minted
+/// together by NucleusLicenseOps/scripts/mint-aecflow-pool.mjs. Single-use.
+///
+/// This replaces the single shared BETA_SIGNUP_CODE secret, which gave every tester the same
+/// string and so made per-tester attribution impossible. The shared code still works during the
+/// transition (see app/signup/actions.ts) but every use of it is recorded as such.
+model BetaCode {
+  id              String    @id @default(cuid())
+  code            String    @unique // plaintext, e.g. AECFLOW-BETA-7Q4X-K2M9
+  keyPrefix       String // AECFLOW-BETA-7Q4X — the unique handle Nucleus shows in the portal
+  status          String    @default("available") // available | claimed | revoked
+  cohort          String?
+  claimedByUserId String?
+  claimedEmail    String?
+  claimedAt       DateTime?
+  companyId       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([status])
+  @@index([claimedEmail])
+  @@map("beta_codes")
 }
 
 enum InvitationStatus {

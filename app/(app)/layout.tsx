@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { BetaReportWidget } from "@/components/beta-report/beta-report-widget";
@@ -7,6 +7,7 @@ import { SystemCurrencyInit } from "@/components/shell/system-currency-init";
 import { getNotificationsForCurrentUser } from "@/lib/data/notifications";
 import { getSystemCurrency } from "@/lib/server/practice-config";
 import { getCurrentCompany, isLicenseExpired } from "@/lib/server/tenant";
+import { checkCompanyLicense } from "@/lib/server/license";
 import { isCurrentUserFounder } from "@/lib/server/founder";
 import { setSystemCurrency } from "@/lib/format";
 import { appVersionLabel } from "@/lib/version";
@@ -23,6 +24,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // renewal page (founder companies never expire).
   const company = await getCurrentCompany();
   if (isLicenseExpired(company)) redirect("/expired");
+
+  // Nucleus licence check — OBSERVE-ONLY. It records the outcome against the company (at most
+  // once an hour) so the Nucleus beta board shows real activity, but `denied` is hard-wired to
+  // false until NUCLEUS_ENFORCE=true, so this cannot lock anyone out today. The redirect is
+  // wired now so switching on enforcement is one env var, not a code change.
+  // Awaited deliberately: it must forward the tester's real IP from this request (see the
+  // x-client-ip contract in lib/server/license.ts), and it fails soft on every path.
+  if (company) {
+    const hdrs = await headers();
+    const clientIp =
+      hdrs.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+      hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      null;
+    const licence = await checkCompanyLicense({
+      companyId: company.id,
+      clientIp,
+      userAgent: hdrs.get("user-agent"),
+    });
+    if (licence.denied) redirect("/expired");
+  }
 
   const [notifications, systemCurrency, isFounder, cookieStore] = await Promise.all([
     getNotificationsForCurrentUser(),

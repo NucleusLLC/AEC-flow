@@ -32,6 +32,8 @@ export async function registerBetaTester(input: {
   code: string;
   agreed: boolean;
 }): Promise<SignupResult> {
+  // Declared outside the try so the catch can hand a reserved code back to the pool.
+  let claimedCodeId: string | null = null;
   try {
     const name = input.name?.trim();
     const email = input.email?.trim().toLowerCase();
@@ -49,12 +51,35 @@ export async function registerBetaTester(input: {
     if (!input.agreed) {
       return { ok: false, error: "Please agree to share feedback during the beta." };
     }
-    if (!expectedCode) {
-      return { ok: false, error: "Beta signup isn't configured yet. Please contact the team." };
+    // ── Beta code resolution ────────────────────────────────────────────────
+    // Two paths during the transition to per-tester codes:
+    //   1. A POOL code (AECFLOW-BETA-XXXX-YYYY) — single-use, and it IS the Nucleus licence key.
+    //   2. The legacy shared BETA_SIGNUP_CODE — everyone types the same string, so it yields no
+    //      per-tester attribution. Still accepted so nobody mid-signup is locked out, but every
+    //      use is flagged in preferences and the account gets no licence key.
+    // Retire path 2 by unsetting BETA_SIGNUP_CODE once the pool is distributed.
+    const submitted = input.code?.trim().toUpperCase() ?? "";
+    const sharedCode = expectedCode?.trim().toUpperCase();
+    if (!submitted) {
+      return { ok: false, error: "Please enter your beta access code." };
     }
-    if (input.code?.trim() !== expectedCode) {
+
+    let poolCode: { id: string; code: string; keyPrefix: string } | null = null;
+    const found = await prisma.betaCode.findUnique({
+      where: { code: submitted },
+      select: { id: true, code: true, keyPrefix: true, status: true },
+    });
+    if (found) {
+      // A real pool code that's already spent is a dead end — say so plainly rather than
+      // falling through to "isn't valid", which would send the tester hunting for a typo.
+      if (found.status !== "available") {
+        return { ok: false, error: "That beta access code has already been used." };
+      }
+      poolCode = { id: found.id, code: found.code, keyPrefix: found.keyPrefix };
+    } else if (!sharedCode || submitted !== sharedCode) {
       return { ok: false, error: "That beta access code isn't valid." };
     }
+    const usedSharedCode = poolCode === null;
 
     const existing = await prisma.user.findUnique({
       where: { email },
@@ -67,6 +92,21 @@ export async function registerBetaTester(input: {
     const passwordHash = await bcrypt.hash(password, 10);
     const now = new Date();
     const accessUntil = addMonths(now, BETA_ACCESS_MONTHS);
+
+    // Reserve the code BEFORE creating anything. The guard on `status: "available"` makes this
+    // atomic: if two people submit the same code at once, exactly one update matches a row.
+    // Reserving first means a crash mid-signup burns a code (recoverable — revoke and re-mint)
+    // rather than issuing the same licence key to two testers (not recoverable).
+    if (poolCode) {
+      const claimed = await prisma.betaCode.updateMany({
+        where: { id: poolCode.id, status: "available" },
+        data: { status: "claimed", claimedEmail: email, claimedAt: now },
+      });
+      if (claimed.count !== 1) {
+        return { ok: false, error: "That beta access code has already been used." };
+      }
+      claimedCodeId = poolCode.id;
+    }
 
     // Signup origin. This runs on Vercel, so the real client IP/country only exist on the request
     // headers — and for a tester who signs up but never returns, this is the ONLY signal we will
@@ -86,6 +126,11 @@ export async function registerBetaTester(input: {
         seatLimit: 5,
         expiresAt: accessUntil,
         modules: [],
+        // The redeemed code IS the Nucleus licence key. Storing the plaintext here (and only its
+        // sha256 in Nucleus) is the same split CAD-Flow uses. Shared-code signups get no key —
+        // there is nothing unique to bind — so they stay unlicensed until backfilled.
+        licenseKey: poolCode?.code ?? null,
+        licenseKeyPrefix: poolCode?.keyPrefix ?? null,
       },
       select: { id: true },
     });
@@ -109,15 +154,40 @@ export async function registerBetaTester(input: {
           betaSignupIp: signupIp,
           betaSignupCountry: signupCountry,
           betaUserAgent: userAgent,
+          // Which gate let them in. `sharedCode` accounts have no licence key and need the
+          // backfill; pool accounts are attributable in Nucleus by keyPrefix from day one.
+          betaCodeSource: usedSharedCode ? "sharedCode" : "pool",
+          betaKeyPrefix: poolCode?.keyPrefix ?? null,
         },
       },
     });
+
+    // Link the claimed code back to the tenant it created (audit trail: code -> company -> user).
+    if (claimedCodeId) {
+      await prisma.betaCode.update({
+        where: { id: claimedCodeId },
+        data: { companyId: co.id },
+      });
+    }
 
     // Give the new company a little sample data so it isn't empty on first login.
     await seedCompany(co.id);
 
     return { ok: true };
   } catch (e) {
+    // Signup failed after the code was reserved — return it to the pool so it isn't lost.
+    // Best-effort: if this cleanup itself fails, the code stays claimed and can be revoked by hand,
+    // which is strictly safer than risking a double-issue.
+    if (claimedCodeId) {
+      try {
+        await prisma.betaCode.updateMany({
+          where: { id: claimedCodeId, status: "claimed" },
+          data: { status: "available", claimedEmail: null, claimedAt: null, companyId: null },
+        });
+      } catch {
+        /* leave it claimed; a burned code is recoverable, a double-issued key is not */
+      }
+    }
     const error = e instanceof Error ? e.message : "Could not create your account.";
     return { ok: false, error };
   }
