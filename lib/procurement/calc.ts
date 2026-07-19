@@ -38,3 +38,36 @@ export function poTotals(input: {
   const total = round2(subtotal + tax + shipping);
   return { subtotal, tax, shipping, total };
 }
+
+/** Received quantity for a line, clamped to [0, ordered]. */
+export function lineReceived(line: PurchaseOrderLine): number {
+  const qty = n(line.quantity);
+  const recv = n(line.receivedQty);
+  return Math.max(0, Math.min(recv, qty));
+}
+
+export interface ReceiptProgress {
+  totalLines: number;
+  receivedLines: number;
+  fullyReceived: boolean;
+  anyReceived: boolean;
+}
+
+/** Line-level receiving progress. A line counts as received once its received
+ *  quantity reaches the ordered quantity. */
+export function receiptProgress(lines: PurchaseOrderLine[]): ReceiptProgress {
+  const totalLines = lines.length;
+  let receivedLines = 0;
+  let anyReceived = false;
+  for (const l of lines) {
+    const recv = lineReceived(l);
+    if (recv > 0) anyReceived = true;
+    if (n(l.quantity) > 0 && recv >= n(l.quantity)) receivedLines += 1;
+  }
+  return {
+    totalLines,
+    receivedLines,
+    fullyReceived: totalLines > 0 && receivedLines === totalLines,
+    anyReceived,
+  };
+}

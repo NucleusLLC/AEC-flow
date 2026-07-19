@@ -10,7 +10,7 @@ import "server-only";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
-import { poTotals } from "@/lib/procurement/calc";
+import { poTotals, receiptProgress } from "@/lib/procurement/calc";
 import type {
   PurchaseOrderDTO,
   PurchaseOrderInput,
@@ -41,19 +41,27 @@ function parseLines(raw: unknown): PurchaseOrderLine[] {
       quantity: Number(o.quantity) || 0,
       unit: typeof o.unit === "string" ? o.unit : "",
       unitPrice: Number(o.unitPrice) || 0,
+      receivedQty: Number(o.receivedQty) || 0,
     };
   });
 }
 
-/** Sanitize incoming lines and drop empty rows (no description and no amount). */
+/** Sanitize incoming lines and drop empty rows (no description and no amount).
+ *  Preserves receivedQty (receiving workflow) so form edits don't wipe receipts,
+ *  clamped to the ordered quantity. */
 function cleanLines(lines: PurchaseOrderLine[]): PurchaseOrderLine[] {
   return (lines ?? [])
-    .map((l) => ({
-      description: (l.description ?? "").trim(),
-      quantity: Number(l.quantity) || 0,
-      unit: (l.unit ?? "").trim(),
-      unitPrice: Number(l.unitPrice) || 0,
-    }))
+    .map((l) => {
+      const quantity = Number(l.quantity) || 0;
+      const receivedQty = Math.max(0, Math.min(Number(l.receivedQty) || 0, quantity));
+      return {
+        description: (l.description ?? "").trim(),
+        quantity,
+        unit: (l.unit ?? "").trim(),
+        unitPrice: Number(l.unitPrice) || 0,
+        receivedQty,
+      };
+    })
     .filter((l) => l.description !== "" || l.quantity !== 0 || l.unitPrice !== 0);
 }
 
@@ -281,4 +289,39 @@ export async function createPurchaseOrderFromSelections(
     data: { purchaseOrderId: row.id, status: "ORDERED" },
   });
   return { po: toDto(row), linked: linked.count };
+}
+
+/**
+ * Record a receipt against a purchase order. `receivedQtys` aligns to the PO's
+ * line order; each is clamped to that line's ordered quantity. Status is
+ * derived — RECEIVED when every line is fully received, PARTIAL when some is —
+ * without overriding a CANCELLED or CLOSED order. receivedDate is stamped once
+ * the order is fully received.
+ */
+export async function recordReceipt(
+  id: string,
+  receivedQtys: number[],
+): Promise<PurchaseOrderDTO> {
+  const po = await prisma.purchaseOrder.findFirstOrThrow({ where: { id } });
+  const lines = parseLines(po.lineItems).map((l, i) => {
+    const next = receivedQtys[i] ?? l.receivedQty ?? 0;
+    return { ...l, receivedQty: Math.max(0, Math.min(Number(next) || 0, l.quantity)) };
+  });
+  const prog = receiptProgress(lines);
+
+  const locked = po.status === "CANCELLED" || po.status === "CLOSED";
+  const status: PurchaseOrderStatus = locked
+    ? po.status
+    : prog.fullyReceived
+      ? "RECEIVED"
+      : prog.anyReceived
+        ? "PARTIAL"
+        : po.status;
+  const receivedDate = prog.fullyReceived ? (po.receivedDate ?? new Date()) : po.receivedDate;
+
+  const row = await prisma.purchaseOrder.update({
+    where: { id },
+    data: { lineItems: lines as unknown as Prisma.InputJsonValue, status, receivedDate },
+  });
+  return toDto(row);
 }

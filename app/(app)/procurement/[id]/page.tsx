@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Printer } from "lucide-react";
 import { getPurchaseOrder } from "@/lib/data/procurement";
-import { lineAmount } from "@/lib/procurement/calc";
+import { lineAmount, lineReceived, receiptProgress } from "@/lib/procurement/calc";
 import { formatCurrency } from "@/lib/format";
 import { Card, CardBody } from "@/components/ui/card";
 import { PoStatusBadge } from "@/components/procurement/status-badge";
 import { PoDeleteButton } from "@/components/procurement/po-delete-button";
+import { PoReceivePanel } from "@/components/procurement/po-receive-panel";
 
 export const metadata: Metadata = { title: "Purchase Order · AEC-flow" };
 
@@ -21,6 +22,8 @@ export default async function PurchaseOrderDetailPage({
   if (!po) notFound();
 
   const money = (n: number) => formatCurrency(n, po.currency, { maximumFractionDigits: 2 });
+  const progress = receiptProgress(po.lineItems);
+  const canReceive = po.status !== "CANCELLED" && po.status !== "CLOSED" && po.lineItems.length > 0;
 
   return (
     <div className="w-full max-w-4xl space-y-6">
@@ -34,6 +37,11 @@ export default async function PurchaseOrderDetailPage({
           <div className="flex items-center gap-3">
             <h2 className="font-mono text-xl font-semibold text-fg">{po.poNumber}</h2>
             <PoStatusBadge status={po.status} />
+            {progress.anyReceived ? (
+              <span className="text-xs text-muted">
+                {progress.receivedLines}/{progress.totalLines} lines received
+              </span>
+            ) : null}
           </div>
           <p className="mt-1 text-sm text-muted">
             {po.vendorName}
@@ -78,20 +86,28 @@ export default async function PurchaseOrderDetailPage({
                 <th className="px-4 py-2.5 font-medium">Description</th>
                 <th className="px-4 py-2.5 text-right font-medium">Qty</th>
                 <th className="px-4 py-2.5 font-medium">Unit</th>
+                <th className="px-4 py-2.5 text-right font-medium">Received</th>
                 <th className="px-4 py-2.5 text-right font-medium">Unit price</th>
                 <th className="px-4 py-2.5 text-right font-medium">Amount</th>
               </tr>
             </thead>
             <tbody>
-              {po.lineItems.map((l, i) => (
-                <tr key={i} className="border-b border-border/60 last:border-0">
-                  <td className="px-4 py-2.5 text-fg">{l.description || "—"}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">{l.quantity}</td>
-                  <td className="px-4 py-2.5 text-muted">{l.unit || "—"}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-muted">{money(l.unitPrice)}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums text-fg">{money(lineAmount(l))}</td>
-                </tr>
-              ))}
+              {po.lineItems.map((l, i) => {
+                const recv = lineReceived(l);
+                const full = l.quantity > 0 && recv >= l.quantity;
+                return (
+                  <tr key={i} className="border-b border-border/60 last:border-0">
+                    <td className="px-4 py-2.5 text-fg">{l.description || "—"}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-muted">{l.quantity}</td>
+                    <td className="px-4 py-2.5 text-muted">{l.unit || "—"}</td>
+                    <td className={`px-4 py-2.5 text-right tabular-nums ${full ? "text-emerald-600" : recv > 0 ? "text-amber-600" : "text-faint"}`}>
+                      {recv}
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-muted">{money(l.unitPrice)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-fg">{money(lineAmount(l))}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <div className="flex justify-end border-t border-border px-4 py-3">
@@ -107,6 +123,8 @@ export default async function PurchaseOrderDetailPage({
           </div>
         </CardBody>
       </Card>
+
+      {canReceive ? <PoReceivePanel poId={po.id} lines={po.lineItems} /> : null}
 
       {po.notes ? (
         <Card>

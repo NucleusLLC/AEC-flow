@@ -6,6 +6,7 @@ import {
   updatePurchaseOrder,
   deletePurchaseOrder,
   createPurchaseOrderFromSelections,
+  recordReceipt,
 } from "@/lib/data/procurement";
 import type { PurchaseOrderInput } from "@/lib/procurement/types";
 
@@ -54,6 +55,20 @@ export async function deletePurchaseOrderAction(id: string): Promise<{ ok: true 
   await deletePurchaseOrder(id);
   revalidatePath("/procurement");
   return { ok: true };
+}
+
+export async function receivePurchaseOrderAction(
+  id: string,
+  receivedQtys: number[],
+): Promise<SaveResult> {
+  try {
+    const po = await recordReceipt(id, receivedQtys);
+    revalidatePath("/procurement");
+    revalidatePath(`/procurement/${id}`);
+    return { ok: true, id: po.id, poNumber: po.poNumber };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to record receipt." };
+  }
 }
 
 export async function createPoFromSelectionsAction(input: {

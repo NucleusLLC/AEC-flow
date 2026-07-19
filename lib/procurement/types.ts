@@ -8,6 +8,8 @@ export interface PurchaseOrderLine {
   quantity: number;
   unit: string;
   unitPrice: number;
+  /** Quantity received so far (receiving workflow). Absent/0 = nothing received. */
+  receivedQty?: number;
 }
 
 export interface PurchaseOrderDTO {
