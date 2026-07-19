@@ -5,6 +5,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import { getProject, DISCIPLINE_LABEL, type PhaseStatus } from "@/lib/data/projects";
+import { getProjectModulesRollup } from "@/lib/data/project-rollup";
+import { ProjectModulesRollupCard } from "@/components/projects/project-modules-rollup";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
@@ -37,6 +39,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
+  const rollup = await getProjectModulesRollup(id);
 
   return (
     <div className="space-y-6">
@@ -126,6 +129,8 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
               ) : null}
             </CardBody>
           </Card>
+
+          <ProjectModulesRollupCard rollup={rollup} />
 
           <Card>
             <CardHeader title="Project Team" subtitle={`${project.team.length} members`} />
