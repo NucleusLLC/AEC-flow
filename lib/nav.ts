@@ -28,6 +28,7 @@ import {
   Building2,
   PencilRuler,
   Sofa,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,6 +59,7 @@ export const navSections: NavSection[] = [
     title: "Design",
     items: [
       { label: "Design Register", href: "/design", icon: FileStack },
+      { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
       { label: "Architecture", href: "/design/architecture", icon: Building2 },
       { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
       { label: "Interior Design", href: "/design/interior", icon: Sofa },

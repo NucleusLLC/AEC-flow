@@ -21,6 +21,7 @@ import {
   PencilRuler,
   Sofa,
   FolderKanban,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 import { navSections, type NavSection } from "@/lib/nav";
@@ -114,6 +115,7 @@ const MODULE_1: AppModule = {
       title: "Design",
       items: [
         { label: "Design Register", href: "/design", icon: FileStack },
+        { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
         { label: "Architecture", href: "/design/architecture", icon: Building2 },
         { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
         { label: "Interior Design", href: "/design/interior", icon: Sofa },
