@@ -539,12 +539,16 @@ model Attachment {
   orderId    String?
   projectId  String?
   meetingId  String?
+  // Service Proposal module (Module 1). The only column this module adds to an existing
+  // table; nullable, so every existing attachment is unaffected.
+  serviceProposalId String?
   uploadedAt DateTime @default(now())
 
   proposal Proposal?     @relation(fields: [proposalId], references: [id])
   order    Order?        @relation(fields: [orderId], references: [id])
   project  Project?      @relation(fields: [projectId], references: [id])
   meeting  MeetingMinute? @relation(fields: [meetingId], references: [id])
+  serviceProposal ServiceProposal? @relation(fields: [serviceProposalId], references: [id])
 }
 
 model ActivityLog {
@@ -1943,4 +1947,361 @@ model DesignDeliverable {
   @@index([discipline])
   @@index([status])
   @@map("design_deliverables")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVICE PROPOSAL MODULE (Module 1 — Architecture & Engineering Design)
+//
+// A professional service-proposal system, SEPARATE from the Business Development
+// `Proposal` above (decision 2026-07-24, docs/proposal-module/01-PRODUCT-PLAN.md §3.1).
+// Nothing in the existing Proposal family is modified. Fee math is authoritative in
+// lib/proposals/engine; these tables persist the inputs plus the engine's denormalised
+// totals for list/dashboard performance.
+//
+// Every model here carries `companyId` and MUST be listed in TENANT_MODELS (lib/db.ts).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ServiceProposalKind {
+  QUICK
+  ADVANCED
+}
+
+enum ServiceProposalStatus {
+  DRAFT
+  INTERNAL_REVIEW
+  APPROVED_FOR_ISSUE
+  SENT
+  UNDER_CLIENT_REVIEW
+  REVISION_REQUESTED
+  REVISED
+  ACCEPTED
+  PARTIALLY_ACCEPTED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+  SUPERSEDED
+  CONVERTED
+}
+
+enum CostBasisType {
+  ESTIMATED_CONSTRUCTION_COST
+  APPROVED_CONSTRUCTION_BUDGET
+  CONTRACTOR_CONTRACT_SUM
+  TOTAL_DEVELOPMENT_COST
+  CONSTRUCTION_EXCL_LAND
+  CONSTRUCTION_EXCL_FFE
+  CONSTRUCTION_EXCL_EQUIPMENT
+  CONSTRUCTION_EXCL_TAXES
+  CONSTRUCTION_EXCL_FINANCING
+  CUSTOM
+}
+
+enum FeeMethod {
+  PERCENT_OF_BASIS
+  FIXED
+  HOURLY
+  PER_AREA
+  PER_UNIT
+  PER_DELIVERABLE
+  RETAINER
+  MONTHLY
+  MILESTONE
+  COST_PLUS
+  SUBCONSULTANT_PLUS_MARKUP
+}
+
+enum ServiceCategory {
+  BASE
+  OPTIONAL
+  ADDITIONAL
+}
+
+enum TaxMode {
+  EXCLUSIVE
+  INCLUSIVE
+}
+
+/// A professional service proposal. The aggregate root of the module.
+model ServiceProposal {
+  companyId String?
+  id        String @id @default(cuid())
+  number    String
+  title     String
+
+  kind         ServiceProposalKind   @default(QUICK)
+  status       ServiceProposalStatus @default(DRAFT)
+  versionLabel String?
+  revision     Int                   @default(1)
+
+  clientId     String?
+  clientName   String?
+  projectId    String?
+  projectName  String?
+  contactName  String?
+  contactEmail String?
+  contactTitle String?
+
+  currency        String  @default("USD")
+  languageCode    String?
+  taxJurisdiction String?
+
+  costBasisType        CostBasisType?
+  costBasisAmount      Decimal?
+  costBasisSourceId    String?
+  costBasisSourceField String?
+  costBasisCapturedAt  DateTime?
+
+  subtotal              Decimal @default(0)
+  discountTotal         Decimal @default(0)
+  taxableSubtotal       Decimal @default(0)
+  taxTotal              Decimal @default(0)
+  grandTotal            Decimal @default(0)
+  baseFeeTotal          Decimal @default(0)
+  optionalServicesTotal Decimal @default(0)
+  reimbursablesTotal    Decimal @default(0)
+  retainerAmount        Decimal @default(0)
+
+  scopeSummary      String?
+  exclusions        String?
+  assumptions       String?
+  terms             String?
+  estimatedWeeks    Int?
+  showFeeDerivation Boolean @default(true)
+  documentStructure Json?
+
+  issuedAt   DateTime?
+  validUntil DateTime?
+  lockedAt   DateTime?
+
+  preparedById String?
+  reviewedById String?
+  approvedById String?
+  ownerId      String?
+  notes        String?
+
+  createdById   String?
+  createdByName String?
+  updatedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  disciplines          ServiceProposalDiscipline[]
+  phases               ServiceProposalPhase[]
+  feeComponents        ServiceProposalFeeComponent[]
+  developmentCostItems ServiceProposalDevelopmentCostItem[]
+  paymentMilestones    ServiceProposalPaymentMilestone[]
+  reimbursables        ServiceProposalReimbursable[]
+  discounts            ServiceProposalDiscount[]
+  taxes                ServiceProposalTax[]
+  statusHistory        ServiceProposalStatusHistory[]
+  versions             ServiceProposalVersion[]
+  attachments          Attachment[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, clientId])
+  @@index([companyId, projectId])
+  @@index([companyId, createdAt])
+  @@map("service_proposals")
+}
+
+model ServiceProposalDiscipline {
+  companyId         String?
+  id                String  @id @default(cuid())
+  serviceProposalId String
+  disciplineKey     String
+  label             String
+  leadName          String?
+  scope             String?
+  sortOrder         Int     @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_disciplines")
+}
+
+model ServiceProposalPhase {
+  companyId         String?
+  id                String  @id @default(cuid())
+  serviceProposalId String
+  name              String
+  percent           Decimal @default(0)
+  amount            Decimal @default(0)
+  sortOrder         Int     @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_phases")
+}
+
+model ServiceProposalFeeComponent {
+  companyId         String?
+  id                String          @id @default(cuid())
+  serviceProposalId String
+  label             String
+  disciplineKey     String?
+  method            FeeMethod
+  category          ServiceCategory @default(BASE)
+  percent           Decimal?
+  fixedAmount       Decimal?
+  selected          Boolean         @default(false)
+  taxable           Boolean         @default(true)
+  calculatedAmount  Decimal         @default(0)
+  overrideAmount    Decimal?
+  overrideReason    String?
+  overrideById      String?
+  overrideAt        DateTime?
+  sortOrder         Int             @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_fee_components")
+}
+
+model ServiceProposalDevelopmentCostItem {
+  companyId          String?
+  id                 String  @id @default(cuid())
+  serviceProposalId  String
+  category           String
+  amount             Decimal @default(0)
+  includedInBasis    Boolean @default(true)
+  isProfessionalFees Boolean @default(false)
+  notes              String?
+  sortOrder          Int     @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_development_cost_items")
+}
+
+model ServiceProposalPaymentMilestone {
+  companyId          String?
+  id                 String  @id @default(cuid())
+  serviceProposalId  String
+  name               String
+  trigger            String?
+  percent            Decimal @default(0)
+  amount             Decimal @default(0)
+  invoiceDescription String?
+  taxable            Boolean @default(true)
+  sortOrder          Int     @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_payment_milestones")
+}
+
+model ServiceProposalReimbursable {
+  companyId         String?
+  id                String  @id @default(cuid())
+  serviceProposalId String
+  label             String
+  amount            Decimal @default(0)
+  method            String?
+  taxable           Boolean @default(true)
+  sortOrder         Int     @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_reimbursables")
+}
+
+model ServiceProposalDiscount {
+  companyId         String?
+  id                String    @id @default(cuid())
+  serviceProposalId String
+  label             String
+  type              String
+  value             Decimal   @default(0)
+  reason            String?
+  authorisedById    String?
+  authorisedAt      DateTime?
+  visibleToClient   Boolean   @default(true)
+  sortOrder         Int       @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_discounts")
+}
+
+model ServiceProposalTax {
+  companyId          String?
+  id                 String  @id @default(cuid())
+  serviceProposalId  String
+  name               String
+  percent            Decimal @default(0)
+  mode               TaxMode @default(EXCLUSIVE)
+  registrationNumber String?
+  sortOrder          Int     @default(0)
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId])
+  @@map("service_proposal_taxes")
+}
+
+model ServiceProposalStatusHistory {
+  companyId         String?
+  id                String                 @id @default(cuid())
+  serviceProposalId String
+  fromStatus        ServiceProposalStatus?
+  toStatus          ServiceProposalStatus
+  reason            String?
+  byId              String?
+  byName            String?
+  createdAt         DateTime               @default(now())
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@index([serviceProposalId, createdAt])
+  @@map("service_proposal_status_history")
+}
+
+/// An immutable snapshot of an issued proposal — the full computed result as JSON, plus a
+/// reference to the rendered document. Append-only; never updated once written.
+model ServiceProposalVersion {
+  companyId         String?
+  id                String   @id @default(cuid())
+  serviceProposalId String
+  versionLabel      String
+  snapshot          Json
+  documentUrl       String?
+  reason            String?
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime @default(now())
+
+  proposal ServiceProposal @relation(fields: [serviceProposalId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceProposalId, versionLabel])
+  @@index([serviceProposalId])
+  @@map("service_proposal_versions")
+}
+
+/// Firm-configurable tax rates. NET-NEW infrastructure — the application previously had no
+/// tax model at all (docs/proposal-module/03-CRITICAL-REVIEW.md §C1). Release A uses
+/// single-rate exclusive tax; the model is shaped to grow.
+model TaxRate {
+  companyId          String?
+  id                 String   @id @default(cuid())
+  name               String
+  percent            Decimal  @default(0)
+  mode               TaxMode  @default(EXCLUSIVE)
+  registrationNumber String?
+  jurisdiction       String?
+  isDefault          Boolean  @default(false)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("tax_rates")
 }
