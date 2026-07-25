@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, FileSignature, Send, CircleDollarSign, Trophy } from "lucide-react";
+import { Plus, FileSignature, Send, CircleDollarSign, Trophy, BarChart3 } from "lucide-react";
 import {
   listServiceProposals,
   summarizeServiceProposals,
@@ -25,13 +25,22 @@ export default async function ServiceProposalsPage() {
             Professional fee proposals — percentage of construction cost, or fixed fee.
           </p>
         </div>
-        <Link
-          href="/design/service-proposals/new"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <Plus className="h-4 w-4" />
-          New Proposal
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/design/service-proposals/analytics"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </Link>
+          <Link
+            href="/design/service-proposals/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <Plus className="h-4 w-4" />
+            New Proposal
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

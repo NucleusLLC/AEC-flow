@@ -526,6 +526,103 @@ export async function reviseServiceProposal(id: string): Promise<ServiceProposal
   return toDto(revised);
 }
 
+export interface ProposalAnalytics {
+  currency: string;
+  total: number;
+  proposedValue: number;
+  acceptedValue: number;
+  openValue: number;
+  winRate: number;
+  avgValue: number;
+  avgAcceptedValue: number;
+  avgResponseDays: number | null;
+  byStatus: { name: string; count: number; value: number }[];
+  pipeline: { name: string; value: number }[];
+  byBasis: { name: string; value: number }[];
+  valueByMonth: { month: string; value: number }[];
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Firm-wide proposal analytics. Reads once and aggregates in memory. */
+export async function getServiceProposalAnalytics(): Promise<ProposalAnalytics> {
+  const rows = await prisma.serviceProposal.findMany({
+    where: { deletedAt: null },
+    select: {
+      status: true, grandTotal: true, currency: true, costBasisType: true,
+      createdAt: true, issuedAt: true,
+    },
+  });
+
+  const currency = rows[0]?.currency ?? "USD";
+  const val = (r: (typeof rows)[number]) => num(r.grandTotal);
+
+  const WON: ServiceProposalStatus[] = ["ACCEPTED", "PARTIALLY_ACCEPTED", "CONVERTED"];
+  const OPEN: ServiceProposalStatus[] = [
+    "DRAFT", "INTERNAL_REVIEW", "APPROVED_FOR_ISSUE", "SENT", "UNDER_CLIENT_REVIEW",
+    "REVISION_REQUESTED", "REVISED",
+  ];
+
+  let proposedValue = 0, acceptedValue = 0, openValue = 0;
+  let wonCount = 0, lostCount = 0;
+  const byStatusMap = new Map<ServiceProposalStatus, { count: number; value: number }>();
+  const monthMap = new Map<string, number>();
+  let percentValue = 0, fixedValue = 0;
+
+  for (const r of rows) {
+    const v = val(r);
+    proposedValue += v;
+    const s = byStatusMap.get(r.status) ?? { count: 0, value: 0 };
+    s.count += 1; s.value += v; byStatusMap.set(r.status, s);
+    if (WON.includes(r.status)) { acceptedValue += v; wonCount += 1; }
+    if (r.status === "REJECTED") lostCount += 1;
+    if (OPEN.includes(r.status)) openValue += v;
+    if (r.costBasisType) percentValue += v; else fixedValue += v;
+
+    const d = r.createdAt;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()).padStart(2, "0")}`;
+    monthMap.set(key, (monthMap.get(key) ?? 0) + v);
+  }
+
+  // Last 6 months, oldest → newest.
+  const now = new Date();
+  const valueByMonth: { month: string; value: number }[] = [];
+  for (let i = 5; i >= 0; i -= 1) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()).padStart(2, "0")}`;
+    valueByMonth.push({ month: MONTHS[d.getUTCMonth()], value: Math.round(monthMap.get(key) ?? 0) });
+  }
+
+  // Average response time (issue → decision) is not tracked per-decision yet; left null.
+  const decided = wonCount + lostCount;
+
+  return {
+    currency,
+    total: rows.length,
+    proposedValue: Math.round(proposedValue),
+    acceptedValue: Math.round(acceptedValue),
+    openValue: Math.round(openValue),
+    winRate: decided > 0 ? Math.round((wonCount / decided) * 100) : 0,
+    avgValue: rows.length > 0 ? Math.round(proposedValue / rows.length) : 0,
+    avgAcceptedValue: wonCount > 0 ? Math.round(acceptedValue / wonCount) : 0,
+    avgResponseDays: null,
+    byStatus: [...byStatusMap.entries()].map(([k, v]) => ({
+      name: k.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()),
+      count: v.count,
+      value: Math.round(v.value),
+    })),
+    pipeline: OPEN.map((k) => ({
+      name: k.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()),
+      value: Math.round(byStatusMap.get(k)?.value ?? 0),
+    })).filter((p) => p.value > 0),
+    byBasis: [
+      { name: "Percentage-based", value: Math.round(percentValue) },
+      { name: "Fixed / other", value: Math.round(fixedValue) },
+    ].filter((b) => b.value > 0),
+    valueByMonth,
+  };
+}
+
 export async function summarizeServiceProposals(opts?: {
   projectId?: string;
 }): Promise<ServiceProposalSummary> {
