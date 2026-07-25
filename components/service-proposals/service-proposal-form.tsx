@@ -20,6 +20,7 @@ import {
   type ServiceCategory,
 } from "@/lib/proposals/engine/types";
 import type { ServiceProposalDTO } from "@/lib/proposals/dto";
+import { PROPOSAL_TEMPLATES, getTemplate } from "@/lib/proposals/templates";
 import {
   createServiceProposalAction,
   updateServiceProposalAction,
@@ -182,6 +183,32 @@ export function ServiceProposalForm({
   const [validUntil, setValidUntil] = useState(init?.validUntil ?? "");
   const [showFeeDerivation, setShowFeeDerivation] = useState(init?.showFeeDerivation ?? true);
 
+  const [templateKey, setTemplateKey] = useState("");
+
+  function applyTemplate(key: string) {
+    setTemplateKey(key);
+    const t = getTemplate(key);
+    if (!t) return;
+    setBasisType(t.defaultBasis);
+    setFees(
+      t.fees.map((f) => ({
+        ...emptyFee(),
+        label: f.label,
+        method: f.method,
+        percent: f.percent != null ? String(f.percent) : "",
+        fixedAmount: f.fixedAmount != null ? String(f.fixedAmount) : "",
+        quantity: f.quantity != null ? String(f.quantity) : "",
+        unitRate: f.unitRate != null ? String(f.unitRate) : "",
+        category: f.category,
+      })),
+    );
+    setPhases(t.phases.map((p) => ({ key: uid(), name: p.name, percent: String(p.percentage) })));
+    setScopeSummary(t.scopeSummary);
+    setExclusions(t.exclusions);
+    setAssumptions(t.assumptions);
+    setTerms(t.terms);
+  }
+
   const feeToComponent = (f: FeeRow) => ({
     id: f.key,
     label: f.label || "Fee",
@@ -294,6 +321,31 @@ export function ServiceProposalForm({
   return (
     <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6" ref={nav}>
+        {mode === "new" ? (
+          <Card>
+            <CardHeader title="Start from a template" subtitle="Optional — prefills fees, phases and scope for a common project type" />
+            <CardBody>
+              <select
+                value={templateKey}
+                onChange={(e) => applyTemplate(e.target.value)}
+                className={field}
+              >
+                <option value="">— Blank proposal —</option>
+                {["Architecture", "Interior", "Engineering", "Other"].map((g) => (
+                  <optgroup key={g} label={g}>
+                    {PROPOSAL_TEMPLATES.filter((t) => t.group === g).map((t) => (
+                      <option key={t.key} value={t.key}>{t.name} — {t.description}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              {templateKey ? (
+                <p className="mt-2 text-xs text-muted">Template applied — everything below is editable.</p>
+              ) : null}
+            </CardBody>
+          </Card>
+        ) : null}
+
         {/* Proposal */}
         <Card>
           <CardHeader title="Proposal" />
