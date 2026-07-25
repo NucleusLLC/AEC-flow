@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PrintButton } from "@/components/print/print-button";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, getSystemCurrency, setSystemCurrency } from "@/lib/format";
+import { getSystemCurrency as getConfiguredCurrency } from "@/lib/server/practice-config";
 import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
 import { getProposals } from "@/lib/data/proposals";
@@ -14,7 +15,7 @@ import { getLeaveRequests } from "@/lib/data/leave";
 type Row = Record<string, unknown>;
 type Col = { label: string; key: string; right?: boolean; fmt?: (v: unknown, row: Row) => string };
 
-const money = (v: unknown, row: Row) => formatCurrency(Number(v ?? 0), (row.currency as string) || "AED");
+const money = (v: unknown, row: Row) => formatCurrency(Number(v ?? 0), (row.currency as string) || getSystemCurrency());
 
 const CONFIG: Record<string, { title: string; getter: () => Promise<unknown[]>; columns: Col[]; factSheet?: string }> = {
   clients: {
@@ -104,6 +105,10 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
   const cfg = CONFIG[entity];
   if (!cfg) notFound();
 
+  // Print routes aren't wrapped by the (app) layout that normally seeds the
+  // System Currency, so seed it here for the money() fallback (per-row
+  // currencies still override).
+  setSystemCurrency(await getConfiguredCurrency());
   const rows = (await cfg.getter()) as Row[];
   const cell = (c: Col, row: Row) => {
     const v = row[c.key];

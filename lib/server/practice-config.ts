@@ -18,7 +18,7 @@ type AppConfig = {
   practiceProfile?: Partial<PracticeProfile>;
   /** Logo as a data URL (e.g. "data:image/png;base64,…"); stored inline for portability. */
   logoDataUrl?: string;
-  /** Org-wide system monetary unit (ISO code, e.g. "AED", "USD"); default for every module. */
+  /** Org-wide system monetary unit (ISO code, e.g. "AWG", "USD"); default for every module. */
   currency?: string;
   /** Document footer line (printed on every page of exported documents). */
   footer?: { text?: string; fontFamily?: string; fontSize?: number };
@@ -26,8 +26,13 @@ type AppConfig = {
   logo?: { position?: LogoPosition; size?: number };
 };
 
-/** Fallback system currency until one is configured. */
-export const DEFAULT_SYSTEM_CURRENCY = "AED";
+/**
+ * Fallback system currency, used only when neither the stored config nor the
+ * SYSTEM_CURRENCY env var supplies one. AWG (Aruban florin) is this practice's
+ * standard unit; keep it in step with the same last-resort default in
+ * lib/format.ts.
+ */
+export const DEFAULT_SYSTEM_CURRENCY = "AWG";
 
 export type FooterSettings = { text: string; fontFamily: string; fontSize: number };
 export const DEFAULT_FOOTER: FooterSettings = {
@@ -107,7 +112,7 @@ export async function getSystemCurrency(): Promise<string> {
 export async function saveSystemCurrency(currency: string): Promise<void> {
   const code = currency.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(code)) {
-    throw new Error("Currency must be a 3-letter ISO code (e.g. AED, USD, EUR).");
+    throw new Error("Currency must be a 3-letter ISO code (e.g. AWG, USD, EUR).");
   }
   const cfg = await readConfig();
   cfg.currency = code;

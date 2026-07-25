@@ -17,7 +17,7 @@ import {
   type ProposalWriteInput,
 } from "@/lib/data/proposals.types";
 import { saveProposal } from "@/app/(app)/proposals/actions";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getSystemCurrency } from "@/lib/format";
 
 type LineItemForm = {
   description: string;
@@ -43,7 +43,7 @@ export type ProposalFormValues = {
 };
 
 const OWNERS = ["Layla Hassan", "Omar Farouk", "Sara Khan", "Ahmed Nabil"];
-const CURRENCIES = ["AED", "USD", "EUR", "GBP"];
+const CURRENCIES = ["AWG", "AED", "USD", "EUR", "GBP"];
 
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -56,7 +56,7 @@ function defaults(): ProposalFormValues {
     clientId: "",
     owner: OWNERS[0],
     status: "DRAFT",
-    currency: "AED",
+    currency: getSystemCurrency(),
     validUntil: "",
     estimatedDuration: "",
     scopeSummary: "",

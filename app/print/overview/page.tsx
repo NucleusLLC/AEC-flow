@@ -8,6 +8,7 @@ import { getProjects } from "@/lib/data/projects";
 import { getProposals } from "@/lib/data/proposals";
 import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
+import { getSystemCurrency } from "@/lib/server/practice-config";
 
 export const metadata: Metadata = { title: "Practice Overview · AEC-flow" };
 
@@ -59,8 +60,8 @@ function Breakdown({ title, data }: { title: string; data: Record<string, number
 }
 
 export default async function PracticeOverview() {
-  const [clients, projects, proposals, orders, team] = await Promise.all([
-    getClients(), getProjects(), getProposals(), getOrders(), getTeam(),
+  const [clients, projects, proposals, orders, team, currency] = await Promise.all([
+    getClients(), getProjects(), getProposals(), getOrders(), getTeam(), getSystemCurrency(),
   ]);
 
   const activeClients = clients.filter((c) => c.status === "ACTIVE").length;
@@ -112,9 +113,9 @@ export default async function PracticeOverview() {
           <Kpi label="Avg Progress" value={`${avgProgress}%`} sub="across all projects" />
           <Kpi label="Team" value={String(team.length)} sub={`${teamActive} active · ${avgUtil}% utilisation`} />
           <Kpi label="Open Proposals" value={String(openProposals.length)} sub={`${proposals.length} total`} />
-          <Kpi label="Pipeline Value" value={formatCurrency(pipeline, "AED")} sub="open proposals" />
-          <Kpi label="Won Value" value={formatCurrency(won, "AED")} sub="approved proposals" />
-          <Kpi label="Order Book" value={formatCurrency(orderValue, "AED")} sub={`${orders.length} orders`} />
+          <Kpi label="Pipeline Value" value={formatCurrency(pipeline, currency)} sub="open proposals" />
+          <Kpi label="Won Value" value={formatCurrency(won, currency)} sub="approved proposals" />
+          <Kpi label="Order Book" value={formatCurrency(orderValue, currency)} sub={`${orders.length} orders`} />
         </div>
 
         {/* Breakdowns */}

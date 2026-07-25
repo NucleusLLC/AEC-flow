@@ -6,6 +6,7 @@ import { PrintButton } from "@/components/print/print-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getClient } from "@/lib/data/clients";
 import { CLIENT_TYPE_LABEL, type ClientStatus } from "@/lib/data/clients.types";
+import { getSystemCurrency } from "@/lib/server/practice-config";
 
 const STATUS_LABEL: Record<ClientStatus, string> = {
   ACTIVE: "Active",
@@ -32,7 +33,7 @@ function Meta({ label, value }: { label: string; value: string }) {
 
 export default async function ClientFactSheet({ params }: PageProps) {
   const { id } = await params;
-  const c = await getClient(id);
+  const [c, currency] = await Promise.all([getClient(id), getSystemCurrency()]);
   if (!c) notFound();
 
   const lifetime = c.proposals.filter((p) => p.status === "APPROVED").reduce((n, p) => n + p.value, 0);
@@ -83,8 +84,8 @@ export default async function ClientFactSheet({ params }: PageProps) {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-4 text-xs">
-          <Meta label="Lifetime Value (approved)" value={formatCurrency(lifetime, "AED")} />
-          <Meta label="Open Pipeline" value={formatCurrency(pipeline, "AED")} />
+          <Meta label="Lifetime Value (approved)" value={formatCurrency(lifetime, currency)} />
+          <Meta label="Open Pipeline" value={formatCurrency(pipeline, currency)} />
         </div>
 
         {c.notes ? (
@@ -141,7 +142,7 @@ export default async function ClientFactSheet({ params }: PageProps) {
                   <td className="py-1.5 pr-3 text-gray-900">{p.title}</td>
                   <td className="py-1.5 pr-3 text-gray-600">{p.status}</td>
                   <td className="py-1.5 pr-3 text-gray-600">{formatDate(p.date)}</td>
-                  <td className="py-1.5 text-right tabular-nums text-gray-900">{formatCurrency(p.value, "AED")}</td>
+                  <td className="py-1.5 text-right tabular-nums text-gray-900">{formatCurrency(p.value, currency)}</td>
                 </tr>
               ))
             ) : (

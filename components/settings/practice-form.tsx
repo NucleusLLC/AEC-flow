@@ -15,7 +15,7 @@ import type { PracticeProfile } from "@/lib/data/settings";
 import type { FooterSettings, LogoSettings, LogoPosition } from "@/lib/server/practice-config";
 
 /** Common currencies for the System Currency selector (any 3-letter ISO code is accepted). */
-const SYSTEM_CURRENCIES = ["AED", "USD", "EUR", "GBP", "SAR", "AWG", "ANG", "COP"];
+const SYSTEM_CURRENCIES = ["AWG", "AED", "USD", "EUR", "GBP", "SAR", "ANG", "COP"];
 
 /** Print-safe font families for the document footer. */
 const FOOTER_FONTS: { label: string; value: string }[] = [
@@ -272,7 +272,7 @@ export function PracticeForm({
                 value={cur}
                 onChange={(e) => setCur(e.target.value.toUpperCase().slice(0, 3))}
                 disabled={!canSave || curPending}
-                placeholder="AED"
+                placeholder="AWG"
                 className={inputCls + " w-32 uppercase tracking-wide"}
               />
             </label>

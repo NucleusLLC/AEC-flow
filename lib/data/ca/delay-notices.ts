@@ -3,9 +3,12 @@ import { prisma } from "@/lib/db";
 import { caRead, num, ymd, ymdReq } from "@/lib/data/ca/repo";
 import { SEED_DELAY_NOTICES } from "@/lib/ca/seed-data";
 import type { DelayNotice, DelayStatus } from "@/lib/ca/types";
+import { getSystemCurrency } from "@/lib/format";
 
-/** delay_notices has no currency column — the module presents amounts in AED. */
-const DELAY_CURRENCY = "AED";
+/**
+ * delay_notices has no currency column — the module presents amounts in the
+ * org-wide System Currency rather than a hardcoded unit.
+ */
 
 export type DelayNoticeInput = {
   projectId: string;
@@ -36,7 +39,7 @@ function toDto(r: Row): DelayNotice {
     claimedDays: r.claimedDays,
     approvedDays: r.approvedDays,
     costImpact: num(r.costImpact),
-    currency: DELAY_CURRENCY,
+    currency: getSystemCurrency(),
     status: r.status,
     dateStarted: ymd(r.dateStarted),
     dateResolved: ymd(r.dateResolved),

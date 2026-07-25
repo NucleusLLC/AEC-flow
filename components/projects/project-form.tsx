@@ -14,6 +14,7 @@ import {
   type ProjectWriteInput,
 } from "@/lib/data/projects.types";
 import { saveProject } from "@/app/(app)/projects/actions";
+import { getSystemCurrency } from "@/lib/format";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -113,7 +114,7 @@ export function ProjectForm({
       ) : null}
 
       {mode === "edit" ? (
-        <input type="hidden" name="currency" defaultValue={initial?.currency ?? "AED"} />
+        <input type="hidden" name="currency" defaultValue={initial?.currency ?? getSystemCurrency()} />
       ) : null}
 
       <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
@@ -194,7 +195,7 @@ export function ProjectForm({
 
           <div>
             <label className={labelClass} htmlFor="value">
-              Contract value (AED)
+              Contract value ({getSystemCurrency()})
             </label>
             <input id="value" name="value" type="number" min="0" step="1000" className={inputClass} placeholder="0" defaultValue={initial?.value ? initial.value : undefined} />
           </div>

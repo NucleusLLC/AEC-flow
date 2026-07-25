@@ -10,6 +10,7 @@ import {
   type OrderWriteInput,
 } from "@/lib/data/orders.types";
 import { saveOrder } from "@/app/(app)/orders/actions";
+import { getSystemCurrency } from "@/lib/format";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -128,7 +129,7 @@ export function OrderForm({
           </div>
           <div>
             <label className={labelClass} htmlFor="fee">
-              Fee (AED)
+              Fee ({getSystemCurrency()})
             </label>
             <input id="fee" name="fee" type="number" min="0" step="1000" className={inputClass} placeholder="0" defaultValue={initial?.fee ?? ""} />
           </div>

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import type { DelayNotice } from "@/lib/ca/types";
+import { getSystemCurrency } from "@/lib/format";
 
 type ProjectOption = { id: string; name: string };
 
@@ -105,7 +106,7 @@ export function DelayNoticeForm({ projects }: { projects: ProjectOption[] }) {
               <input type="number" min={0} className={inputCls} {...register("claimedDays", { valueAsNumber: true })} />
             </div>
             <div>
-              <label className={labelCls}>Cost impact (AED)</label>
+              <label className={labelCls}>Cost impact ({getSystemCurrency()})</label>
               <input type="number" min={0} step="0.01" className={inputCls} {...register("costImpact", { valueAsNumber: true })} />
             </div>
             <div>
