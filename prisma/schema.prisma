@@ -2147,6 +2147,12 @@ model ServiceProposalFeeComponent {
   category          ServiceCategory @default(BASE)
   percent           Decimal?
   fixedAmount       Decimal?
+  // Rate methods (hourly / per-area / per-unit / per-deliverable / monthly): quantity x rate.
+  quantity          Decimal?
+  unitRate          Decimal?
+  // Markup methods (cost-plus / subconsultant): base cost x (1 + markup%).
+  baseAmount        Decimal?
+  markupPercent     Decimal?
   selected          Boolean         @default(false)
   taxable           Boolean         @default(true)
   calculatedAmount  Decimal         @default(0)

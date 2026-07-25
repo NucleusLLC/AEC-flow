@@ -70,8 +70,62 @@ export type FeeMethod =
   | "COST_PLUS"
   | "SUBCONSULTANT_PLUS_MARKUP";
 
-/** Release A subset — anything else is reported as an unimplemented-method error. */
-export const IMPLEMENTED_METHODS: FeeMethod[] = ["PERCENT_OF_BASIS", "FIXED"];
+/**
+ * Every method the engine can calculate. HYBRID is intentionally absent: a hybrid fee is not
+ * a single component but a proposal carrying several components of different methods, which
+ * the model already supports. HYBRID therefore reports a helpful message rather than a value.
+ */
+export const IMPLEMENTED_METHODS: FeeMethod[] = [
+  "PERCENT_OF_BASIS",
+  "FIXED",
+  "HOURLY",
+  "PER_AREA",
+  "PER_UNIT",
+  "PER_DELIVERABLE",
+  "RETAINER",
+  "MONTHLY",
+  "MILESTONE",
+  "COST_PLUS",
+  "SUBCONSULTANT_PLUS_MARKUP",
+];
+
+/** Methods computed as quantity × unit rate (hours, area, units, deliverables, months). */
+export const RATE_METHODS: FeeMethod[] = [
+  "HOURLY",
+  "PER_AREA",
+  "PER_UNIT",
+  "PER_DELIVERABLE",
+  "MONTHLY",
+];
+
+/** Methods that are a plain lump sum (semantically distinct but computed identically). */
+export const LUMP_METHODS: FeeMethod[] = ["FIXED", "RETAINER", "MILESTONE"];
+
+/** Methods computed as a base cost plus a markup percentage. */
+export const MARKUP_METHODS: FeeMethod[] = ["COST_PLUS", "SUBCONSULTANT_PLUS_MARKUP"];
+
+export const FEE_METHOD_LABEL: Record<FeeMethod, string> = {
+  PERCENT_OF_BASIS: "% of cost basis",
+  FIXED: "Fixed fee",
+  HOURLY: "Hourly",
+  PER_AREA: "Per area (m²/ft²)",
+  PER_UNIT: "Per unit",
+  PER_DELIVERABLE: "Per deliverable",
+  RETAINER: "Retainer",
+  MONTHLY: "Monthly",
+  MILESTONE: "Milestone",
+  COST_PLUS: "Cost plus markup",
+  SUBCONSULTANT_PLUS_MARKUP: "Subconsultant + markup",
+};
+
+/** The unit noun shown beside a rate method's quantity. */
+export const RATE_METHOD_UNIT: Partial<Record<FeeMethod, string>> = {
+  HOURLY: "hours",
+  PER_AREA: "area",
+  PER_UNIT: "units",
+  PER_DELIVERABLE: "deliverables",
+  MONTHLY: "months",
+};
 
 /**
  * Base services are in the fee. Optional services are priced but only count when selected.
@@ -121,8 +175,16 @@ export interface FeeComponentInput {
   category: ServiceCategory;
   /** PERCENT_OF_BASIS */
   percent?: number | null;
-  /** FIXED */
+  /** FIXED / RETAINER / MILESTONE */
   fixedAmount?: number | null;
+  /** RATE_METHODS: the count (hours, area, units, deliverables, months). */
+  quantity?: number | null;
+  /** RATE_METHODS: the rate per unit. */
+  unitRate?: number | null;
+  /** MARKUP_METHODS: the base cost being marked up. */
+  baseAmount?: number | null;
+  /** MARKUP_METHODS: markup applied to baseAmount, as a percentage. */
+  markupPercent?: number | null;
   /** Optional services only count toward the total when selected. */
   selected?: boolean;
   taxable?: boolean;
@@ -188,6 +250,8 @@ export type DiagnosticCode =
   | "PERCENT_WITHOUT_BASIS"
   | "PERCENT_MISSING"
   | "FIXED_WITHOUT_AMOUNT"
+  | "RATE_INPUTS_MISSING"
+  | "MARKUP_BASE_MISSING"
   | "METHOD_NOT_IMPLEMENTED"
   | "OVERRIDE_WITHOUT_REASON"
   | "GROSS_UP_RATE_TOO_HIGH"

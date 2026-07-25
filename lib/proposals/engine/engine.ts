@@ -24,6 +24,7 @@ import {
   applyPercent,
   fromMajor,
   money,
+  multiply,
   sum,
   toMajor,
   zero,
@@ -32,6 +33,11 @@ import {
 import { grossUpFactor, resolveCostBasis } from "./basis";
 import {
   IMPLEMENTED_METHODS,
+  LUMP_METHODS,
+  RATE_METHODS,
+  MARKUP_METHODS,
+  FEE_METHOD_LABEL,
+  RATE_METHOD_UNIT,
   type AllocationResult,
   type AuditStep,
   type Diagnostic,
@@ -71,12 +77,56 @@ function computeComponent(
   let calculated = zero(currency);
   let formula = "";
 
+  const n = (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+
+  // Every FeeMethod is now implemented; this stays as a safety net if the enum grows.
   if (!IMPLEMENTED_METHODS.includes(c.method)) {
     errors.push({
       code: "METHOD_NOT_IMPLEMENTED",
       message: `Fee method "${c.method}" is not available yet (${c.label}).`,
       ref: c.id,
     });
+  } else if (LUMP_METHODS.includes(c.method)) {
+    // FIXED / RETAINER / MILESTONE — a lump sum. Distinct labels, identical arithmetic.
+    if (Number.isNaN(n(c.fixedAmount))) {
+      errors.push({
+        code: "FIXED_WITHOUT_AMOUNT",
+        message: `"${c.label}" (${FEE_METHOD_LABEL[c.method].toLowerCase()}) needs an amount.`,
+        ref: c.id,
+      });
+    } else {
+      calculated = fromMajor(c.fixedAmount as number, currency);
+      formula = FEE_METHOD_LABEL[c.method];
+    }
+  } else if (RATE_METHODS.includes(c.method)) {
+    // HOURLY / PER_AREA / PER_UNIT / PER_DELIVERABLE / MONTHLY — quantity × unit rate.
+    const qty = n(c.quantity);
+    const rate = n(c.unitRate);
+    if (Number.isNaN(qty) || Number.isNaN(rate) || qty <= 0) {
+      errors.push({
+        code: "RATE_INPUTS_MISSING",
+        message: `"${c.label}" (${FEE_METHOD_LABEL[c.method].toLowerCase()}) needs a quantity and a rate.`,
+        ref: c.id,
+      });
+    } else {
+      calculated = multiply(fromMajor(rate, currency), qty);
+      formula = `${qty} ${RATE_METHOD_UNIT[c.method] ?? "units"} x ${fmt(rate)}`;
+    }
+  } else if (MARKUP_METHODS.includes(c.method)) {
+    // COST_PLUS / SUBCONSULTANT_PLUS_MARKUP — base cost plus a markup percentage.
+    const base = n(c.baseAmount);
+    const markup = Number.isNaN(n(c.markupPercent)) ? 0 : (c.markupPercent as number);
+    if (Number.isNaN(base) || base < 0) {
+      errors.push({
+        code: "MARKUP_BASE_MISSING",
+        message: `"${c.label}" (${FEE_METHOD_LABEL[c.method].toLowerCase()}) needs a base cost.`,
+        ref: c.id,
+      });
+    } else {
+      const b = fromMajor(base, currency);
+      calculated = add(b, applyPercent(b, markup));
+      formula = `${fmt(base)} + ${markup}% markup`;
+    }
   } else if (c.method === "PERCENT_OF_BASIS") {
     if (!hasBasis || basisAmount.minor === 0) {
       errors.push({
@@ -107,17 +157,6 @@ function computeComponent(
     } else {
       calculated = applyPercent(basisAmount, c.percent);
       formula = `${fmt(toMajor(basisAmount))} x ${c.percent}%`;
-    }
-  } else if (c.method === "FIXED") {
-    if (c.fixedAmount === null || c.fixedAmount === undefined || !Number.isFinite(c.fixedAmount)) {
-      errors.push({
-        code: "FIXED_WITHOUT_AMOUNT",
-        message: `"${c.label}" is a fixed fee but no amount has been entered.`,
-        ref: c.id,
-      });
-    } else {
-      calculated = fromMajor(c.fixedAmount, currency);
-      formula = "Fixed fee";
     }
   }
 

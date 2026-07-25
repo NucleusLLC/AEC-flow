@@ -9,7 +9,13 @@ import { computeProposal } from "@/lib/proposals/engine/engine";
 import {
   COST_BASIS_LABEL,
   DEFAULT_PHASES,
+  FEE_METHOD_LABEL,
+  RATE_METHODS,
+  LUMP_METHODS,
+  MARKUP_METHODS,
+  RATE_METHOD_UNIT,
   type CostBasisType,
+  type FeeMethod,
   type ProposalCalcInput,
   type ServiceCategory,
 } from "@/lib/proposals/engine/types";
@@ -37,17 +43,52 @@ const label = "mb-1 block text-xs font-medium text-muted";
 type FeeRow = {
   key: string;
   label: string;
-  method: "PERCENT_OF_BASIS" | "FIXED";
+  method: FeeMethod;
   percent: string;
   fixedAmount: string;
+  quantity: string;
+  unitRate: string;
+  baseAmount: string;
+  markupPercent: string;
   category: ServiceCategory;
   selected: boolean;
 };
 type PhaseRow = { key: string; name: string; percent: string };
 type MilestoneRow = { key: string; name: string; percent: string };
+type ReimbRow = { key: string; label: string; amount: string };
+type WorksheetRow = { key: string; category: string; amount: string; included: boolean; isProfFees: boolean };
 
 let counter = 0;
 const uid = () => `r${counter++}`;
+
+/** Fee methods offered in the form, grouped for the dropdown. */
+const FEE_METHOD_ORDER: FeeMethod[] = [
+  "PERCENT_OF_BASIS",
+  "FIXED",
+  "HOURLY",
+  "PER_AREA",
+  "PER_UNIT",
+  "PER_DELIVERABLE",
+  "MONTHLY",
+  "RETAINER",
+  "MILESTONE",
+  "COST_PLUS",
+  "SUBCONSULTANT_PLUS_MARKUP",
+];
+
+const emptyFee = (): FeeRow => ({
+  key: uid(),
+  label: "",
+  method: "PERCENT_OF_BASIS",
+  percent: "",
+  fixedAmount: "",
+  quantity: "",
+  unitRate: "",
+  baseAmount: "",
+  markupPercent: "",
+  category: "BASE",
+  selected: false,
+});
 
 export function ServiceProposalForm({
   clients,
@@ -79,19 +120,34 @@ export function ServiceProposalForm({
   );
   const [basisAmount, setBasisAmount] = useState(String(init?.costBasis?.amount ?? ""));
   const [basisSourceField, setBasisSourceField] = useState(init?.costBasis?.sourceField ?? "");
+  const [worksheet, setWorksheet] = useState<WorksheetRow[]>(
+    init?.costBasis?.worksheet?.length
+      ? init.costBasis.worksheet.map((w) => ({
+          key: uid(),
+          category: w.category,
+          amount: String(w.amount),
+          included: w.includedInBasis,
+          isProfFees: w.isProfessionalFees ?? false,
+        }))
+      : [],
+  );
 
   const [fees, setFees] = useState<FeeRow[]>(
     init?.feeComponents?.length
       ? init.feeComponents.map((c) => ({
           key: uid(),
           label: c.label,
-          method: c.method === "FIXED" ? "FIXED" : "PERCENT_OF_BASIS",
+          method: c.method,
           percent: c.percent != null ? String(c.percent) : "",
           fixedAmount: c.fixedAmount != null ? String(c.fixedAmount) : "",
+          quantity: c.quantity != null ? String(c.quantity) : "",
+          unitRate: c.unitRate != null ? String(c.unitRate) : "",
+          baseAmount: c.baseAmount != null ? String(c.baseAmount) : "",
+          markupPercent: c.markupPercent != null ? String(c.markupPercent) : "",
           category: c.category,
           selected: c.selected ?? false,
         }))
-      : [{ key: uid(), label: "Architectural design services", method: "PERCENT_OF_BASIS", percent: "", fixedAmount: "", category: "BASE", selected: false }],
+      : [{ ...emptyFee(), label: "Architectural design services" }],
   );
 
   const [phases, setPhases] = useState<PhaseRow[]>(
@@ -103,6 +159,12 @@ export function ServiceProposalForm({
   const [milestones, setMilestones] = useState<MilestoneRow[]>(
     init?.paymentMilestones?.length
       ? init.paymentMilestones.map((m) => ({ key: uid(), name: m.name, percent: String(m.percent) }))
+      : [],
+  );
+
+  const [reimb, setReimb] = useState<ReimbRow[]>(
+    init?.reimbursables?.length
+      ? init.reimbursables.map((r) => ({ key: uid(), label: r.label, amount: String(r.amount) }))
       : [],
   );
 
@@ -120,36 +182,60 @@ export function ServiceProposalForm({
   const [validUntil, setValidUntil] = useState(init?.validUntil ?? "");
   const [showFeeDerivation, setShowFeeDerivation] = useState(init?.showFeeDerivation ?? true);
 
+  const feeToComponent = (f: FeeRow) => ({
+    id: f.key,
+    label: f.label || "Fee",
+    method: f.method,
+    category: f.category,
+    percent: f.method === "PERCENT_OF_BASIS" ? Number(f.percent) || 0 : null,
+    fixedAmount: LUMP_METHODS.includes(f.method) ? Number(f.fixedAmount) || 0 : null,
+    quantity: RATE_METHODS.includes(f.method) ? Number(f.quantity) || 0 : null,
+    unitRate: RATE_METHODS.includes(f.method) ? Number(f.unitRate) || 0 : null,
+    baseAmount: MARKUP_METHODS.includes(f.method) ? Number(f.baseAmount) || 0 : null,
+    markupPercent: MARKUP_METHODS.includes(f.method) ? Number(f.markupPercent) || 0 : null,
+    selected: f.selected,
+  });
+
+  const usesWorksheet = basisType === "TOTAL_DEVELOPMENT_COST";
+  const buildCostBasis = () => {
+    const anyPercent = fees.some((f) => f.method === "PERCENT_OF_BASIS");
+    if (!anyPercent) return null;
+    return {
+      type: basisType,
+      amount: Number(basisAmount) || 0,
+      sourceField: basisSourceField || null,
+      worksheet: usesWorksheet
+        ? worksheet
+            .filter((w) => w.category || Number(w.amount) > 0)
+            .map((w) => ({
+              category: w.category || "Item",
+              amount: Number(w.amount) || 0,
+              includedInBasis: w.included,
+              isProfessionalFees: w.isProfFees,
+            }))
+        : undefined,
+    };
+  };
+
   // Build the exact engine input so the preview equals what the server will store.
   const calcInput: ProposalCalcInput = useMemo(() => {
-    const anyPercent = fees.some((f) => f.method === "PERCENT_OF_BASIS");
     return {
       currency,
-      costBasis: anyPercent
-        ? {
-            type: basisType,
-            amount: Number(basisAmount) || 0,
-            sourceField: basisSourceField || null,
-          }
-        : null,
-      feeComponents: fees.map((f) => ({
-        id: f.key,
-        label: f.label || "Fee",
-        method: f.method,
-        category: f.category,
-        percent: f.method === "PERCENT_OF_BASIS" ? Number(f.percent) || 0 : null,
-        fixedAmount: f.method === "FIXED" ? Number(f.fixedAmount) || 0 : null,
-        selected: f.selected,
-      })),
+      costBasis: buildCostBasis(),
+      feeComponents: fees.map(feeToComponent),
       phases: phases.map((p) => ({ id: p.key, name: p.name, percent: Number(p.percent) || 0 })),
       paymentMilestones: milestones.map((m) => ({ id: m.key, name: m.name, percent: Number(m.percent) || 0 })),
+      reimbursables: reimb
+        .filter((r) => r.label || Number(r.amount) > 0)
+        .map((r) => ({ id: r.key, label: r.label || "Reimbursable", amount: Number(r.amount) || 0 })),
       taxes: taxName && Number(taxPercent) > 0 ? [{ name: taxName, percent: Number(taxPercent), mode: "EXCLUSIVE" as const }] : [],
       discounts:
         discountLabel && Number(discountValue) > 0
           ? [{ id: "d", label: discountLabel, type: discountType, value: Number(discountValue) }]
           : [],
     };
-  }, [currency, basisType, basisAmount, basisSourceField, fees, phases, milestones, taxName, taxPercent, discountLabel, discountType, discountValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency, basisType, basisAmount, basisSourceField, worksheet, fees, phases, milestones, reimb, taxName, taxPercent, discountLabel, discountType, discountValue]);
 
   const calc = useMemo(() => computeProposal(calcInput), [calcInput]);
   const money = (n: number) => formatCurrency(n, currency, { maximumFractionDigits: 2 });
@@ -169,20 +255,13 @@ export function ServiceProposalForm({
       projectName: project?.name ?? null,
       contactName: contactName || null,
       contactEmail: contactEmail || null,
-      costBasis: anyPercent
-        ? { type: basisType, amount: Number(basisAmount) || 0, sourceField: basisSourceField || null }
-        : null,
-      feeComponents: fees.map((f) => ({
-        id: f.key,
-        label: f.label || "Fee",
-        method: f.method,
-        category: f.category,
-        percent: f.method === "PERCENT_OF_BASIS" ? Number(f.percent) || 0 : null,
-        fixedAmount: f.method === "FIXED" ? Number(f.fixedAmount) || 0 : null,
-        selected: f.selected,
-      })),
+      costBasis: buildCostBasis(),
+      feeComponents: fees.map(feeToComponent),
       phases: phases.map((p) => ({ id: p.key, name: p.name, percent: Number(p.percent) || 0 })),
       paymentMilestones: milestones.map((m) => ({ id: m.key, name: m.name, percent: Number(m.percent) || 0 })),
+      reimbursables: reimb
+        .filter((r) => r.label || Number(r.amount) > 0)
+        .map((r) => ({ id: r.key, label: r.label || "Reimbursable", amount: Number(r.amount) || 0 })),
       taxes: taxName && Number(taxPercent) > 0 ? [{ name: taxName, percent: Number(taxPercent), mode: "EXCLUSIVE" }] : [],
       discounts:
         discountLabel && Number(discountValue) > 0
@@ -273,6 +352,32 @@ export function ServiceProposalForm({
                 <label className={label}>Source note (e.g. which estimate figure)</label>
                 <input value={basisSourceField} onChange={(e) => setBasisSourceField(e.target.value)} className={field} placeholder="Estimate EST-2026-014 — direct cost" />
               </div>
+
+              {usesWorksheet ? (
+                <div className="sm:col-span-3 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted">Development-cost worksheet</span>
+                    <span className="text-xs text-muted">
+                      When a line is flagged as professional fees, the fee basis excludes it to avoid a circular calculation.
+                    </span>
+                  </div>
+                  {worksheet.map((w) => {
+                    const setW = (patch: Partial<WorksheetRow>) => setWorksheet((p) => p.map((x) => x.key === w.key ? { ...x, ...patch } : x));
+                    return (
+                      <div key={w.key} className="grid items-center gap-2 sm:grid-cols-[1fr_130px_auto_auto_32px]">
+                        <input value={w.category} onChange={(e) => setW({ category: e.target.value })} className={field} placeholder="Building construction" />
+                        <input type="number" step="any" min="0" value={w.amount} onChange={(e) => setW({ amount: e.target.value })} className={`${field} text-right`} placeholder="2000000" />
+                        <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={w.included} onChange={(e) => setW({ included: e.target.checked })} /> In basis</label>
+                        <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={w.isProfFees} onChange={(e) => setW({ isProfFees: e.target.checked })} /> Prof. fees</label>
+                        <button type="button" onClick={() => setWorksheet((p) => p.filter((x) => x.key !== w.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove line"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    );
+                  })}
+                  <button type="button" onClick={() => setWorksheet((p) => [...p, { key: uid(), category: "", amount: "", included: true, isProfFees: false }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1 text-xs font-medium text-muted hover:border-brand hover:text-fg">
+                    <Plus className="h-3.5 w-3.5" /> Add cost line
+                  </button>
+                </div>
+              ) : null}
             </CardBody>
           </Card>
         ) : null}
@@ -281,40 +386,75 @@ export function ServiceProposalForm({
         <Card>
           <CardHeader title="Professional fees" subtitle="One line per discipline or service" />
           <CardBody className="space-y-2">
-            {fees.map((f) => (
-              <div key={f.key} className="rounded-lg border border-border p-3">
-                <div className="grid gap-2 sm:grid-cols-[1fr_130px_110px_40px]">
-                  <input value={f.label} onChange={(e) => setFees((p) => p.map((x) => x.key === f.key ? { ...x, label: e.target.value } : x))} className={field} placeholder="Architecture" />
-                  <select value={f.method} onChange={(e) => setFees((p) => p.map((x) => x.key === f.key ? { ...x, method: e.target.value as FeeRow["method"] } : x))} className={field}>
-                    <option value="PERCENT_OF_BASIS">% of basis</option>
-                    <option value="FIXED">Fixed fee</option>
-                  </select>
-                  {f.method === "PERCENT_OF_BASIS" ? (
-                    <input type="number" step="any" min="0" value={f.percent} onChange={(e) => setFees((p) => p.map((x) => x.key === f.key ? { ...x, percent: e.target.value } : x))} className={`${field} text-right`} placeholder="7.5" />
-                  ) : (
-                    <input type="number" step="any" min="0" value={f.fixedAmount} onChange={(e) => setFees((p) => p.map((x) => x.key === f.key ? { ...x, fixedAmount: e.target.value } : x))} className={`${field} text-right`} placeholder="55000" />
-                  )}
-                  <button type="button" onClick={() => setFees((p) => p.length === 1 ? p : p.filter((x) => x.key !== f.key))} disabled={fees.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label="Remove fee"><Trash2 className="h-4 w-4" /></button>
-                </div>
-                <div className="mt-2 flex items-center gap-4 text-xs text-muted">
-                  <label className="inline-flex items-center gap-1.5">
-                    <span>Type</span>
-                    <select value={f.category} onChange={(e) => setFees((p) => p.map((x) => x.key === f.key ? { ...x, category: e.target.value as ServiceCategory } : x))} className="h-7 rounded border border-border bg-surface px-2 text-xs">
-                      <option value="BASE">Base</option>
-                      <option value="OPTIONAL">Optional</option>
-                      <option value="ADDITIONAL">Additional</option>
+            {fees.map((f) => {
+              const set = (patch: Partial<FeeRow>) =>
+                setFees((p) => p.map((x) => (x.key === f.key ? { ...x, ...patch } : x)));
+              const compAmount = calc.components.find((c) => c.id === f.key)?.calculatedAmount ?? 0;
+              return (
+                <div key={f.key} className="rounded-lg border border-border p-3">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_180px_40px]">
+                    <input value={f.label} onChange={(e) => set({ label: e.target.value })} className={field} placeholder="Architecture" />
+                    <select value={f.method} onChange={(e) => set({ method: e.target.value as FeeMethod })} className={field}>
+                      {FEE_METHOD_ORDER.map((m) => <option key={m} value={m}>{FEE_METHOD_LABEL[m]}</option>)}
                     </select>
-                  </label>
-                  {f.category === "OPTIONAL" ? (
+                    <button type="button" onClick={() => setFees((p) => p.length === 1 ? p : p.filter((x) => x.key !== f.key))} disabled={fees.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label="Remove fee"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+
+                  {/* Method-specific inputs */}
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_140px]">
+                    {f.method === "PERCENT_OF_BASIS" ? (
+                      <label className="text-xs text-muted">Percentage
+                        <input type="number" step="any" min="0" value={f.percent} onChange={(e) => set({ percent: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="7.5" />
+                      </label>
+                    ) : null}
+                    {LUMP_METHODS.includes(f.method) ? (
+                      <label className="text-xs text-muted">Amount
+                        <input type="number" step="any" min="0" value={f.fixedAmount} onChange={(e) => set({ fixedAmount: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="55000" />
+                      </label>
+                    ) : null}
+                    {RATE_METHODS.includes(f.method) ? (
+                      <>
+                        <label className="text-xs text-muted">{(RATE_METHOD_UNIT[f.method] ?? "quantity")[0].toUpperCase() + (RATE_METHOD_UNIT[f.method] ?? "quantity").slice(1)}
+                          <input type="number" step="any" min="0" value={f.quantity} onChange={(e) => set({ quantity: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="120" />
+                        </label>
+                        <label className="text-xs text-muted">Rate
+                          <input type="number" step="any" min="0" value={f.unitRate} onChange={(e) => set({ unitRate: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="150" />
+                        </label>
+                      </>
+                    ) : null}
+                    {MARKUP_METHODS.includes(f.method) ? (
+                      <>
+                        <label className="text-xs text-muted">Base cost
+                          <input type="number" step="any" min="0" value={f.baseAmount} onChange={(e) => set({ baseAmount: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="40000" />
+                        </label>
+                        <label className="text-xs text-muted">Markup %
+                          <input type="number" step="any" min="0" value={f.markupPercent} onChange={(e) => set({ markupPercent: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="10" />
+                        </label>
+                      </>
+                    ) : null}
+                    <div className="flex items-end justify-end pb-2 text-sm tabular-nums text-fg">{money(compAmount)}</div>
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-4 text-xs text-muted">
                     <label className="inline-flex items-center gap-1.5">
-                      <input type="checkbox" checked={f.selected} onChange={(e) => setFees((p) => p.map((x) => x.key === f.key ? { ...x, selected: e.target.checked } : x))} />
-                      <span>Selected (include in total)</span>
+                      <span>Type</span>
+                      <select value={f.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })} className="h-7 rounded border border-border bg-surface px-2 text-xs">
+                        <option value="BASE">Base</option>
+                        <option value="OPTIONAL">Optional</option>
+                        <option value="ADDITIONAL">Additional</option>
+                      </select>
                     </label>
-                  ) : null}
+                    {f.category === "OPTIONAL" ? (
+                      <label className="inline-flex items-center gap-1.5">
+                        <input type="checkbox" checked={f.selected} onChange={(e) => set({ selected: e.target.checked })} />
+                        <span>Selected (include in total)</span>
+                      </label>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
-            <button type="button" onClick={() => setFees((p) => [...p, { key: uid(), label: "", method: "PERCENT_OF_BASIS", percent: "", fixedAmount: "", category: "BASE", selected: false }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
+              );
+            })}
+            <button type="button" onClick={() => setFees((p) => [...p, emptyFee()])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Plus className="h-4 w-4" /> Add fee line
             </button>
           </CardBody>
@@ -363,6 +503,25 @@ export function ServiceProposalForm({
             ))}
             <button type="button" onClick={() => setMilestones((p) => [...p, { key: uid(), name: "", percent: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Plus className="h-4 w-4" /> Add milestone
+            </button>
+          </CardBody>
+        </Card>
+
+        {/* Reimbursables */}
+        <Card>
+          <CardHeader title="Reimbursable expenses" subtitle="Printing, travel, permit fees — added to the subtotal" />
+          <CardBody className="space-y-2">
+            {reimb.length === 0 ? (
+              <p className="text-sm text-muted">No reimbursables yet.</p>
+            ) : reimb.map((r) => (
+              <div key={r.key} className="grid gap-2 sm:grid-cols-[1fr_140px_40px]">
+                <input value={r.label} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, label: e.target.value } : x))} className={field} placeholder="Printing & plotting" />
+                <input type="number" step="any" min="0" value={r.amount} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, amount: e.target.value } : x))} className={`${field} text-right`} placeholder="1500" />
+                <button type="button" onClick={() => setReimb((p) => p.filter((x) => x.key !== r.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove reimbursable"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setReimb((p) => [...p, { key: uid(), label: "", amount: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
+              <Plus className="h-4 w-4" /> Add reimbursable
             </button>
           </CardBody>
         </Card>

@@ -479,15 +479,15 @@ describe("edge cases", () => {
     expect(codes(r.warnings)).toContain("NO_FEE_COMPONENTS");
   });
 
-  it("reports an unimplemented fee method rather than silently returning zero", () => {
+  it("reports missing rate inputs rather than silently returning zero", () => {
     const r = computeProposal(
       base({
         feeComponents: [
-          { id: "h", label: "Site visits", method: "HOURLY", category: "BASE", percent: null },
+          { id: "h", label: "Site visits", method: "HOURLY", category: "BASE" },
         ],
       }),
     );
-    expect(codes(r.errors)).toContain("METHOD_NOT_IMPLEMENTED");
+    expect(codes(r.errors)).toContain("RATE_INPUTS_MISSING");
   });
 
   it("is deterministic — identical input yields identical output", () => {
