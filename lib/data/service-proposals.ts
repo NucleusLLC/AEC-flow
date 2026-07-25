@@ -20,6 +20,7 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { computeProposal } from "@/lib/proposals/engine/engine";
 import { buildWriteData, nextProposalNumber } from "@/lib/proposals/persist";
+import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { COST_BASIS_LABEL } from "@/lib/proposals/engine/types";
 import {
   isLocked,
@@ -309,6 +310,19 @@ export async function listStatusHistory(
 
 // ── Write helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * Stamp companyId onto child-row create payloads.
+ *
+ * WHY: the tenant extension in lib/db.ts injects companyId on TOP-LEVEL writes only, not on
+ * Prisma NESTED creates. Children created via `parent.create({ data: { phases: { create } } })`
+ * would otherwise land with companyId = NULL — and then the companyId-scoped deleteMany used
+ * on edit would never match them, so every edit duplicated the children. Stamping explicitly
+ * keeps children consistently scoped so the delete-then-recreate works.
+ */
+function stampCompany<T extends object>(rows: T[], companyId: string | null): (T & { companyId: string | null })[] {
+  return rows.map((r) => ({ ...r, companyId }));
+}
+
 export class ProposalLockedError extends Error {
   constructor(number: string) {
     super(`Proposal ${number} has been accepted or issued and can no longer be edited.`);
@@ -320,6 +334,7 @@ export class ProposalLockedError extends Error {
 
 export async function createServiceProposal(input: ServiceProposalInput): Promise<ServiceProposalDTO> {
   const who = await actor();
+  const cid = await getCurrentCompanyId();
   const existing = await prisma.serviceProposal.findMany({ select: { number: true } });
   const number = nextProposalNumber(existing.map((e) => e.number), new Date().getFullYear());
   const { header, children } = buildWriteData(input);
@@ -332,13 +347,13 @@ export async function createServiceProposal(input: ServiceProposalInput): Promis
       createdById: who.id,
       createdByName: who.name,
       updatedById: who.id,
-      feeComponents: { create: children.feeComponents },
-      phases: { create: children.phases },
-      paymentMilestones: { create: children.paymentMilestones },
-      reimbursables: { create: children.reimbursables },
-      discounts: { create: children.discounts },
-      taxes: { create: children.taxes },
-      developmentCostItems: { create: children.developmentCostItems },
+      feeComponents: { create: stampCompany(children.feeComponents, cid) },
+      phases: { create: stampCompany(children.phases, cid) },
+      paymentMilestones: { create: stampCompany(children.paymentMilestones, cid) },
+      reimbursables: { create: stampCompany(children.reimbursables, cid) },
+      discounts: { create: stampCompany(children.discounts, cid) },
+      taxes: { create: stampCompany(children.taxes, cid) },
+      developmentCostItems: { create: stampCompany(children.developmentCostItems, cid) },
     },
     include: FULL_INCLUDE,
   });
@@ -351,24 +366,31 @@ export async function updateServiceProposal(
 ): Promise<ServiceProposalDTO> {
   const current = await prisma.serviceProposal.findFirstOrThrow({
     where: { id, deletedAt: null },
-    select: { status: true, number: true },
+    select: { status: true, number: true, companyId: true },
   });
   if (isLocked(current.status)) throw new ProposalLockedError(current.number);
 
   const who = await actor();
+  const cid = current.companyId; // stamp children with the PARENT's company so scoping is exact
   const { header, children } = buildWriteData(input);
 
-  // Replace children wholesale inside one transaction. Version snapshots preserve any issued
-  // history, so rebuilding the working children is safe and avoids fragile row diffing.
+  // Replace children wholesale inside one transaction. The delete is a raw, unscoped delete by
+  // parent id (deleteAllChildren) so it removes EVERY existing child — including legacy rows
+  // written with a NULL companyId before the stamping fix — which is what caused edits to
+  // duplicate the children. Version snapshots preserve issued history, so rebuilding the
+  // working children is safe.
   const updated = await prisma.$transaction(async (tx) => {
+    // Raw, UNSCOPED deletes by parent id: removes EVERY existing child (including legacy rows
+    // written with NULL companyId before the stamping fix) so an edit never duplicates them.
+    // Safe — the parent was already verified to belong to this company above.
     await Promise.all([
-      tx.serviceProposalFeeComponent.deleteMany({ where: { serviceProposalId: id } }),
-      tx.serviceProposalPhase.deleteMany({ where: { serviceProposalId: id } }),
-      tx.serviceProposalPaymentMilestone.deleteMany({ where: { serviceProposalId: id } }),
-      tx.serviceProposalReimbursable.deleteMany({ where: { serviceProposalId: id } }),
-      tx.serviceProposalDiscount.deleteMany({ where: { serviceProposalId: id } }),
-      tx.serviceProposalTax.deleteMany({ where: { serviceProposalId: id } }),
-      tx.serviceProposalDevelopmentCostItem.deleteMany({ where: { serviceProposalId: id } }),
+      tx.$executeRaw`DELETE FROM service_proposal_fee_components WHERE "serviceProposalId" = ${id}`,
+      tx.$executeRaw`DELETE FROM service_proposal_phases WHERE "serviceProposalId" = ${id}`,
+      tx.$executeRaw`DELETE FROM service_proposal_payment_milestones WHERE "serviceProposalId" = ${id}`,
+      tx.$executeRaw`DELETE FROM service_proposal_reimbursables WHERE "serviceProposalId" = ${id}`,
+      tx.$executeRaw`DELETE FROM service_proposal_discounts WHERE "serviceProposalId" = ${id}`,
+      tx.$executeRaw`DELETE FROM service_proposal_taxes WHERE "serviceProposalId" = ${id}`,
+      tx.$executeRaw`DELETE FROM service_proposal_development_cost_items WHERE "serviceProposalId" = ${id}`,
     ]);
     return tx.serviceProposal.update({
       where: { id },
@@ -376,13 +398,13 @@ export async function updateServiceProposal(
         ...header,
         status: input.status ?? undefined,
         updatedById: who.id,
-        feeComponents: { create: children.feeComponents },
-        phases: { create: children.phases },
-        paymentMilestones: { create: children.paymentMilestones },
-        reimbursables: { create: children.reimbursables },
-        discounts: { create: children.discounts },
-        taxes: { create: children.taxes },
-        developmentCostItems: { create: children.developmentCostItems },
+        feeComponents: { create: stampCompany(children.feeComponents, cid) },
+        phases: { create: stampCompany(children.phases, cid) },
+        paymentMilestones: { create: stampCompany(children.paymentMilestones, cid) },
+        reimbursables: { create: stampCompany(children.reimbursables, cid) },
+        discounts: { create: stampCompany(children.discounts, cid) },
+        taxes: { create: stampCompany(children.taxes, cid) },
+        developmentCostItems: { create: stampCompany(children.developmentCostItems, cid) },
       },
       include: FULL_INCLUDE,
     });
@@ -494,6 +516,7 @@ export async function reviseServiceProposal(id: string): Promise<ServiceProposal
     include: FULL_INCLUDE,
   });
   const input = toInput(src);
+  const cid = src.companyId;
   const existing = await prisma.serviceProposal.findMany({ select: { number: true } });
   const number = nextProposalNumber(existing.map((e) => e.number), new Date().getFullYear());
   const { header, children } = buildWriteData(input);
@@ -508,13 +531,13 @@ export async function reviseServiceProposal(id: string): Promise<ServiceProposal
         createdById: who.id,
         createdByName: who.name,
         updatedById: who.id,
-        feeComponents: { create: children.feeComponents },
-        phases: { create: children.phases },
-        paymentMilestones: { create: children.paymentMilestones },
-        reimbursables: { create: children.reimbursables },
-        discounts: { create: children.discounts },
-        taxes: { create: children.taxes },
-        developmentCostItems: { create: children.developmentCostItems },
+        feeComponents: { create: stampCompany(children.feeComponents, cid) },
+        phases: { create: stampCompany(children.phases, cid) },
+        paymentMilestones: { create: stampCompany(children.paymentMilestones, cid) },
+        reimbursables: { create: stampCompany(children.reimbursables, cid) },
+        discounts: { create: stampCompany(children.discounts, cid) },
+        taxes: { create: stampCompany(children.taxes, cid) },
+        developmentCostItems: { create: stampCompany(children.developmentCostItems, cid) },
       },
       include: FULL_INCLUDE,
     });
