@@ -222,3 +222,31 @@ losing history, and produce a client-facing document. Success criteria 1–11 me
 
 ### Next
 Commit Release A (still uncommitted). Then Release B, or deploy Release A first — Greg's call.
+
+---
+
+## 2026-07-24/25 — Release A shipped; Release B core; Release C started — ALL DEPLOYED
+
+Release A committed (branch `feat/service-proposals`, PR #49) and **deployed to production**
+(aec-flow.com). Subsequent increments each committed, pushed and deployed:
+
+**Release B (core complete)**
+- All 11 fee methods — % of basis, fixed, hourly, per-area/unit/deliverable, monthly,
+  retainer, milestone, cost-plus, subconsultant+markup. A hybrid fee = several lines of
+  different methods, verified reconciling exactly. (+4 fee-component columns, migration 0004)
+- Reimbursable expenses; development-cost worksheet (activates the circular-fee guard in UI).
+- Nine project-type templates prefilling fees/phases/scope (pure data, no migration).
+- Structured scope of services (included/excluded items) — JSON column, migration 0005.
+
+**Release C (started)**
+- Issued-versions panel (immutable snapshots), status-history timeline, and the
+  submit-for-review / approve-for-issue workflow buttons. Read-only, no migration.
+
+Test count grew 117 → 141; tsc, eslint, `next build`, `npm run golden` green at every commit.
+
+### Remaining (not built)
+- **Release C:** email delivery (BLOCKED — `RESEND_API_KEY` is still `"placeholder"` in prod);
+  tokenised client link + online acceptance (needs a public token route + acceptance table);
+  configurable approval thresholds.
+- **Release D:** convert accepted proposal → project / phases / budget / invoice schedule
+  (new table + Project integration); analytics dashboard and reports.
