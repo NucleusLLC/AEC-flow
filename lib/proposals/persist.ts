@@ -57,6 +57,16 @@ export function buildWriteData(input: ServiceProposalInput) {
     terms: input.terms ?? null,
     estimatedWeeks: input.estimatedWeeks ?? null,
     showFeeDerivation: input.showFeeDerivation,
+    // Scope items are descriptive (no money) — stored as JSON, cleaned of blank rows.
+    scopeItems: (input.scopeItems ?? [])
+      .filter((s) => (s.title ?? "").trim() !== "")
+      .map((s) => ({
+        title: s.title.trim(),
+        description: s.description ?? null,
+        discipline: s.discipline ?? null,
+        category: s.category,
+        included: s.included,
+      })),
     validUntil: toDate(input.validUntil),
     notes: input.notes ?? null,
   };

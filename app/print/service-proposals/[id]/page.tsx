@@ -52,9 +52,24 @@ export default async function ServiceProposalPrintPage({
         { role: "Date", name: "" },
       ]}
     >
-      {p.input.scopeSummary ? (
+      {p.input.scopeSummary || (p.input.scopeItems && p.input.scopeItems.length > 0) ? (
         <PrintSection title="Scope of services">
-          <p className="whitespace-pre-wrap text-[11px] text-gray-700">{p.input.scopeSummary}</p>
+          {p.input.scopeSummary ? (
+            <p className="whitespace-pre-wrap text-[11px] text-gray-700">{p.input.scopeSummary}</p>
+          ) : null}
+          {p.input.scopeItems && p.input.scopeItems.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-[11px]">
+              {p.input.scopeItems.map((s, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className={s.included ? "text-gray-900" : "text-gray-400"}>{s.included ? "✓" : "✕"}</span>
+                  <span className={s.included ? "text-gray-900" : "text-gray-500 line-through"}>
+                    <strong>{s.title}</strong>
+                    {s.description ? <span className="text-gray-600"> — {s.description}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </PrintSection>
       ) : null}
 

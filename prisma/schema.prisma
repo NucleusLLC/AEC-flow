@@ -2068,6 +2068,8 @@ model ServiceProposal {
   estimatedWeeks    Int?
   showFeeDerivation Boolean @default(true)
   documentStructure Json?
+  /// [{ title, description, discipline, category, included }] — structured scope of services.
+  scopeItems        Json?
 
   issuedAt   DateTime?
   validUntil DateTime?

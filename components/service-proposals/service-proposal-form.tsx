@@ -58,6 +58,7 @@ type PhaseRow = { key: string; name: string; percent: string };
 type MilestoneRow = { key: string; name: string; percent: string };
 type ReimbRow = { key: string; label: string; amount: string };
 type WorksheetRow = { key: string; category: string; amount: string; included: boolean; isProfFees: boolean };
+type ScopeRow = { key: string; title: string; description: string; included: boolean };
 
 let counter = 0;
 const uid = () => `r${counter++}`;
@@ -176,6 +177,16 @@ export function ServiceProposalForm({
   const [discountType, setDiscountType] = useState<"PERCENT" | "FIXED">(init?.discounts?.[0]?.type ?? "PERCENT");
   const [discountValue, setDiscountValue] = useState(String(init?.discounts?.[0]?.value ?? ""));
 
+  const [scopeRows, setScopeRows] = useState<ScopeRow[]>(
+    init?.scopeItems?.length
+      ? init.scopeItems.map((s) => ({
+          key: uid(),
+          title: s.title,
+          description: s.description ?? "",
+          included: s.included,
+        }))
+      : [],
+  );
   const [scopeSummary, setScopeSummary] = useState(init?.scopeSummary ?? "");
   const [exclusions, setExclusions] = useState(init?.exclusions ?? "");
   const [assumptions, setAssumptions] = useState(init?.assumptions ?? "");
@@ -295,6 +306,9 @@ export function ServiceProposalForm({
           ? [{ id: "d", label: discountLabel, type: discountType, value: Number(discountValue) }]
           : [],
       scopeSummary: scopeSummary || null,
+      scopeItems: scopeRows
+        .filter((s) => s.title.trim() !== "")
+        .map((s) => ({ title: s.title, description: s.description || null, included: s.included, category: "BASE" as const })),
       exclusions: exclusions || null,
       assumptions: assumptions || null,
       terms: terms || null,
@@ -612,9 +626,35 @@ export function ServiceProposalForm({
           </CardBody>
         </Card>
 
+        {/* Scope of services */}
+        <Card>
+          <CardHeader title="Scope of services" subtitle="Itemised inclusions and exclusions — appears as a list on the document" />
+          <CardBody className="space-y-2">
+            {scopeRows.length === 0 ? (
+              <p className="text-sm text-muted">No scope items yet — add inclusions and exclusions, or use the free-text summary below.</p>
+            ) : scopeRows.map((s) => {
+              const setS = (patch: Partial<ScopeRow>) => setScopeRows((p) => p.map((x) => x.key === s.key ? { ...x, ...patch } : x));
+              return (
+                <div key={s.key} className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto_32px] sm:items-center">
+                  <input value={s.title} onChange={(e) => setS({ title: e.target.value })} className={field} placeholder="Site analysis & feasibility" />
+                  <input value={s.description} onChange={(e) => setS({ description: e.target.value })} className={field} placeholder="Optional detail" />
+                  <label className="inline-flex items-center gap-1.5 text-xs text-muted">
+                    <input type="checkbox" checked={s.included} onChange={(e) => setS({ included: e.target.checked })} />
+                    {s.included ? "Included" : "Excluded"}
+                  </label>
+                  <button type="button" onClick={() => setScopeRows((p) => p.filter((x) => x.key !== s.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove scope item"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => setScopeRows((p) => [...p, { key: uid(), title: "", description: "", included: true }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
+              <Plus className="h-4 w-4" /> Add scope item
+            </button>
+          </CardBody>
+        </Card>
+
         {/* Scope & terms */}
         <Card>
-          <CardHeader title="Scope & terms" />
+          <CardHeader title="Scope narrative & terms" />
           <CardBody className="space-y-3">
             <div>
               <label className={label}>Scope summary</label>

@@ -197,6 +197,17 @@ export const taxSchema = z.object({
   registrationNumber: optionalText,
 });
 
+export const scopeItemSchema = z.object({
+  title: nonEmpty("Scope item"),
+  description: optionalText,
+  discipline: optionalText,
+  category: serviceCategorySchema.default("BASE"),
+  /** false = the item is listed as explicitly excluded from scope. */
+  included: z.boolean().default(true),
+});
+
+export type ScopeItem = z.infer<typeof scopeItemSchema>;
+
 // ── The whole proposal ────────────────────────────────────────────────────────
 
 /**
@@ -232,6 +243,7 @@ export const serviceProposalInputSchema = z.object({
   taxes: z.array(taxSchema).default([]),
 
   scopeSummary: optionalText,
+  scopeItems: z.array(scopeItemSchema).default([]),
   exclusions: optionalText,
   assumptions: optionalText,
   terms: optionalText,

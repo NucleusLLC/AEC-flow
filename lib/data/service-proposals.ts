@@ -154,6 +154,20 @@ function toInput(p: FullProposal): ServiceProposalInput {
       registrationNumber: t.registrationNumber,
     })),
     scopeSummary: p.scopeSummary,
+    scopeItems: Array.isArray(p.scopeItems)
+      ? (p.scopeItems as unknown[]).map((raw) => {
+          const o = (raw ?? {}) as Record<string, unknown>;
+          return {
+            title: typeof o.title === "string" ? o.title : "",
+            description: typeof o.description === "string" ? o.description : null,
+            discipline: typeof o.discipline === "string" ? o.discipline : null,
+            category: (o.category === "OPTIONAL" || o.category === "ADDITIONAL"
+              ? o.category
+              : "BASE") as "BASE" | "OPTIONAL" | "ADDITIONAL",
+            included: o.included !== false,
+          };
+        })
+      : [],
     exclusions: p.exclusions,
     assumptions: p.assumptions,
     terms: p.terms,

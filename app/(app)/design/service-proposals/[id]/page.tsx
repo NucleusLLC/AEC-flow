@@ -127,9 +127,28 @@ export default async function ServiceProposalDetailPage({
             </Card>
           ) : null}
 
+          {(p.input.scopeItems && p.input.scopeItems.length > 0) ? (
+            <Card>
+              <CardHeader title="Scope of services" />
+              <CardBody>
+                <ul className="space-y-1.5 text-sm">
+                  {p.input.scopeItems.map((s, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className={s.included ? "text-emerald-600" : "text-rose-500"}>{s.included ? "✓" : "✕"}</span>
+                      <span className={s.included ? "text-fg" : "text-muted line-through"}>
+                        <strong className="font-medium">{s.title}</strong>
+                        {s.description ? <span className="text-muted"> — {s.description}</span> : null}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
+          ) : null}
+
           {p.input.scopeSummary || p.input.terms || p.input.exclusions || p.input.assumptions ? (
             <Card>
-              <CardHeader title="Scope & terms" />
+              <CardHeader title="Narrative & terms" />
               <CardBody className="space-y-3 text-sm">
                 {p.input.scopeSummary ? <Field label="Scope" value={p.input.scopeSummary} /> : null}
                 {p.input.exclusions ? <Field label="Exclusions" value={p.input.exclusions} /> : null}

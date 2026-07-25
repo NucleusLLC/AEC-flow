@@ -129,6 +129,21 @@ describe("buildWriteData — the header totals come from the engine, never the c
     expect(header.validUntil).toBeInstanceOf(Date);
   });
 
+  it("stores scope items, preserving the included/excluded flag", () => {
+    const { header } = buildWriteData(
+      input({
+        scopeItems: [
+          { title: "Site analysis", description: "Feasibility review", included: true, category: "BASE" },
+          { title: "Full-time supervision", included: false, category: "BASE" },
+        ],
+      }),
+    );
+    const items = header.scopeItems as { title: string; included: boolean }[];
+    expect(items).toHaveLength(2);
+    expect(items[0].title).toBe("Site analysis");
+    expect(items[1].included).toBe(false);
+  });
+
   it("maps the development-cost worksheet to rows", () => {
     const { children } = buildWriteData(
       input({
