@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Printer } from "lucide-react";
-import { getServiceProposal } from "@/lib/data/service-proposals";
+import {
+  getServiceProposal,
+  listServiceProposalVersions,
+  listStatusHistory,
+} from "@/lib/data/service-proposals";
 import { computeProposal } from "@/lib/proposals/engine/engine";
 import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
-import { isLocked } from "@/lib/proposals/engine/status";
+import { isLocked, STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
@@ -22,6 +26,10 @@ export default async function ServiceProposalDetailPage({
   const p = await getServiceProposal(id);
   if (!p) notFound();
 
+  const [versions, history] = await Promise.all([
+    listServiceProposalVersions(p.id),
+    listStatusHistory(p.id),
+  ]);
   const calc = computeProposal(p.input as ProposalCalcInput);
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
   const locked = isLocked(p.status);
@@ -186,6 +194,43 @@ export default async function ServiceProposalDetailPage({
             <div className="rounded-xl border border-border bg-surface p-4 text-sm">
               <div className="text-xs text-muted">Valid until</div>
               <div className="mt-0.5 font-medium text-fg">{p.validUntil}</div>
+            </div>
+          ) : null}
+
+          {versions.length > 0 ? (
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <h3 className="text-sm font-semibold text-fg">Issued versions</h3>
+              <ul className="mt-2 space-y-2 text-sm">
+                {versions.map((v) => (
+                  <li key={v.id} className="flex items-baseline justify-between gap-2">
+                    <span>
+                      <span className="font-medium text-fg">v{v.versionLabel}</span>
+                      <span className="ml-1.5 text-xs text-muted">{v.createdAt.slice(0, 10)}</span>
+                      {v.createdByName ? <span className="text-xs text-faint"> · {v.createdByName}</span> : null}
+                    </span>
+                    <span className="tabular-nums text-muted">{formatCurrency(v.grandTotal, v.currency, { maximumFractionDigits: 0 })}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 border-t border-border pt-2 text-xs text-muted">
+                Each issued version is an immutable snapshot of what the client received.
+              </p>
+            </div>
+          ) : null}
+
+          {history.length > 0 ? (
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <h3 className="text-sm font-semibold text-fg">Status history</h3>
+              <ul className="mt-2 space-y-2 text-sm">
+                {history.map((h) => (
+                  <li key={h.id} className="text-muted">
+                    <span className="text-fg">{STATUS_LABEL[h.toStatus]}</span>
+                    <span className="ml-1.5 text-xs">{h.createdAt.slice(0, 10)}</span>
+                    {h.byName ? <span className="text-xs text-faint"> · {h.byName}</span> : null}
+                    {h.reason ? <div className="text-xs text-faint">{h.reason}</div> : null}
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
         </div>

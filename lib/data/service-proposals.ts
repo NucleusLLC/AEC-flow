@@ -248,6 +248,65 @@ export async function getServiceProposal(id: string): Promise<ServiceProposalDTO
   return p ? toDto(p) : null;
 }
 
+export interface ProposalVersionInfo {
+  id: string;
+  versionLabel: string;
+  reason: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  grandTotal: number;
+  currency: string;
+}
+
+/** Issued version snapshots, newest first. Proves the immutable-history guarantee. */
+export async function listServiceProposalVersions(
+  serviceProposalId: string,
+): Promise<ProposalVersionInfo[]> {
+  const rows = await prisma.serviceProposalVersion.findMany({
+    where: { serviceProposalId },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((v) => {
+    const snap = (v.snapshot ?? {}) as { calc?: { totals?: { grandTotal?: number }; currency?: string } };
+    return {
+      id: v.id,
+      versionLabel: v.versionLabel,
+      reason: v.reason,
+      createdByName: v.createdByName,
+      createdAt: v.createdAt.toISOString(),
+      grandTotal: Number(snap.calc?.totals?.grandTotal ?? 0),
+      currency: snap.calc?.currency ?? "USD",
+    };
+  });
+}
+
+export interface StatusHistoryEntry {
+  id: string;
+  fromStatus: ServiceProposalStatus | null;
+  toStatus: ServiceProposalStatus;
+  reason: string | null;
+  byName: string | null;
+  createdAt: string;
+}
+
+/** The full status timeline, newest first. */
+export async function listStatusHistory(
+  serviceProposalId: string,
+): Promise<StatusHistoryEntry[]> {
+  const rows = await prisma.serviceProposalStatusHistory.findMany({
+    where: { serviceProposalId },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((h) => ({
+    id: h.id,
+    fromStatus: h.fromStatus,
+    toStatus: h.toStatus,
+    reason: h.reason,
+    byName: h.byName,
+    createdAt: h.createdAt.toISOString(),
+  }));
+}
+
 // ── Write helpers ─────────────────────────────────────────────────────────────
 
 export class ProposalLockedError extends Error {

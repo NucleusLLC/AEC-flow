@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Send, CopyPlus, Check, X } from "lucide-react";
+import { Trash2, Send, CopyPlus, Check, X, ClipboardCheck, ThumbsUp } from "lucide-react";
 import {
   deleteServiceProposalAction,
   issueServiceProposalAction,
@@ -37,12 +37,24 @@ export function ServiceProposalActions({
     });
   }
 
+  const canReview = canTransition(status, "INTERNAL_REVIEW");
+  const canApprove = canTransition(status, "APPROVED_FOR_ISSUE");
   const canIssue = canTransition(status, "SENT");
   const canAccept = canTransition(status, "ACCEPTED");
   const canReject = canTransition(status, "REJECTED");
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {canReview ? (
+        <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "INTERNAL_REVIEW"))}>
+          <ClipboardCheck className="h-4 w-4" /> Submit for review
+        </button>
+      ) : null}
+      {canApprove ? (
+        <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "APPROVED_FOR_ISSUE"))}>
+          <ThumbsUp className="h-4 w-4" /> Approve for issue
+        </button>
+      ) : null}
       {canIssue ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => issueServiceProposalAction(id))}>
           <Send className="h-4 w-4" /> Issue to client
