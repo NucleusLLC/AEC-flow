@@ -49,6 +49,28 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
           <span className="text-sm font-semibold text-fg">{project.progressPct}%</span>
         </div>
         <ProgressBar value={project.progressPct} className="mt-3" />
+
+        {project.phases.length > 0 ? (
+          <div className="mt-5 border-t border-border pt-4">
+            <p className="mb-3 text-xs text-muted">
+              This number rolls up the {project.phases.length} project phase
+              {project.phases.length === 1 ? "" : "s"} below:
+            </p>
+            <ul className="space-y-2.5">
+              {project.phases.map((ph) => (
+                <li key={ph.id} className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1 truncate text-sm text-fg">{ph.name}</span>
+                  <span className="hidden w-32 sm:block">
+                    <ProgressBar value={ph.progressPct} />
+                  </span>
+                  <span className="w-9 shrink-0 text-right text-xs font-medium tabular-nums text-muted">
+                    {ph.progressPct}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
