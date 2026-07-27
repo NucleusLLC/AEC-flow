@@ -188,7 +188,7 @@ export const CLIENTS: SeedClient[] = [
 export const PROPOSALS: SeedProposal[] = [
   {
     refNumber: "PRO-2026-031", title: "Marina Heights Tower — Full Design Services", clientId: "emaar", clientName: "Emaar Properties", owner: "Greg Lacle",
-    status: "APPROVED", revision: 2, currency: "AED", totalFee: 4200000,
+    status: "APPROVED", revision: 2, currency: "AWG", totalFee: 4200000,
     scopeSummary: "Architecture, structural and MEP design for a 42-storey residential tower.", exclusions: "Specialist façade engineering, LEED certification.", assumptions: "Single mobilisation; client provides topographic survey.", terms: "Payment against milestones, net 30.", estimatedDuration: 64,
     sentAt: "2026-02-12", approvedAt: "2026-03-01", followUpDate: null, lastContactDate: "2026-03-01", followUpNotes: null, nextAction: null, validUntil: "2026-05-12", createdAt: "2026-02-10",
     lineItems: [
@@ -206,7 +206,7 @@ export const PROPOSALS: SeedProposal[] = [
   },
   {
     refNumber: "PRO-2026-038", title: "Yas Bay Mixed-Use — Concept & Schematic", clientId: "aldar", clientName: "Aldar Properties", owner: "Sara Khan",
-    status: "SENT", revision: 1, currency: "AED", totalFee: 1850000,
+    status: "SENT", revision: 1, currency: "AWG", totalFee: 1850000,
     scopeSummary: "Concept and schematic design for a mixed-use waterfront block.", exclusions: "Detailed design, site supervision.", assumptions: "Massing brief provided by client.", terms: "50% on appointment, 50% on schematic.", estimatedDuration: 24,
     sentAt: "2026-05-28", approvedAt: null, followUpDate: "2026-06-25", lastContactDate: "2026-05-28", followUpNotes: "Awaiting board review.", nextAction: "Call procurement lead", validUntil: "2026-07-28", createdAt: "2026-05-26",
     lineItems: [
@@ -220,7 +220,7 @@ export const PROPOSALS: SeedProposal[] = [
   },
   {
     refNumber: "PRO-2026-042", title: "Al Quoz Community Centre", clientId: "dm", clientName: "Dubai Municipality", owner: "Maya Santos",
-    status: "PENDING", revision: 1, currency: "AED", totalFee: 980000,
+    status: "PENDING", revision: 1, currency: "AWG", totalFee: 980000,
     scopeSummary: "Full design services for a public community centre.", exclusions: "Landscape of adjacent park.", assumptions: "Government standard specifications apply.", terms: "Per government payment schedule.", estimatedDuration: 36,
     sentAt: "2026-06-05", approvedAt: null, followUpDate: "2026-06-22", lastContactDate: "2026-06-10", followUpNotes: "Tender clarification submitted.", nextAction: "Submit clarification responses", validUntil: "2026-08-05", createdAt: "2026-06-03",
     lineItems: [
@@ -236,7 +236,7 @@ export const PROPOSALS: SeedProposal[] = [
   },
   {
     refNumber: "PRO-2026-047", title: "Emirates Hills Private Villa", clientId: "khoury", clientName: "Khoury Family Office", owner: "Lina Verhoeven",
-    status: "DRAFT", revision: 1, currency: "AED", totalFee: 640000,
+    status: "DRAFT", revision: 1, currency: "AWG", totalFee: 640000,
     scopeSummary: "Architecture and interior design for a private villa.", exclusions: "Landscape, pool engineering.", assumptions: "Client provides plot survey and brief.", terms: "Stage payments.", estimatedDuration: 30,
     sentAt: null, approvedAt: null, followUpDate: "2026-06-28", lastContactDate: "2026-06-12", followUpNotes: "Brief workshop scheduled.", nextAction: "Confirm fee scope", validUntil: null, createdAt: "2026-06-12",
     lineItems: [
@@ -253,9 +253,9 @@ export const PROPOSALS: SeedProposal[] = [
 /* ─────────────────────────── Orders ─────────────────────────── */
 
 export const ORDERS: SeedOrder[] = [
-  { orderNumber: "ORD-2026-014", clientName: "Emaar Properties", proposalRef: "PRO-2026-031", projectId: "ZA-2026-014", title: "Marina Heights Tower — Design Services", serviceType: "Full Design Services", status: "IN_PROGRESS", fee: 4200000, currency: "AED", scopeSummary: "Confirmed order for full multidisciplinary design.", siteAddress: "Dubai Marina, Plot D-17", expectedStartDate: "2026-03-15", expectedEndDate: "2027-06-30", notes: "Mobilised; concept underway.", createdAt: "2026-03-05" },
-  { orderNumber: "ORD-2026-022", clientName: "Meraas Holding", proposalRef: null, projectId: "ZA-2026-022", title: "City Walk Retail Refresh", serviceType: "Architecture + Interior", status: "CONFIRMED", fee: 1350000, currency: "AED", scopeSummary: "Retail frontage and interior refresh across two blocks.", siteAddress: "City Walk, Al Wasl, Dubai", expectedStartDate: "2026-07-01", expectedEndDate: "2026-12-15", notes: "Awaiting kickoff.", createdAt: "2026-06-08" },
-  { orderNumber: "ORD-2026-009", clientName: "Aldar Properties", proposalRef: null, projectId: "ZA-2026-009", title: "Yas Bay Plot 4 — Schematic", serviceType: "Concept + Schematic", status: "COMPLETED", fee: 820000, currency: "AED", scopeSummary: "Completed schematic package handed to client.", siteAddress: "Yas Bay, Abu Dhabi", expectedStartDate: "2025-11-01", expectedEndDate: "2026-04-30", notes: "Closed out.", createdAt: "2025-10-20" },
+  { orderNumber: "ORD-2026-014", clientName: "Emaar Properties", proposalRef: "PRO-2026-031", projectId: "ZA-2026-014", title: "Marina Heights Tower — Design Services", serviceType: "Full Design Services", status: "IN_PROGRESS", fee: 4200000, currency: "AWG", scopeSummary: "Confirmed order for full multidisciplinary design.", siteAddress: "Dubai Marina, Plot D-17", expectedStartDate: "2026-03-15", expectedEndDate: "2027-06-30", notes: "Mobilised; concept underway.", createdAt: "2026-03-05" },
+  { orderNumber: "ORD-2026-022", clientName: "Meraas Holding", proposalRef: null, projectId: "ZA-2026-022", title: "City Walk Retail Refresh", serviceType: "Architecture + Interior", status: "CONFIRMED", fee: 1350000, currency: "AWG", scopeSummary: "Retail frontage and interior refresh across two blocks.", siteAddress: "City Walk, Al Wasl, Dubai", expectedStartDate: "2026-07-01", expectedEndDate: "2026-12-15", notes: "Awaiting kickoff.", createdAt: "2026-06-08" },
+  { orderNumber: "ORD-2026-009", clientName: "Aldar Properties", proposalRef: null, projectId: "ZA-2026-009", title: "Yas Bay Plot 4 — Schematic", serviceType: "Concept + Schematic", status: "COMPLETED", fee: 820000, currency: "AWG", scopeSummary: "Completed schematic package handed to client.", siteAddress: "Yas Bay, Abu Dhabi", expectedStartDate: "2025-11-01", expectedEndDate: "2026-04-30", notes: "Closed out.", createdAt: "2025-10-20" },
 ];
 
 /* ─────────────────────────── Projects ─────────────────────────── */
@@ -276,33 +276,33 @@ export const PROJECTS: SeedProject[] = [
   {
     projectNumber: "ZA-2026-014", name: "Marina Heights Tower", clientId: "emaar", manager: "Greg Lacle", status: "ACTIVE", priority: "HIGH",
     description: "42-storey residential tower with amenity podium.", siteAddress: "Dubai Marina, Plot D-17", disciplines: ["ARCHITECTURE", "STRUCTURAL", "MEP", "INTERIOR"],
-    startDate: "2026-03-15", targetEndDate: "2027-06-30", completedAt: null, progressPct: 35, value: 4200000, currency: "AED",
+    startDate: "2026-03-15", targetEndDate: "2027-06-30", completedAt: null, progressPct: 35, value: 4200000, currency: "AWG",
     phases: PHASES(), team: [{ name: "Greg Lacle", role: "Project Director" }, { name: "Sara Khan", role: "Structural Lead" }, { name: "Omar Haddad", role: "Project Architect" }, { name: "Raj Patel", role: "MEP" }],
   },
   {
     projectNumber: "ZA-2026-022", name: "City Walk Retail Refresh", clientId: "meraas", manager: "Lina Verhoeven", status: "ACTIVE", priority: "MEDIUM",
     description: "Retail frontage and interior refresh across two blocks.", siteAddress: "City Walk, Al Wasl, Dubai", disciplines: ["ARCHITECTURE", "INTERIOR"],
-    startDate: "2026-07-01", targetEndDate: "2026-12-15", completedAt: null, progressPct: 10, value: 1350000, currency: "AED",
+    startDate: "2026-07-01", targetEndDate: "2026-12-15", completedAt: null, progressPct: 10, value: 1350000, currency: "AWG",
     phases: PHASES({ schematic: { status: "NOT_STARTED", progressPct: 0 } }), team: [{ name: "Lina Verhoeven", role: "Design Lead" }, { name: "Omar Haddad", role: "Architect" }],
   },
   {
     projectNumber: "ZA-2026-009", name: "Yas Bay Plot 4", clientId: "aldar", manager: "Sara Khan", status: "COMPLETED", priority: "MEDIUM",
     description: "Schematic design package for a mixed-use waterfront plot.", siteAddress: "Yas Bay, Abu Dhabi", disciplines: ["ARCHITECTURE", "STRUCTURAL"],
-    startDate: "2025-11-01", targetEndDate: "2026-04-30", completedAt: "2026-04-28", progressPct: 100, value: 820000, currency: "AED",
+    startDate: "2025-11-01", targetEndDate: "2026-04-30", completedAt: "2026-04-28", progressPct: 100, value: 820000, currency: "AWG",
     phases: PHASES({ schematic: { status: "COMPLETED", progressPct: 100 }, detailed: { status: "COMPLETED", progressPct: 100 }, tender: { status: "COMPLETED", progressPct: 100 }, construction: { status: "COMPLETED", progressPct: 100 }, handover: { status: "COMPLETED", progressPct: 100 } }),
     team: [{ name: "Sara Khan", role: "Project Lead" }, { name: "Omar Haddad", role: "Architect" }],
   },
   {
     projectNumber: "ZA-2026-031", name: "Al Quoz Community Centre", clientId: "dm", manager: "Maya Santos", status: "ON_HOLD", priority: "LOW",
     description: "Public community centre — awaiting tender award.", siteAddress: "Al Quoz 3, Dubai", disciplines: ["ARCHITECTURE", "STRUCTURAL", "MEP"],
-    startDate: null, targetEndDate: null, completedAt: null, progressPct: 5, value: 980000, currency: "AED",
+    startDate: null, targetEndDate: null, completedAt: null, progressPct: 5, value: 980000, currency: "AWG",
     phases: PHASES({ concept: { status: "IN_PROGRESS", progressPct: 40 }, schematic: { status: "NOT_STARTED", progressPct: 0 } }),
     team: [{ name: "Maya Santos", role: "Coordinator" }, { name: "Greg Lacle", role: "Design Director" }],
   },
   {
     projectNumber: "ZA-2025-118", name: "Jumeirah Beach Villa", clientId: "khoury", manager: "Lina Verhoeven", status: "ACTIVE", priority: "MEDIUM",
     description: "Private beachfront villa, architecture and interiors.", siteAddress: "Jumeirah 1, Dubai", disciplines: ["ARCHITECTURE", "INTERIOR"],
-    startDate: "2025-09-10", targetEndDate: "2026-09-30", completedAt: null, progressPct: 55, value: 1100000, currency: "AED",
+    startDate: "2025-09-10", targetEndDate: "2026-09-30", completedAt: null, progressPct: 55, value: 1100000, currency: "AWG",
     phases: PHASES({ detailed: { status: "IN_PROGRESS", progressPct: 50 } }),
     team: [{ name: "Lina Verhoeven", role: "Design Lead" }, { name: "Greg Lacle", role: "Principal" }],
   },

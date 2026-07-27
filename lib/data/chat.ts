@@ -79,7 +79,7 @@ const MESSAGES: Record<string, ChatMessage[]> = {
   "c-general": [
     { id: "m1", channelId: "c-general", authorId: "u-layla", body: "Morning all — reminder the office is closed Thursday for the public holiday. Plan deliverables around it.", at: "8:32 AM", day: "Today" },
     { id: "m2", channelId: "c-general", authorId: "u-nadia", body: "Revit central files have been upgraded to the 2026 template. Please sync before opening any model.", at: "8:48 AM", day: "Today" },
-    { id: "m3", channelId: "c-general", authorId: "u-omar", body: "Great quarter everyone — we crossed AED 11M in approved fees. Thanks for the push on Saadiyat and the villa.", at: "9:05 AM", day: "Today" },
+    { id: "m3", channelId: "c-general", authorId: "u-omar", body: "Great quarter everyone — we crossed AWG 11M in approved fees. Thanks for the push on Saadiyat and the villa.", at: "9:05 AM", day: "Today" },
   ],
   "c-design": [
     { id: "m1", channelId: "c-design", authorId: "u-sara", body: "Uploaded the revised façade study for Creek Harbour — feedback by EOD please.", at: "9:10 AM", day: "Today" },
@@ -109,7 +109,7 @@ const MESSAGES: Record<string, ChatMessage[]> = {
   ],
   "dm-ahmed": [
     { id: "m1", channelId: "dm-ahmed", authorId: "u-omar", body: "Can you get me the structural fee delta for Yas Bay by tomorrow?", at: "Yesterday", day: "Yesterday" },
-    { id: "m2", channelId: "dm-ahmed", authorId: "u-ahmed", body: "Will do — roughly +AED 130k for the revised grid. I'll confirm the breakdown.", at: "Yesterday", day: "Yesterday" },
+    { id: "m2", channelId: "dm-ahmed", authorId: "u-ahmed", body: "Will do — roughly +AWG 130k for the revised grid. I'll confirm the breakdown.", at: "Yesterday", day: "Yesterday" },
   ],
 };
 

@@ -13,9 +13,15 @@ import {
 } from "@/app/(app)/settings/actions";
 import type { PracticeProfile } from "@/lib/data/settings";
 import type { FooterSettings, LogoSettings, LogoPosition } from "@/lib/server/practice-config";
+import { currencyOptions } from "@/lib/format";
 
-/** Common currencies for the System Currency selector (any 3-letter ISO code is accepted). */
-const SYSTEM_CURRENCIES = ["AWG", "AED", "USD", "EUR", "GBP", "SAR", "ANG", "COP"];
+/**
+ * Quick-pick shortcuts beside the System Currency field. The currently
+ * configured currency is prepended by `currencyOptions`, so it is always
+ * offered even on a tenant using a code that isn't listed here. Any 3-letter
+ * ISO code can still be typed into the input.
+ */
+const OTHER_CURRENCIES = ["AWG", "AED", "USD", "EUR", "GBP", "SAR", "ANG", "COP"];
 
 /** Print-safe font families for the document footer. */
 const FOOTER_FONTS: { label: string; value: string }[] = [
@@ -272,7 +278,7 @@ export function PracticeForm({
                 value={cur}
                 onChange={(e) => setCur(e.target.value.toUpperCase().slice(0, 3))}
                 disabled={!canSave || curPending}
-                placeholder="AWG"
+                placeholder={currency}
                 className={inputCls + " w-32 uppercase tracking-wide"}
               />
             </label>
@@ -289,7 +295,7 @@ export function PracticeForm({
             ) : null}
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {SYSTEM_CURRENCIES.map((c) => (
+            {currencyOptions(OTHER_CURRENCIES).map((c) => (
               <button
                 key={c}
                 type="button"

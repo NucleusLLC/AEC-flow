@@ -86,7 +86,7 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
     version: "V1",
     date: "2026-01-01",
     location: "—",
-    currency: "AED",
+    currency: "AWG",
     avgLaborRate: RATE,
     profitPct: 10,
     bboPct: 5,
@@ -130,7 +130,7 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
 {
   const est: CostEstimate = {
     id: "eh", projectId: null, projectName: "Hybrid", version: "V1", date: "2026-01-01",
-    location: "—", currency: "AED", avgLaborRate: RATE, profitPct: 10, bboPct: 5,
+    location: "—", currency: "AWG", avgLaborRate: RATE, profitPct: 10, bboPct: 5,
     categories: [{ id: "c1", name: "Mixed", items: [
       baseItem({ id: "h1" }),                                                        // norm
       baseItem({ id: "h2", calculationMethod: "labor_rate", laborRatePerUnit: 80 }), // labor_rate
@@ -152,7 +152,7 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
   const lr = baseItem({ id: "r", calculationMethod: "labor_rate", laborRatePerUnit: 80 });
   const est: CostEstimate = {
     id: "e2", projectId: null, projectName: "Sched", version: "V1", date: "2026-01-01",
-    location: "—", currency: "AED", avgLaborRate: RATE, profitPct: 0, bboPct: 0,
+    location: "—", currency: "AWG", avgLaborRate: RATE, profitPct: 0, bboPct: 0,
     categories: [{ id: "c1", name: "S", items: [norm, lr] }],
   };
   const sec = computeSections(est)[0];
@@ -168,7 +168,7 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
 {
   const est: CostEstimate = {
     id: "er", projectId: null, projectName: "Retainage", version: "V1", date: "2026-01-01",
-    location: "—", currency: "AED", avgLaborRate: RATE, profitPct: 0, bboPct: 0,
+    location: "—", currency: "AWG", avgLaborRate: RATE, profitPct: 0, bboPct: 0,
     categories: [{ id: "c1", name: "S", items: [baseItem()] }], // one item → direct 1090
   };
   const basePay = (over: Partial<PaymentConfig>): PaymentConfig => ({
@@ -199,7 +199,7 @@ const baseItem = (over: Partial<EstimateItem> = {}): EstimateItem => ({
 {
   const est: CostEstimate = {
     id: "ed", projectId: null, projectName: "DevCost", version: "V1", date: "2026-01-01",
-    location: "—", currency: "AED", avgLaborRate: RATE, profitPct: 10, bboPct: 6,
+    location: "—", currency: "AWG", avgLaborRate: RATE, profitPct: 10, bboPct: 6,
     categories: [{ id: "c1", name: "S", items: [baseItem()] }], // one item → direct 1090
   };
   const direct = computeGrandCost(est);

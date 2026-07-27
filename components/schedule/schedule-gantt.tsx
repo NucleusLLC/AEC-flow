@@ -25,7 +25,7 @@ import {
 import { saveScheduleAction } from "@/app/(app)/schedule/actions";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/format";
+import { formatDate, SYSTEM_LOCALE } from "@/lib/format";
 import { StatusBoard } from "@/components/schedule/status-board";
 import {
   HOURS_PER_DAY,
@@ -337,7 +337,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
         const segStart = c < ws ? ws : c;
         const segEnd = new Date(Math.min(next.getTime() - 86_400_000, we.getTime()));
         major.push({
-          label: c.toLocaleDateString("en-AE", { month: "short", year: "2-digit" }),
+          label: c.toLocaleDateString(SYSTEM_LOCALE, { month: "short", year: "2-digit" }),
           left: (diffDaysIso(windowStart, segStart.toISOString().slice(0, 10))) * pxPerDay,
           width: (diffDaysIso(segStart.toISOString().slice(0, 10), segEnd.toISOString().slice(0, 10)) + 1) * pxPerDay,
         });
@@ -381,7 +381,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
         const next = new Date(c.getFullYear(), c.getMonth() + 1, 1);
         const segStart = c < ws ? ws : c;
         minor.push({
-          label: c.toLocaleDateString("en-AE", { month: "short" }),
+          label: c.toLocaleDateString(SYSTEM_LOCALE, { month: "short" }),
           left: diffDaysIso(windowStart, segStart.toISOString().slice(0, 10)) * pxPerDay,
           width: Math.round(((Math.min(next.getTime(), we.getTime() + 86_400_000) - segStart.getTime()) / 86_400_000) * pxPerDay),
         });

@@ -25,7 +25,7 @@ const est: CostEstimate = {
   version: "V1",
   date: "2026-01-01",
   location: "—",
-  currency: "AED",
+  currency: "AWG",
   avgLaborRate: 50,
   profitPct: 10,
   bboPct: 5,

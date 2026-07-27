@@ -124,7 +124,7 @@ const MEMBERS: Member[] = [
 /** Practice-wide preference defaults; a user's saved prefs are merged over these. */
 export const PREFERENCES: Preferences = {
   defaultCurrency: "AWG",
-  locale: "en-AE",
+  locale: "en-GB",
   fiscalYearStart: "January",
   vatPercent: 5,
   proposalValidityDays: 30,

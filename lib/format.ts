@@ -32,6 +32,17 @@ export function getSystemCurrency(): string {
 }
 
 /**
+ * Options for a currency picker: the configured System Currency first, then the
+ * caller's other commonly-used codes (de-duplicated). Resolved at call time, so
+ * a tenant on any unit always finds its own currency in the list instead of
+ * relying on whatever codes were hardcoded here.
+ */
+export function currencyOptions(others: readonly string[]): string[] {
+  const system = getSystemCurrency();
+  return [system, ...others.filter((c) => c.toUpperCase() !== system)];
+}
+
+/**
  * Presentation locale for money, numbers and dates across the whole app.
  *
  * This is a LOCALE, not a currency: it decides digit grouping and date word

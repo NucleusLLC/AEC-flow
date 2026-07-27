@@ -62,9 +62,9 @@ function makeReport(): ReportData {
     ],
     grandTotal: {
       rows: [
-        { label: "Direct Cost", value: "AED 100,000" },
-        { label: "Profit (10%)", value: "AED 10,000" },
-        { label: "Grand Total", value: "AED 110,000", emphasize: true },
+        { label: "Direct Cost", value: "AWG 100,000" },
+        { label: "Profit (10%)", value: "AWG 10,000" },
+        { label: "Grand Total", value: "AWG 110,000", emphasize: true },
       ],
     },
   };

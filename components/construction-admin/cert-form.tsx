@@ -8,7 +8,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { progressPayment } from "@/lib/ca/calc";
 import { CERT_STATUS_LABEL } from "@/lib/ca/labels";
 import type { ProgressCertification, CertificationStatus } from "@/lib/ca/types";
-import { formatCurrency } from "@/lib/format";
+import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
 
 type ProjectOption = { id: string; name: string; value: number };
 
@@ -33,7 +33,8 @@ type Values = {
   status: CertificationStatus;
 };
 
-const CURRENCIES = ["USD", "AED", "EUR", "ANG", "AWG", "COP"];
+/** Other codes offered alongside the System Currency, which always leads the list. */
+const OTHER_CURRENCIES = ["USD", "AED", "EUR", "ANG", "AWG", "COP"];
 
 function MoneyLine({ label, value, currency, strong }: { label: string; value: number; currency: string; strong?: boolean }) {
   return (
@@ -66,7 +67,7 @@ export function CertForm({ projects, initial, certId }: { projects: ProjectOptio
           recommendation: initial.recommendation ?? "",
           status: initial.status,
         }
-      : ({ currency: "USD", retentionPercentage: 10, status: "DRAFT" } as Values),
+      : ({ currency: getSystemCurrency(), retentionPercentage: 10, status: "DRAFT" } as Values),
   });
 
   const v = useWatch({ control });
@@ -76,7 +77,7 @@ export function CertForm({ projects, initial, certId }: { projects: ProjectOptio
     retentionPercentage: Number(v.retentionPercentage) || 0,
     previousPaymentsValue: Number(v.previousPaymentsValue) || 0,
   });
-  const currency = v.currency || "USD";
+  const currency = v.currency || getSystemCurrency();
 
   async function onSubmit(values: Values) {
     setSaving(true);
@@ -160,7 +161,7 @@ export function CertForm({ projects, initial, certId }: { projects: ProjectOptio
                 <div>
                   <label className={labelCls}>Currency</label>
                   <select className={inputCls} {...register("currency")}>
-                    {CURRENCIES.map((c) => (
+                    {currencyOptions(OTHER_CURRENCIES).map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>

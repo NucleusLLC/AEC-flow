@@ -5,11 +5,6 @@ import { SEED_DELAY_NOTICES } from "@/lib/ca/seed-data";
 import type { DelayNotice, DelayStatus } from "@/lib/ca/types";
 import { getSystemCurrency } from "@/lib/format";
 
-/**
- * delay_notices has no currency column — the module presents amounts in the
- * org-wide System Currency rather than a hardcoded unit.
- */
-
 export type DelayNoticeInput = {
   projectId: string;
   projectName?: string | null;
@@ -39,6 +34,8 @@ function toDto(r: Row): DelayNotice {
     claimedDays: r.claimedDays,
     approvedDays: r.approvedDays,
     costImpact: num(r.costImpact),
+    // delay_notices has no currency column, so amounts are reported in the
+    // org-wide System Currency rather than a hardcoded unit.
     currency: getSystemCurrency(),
     status: r.status,
     dateStarted: ymd(r.dateStarted),

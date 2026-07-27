@@ -17,7 +17,7 @@ import {
   type ProposalWriteInput,
 } from "@/lib/data/proposals.types";
 import { saveProposal } from "@/app/(app)/proposals/actions";
-import { formatCurrency, getSystemCurrency } from "@/lib/format";
+import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
 
 type LineItemForm = {
   description: string;
@@ -43,7 +43,8 @@ export type ProposalFormValues = {
 };
 
 const OWNERS = ["Layla Hassan", "Omar Farouk", "Sara Khan", "Ahmed Nabil"];
-const CURRENCIES = ["AWG", "AED", "USD", "EUR", "GBP"];
+/** Other codes offered alongside the System Currency, which always leads the list. */
+const OTHER_CURRENCIES = ["AED", "USD", "EUR", "GBP"];
 
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -422,7 +423,7 @@ export function ProposalForm({
                 <div>
                   <label className={labelCls}>Currency</label>
                   <select className={inputCls} {...register("currency", { required: true })}>
-                    {CURRENCIES.map((c) => (
+                    {currencyOptions(OTHER_CURRENCIES).map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>

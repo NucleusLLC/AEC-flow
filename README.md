@@ -1,6 +1,8 @@
 # ZenArch — AEC Management Suite
 
-An internal management suite for an Architecture / Engineering / Construction practice (UAE, AED).
+An internal management suite for an Architecture / Engineering / Construction practice.
+Money is rendered in the org-wide **System Currency** (Settings → Practice; `AWG` when
+nothing is configured), never a hardcoded unit.
 Covers the full business flow: **Clients → Proposals → Orders → Projects** (with phases), plus **Team**, **Leave**, and **Settings**.
 
 Built with **Next.js 16** (App Router, React 19), **Prisma 7** (Postgres via driver adapter), **Tailwind v4**, `next-auth`, `react-hook-form` + `zod`, `recharts`.
@@ -52,7 +54,7 @@ components/<module>/<module>-view  "use client" — search / filter / sort / tab
 components/<module>/badges.tsx     module-specific status colours
 components/ui/*                    Card, Badge/StatusBadge/PriorityBadge, ProgressBar
 lib/data/<module>.ts               ⭐ the ONLY data source — swap to Prisma here
-lib/format.ts, lib/utils.ts        AED/date formatting, cn(), initials()
+lib/format.ts, lib/utils.ts        System-Currency/date formatting, cn(), initials()
 lib/db.ts                          Prisma client (driver adapter, pooled DATABASE_URL)
 prisma/schema.prisma               full domain model + enums
 ```

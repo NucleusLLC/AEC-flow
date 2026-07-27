@@ -9,7 +9,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { changeOrderBreakdown, revisedContractValue } from "@/lib/ca/calc";
 import { CHANGE_ORDER_STATUS_LABEL } from "@/lib/ca/labels";
 import type { ChangeOrder, ChangeOrderStatus } from "@/lib/ca/types";
-import { formatCurrency } from "@/lib/format";
+import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
 
 type ProjectOption = { id: string; name: string; value: number };
 
@@ -43,7 +43,8 @@ type Values = {
   notes: string;
 };
 
-const CURRENCIES = ["USD", "AED", "EUR", "ANG", "AWG", "COP"];
+/** Other codes offered alongside the System Currency, which always leads the list. */
+const OTHER_CURRENCIES = ["USD", "AED", "EUR", "ANG", "AWG", "COP"];
 
 function MoneyLine({ label, value, currency, strong }: { label: string; value: number; currency: string; strong?: boolean }) {
   return (
@@ -81,7 +82,7 @@ export function ChangeOrderForm({
       engineer: "",
       owner: "",
       status: "DRAFT",
-      currency: "USD",
+      currency: getSystemCurrency(),
       costLabor: 0,
       costMaterial: 0,
       costEquipment: 0,
@@ -109,7 +110,7 @@ export function ChangeOrderForm({
     contingencyPercentage: Number(v.contingencyPercentage) || 0,
     vatPercentage: Number(v.vatPercentage) || 0,
   });
-  const currency = v.currency || "USD";
+  const currency = v.currency || getSystemCurrency();
   const revised = revisedContractValue(
     Number(v.originalContractValue) || 0,
     (Number(v.approvedChangeOrdersToDate) || 0) + (v.status === "APPROVED" ? breakdown.total : 0),
@@ -304,7 +305,7 @@ export function ChangeOrderForm({
                 <div>
                   <label className={labelCls}>Currency</label>
                   <select className={inputCls} {...register("currency")}>
-                    {CURRENCIES.map((c) => (
+                    {currencyOptions(OTHER_CURRENCIES).map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>

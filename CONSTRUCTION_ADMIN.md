@@ -74,10 +74,10 @@ Prisma API, seed fallback) for the three previously-stubbed entities:
   `lib/data/ca/submittals.ts`, API `…/submittals/*`. The dashboard's
   **Open Submittals** tile is now live (counts non-final dispositions).
 - **Delay Notices** (`/construction-admin/delay-notices`) — notices of delay /
-  EOT claims; claimed vs **approved days** determination, cost impact (AED),
+  EOT claims; claimed vs **approved days** determination, cost impact,
   Submitted → Under-review → Accepted/Rejected/Closed. `lib/data/ca/delay-notices.ts`,
   API `…/delay-notices/*`. (`delay_notices` has no currency column — amounts
-  present in AED, the module's regional default.)
+  present in the org-wide **System Currency** from Settings → Practice.)
 
 All three follow the RFI pattern (DTO in `lib/ca/types.ts`, label/tone maps in
 `lib/ca/labels.ts`, badges, seed arrays in `lib/ca/seed-data.ts`, and prisma
