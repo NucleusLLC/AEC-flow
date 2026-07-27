@@ -6,6 +6,7 @@ import { PrintButton } from "@/components/meetings/print-button";
 import { MeetingDocument } from "@/components/meetings/meeting-document";
 import { getMeeting } from "@/lib/data/meetings";
 import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -20,6 +21,8 @@ export default async function MeetingPrintPage({ params }: PageProps) {
   const meeting = await getMeeting(id);
   if (!meeting) notFound();
   const { logoDataUrl, logo } = await getPracticeSettings();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
@@ -37,7 +40,7 @@ export default async function MeetingPrintPage({ params }: PageProps) {
 
       {/* A4 document sheet */}
       <div className="my-6 print:my-0">
-        <MeetingDocument meeting={meeting} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} />
+        <MeetingDocument meeting={meeting} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} companyLocation={firm.location} />
       </div>
 
       <style>{`@page { size: A4; margin: 14mm; }`}</style>

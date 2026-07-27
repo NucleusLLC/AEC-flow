@@ -6,6 +6,7 @@ import { PrintButton } from "@/components/proposals/print-button";
 import { ProposalDocument } from "@/components/proposals/proposal-document";
 import { getProposal } from "@/lib/data/proposals";
 import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -20,6 +21,8 @@ export default async function ProposalPrintPage({ params }: PageProps) {
   const proposal = await getProposal(id);
   if (!proposal) notFound();
   const { logoDataUrl, logo } = await getPracticeSettings();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
@@ -37,7 +40,7 @@ export default async function ProposalPrintPage({ params }: PageProps) {
 
       {/* A4-ish document sheet — shared with the in-app preview */}
       <div className="my-6 print:my-0">
-        <ProposalDocument proposal={proposal} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} />
+        <ProposalDocument proposal={proposal} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} companyLocation={firm.location} />
       </div>
     </div>
   );

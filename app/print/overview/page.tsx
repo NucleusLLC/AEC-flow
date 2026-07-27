@@ -8,7 +8,9 @@ import { getProjects } from "@/lib/data/projects";
 import { getProposals } from "@/lib/data/proposals";
 import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
-import { getSystemCurrency } from "@/lib/server/practice-config";
+import { getSystemCurrency, getPracticeSettings } from "@/lib/server/practice-config";
+import { DocumentLetterhead } from "@/components/print/document-letterhead";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 export const metadata: Metadata = { title: "Practice Overview · AEC-flow" };
 
@@ -60,9 +62,11 @@ function Breakdown({ title, data }: { title: string; data: Record<string, number
 }
 
 export default async function PracticeOverview() {
-  const [clients, projects, proposals, orders, team, currency] = await Promise.all([
-    getClients(), getProjects(), getProposals(), getOrders(), getTeam(), getSystemCurrency(),
+  const [clients, projects, proposals, orders, team, currency, practice] = await Promise.all([
+    getClients(), getProjects(), getProposals(), getOrders(), getTeam(), getSystemCurrency(), getPracticeSettings(),
   ]);
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   const activeClients = clients.filter((c) => c.status === "ACTIVE").length;
   const prospects = clients.filter((c) => c.status === "PROSPECT").length;
@@ -93,18 +97,17 @@ export default async function PracticeOverview() {
       </div>
 
       <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
-        <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
-              Architecture · Engineering · Project Management
+        <DocumentLetterhead
+          logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
+          name={companyName}
+          borderClass="border-b-2 border-gray-900 pb-4"
+          details={
+            <div className="text-right">
+              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Practice Overview</div>
+              <div className="mt-1 text-xs text-gray-500">{formatDate(new Date())}</div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Practice Overview</div>
-            <div className="mt-1 text-xs text-gray-500">{formatDate(new Date())}</div>
-          </div>
-        </div>
+          }
+        />
 
         {/* KPI grid */}
         <div className="mt-5 grid grid-cols-4 gap-3">
@@ -131,7 +134,7 @@ export default async function PracticeOverview() {
         </div>
 
         <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          AEC-flow · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
+          {companyName} · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
         </div>
       </div>
     </div>

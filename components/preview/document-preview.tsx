@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { firmName } from "@/lib/firm-identity";
 
 /** Minimal shape any module can build to get a quick preview. */
 export type PreviewDoc = {
@@ -313,7 +314,7 @@ function CadPreview({ name }: { name: string }) {
         <div className="absolute bottom-4 right-4 w-48 border border-white/25 bg-[#0e1726]/90 p-2 text-[10px] text-white/80">
           <div className="truncate font-semibold text-white">{name}</div>
           <div className="mt-1 flex justify-between border-t border-white/15 pt-1">
-            <span>ZenArch</span>
+            <span className="truncate">{firmName()}</span>
             <span>1:100</span>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { CostSummaryCharts } from "./cost-summary-charts";
 import type { FooterSettings } from "@/lib/server/practice-config";
 import { Card } from "@/components/ui/card";
 import { EmailButton } from "@/components/email/email-button";
+import { firmName } from "@/lib/firm-identity";
 import { SectionCopy } from "./section-copy";
 import {
   ESTIMATE_UNITS,
@@ -1868,7 +1869,7 @@ ${!preview ? `@media print {
               subject={`Estimate — ${est.projectName} (${est.version})`}
               attachment={`${est.projectName} — Estimate ${est.version}.pdf`}
               defaultTo={est.client?.includes("@") ? est.client : ""}
-              defaultBody={`Dear ${est.client?.trim() || "recipient"},\n\nPlease find attached our cost estimate for ${est.projectName}${est.projectNumber ? ` (No. ${est.projectNumber})` : ""}, version ${est.version}.\n\nKind regards,\nZenArch`}
+              defaultBody={`Dear ${est.client?.trim() || "recipient"},\n\nPlease find attached our cost estimate for ${est.projectName}${est.projectNumber ? ` (No. ${est.projectNumber})` : ""}, version ${est.version}.\n\nKind regards,\n${firmName()}`}
             />
             <button type="button" onClick={() => setPreview(false)} className={ghostBtn}>
               <X className="h-4 w-4" /> Close

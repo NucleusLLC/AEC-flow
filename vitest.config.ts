@@ -21,7 +21,9 @@ import { resolve } from "node:path";
  */
 export default defineConfig({
   test: {
-    include: ["lib/proposals/**/*.test.ts"],
+    // Files are named explicitly rather than broadened to `lib/**`: a wider glob
+    // would collect the node:test suites described above, which Vitest can't run.
+    include: ["lib/proposals/**/*.test.ts", "lib/firm-identity.test.ts"],
     environment: "node",
   },
   resolve: {

@@ -7,6 +7,7 @@ import { EstimateDocument } from "@/components/estimates/estimate-document";
 import { getEstimateById } from "@/lib/data/estimates";
 import { getGeneralConditions } from "@/lib/data/general-conditions-db";
 import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -24,7 +25,9 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
   const { gc, usd } = await searchParams;
   const est = await getEstimateById(id);
   if (!est) notFound();
-  const { logoDataUrl, logo } = await getPracticeSettings();
+  const { logoDataUrl, logo, profile } = await getPracticeSettings();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   // General Conditions are opt-in (matches the editor's default-off toggle). Use the
   // firm's SAVED General Conditions (DB), not the static seed, so the exported PDF
@@ -52,7 +55,7 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
 
       {/* A4 document sheet */}
       <div className="my-6 print:my-0">
-        <EstimateDocument est={est} generalConditions={generalConditions} usdRate={usdRate} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} />
+        <EstimateDocument est={est} generalConditions={generalConditions} usdRate={usdRate} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} />
       </div>
     </div>
   );

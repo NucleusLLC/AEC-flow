@@ -6,6 +6,7 @@ import { PrintButton } from "@/components/orders/print-button";
 import { OrderDocument } from "@/components/orders/order-document";
 import { getOrder } from "@/lib/data/orders";
 import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,9 @@ export default async function OrderPrintPage({ params }: PageProps) {
   const { id } = await params;
   const order = await getOrder(id);
   if (!order) notFound();
-  const { logoDataUrl } = await getPracticeSettings();
+  const { logoDataUrl, logo } = await getPracticeSettings();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
@@ -37,7 +40,7 @@ export default async function OrderPrintPage({ params }: PageProps) {
 
       {/* A4 document sheet */}
       <div className="my-6 print:my-0">
-        <OrderDocument order={order} logoDataUrl={logoDataUrl} />
+        <OrderDocument order={order} logoDataUrl={logoDataUrl} logo={{ position: logo.position, size: logo.size }} companyName={companyName} companyLocation={firm.location} />
       </div>
 
       <style>{`@page { size: A4; margin: 14mm; }`}</style>

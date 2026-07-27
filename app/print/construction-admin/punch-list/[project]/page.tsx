@@ -6,7 +6,10 @@ import { PrintButton } from "@/components/construction-admin/print-button";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
 import { PUNCH_STATUS_LABEL } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
+import { getPracticeSettings } from "@/lib/server/practice-config";
+import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import type { PunchListItem, PunchStatus, PunchPriority } from "@/lib/ca/types";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 type PageProps = { params: Promise<{ project: string }> };
 
@@ -104,8 +107,13 @@ function ItemsTable({ items }: { items: PunchListItem[] }) {
 export default async function PunchListPrintPage({ params }: PageProps) {
   const { project } = await params;
   const all = project === "all";
-  const items = await listPunchItems(all ? undefined : project);
+  const [items, practice] = await Promise.all([
+    listPunchItems(all ? undefined : project),
+    getPracticeSettings(),
+  ]);
   if (items.length === 0) notFound();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   // Group by project (for "all"), each project's items grouped by location.
   const projectGroups = new Map<string, PunchListItem[]>();
@@ -134,19 +142,18 @@ export default async function PunchListPrintPage({ params }: PageProps) {
 
       <div className="mx-auto my-6 w-[297mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* Letterhead */}
-        <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
-              Architecture · Engineering · Project Management
+        <DocumentLetterhead
+          logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
+          name={companyName}
+          borderClass="border-b-2 border-gray-900 pb-4"
+          details={
+            <div className="text-right">
+              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
+              <div className="mt-1 font-mono text-xs text-gray-600">{reportRef}</div>
+              <div className="text-[11px] text-gray-500">Issued {formatDate(new Date().toISOString())}</div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
-            <div className="mt-1 font-mono text-xs text-gray-600">{reportRef}</div>
-            <div className="text-[11px] text-gray-500">Issued {formatDate(new Date().toISOString())}</div>
-          </div>
-        </div>
+          }
+        />
 
         <h1 className="mt-6 text-lg font-bold text-gray-900">{heading}</h1>
         <Summary items={items} />
@@ -185,10 +192,10 @@ export default async function PunchListPrintPage({ params }: PageProps) {
 
         <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
           Disclaimer: This snag and defect register is issued for construction administration purposes. Items
-          remain subject to site verification and final inspection prior to handover. © AEC-flow.
+          remain subject to site verification and final inspection prior to handover. © {companyName}.
         </p>
         <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          AEC-flow · {reportRef} · {docTitle}
+          {companyName} · {reportRef} · {docTitle}
         </div>
       </div>
     </div>

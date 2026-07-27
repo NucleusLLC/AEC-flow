@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PrintButton } from "@/components/development/print-button";
+import { DocumentLetterhead } from "@/components/print/document-letterhead";
+import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 /**
- * Shared A4 print surface for Land Development reports — ZenArch letterhead, a
- * meta strip and a disclaimer. `@page { size: A4 }` yields a true A4 PDF via the
+ * Shared A4 print surface for Land Development reports — practice letterhead
+ * (configured company logo, or the company-name wordmark as a fallback), a meta
+ * strip and a disclaimer. `@page { size: A4 }` yields a true A4 PDF via the
  * browser's "Save as PDF". The toolbar is hidden when printing.
+ *
+ * Async server component: it loads the org-wide practice settings itself so
+ * every consuming print route gets the logo without threading props.
  */
-export function DevPrintShell({
+export async function DevPrintShell({
   backHref,
   docTitle,
   refNumber,
@@ -22,6 +29,9 @@ export function DevPrintShell({
   meta: { label: string; value: string }[];
   children: React.ReactNode;
 }) {
+  const { logoDataUrl, logo } = await getPracticeSettings();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
       <style>{`@page { size: A4; margin: 14mm; } @media print { html, body { background: #fff; } }`}</style>
@@ -36,19 +46,19 @@ export function DevPrintShell({
 
       <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* Letterhead */}
-        <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">ZenArch</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
-              Development · Land · Project Management
+        <DocumentLetterhead
+          logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
+          name={companyName}
+          tagline="Development · Land · Project Management"
+          borderClass="border-b-2 border-gray-900 pb-4"
+          details={
+            <div className="text-right">
+              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
+              <div className="mt-1 font-mono text-xs text-gray-600">{refNumber}</div>
+              <div className="text-[11px] text-gray-500">{projectName}</div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
-            <div className="mt-1 font-mono text-xs text-gray-600">{refNumber}</div>
-            <div className="text-[11px] text-gray-500">{projectName}</div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Meta strip */}
         <div className="mt-4 grid grid-cols-4 gap-3 rounded-md bg-gray-50 px-4 py-3 text-[11px] print:bg-gray-50">
@@ -66,10 +76,10 @@ export function DevPrintShell({
           Disclaimer: This development pro-forma is issued for planning and feasibility purposes.
           Figures are based on information available at the date of issue and remain subject to
           verification, market conditions, permit outcomes and final account. Not an offer or a
-          guarantee of returns. © ZenArch Development.
+          guarantee of returns. © {companyName}.
         </p>
         <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          ZenArch Development · {refNumber} · {docTitle}
+          {companyName} · {refNumber} · {docTitle}
         </div>
       </div>
     </div>

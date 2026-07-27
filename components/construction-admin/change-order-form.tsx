@@ -10,6 +10,7 @@ import { changeOrderBreakdown, revisedContractValue } from "@/lib/ca/calc";
 import { CHANGE_ORDER_STATUS_LABEL } from "@/lib/ca/labels";
 import type { ChangeOrder, ChangeOrderStatus } from "@/lib/ca/types";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
+import { firmName } from "@/lib/firm-identity";
 
 type ProjectOption = { id: string; name: string; value: number };
 
@@ -78,7 +79,7 @@ export function ChangeOrderForm({
       description: "",
       requestedBy: "",
       contractor: "",
-      architect: "ZenArch Consultants",
+      architect: firmName(),
       engineer: "",
       owner: "",
       status: "DRAFT",

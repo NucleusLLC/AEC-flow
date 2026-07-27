@@ -11,26 +11,42 @@
 
 import { ORDER_STATUS_LABEL, type OrderRecord } from "@/lib/data/orders.types";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { BrandMark } from "@/components/print/brand-mark";
+import { DocumentLetterhead } from "@/components/print/document-letterhead";
+import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
 
 export function OrderDocument({
   order,
   logoDataUrl,
+  logo,
+  companyName,
+  companyLocation,
 }: {
   order: OrderRecord;
   logoDataUrl?: string | null;
+  /** Logo placement (position + size); falls back to a left-aligned default. */
+  logo?: { position?: "left" | "center" | "right"; size?: number };
+  /** Configured practice name. Server print routes pass it; previews fall back to
+   *  the client-seeded firm identity (see lib/firm-identity.ts). */
+  companyName?: string;
+  /** Configured practice location for the footer; omitted entirely when unset. */
+  companyLocation?: string;
 }) {
+  const firm = firmName(companyName);
+  const location = firmLocation(companyLocation);
   return (
     <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
       {/* Letterhead */}
-      <div className="flex items-start justify-between border-b-2 border-gray-900 pb-5">
-        <BrandMark logoDataUrl={logoDataUrl} />
-        <div className="text-right">
-          <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Order Confirmation</div>
-          <div className="mt-1 text-xs text-gray-600">{ORDER_STATUS_LABEL[order.status]}</div>
-          <div className="text-xs text-gray-500">{order.orderNumber}</div>
-        </div>
-      </div>
+      <DocumentLetterhead
+        logo={{ dataUrl: logoDataUrl, position: logo?.position, size: logo?.size }}
+        name={companyName}
+        details={
+          <div className="text-right">
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Order Confirmation</div>
+            <div className="mt-1 text-xs text-gray-600">{ORDER_STATUS_LABEL[order.status]}</div>
+            <div className="text-xs text-gray-500">{order.orderNumber}</div>
+          </div>
+        }
+      />
 
       {/* Title */}
       <h1 className="mt-7 text-xl font-bold text-gray-900">{order.title || "Untitled order"}</h1>
@@ -104,7 +120,7 @@ export function OrderDocument({
       <div className="mt-12 grid grid-cols-2 gap-10">
         <div>
           <div className="h-12 border-b border-gray-400" />
-          <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">For ZenArch</div>
+          <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">For {firm}</div>
           <div className="mt-1 text-[10px] text-gray-400">Name · Signature · Date</div>
         </div>
         <div>
@@ -115,7 +131,7 @@ export function OrderDocument({
       </div>
 
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        ZenArch Consultants · Dubai, United Arab Emirates · Order {order.orderNumber}
+        {documentFooterLine(firm, location, `Order ${order.orderNumber}`)}
       </div>
     </div>
   );

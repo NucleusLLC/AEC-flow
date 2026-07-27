@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Mail, X, Paperclip, Send, Check } from "lucide-react";
+import { firmName } from "@/lib/firm-identity";
 
 /**
  * Reusable "Email …" button + compose dialog. Drop into any module to email an
@@ -64,7 +65,9 @@ function EmailDialog({
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [subj, setSubj] = useState(subject);
-  const [msg, setMsg] = useState(defaultBody ?? `Dear recipient,\n\nPlease find attached ${attachment}.\n\nKind regards,\nZenArch`);
+  const [msg, setMsg] = useState(
+    defaultBody ?? `Dear recipient,\n\nPlease find attached ${attachment}.\n\nKind regards,\n${firmName()}`,
+  );
   const [sent, setSent] = useState(false);
 
   useEffect(() => {

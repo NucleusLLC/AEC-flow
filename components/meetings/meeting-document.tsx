@@ -16,13 +16,30 @@ import {
 } from "@/lib/data/meetings.types";
 import { formatDate } from "@/lib/format";
 import { DocumentLetterhead, type LetterheadLogo } from "@/components/print/document-letterhead";
+import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
 
-export function MeetingDocument({ meeting, logo }: { meeting: MeetingRecord; logo?: LetterheadLogo }) {
+export function MeetingDocument({
+  meeting,
+  logo,
+  companyName,
+  companyLocation,
+}: {
+  meeting: MeetingRecord;
+  logo?: LetterheadLogo;
+  /** Configured practice name. Server print routes pass it; previews fall back to
+   *  the client-seeded firm identity (see lib/firm-identity.ts). */
+  companyName?: string;
+  /** Configured practice location for the footer; omitted entirely when unset. */
+  companyLocation?: string;
+}) {
+  const firm = firmName(companyName);
+  const location = firmLocation(companyLocation);
   return (
     <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
       {/* Letterhead */}
       <DocumentLetterhead
         logo={logo}
+        name={companyName}
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Meeting Minutes</div>
@@ -129,7 +146,7 @@ export function MeetingDocument({ meeting, logo }: { meeting: MeetingRecord; log
       </table>
 
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        ZenArch Consultants · Dubai, United Arab Emirates · Minutes recorded by {meeting.author}
+        {documentFooterLine(firm, location, `Minutes recorded by ${meeting.author}`)}
       </div>
     </div>
   );

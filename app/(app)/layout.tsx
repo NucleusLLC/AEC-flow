@@ -4,8 +4,10 @@ import { AppShell } from "@/components/shell/app-shell";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { BetaReportWidget } from "@/components/beta-report/beta-report-widget";
 import { SystemCurrencyInit } from "@/components/shell/system-currency-init";
+import { FirmIdentityInit } from "@/components/shell/firm-identity-init";
 import { getNotificationsForCurrentUser } from "@/lib/data/notifications";
 import { getSystemCurrency } from "@/lib/server/practice-config";
+import { getFirmIdentity } from "@/lib/server/firm";
 import { getCurrentCompany, isLicenseExpired } from "@/lib/server/tenant";
 import { checkCompanyLicense } from "@/lib/server/license";
 import { isCurrentUserFounder } from "@/lib/server/founder";
@@ -45,11 +47,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (licence.denied) redirect("/expired");
   }
 
-  const [notifications, systemCurrency, isFounder, cookieStore] = await Promise.all([
+  const [notifications, systemCurrency, isFounder, cookieStore, firm] = await Promise.all([
     getNotificationsForCurrentUser(),
     getSystemCurrency(),
     isCurrentUserFounder(),
     cookies(),
+    getFirmIdentity(),
   ]);
   // Seed the System Currency for server-rendered formatting this request…
   setSystemCurrency(systemCurrency);
@@ -59,6 +62,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       {/* …and on the client, before anything formats money. */}
       <SystemCurrencyInit currency={systemCurrency} />
+      {/* Seeds the practice's own name/location for in-app document previews, so a
+       * preview shows the same firm identity the printed document will carry. */}
+      <FirmIdentityInit name={firm.name} location={firm.location} />
       {/* Shell owns the collapsible "full screen" sidebar state (sidebar + topbar). */}
       <AppShell notifications={notifications} version={appVersionLabel()} isFounder={isFounder} initialModule={initialModule}>
         {children}

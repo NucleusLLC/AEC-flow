@@ -16,6 +16,8 @@ import {
   type Discipline,
 } from "@/lib/data/schedule";
 import { cn } from "@/lib/utils";
+import { SYSTEM_LOCALE } from "@/lib/format";
+import { firmName } from "@/lib/firm-identity";
 
 const PAPERS: Record<string, [number, number]> = {
   A4: [210, 297],
@@ -48,10 +50,14 @@ export function SchedulePrint({
   schedule,
   generatedAt,
   logo,
+  companyName,
 }: {
   schedule: ProjectSchedule;
   generatedAt: string;
   logo?: LetterheadLogo;
+  /** Configured practice name. The print route passes it; otherwise it resolves
+   *  through the client-seeded firm identity (see lib/firm-identity.ts). */
+  companyName?: string;
 }) {
   const [paper, setPaper] = useState<PaperKey>("A3");
   const [orient, setOrient] = useState<Orientation>("landscape");
@@ -120,7 +126,7 @@ export function SchedulePrint({
       const sIso = segStart.toISOString().slice(0, 10);
       const eIso = segEnd.toISOString().slice(0, 10);
       out.push({
-        label: c.toLocaleDateString("en-AE", { month: "short", year: "2-digit" }),
+        label: c.toLocaleDateString(SYSTEM_LOCALE, { month: "short", year: "2-digit" }),
         left: diffDaysIso(windowStart, sIso) * pxPerDay,
         width: (diffDaysIso(sIso, eIso) + 1) * pxPerDay,
       });
@@ -270,9 +276,9 @@ export function SchedulePrint({
               ) : (
                 <div className="flex h-7 items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded bg-[#1d4ed8] text-xs font-bold text-white">
-                    Z
+                    {firmName(companyName).charAt(0).toUpperCase()}
                   </span>
-                  <span className="text-sm font-semibold text-slate-900">ZenArch</span>
+                  <span className="text-sm font-semibold text-slate-900">{firmName(companyName)}</span>
                 </div>
               )}
               <h1 className="mt-2 text-lg font-bold text-slate-900">{schedule.projectName}</h1>

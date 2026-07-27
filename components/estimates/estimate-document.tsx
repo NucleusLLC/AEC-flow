@@ -15,6 +15,7 @@ import type { CostEstimate } from "@/lib/data/estimates";
 import type { GeneralConditionItem } from "@/lib/data/general-conditions";
 import { calcItem, categoryTotals, estimateTotals } from "@/lib/estimates/calc";
 import { DocumentLetterhead, type LetterheadLogo } from "@/components/print/document-letterhead";
+import { documentFooterLine, firmName } from "@/lib/firm-identity";
 
 const nf0 = (n: number) => Math.round(n).toLocaleString("en-US");
 const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -24,6 +25,7 @@ export function EstimateDocument({
   generalConditions,
   usdRate,
   logo,
+  companyName,
 }: {
   est: CostEstimate;
   /** When provided, enabled items are added as a "General Conditions" line before markup. */
@@ -31,7 +33,11 @@ export function EstimateDocument({
   /** When provided (>0), show a USD secondary unit: 1 {currency} = usdRate USD. */
   usdRate?: number;
   logo?: LetterheadLogo;
+  /** Configured practice name. Server print routes pass it; previews fall back to
+   *  the client-seeded firm identity (see lib/firm-identity.ts). */
+  companyName?: string;
 }) {
+  const firm = firmName(companyName);
   const rate = est.avgLaborRate;
   const t = estimateTotals(est, generalConditions);
   const money = (n: number) => `${est.currency} ${nf0(n)}`;
@@ -43,6 +49,7 @@ export function EstimateDocument({
       {/* Letterhead */}
       <DocumentLetterhead
         logo={logo}
+        name={companyName}
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Cost Estimate</div>
@@ -234,7 +241,7 @@ export function EstimateDocument({
         <div className="mt-8 grid grid-cols-2 gap-10">
           <div>
             <div className="h-px w-full bg-gray-400" />
-            <div className="mt-1 text-xs text-gray-600">Prepared by — ZenArch Consultants</div>
+            <div className="mt-1 text-xs text-gray-600">Prepared by — {firm}</div>
             <div className="text-[11px] text-gray-400">Estimator · Date</div>
           </div>
           <div>
@@ -246,7 +253,7 @@ export function EstimateDocument({
       </div>
 
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        ZenArch Consultants · Cost Estimate {est.id} · {est.version} · {est.location}
+        {documentFooterLine(firm, `Cost Estimate ${est.id}`, est.version, est.location)}
       </div>
     </div>
   );

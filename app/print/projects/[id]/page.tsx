@@ -5,6 +5,9 @@ import { ArrowLeft } from "lucide-react";
 import { PrintButton } from "@/components/print/print-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getProject } from "@/lib/data/projects";
+import { getPracticeSettings } from "@/lib/server/practice-config";
+import { DocumentLetterhead } from "@/components/print/document-letterhead";
+import { getFirmIdentity } from "@/lib/server/firm";
 import {
   PROJECT_STATUS_LABEL,
   PRIORITY_LABEL,
@@ -39,8 +42,10 @@ function Meta({ label, value }: { label: string; value: string }) {
 
 export default async function ProjectFactSheet({ params }: PageProps) {
   const { id } = await params;
-  const p = await getProject(id);
+  const [p, practice] = await Promise.all([getProject(id), getPracticeSettings()]);
   if (!p) notFound();
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
 
   const dash = (s: string | null) => (s ? formatDate(s) : "—");
 
@@ -58,18 +63,17 @@ export default async function ProjectFactSheet({ params }: PageProps) {
 
       <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* Letterhead */}
-        <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
-              Architecture · Engineering · Project Management
+        <DocumentLetterhead
+          logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
+          name={companyName}
+          borderClass="border-b-2 border-gray-900 pb-4"
+          details={
+            <div className="text-right">
+              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Project Fact Sheet</div>
+              <div className="mt-1 font-mono text-xs text-gray-600">{p.projectNumber}</div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Project Fact Sheet</div>
-            <div className="mt-1 font-mono text-xs text-gray-600">{p.projectNumber}</div>
-          </div>
-        </div>
+          }
+        />
 
         <h1 className="mt-5 text-xl font-bold text-gray-900">{p.name}</h1>
         {p.description ? <p className="mt-1 text-gray-700">{p.description}</p> : null}
@@ -151,7 +155,7 @@ export default async function ProjectFactSheet({ params }: PageProps) {
         </table>
 
         <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          AEC-flow · {p.projectNumber} · {p.name} · Generated {formatDate(new Date())}
+          {companyName} · {p.projectNumber} · {p.name} · Generated {formatDate(new Date())}
         </div>
       </div>
     </div>

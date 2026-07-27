@@ -4,13 +4,15 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PrintButton } from "@/components/print/print-button";
 import { formatCurrency, formatDate, getSystemCurrency, setSystemCurrency } from "@/lib/format";
-import { getSystemCurrency as getConfiguredCurrency } from "@/lib/server/practice-config";
+import { getSystemCurrency as getConfiguredCurrency, getPracticeSettings } from "@/lib/server/practice-config";
+import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
 import { getProposals } from "@/lib/data/proposals";
 import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
+import { getFirmIdentity } from "@/lib/server/firm";
 
 type Row = Record<string, unknown>;
 type Col = { label: string; key: string; right?: boolean; fmt?: (v: unknown, row: Row) => string };
@@ -108,7 +110,10 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
   // Print routes aren't wrapped by the (app) layout that normally seeds the
   // System Currency, so seed it here for the money() fallback (per-row
   // currencies still override).
-  setSystemCurrency(await getConfiguredCurrency());
+  const [configuredCurrency, practice] = await Promise.all([getConfiguredCurrency(), getPracticeSettings()]);
+  setSystemCurrency(configuredCurrency);
+  const firm = await getFirmIdentity();
+  const companyName = firm.name;
   const rows = (await cfg.getter()) as Row[];
   const cell = (c: Col, row: Row) => {
     const v = row[c.key];
@@ -130,18 +135,17 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
 
       <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* Letterhead */}
-        <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4">
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-gray-900">AEC-flow</div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-gray-500">
-              Architecture · Engineering · Project Management
+        <DocumentLetterhead
+          logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
+          name={companyName}
+          borderClass="border-b-2 border-gray-900 pb-4"
+          details={
+            <div className="text-right">
+              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{cfg.title}</div>
+              <div className="mt-1 text-xs text-gray-500">{rows.length} records · {formatDate(new Date())}</div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{cfg.title}</div>
-            <div className="mt-1 text-xs text-gray-500">{rows.length} records · {formatDate(new Date())}</div>
-          </div>
-        </div>
+          }
+        />
 
         <table className="mt-5 w-full border-collapse text-[11.5px]">
           <thead>
@@ -177,7 +181,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
         </table>
 
         <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          AEC-flow · {cfg.title} · {rows.length} records
+          {companyName} · {cfg.title} · {rows.length} records
         </div>
       </div>
     </div>

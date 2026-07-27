@@ -17,15 +17,25 @@ import {
   type ProposalRecord,
 } from "@/lib/data/proposals.types";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
 import { DocumentLetterhead, type LetterheadLogo } from "@/components/print/document-letterhead";
 
 export function ProposalDocument({
   proposal,
   logo,
+  companyName,
+  companyLocation,
 }: {
   proposal: ProposalRecord;
   logo?: LetterheadLogo;
+  /** Configured practice name. Server print routes pass it; previews fall back to
+   *  the client-seeded firm identity (see lib/firm-identity.ts). */
+  companyName?: string;
+  /** Configured practice location for the footer; omitted entirely when unset. */
+  companyLocation?: string;
 }) {
+  const firm = firmName(companyName);
+  const location = firmLocation(companyLocation);
   const committed = committedFee(proposal);
   const optional = optionalFee(proposal);
   const lineItems = [...proposal.lineItems].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -35,6 +45,7 @@ export function ProposalDocument({
       {/* Letterhead */}
       <DocumentLetterhead
         logo={logo}
+        name={companyName}
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Fee Proposal</div>
@@ -54,7 +65,7 @@ export function ProposalDocument({
         </div>
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Prepared by</div>
-          <div className="mt-1 font-semibold text-gray-900">ZenArch Consultants</div>
+          <div className="mt-1 font-semibold text-gray-900">{firm}</div>
           <div className="text-gray-600">{proposal.owner}</div>
         </div>
       </div>
@@ -191,12 +202,12 @@ export function ProposalDocument({
       <div className="mt-10 break-inside-avoid border-t border-gray-300 pt-6">
         <p className="text-xs text-gray-500">
           This proposal is valid until {formatDate(proposal.validUntil)}. To proceed, please countersign
-          below and return a copy to ZenArch Consultants.
+          below and return a copy to {firm}.
         </p>
         <div className="mt-8 grid grid-cols-2 gap-10">
           <div>
             <div className="h-px w-full bg-gray-400" />
-            <div className="mt-1 text-xs text-gray-600">For and on behalf of ZenArch Consultants</div>
+            <div className="mt-1 text-xs text-gray-600">For and on behalf of {firm}</div>
             <div className="text-[11px] text-gray-400">{proposal.owner} · Date</div>
           </div>
           <div>
@@ -208,8 +219,12 @@ export function ProposalDocument({
       </div>
 
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        ZenArch Consultants · Dubai, United Arab Emirates · {proposal.refNumber}
-        {proposal.revision > 1 ? ` · Rev ${proposal.revision}` : ""}
+        {documentFooterLine(
+          firm,
+          location,
+          proposal.refNumber,
+          proposal.revision > 1 ? `Rev ${proposal.revision}` : "",
+        )}
       </div>
     </div>
   );
