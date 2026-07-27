@@ -24,5 +24,10 @@ export async function getFirmIdentity(): Promise<FirmIdentity> {
   return {
     name: practice.profile.name?.trim() || company?.name?.trim() || "AEC-flow",
     location: practiceLocationLine(practice.profile),
+    logo: {
+      dataUrl: practice.logoDataUrl,
+      position: practice.logo.position,
+      size: practice.logo.size,
+    },
   };
 }

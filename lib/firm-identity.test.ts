@@ -4,6 +4,7 @@ import {
   getFirmIdentity,
   firmName,
   firmLocation,
+  firmLogo,
   practiceLocationLine,
   documentFooterLine,
 } from "@/lib/firm-identity";
@@ -16,7 +17,7 @@ import {
  */
 
 beforeEach(() => {
-  setFirmIdentity({ name: "", location: "" });
+  setFirmIdentity({ name: "", location: "", logo: { dataUrl: null, position: "left", size: 56 } });
 });
 
 describe("firmName", () => {
@@ -91,8 +92,38 @@ describe("documentFooterLine", () => {
 describe("setFirmIdentity", () => {
   it("trims what it stores and ignores a null seed", () => {
     setFirmIdentity({ name: "  Uzca Architects  ", location: "  Aruba  " });
-    expect(getFirmIdentity()).toEqual({ name: "Uzca Architects", location: "Aruba" });
+    expect(getFirmIdentity().name).toBe("Uzca Architects");
+    expect(getFirmIdentity().location).toBe("Aruba");
     setFirmIdentity(null);
-    expect(getFirmIdentity()).toEqual({ name: "Uzca Architects", location: "Aruba" });
+    expect(getFirmIdentity().name).toBe("Uzca Architects");
+  });
+});
+
+describe("firmLogo", () => {
+  const LOGO = { dataUrl: "data:image/png;base64,AAA", position: "right" as const, size: 72 };
+
+  it("returns the configured logo when a caller passes none — the preview-modal case", () => {
+    setFirmIdentity({ name: "ZenArch", location: "", logo: LOGO });
+    expect(firmLogo()).toEqual(LOGO);
+    expect(firmLogo(undefined)).toEqual(LOGO);
+  });
+
+  it("lets an explicit logo win", () => {
+    setFirmIdentity({ name: "ZenArch", location: "", logo: LOGO });
+    expect(firmLogo({ dataUrl: "data:image/png;base64,BBB" }).dataUrl).toBe("data:image/png;base64,BBB");
+  });
+
+  it("falls back field by field, so a bare data URL still inherits position and size", () => {
+    setFirmIdentity({ name: "ZenArch", location: "", logo: LOGO });
+    expect(firmLogo({ dataUrl: "data:image/png;base64,BBB" })).toEqual({
+      dataUrl: "data:image/png;base64,BBB",
+      position: "right",
+      size: 72,
+    });
+  });
+
+  it("reports no logo when none is configured, so the wordmark shows instead", () => {
+    expect(firmLogo().dataUrl).toBeNull();
+    expect(firmLogo({ dataUrl: null }).dataUrl).toBeNull();
   });
 });

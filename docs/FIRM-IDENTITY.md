@@ -55,13 +55,24 @@ the System Currency.
 
 | Surface | How it gets the identity |
 |---|---|
-| `app/print/**` routes | `await getFirmIdentity()` → passed as `companyName` / `companyLocation` props |
-| In-app preview modals | the seeded global, via `firmName()` / `firmLocation()` with no argument |
+| `app/print/**` routes | `await getFirmIdentity()` → passed as `companyName` / `companyLocation` / `logo` props |
+| In-app preview modals | the seeded global, via `firmName()` / `firmLocation()` / `firmLogo()` with no argument |
 
 Preview modals (`ProposalPreviewModal`, `DocumentPreview`, the estimate print
 overlay) are client components nested several levels inside client-only views;
 threading a prop from a server parent would mean touching every intermediate
 view. The global keeps preview and print showing the same thing.
+
+### The logo travels the same way as the name
+
+The seed carries the uploaded logo (data URL, position, size) as well, because
+`ProposalPreviewModal` renders `<ProposalDocument>` with no logo prop — the
+preview claimed to show "exactly what the client receives" while actually
+showing a text wordmark where the print route showed the logo.
+
+`DocumentLetterhead` resolves through `firmLogo(logo)`, which falls back **field
+by field**: pass only a data URL and you still inherit the configured position
+and size. So a new document surface gets the right logo by doing nothing.
 
 ### ⚠ Why the global is seeded ONLY in the browser
 
@@ -107,4 +118,23 @@ flagged for explicit approval rather than made silently.
 5. Sample and seed data may legitimately contain "ZenArch Consultants" as a
    *vendor* — that is demo content, not branding. Leave it.
 
-Covered by `lib/firm-identity.test.ts` (13 tests).
+Covered by `lib/firm-identity.test.ts` (17 tests).
+
+---
+
+## 6. How this was verified
+
+Unit tests cover the resolvers, but the thing that actually matters — *does the
+uploaded logo appear on the page* — was checked by rendering every document
+against the live database with a headless browser, probing each page for an
+`<img src="data:image…">` in the letterhead:
+
+| Surface | Result |
+|---|---|
+| 19 print routes (service proposal, RFI, change order, certification, CA report, punch list, minutes, order, fee proposal, estimate, PO, materials schedule, design transmittal, development feasibility/investor, client & project fact sheets, team, practice overview, directory) | logo rendered, 56 px |
+| In-app fee-proposal preview modal | logo rendered |
+| Gantt / timeframe sheet | wired identically (`logo.dataUrl` → `<img>`); not rendered because the founder company has no schedule record |
+
+Re-run it by pointing a headless browser at `/print/**` with a session cookie and
+asserting on that `<img>`. Note the tenant scope returns **empty without a
+session**, so unauthenticated print routes 404 by design — that is not a bug.

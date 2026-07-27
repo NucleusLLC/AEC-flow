@@ -5,8 +5,15 @@
  * according to the org-wide logo placement configured in Settings → Practice
  * (position: left | center | right, and size in px). Presentational, no hooks, so
  * it renders identically in server print routes and client preview modals.
+ *
+ * When a caller passes no logo — preview modals nested inside client-only views —
+ * it falls back to the identity seeded by <FirmIdentityInit>, so a preview shows
+ * the same uploaded logo the printed document will carry. Each field falls back
+ * independently, so passing only a data URL still inherits the configured
+ * position and size.
  */
 import { BrandMark } from "@/components/print/brand-mark";
+import { firmLogo } from "@/lib/firm-identity";
 
 export type LetterheadLogo = {
   dataUrl?: string | null;
@@ -28,8 +35,9 @@ export function DocumentLetterhead({
   tagline?: string;
   borderClass?: string;
 }) {
-  const position = logo?.position ?? "left";
-  const mark = <BrandMark logoDataUrl={logo?.dataUrl} size={logo?.size} name={name} tagline={tagline} />;
+  const resolved = firmLogo(logo);
+  const position = resolved.position;
+  const mark = <BrandMark logoDataUrl={resolved.dataUrl} size={resolved.size} name={name} tagline={tagline} />;
 
   if (position === "center") {
     return (

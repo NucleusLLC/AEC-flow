@@ -64,7 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <SystemCurrencyInit currency={systemCurrency} />
       {/* Seeds the practice's own name/location for in-app document previews, so a
        * preview shows the same firm identity the printed document will carry. */}
-      <FirmIdentityInit name={firm.name} location={firm.location} />
+      <FirmIdentityInit name={firm.name} location={firm.location} logo={firm.logo} />
       {/* Shell owns the collapsible "full screen" sidebar state (sidebar + topbar). */}
       <AppShell notifications={notifications} version={appVersionLabel()} isFounder={isFounder} initialModule={initialModule}>
         {children}

@@ -25,14 +25,37 @@
  * and the explicit props apply. Do not add a server-side `setFirmIdentity` call.
  */
 
-export type FirmIdentity = { name: string; location: string };
+/** Logo placement as configured in Settings → Practice → Document Logo. */
+export type FirmLogo = { dataUrl: string | null; position: "left" | "center" | "right"; size: number };
 
-let FIRM: FirmIdentity = { name: "", location: "" };
+export type FirmIdentity = { name: string; location: string; logo: FirmLogo };
+
+const NO_LOGO: FirmLogo = { dataUrl: null, position: "left", size: 56 };
+
+let FIRM: FirmIdentity = { name: "", location: "", logo: NO_LOGO };
 
 /** Seeds the client-side identity. Called by <FirmIdentityInit> only — see above. */
 export function setFirmIdentity(firm: Partial<FirmIdentity> | null | undefined): void {
   if (!firm) return;
-  FIRM = { name: (firm.name ?? "").trim(), location: (firm.location ?? "").trim() };
+  FIRM = {
+    name: (firm.name ?? "").trim(),
+    location: (firm.location ?? "").trim(),
+    logo: firm.logo ? { ...NO_LOGO, ...firm.logo } : NO_LOGO,
+  };
+}
+
+/**
+ * The configured document logo, for components rendered without an explicit one
+ * — in-app preview modals, which must show what the printed document will show.
+ * Each field falls back independently so a caller can pass a data URL and still
+ * inherit the configured position and size.
+ */
+export function firmLogo(override?: Partial<FirmLogo> | null): FirmLogo {
+  return {
+    dataUrl: override?.dataUrl ?? FIRM.logo.dataUrl,
+    position: override?.position ?? FIRM.logo.position,
+    size: override?.size ?? FIRM.logo.size,
+  };
 }
 
 export function getFirmIdentity(): FirmIdentity {
