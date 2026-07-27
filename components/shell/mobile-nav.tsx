@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, MessageSquarePlus, X } from "lucide-react";
+import { Menu, MessageSquarePlus, Settings, X } from "lucide-react";
 import { openBetaReport } from "@/components/beta-report/open-beta-report";
 import { useModule } from "@/components/shell/module-provider";
 import { ModuleSwitcher } from "@/components/shell/module-switcher";
@@ -120,6 +120,34 @@ export function MobileNav() {
                 </div>
               ))}
             </nav>
+
+            {/* Settings — pinned below the nav so it is reachable from EVERY module. */}
+            <div className="border-t border-white/10 px-3 py-2">
+              {(() => {
+                const active = pathname === "/settings" || pathname.startsWith("/settings/");
+                return (
+                  <Link
+                    href="/settings"
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-sidebar-2 text-white"
+                        : "text-sidebar-fg hover:bg-sidebar-2/60 hover:text-white",
+                    )}
+                  >
+                    <Settings
+                      className={cn(
+                        "h-[18px] w-[18px] shrink-0",
+                        active ? "text-brand" : "text-sidebar-muted",
+                      )}
+                      strokeWidth={2}
+                    />
+                    {t("Settings")}
+                  </Link>
+                );
+              })()}
+            </div>
 
             {/* Beta feedback — the sidebar is desktop-only, so the drawer carries the
              * other launcher for the Bug/Wish panel. */}

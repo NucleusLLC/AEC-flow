@@ -19,7 +19,6 @@ import {
   Activity,
   Download,
   Upload,
-  Settings,
   Bug,
   LayoutGrid,
   ListChecks,
@@ -112,7 +111,6 @@ export const navSections: NavSection[] = [
       { label: "Exports", href: "/exports", icon: Download, disabled: true },
       { label: "Widgets", href: "/widgets", icon: LayoutGrid },
       { label: "Beta Reports", href: "/beta-reports", icon: Bug },
-      { label: "Settings", href: "/settings", icon: Settings },
     ],
   },
 ];

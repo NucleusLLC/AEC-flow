@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { MessageSquarePlus, ShieldCheck } from "lucide-react";
+import { MessageSquarePlus, Settings, ShieldCheck } from "lucide-react";
 import { openBetaReport } from "@/components/beta-report/open-beta-report";
 import { useModule } from "@/components/shell/module-provider";
 import { ModuleSwitcher } from "@/components/shell/module-switcher";
@@ -119,6 +119,34 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
           </div>
         ))}
       </nav>
+
+      {/* Settings — pinned below the nav so it is reachable from EVERY module,
+       * not just the one whose curated nav happened to include it. */}
+      <div className="border-t border-white/10 px-3 py-2">
+        {(() => {
+          const active = pathname === "/settings" || pathname.startsWith("/settings/");
+          return (
+            <Link
+              href="/settings"
+              className={cn(
+                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-sidebar-2 text-white"
+                  : "text-sidebar-fg hover:bg-sidebar-2/60 hover:text-white",
+              )}
+            >
+              <Settings
+                className={cn(
+                  "h-[18px] w-[18px] shrink-0",
+                  active ? "text-brand" : "text-sidebar-muted group-hover:text-sidebar-fg",
+                )}
+                strokeWidth={2}
+              />
+              {t("Settings")}
+            </Link>
+          );
+        })()}
+      </div>
 
       {/* Beta feedback — opens the Bug/Wish panel (mounted in the (app) layout).
        * Lives here rather than floating over the page, where it used to overlap

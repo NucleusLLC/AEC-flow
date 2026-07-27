@@ -228,5 +228,9 @@ export function allModuleNavItems() {
       }
     }
   }
+  // Settings is a shell-level link pinned in the sidebar footer (present in every
+  // module) rather than a per-module nav item, so include it here for page-title
+  // resolution.
+  if (!seen.has("/settings")) items.push({ label: "Settings", href: "/settings" });
   return items;
 }
