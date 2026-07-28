@@ -31,7 +31,15 @@ import { useEffect, useRef, useState } from "react";
  * mechanism that can number pages the browser itself decides on.
  */
 
-type Atom = { top: number; bottom: number; height: number };
+type Atom = { el: HTMLElement; top: number; bottom: number; height: number };
+
+/** Removes the spacing applied by a previous measuring pass. */
+function clearGutters(root: HTMLElement): void {
+  for (const el of Array.from(root.querySelectorAll<HTMLElement>("[data-paged-break]"))) {
+    el.removeAttribute("data-paged-break");
+    el.style.removeProperty("--paged-gutter");
+  }
+}
 
 /**
  * The blocks the browser genuinely refuses to split, in document order.
@@ -66,7 +74,7 @@ function collectAtoms(root: HTMLElement, hostTop: number): Atom[] {
       if (atomic) {
         const rect = child.getBoundingClientRect();
         const top = rect.top + window.scrollY - hostTop;
-        out.push({ top, bottom: top + rect.height, height: rect.height });
+        out.push({ el: child, top, bottom: top + rect.height, height: rect.height });
       } else if (child.children.length > 0) {
         walk(child);
       }
@@ -79,15 +87,21 @@ function collectAtoms(root: HTMLElement, hostTop: number): Atom[] {
   return out;
 }
 
+/** Height of the on-screen gutter drawn between two pages, in millimetres. */
+const GUTTER_MM = 16;
+
 export function PagedPreview({
   /** Printable height of one page in millimetres (page height − top/bottom margins). */
   pageContentHeightMm,
   /** Printable width, used only to detect a sheet squeezed narrower than paper. */
   pageContentWidthMm = 182,
+  /** The practice footer line, shown at the left of each page's footer band. */
+  footerText,
   children,
 }: {
   pageContentHeightMm: number;
   pageContentWidthMm?: number;
+  footerText?: string;
   children: React.ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -129,15 +143,32 @@ export function PagedPreview({
         return;
       }
 
+      // Any gutters from a previous pass must go before measuring, or each run
+      // would paginate a document already inflated by the last run's spacing.
+      clearGutters(el);
+
+      // A page should not end mid-sentence, so short text blocks are made
+      // unbreakable and move whole. The ceiling matters: marking EVERY paragraph
+      // unbreakable turned a 197mm scope paragraph into an atom and forced the
+      // page to end at its top, wasting three quarters of a sheet. Anything
+      // longer than this keeps splitting, which is the lesser evil.
+      const keepMax = pageH * 0.35;
+      for (const block of Array.from(
+        el.querySelectorAll<HTMLElement>("p, li, dd, blockquote"),
+      )) {
+        const h = block.getBoundingClientRect().height;
+        if (h > 0 && h <= keepMax) block.setAttribute("data-auto-keep", "");
+        else block.removeAttribute("data-auto-keep");
+      }
+
       const atoms = collectAtoms(el, hostTop);
-      const contentHeight = hostRect.height;
+      const contentHeight = el.getBoundingClientRect().height;
 
       // Fill each page to its full height, then pull the boundary back only if
       // it would land inside a block that cannot be split — that block moves down
       // whole, which is exactly what the print engine does.
-      const found: { top: number; page: number }[] = [];
+      const cuts: { at: number; atom?: Atom }[] = [];
       let pageStart = 0;
-      let page = 1;
 
       while (pageStart + pageH < contentHeight - 1) {
         let boundary = pageStart + pageH;
@@ -147,16 +178,38 @@ export function PagedPreview({
         );
         if (straddler) boundary = straddler.top;
 
-        found.push({ top: boundary, page });
-        page += 1;
+        // The block that will begin the next page — the one to push down so the
+        // gutter opens in the right place.
+        const starter = straddler ?? atoms.find((a) => a.top >= boundary - 1);
+
+        cuts.push({ at: boundary, atom: starter });
         pageStart = boundary;
 
         // Defensive: a boundary that fails to advance would spin forever.
-        if (found.length > 200) break;
+        if (cuts.length > 200) break;
       }
 
-      setBreaks(found);
-      setTotal(page);
+      // Open a real gap at each cut so the page footer has room and content is
+      // never printed into the band. Screen-only: see the CSS note in PageRules.
+      const gutterPx = GUTTER_MM * pxPerMm;
+      for (const cut of cuts) {
+        if (!cut.atom) continue;
+        cut.atom.el.setAttribute("data-paged-break", "");
+        cut.atom.el.style.setProperty("--paged-gutter", `${gutterPx}px`);
+      }
+
+      // Positions shifted when the gutters opened, so read them back rather than
+      // predicting where everything landed.
+      const hostTop2 = el.getBoundingClientRect().top + window.scrollY;
+      const bands = cuts.map((cut, i) => {
+        const top = cut.atom
+          ? cut.atom.el.getBoundingClientRect().top + window.scrollY - hostTop2 - gutterPx
+          : cut.at;
+        return { top, page: i + 1 };
+      });
+
+      setBreaks(bands);
+      setTotal(cuts.length + 1);
     }
 
     measure();
@@ -188,13 +241,19 @@ export function PagedPreview({
           data-paged-preview-chrome="true"
           aria-hidden
           className="pointer-events-none absolute left-0 right-0 z-10 print:hidden"
-          style={{ top: b.top }}
+          style={{ top: b.top, height: `${GUTTER_MM}mm` }}
         >
-          <div className="relative -mx-[14mm] border-t border-dashed border-gray-300">
-            <span className="absolute -top-[9px] right-[14mm] bg-white px-2 text-[10px] font-medium text-gray-400">
+          {/* The page's own footer band — the practice line left, the page
+           * number right, exactly as the printed margin boxes place them. */}
+          <div className="flex items-end justify-between border-t border-gray-200 pt-1 text-[9px] text-gray-400">
+            <span className="truncate pr-4">{footerText}</span>
+            <span className="shrink-0 tabular-nums">
               Page {b.page} of {total}
             </span>
           </div>
+          {/* The sheet edge: everything below is the next page. */}
+          <div className="absolute inset-x-[-14mm] bottom-0 border-b border-gray-300" />
+          <div className="absolute inset-x-[-14mm] bottom-0 h-[6mm] translate-y-full bg-gray-100" />
         </div>
       ))}
 

@@ -37,12 +37,12 @@ export async function CaPrintShell({
   children: React.ReactNode;
   signatures: { role: string; name: string }[];
 }) {
-  const { logoDataUrl, logo, documentFontId } = await getPracticeSettings();
+  const { logoDataUrl, logo, documentFontId, footer } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   return (
     <DocumentFont fontId={documentFontId} className="min-h-screen bg-gray-100 print:bg-white">
-      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} footerLeft={refNumber} />
+      <PageRules margins={{ top: 14, right: 14, bottom: 20, left: 14 }} footerLeft={footer.text} />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
         <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
@@ -57,7 +57,7 @@ export async function CaPrintShell({
        * differently, so it cannot be an accurate preview. */}
       <div className="aec-doc mx-auto my-6 w-[210mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* A4 (297mm) less the 14mm top and bottom @page margins. */}
-        <PagedPreview pageContentHeightMm={269}>
+        <PagedPreview pageContentHeightMm={263} footerText={footer.text}>
         {/* Letterhead */}
         <DocumentLetterhead
           logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}

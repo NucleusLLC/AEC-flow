@@ -74,11 +74,14 @@ export function PageRules({
 
   const marginBoxStyle = `font-size: ${TYPE_SCALE.footer}pt; color: #6b7280; font-family: inherit;`;
 
+  // Footer band layout, matching the Estimates sheet: the practice's footer line
+  // on the left, the page number on the right. Nothing sits centred, so a long
+  // footer line and the page number cannot collide.
   const marginBoxes = [
-    pageNumbers
-      ? `@bottom-center { content: "Page " counter(page) " of " counter(pages); ${marginBoxStyle} }`
-      : "",
     footerLeft ? `@bottom-left { content: ${cssString(footerLeft)}; ${marginBoxStyle} }` : "",
+    pageNumbers
+      ? `@bottom-right { content: "Page " counter(page) " of " counter(pages); ${marginBoxStyle} }`
+      : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -161,24 +164,59 @@ function documentCss(density: Density): string {
 }
 
 /**
- * Shared pagination behaviour. `break-inside` is the modern property; the
- * `page-break-*` aliases are kept because Chrome's print path still honours them
- * on some elements where the modern property alone is ignored.
+ * Shared pagination behaviour.
+ *
+ * The break declarations are deliberately NOT wrapped in `@media print`. They
+ * have no visual effect on a continuous screen, but the paged preview reads them
+ * back with `getComputedStyle` to work out which blocks the printer will refuse
+ * to split. Hidden inside a print-only block they would be invisible to the
+ * preview, and the preview would once again disagree with the printed page.
+ *
+ * `break-inside` is the modern property; the `page-break-*` aliases are kept
+ * because Chrome's print path still honours them on elements where the modern
+ * property alone is ignored.
  */
 const PRINT_BREAK_CSS = `
+.aec-doc tr,
+.aec-doc img,
+.aec-doc figure { break-inside: avoid; page-break-inside: avoid; }
+
+/* NOTE: paragraphs and list items are deliberately NOT marked unbreakable here.
+ * Doing so made a 197mm scope paragraph atomic, which forced the page to end at
+ * its top and left three quarters of the sheet empty — the same waste twice
+ * fixed elsewhere. Instead PagedPreview marks only SHORT blocks with
+ * data-keep-together (rule below), so ordinary paragraphs and bullets move whole
+ * to the next page while an over-long one still splits. */
+
+/* A heading must not be the last thing on a page. */
+.aec-doc h1,
+.aec-doc h2,
+.aec-doc h3,
+.aec-doc h4 { break-after: avoid; page-break-after: avoid; }
+
+.aec-doc [data-keep-together] { break-inside: avoid; page-break-inside: avoid; }
+
+/* Applied by PagedPreview to text blocks short enough to move whole. Keeps a
+ * page from ending mid-sentence without stranding a page for a long block. */
+.aec-doc [data-auto-keep] { break-inside: avoid; page-break-inside: avoid; }
+.aec-doc [data-break-before] { break-before: page; page-break-before: always; }
+
+.aec-doc p,
+.aec-doc li { orphans: ${BREAK_RULES.minimumOrphanLines}; widows: ${BREAK_RULES.minimumWidowLines}; }
+
+/* Screen-only page gutter. PagedPreview sets --paged-gutter on the block that
+ * starts each new page, opening a real gap for that page's footer band so
+ * content is never drawn underneath it. It is deliberately absent from print:
+ * there the gap is the @page bottom margin, and adding margin as well would push
+ * every page short. The original top margin is intentionally overridden — a
+ * block that begins a page has its top margin dropped by the print engine too. */
+@media screen {
+  .aec-doc [data-paged-break] { margin-top: var(--paged-gutter, 0) !important; }
+}
+
 @media print {
   /* A table split across pages must carry its header onto the next one. */
-  thead { display: table-header-group; }
-  tfoot { display: table-footer-group; }
-  tr, img, figure { break-inside: avoid; page-break-inside: avoid; }
-
-  /* A heading must not be the last thing on a page. */
-  h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
-
-  /* Blocks that lose their meaning when split. */
-  [data-keep-together] { break-inside: avoid; page-break-inside: avoid; }
-  [data-break-before] { break-before: page; page-break-before: always; }
-
-  p, li { orphans: ${BREAK_RULES.minimumOrphanLines}; widows: ${BREAK_RULES.minimumWidowLines}; }
+  .aec-doc thead { display: table-header-group; }
+  .aec-doc tfoot { display: table-footer-group; }
 }
 `.trim();

@@ -25,8 +25,13 @@ import {
   createServiceProposalAction,
   updateServiceProposalAction,
 } from "@/app/(app)/design/service-proposals/actions";
+import { saveClient } from "@/app/(app)/clients/actions";
+import type { ClientWriteInput } from "@/lib/data/clients.types";
 
 type Option = { id: string; name: string };
+
+/** Sentinel value for the "+ New client" row in the client dropdown. Never sent to the server. */
+const NEW_CLIENT = "__new_client__";
 
 const CURRENCIES = ["USD", "AWG", "EUR", "ANG"];
 const BASIS_TYPES: CostBasisType[] = [
@@ -116,6 +121,89 @@ export function ServiceProposalForm({
   const [contactName, setContactName] = useState(init?.contactName ?? "");
   const [contactEmail, setContactEmail] = useState(init?.contactEmail ?? "");
   const [currency, setCurrency] = useState(init?.currency ?? "USD");
+
+  /* ---- Inline "+ New client" -------------------------------------------- */
+  // Clients created from inside this form. Merged with the server-rendered list
+  // so the new row is selectable immediately, without leaving the page.
+  const [addedClients, setAddedClients] = useState<Option[]>([]);
+  const [newClientOpen, setNewClientOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientCompany, setNewClientCompany] = useState("");
+  const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientError, setNewClientError] = useState<string | null>(null);
+  const [clientPending, startClient] = useTransition();
+
+  const clientOptions = useMemo(() => {
+    const known = new Set(clients.map((c) => c.id));
+    return [...clients, ...addedClients.filter((c) => !known.has(c.id))];
+  }, [clients, addedClients]);
+
+  function resetNewClient() {
+    setNewClientName("");
+    setNewClientCompany("");
+    setNewClientEmail("");
+    setNewClientError(null);
+  }
+
+  function onClientChange(value: string) {
+    if (value === NEW_CLIENT) {
+      setNewClientError(null);
+      setNewClientOpen(true);
+      return;
+    }
+    setNewClientOpen(false);
+    resetNewClient();
+    setClientId(value);
+  }
+
+  /** Cancel the inline form — the dropdown falls back to whatever was selected before. */
+  function cancelNewClient() {
+    setNewClientOpen(false);
+    resetNewClient();
+  }
+
+  function saveNewClient() {
+    const name = newClientName.trim();
+    if (!name) {
+      setNewClientError("Client name is required.");
+      return;
+    }
+    setNewClientError(null);
+    // Same server action the /clients/new form uses, so tenant scoping,
+    // validation and activity logging all stay in one place.
+    const payload: ClientWriteInput = {
+      name,
+      companyName: newClientCompany.trim() || null,
+      contactPerson: null,
+      email: newClientEmail.trim() || null,
+      phone: null,
+      website: null,
+      taxNumber: null,
+      type: "PRIVATE",
+      status: "ACTIVE",
+      tags: [],
+      notes: null,
+      addresses: [],
+    };
+    startClient(async () => {
+      const res = await saveClient("new", payload);
+      if (!res.ok) {
+        setNewClientError(res.error);
+        return;
+      }
+      setAddedClients((p) => [...p, { id: res.id, name }]);
+      setClientId(res.id);
+      setNewClientOpen(false);
+      resetNewClient();
+    });
+  }
+
+  // Enter inside the inline fields must save the client, not submit the proposal.
+  function onNewClientKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    saveNewClient();
+  }
 
   const [basisType, setBasisType] = useState<CostBasisType>(
     init?.costBasis?.type ?? "ESTIMATED_CONSTRUCTION_COST",
@@ -282,7 +370,7 @@ export function ServiceProposalForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const client = clients.find((c) => c.id === clientId);
+    const client = clientOptions.find((c) => c.id === clientId);
     const project = projects.find((p) => p.id === projectId);
     const payload = {
       title,
@@ -370,10 +458,70 @@ export function ServiceProposalForm({
             </div>
             <div>
               <label className={label}>Client</label>
-              <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={field}>
+              <select
+                value={newClientOpen ? NEW_CLIENT : clientId}
+                onChange={(e) => onClientChange(e.target.value)}
+                className={field}
+              >
                 <option value="">— None —</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <option value={NEW_CLIENT}>+ New client</option>
+                {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+
+              {newClientOpen ? (
+                <div className="mt-2 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
+                  <p className="text-xs font-medium text-muted">New client</p>
+                  <input
+                    value={newClientName}
+                    onChange={(e) => setNewClientName(e.target.value)}
+                    onKeyDown={onNewClientKeyDown}
+                    className={field}
+                    placeholder="Client name *"
+                    aria-label="New client name"
+                    autoFocus
+                  />
+                  <input
+                    value={newClientCompany}
+                    onChange={(e) => setNewClientCompany(e.target.value)}
+                    onKeyDown={onNewClientKeyDown}
+                    className={field}
+                    placeholder="Legal / company name"
+                    aria-label="New client company name"
+                  />
+                  <input
+                    type="email"
+                    value={newClientEmail}
+                    onChange={(e) => setNewClientEmail(e.target.value)}
+                    onKeyDown={onNewClientKeyDown}
+                    className={field}
+                    placeholder="Email"
+                    aria-label="New client email"
+                  />
+                  {newClientError ? (
+                    <div className="flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-700 dark:text-rose-400">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {newClientError}
+                    </div>
+                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={saveNewClient}
+                      disabled={clientPending}
+                      className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
+                    >
+                      {clientPending ? "Saving…" : "Save client"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelNewClient}
+                      disabled={clientPending}
+                      className="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-muted hover:text-fg disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div>
               <label className={label}>Project</label>

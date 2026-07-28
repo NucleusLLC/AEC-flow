@@ -6,6 +6,7 @@ import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
 import { STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { formatCurrency } from "@/lib/format";
 import { CaPrintShell, PrintSection } from "@/components/construction-admin/print-shell";
+import { RichText } from "@/components/print/rich-text";
 
 export const metadata: Metadata = { title: "Service Proposal · Print" };
 
@@ -55,7 +56,7 @@ export default async function ServiceProposalPrintPage({
       {p.input.scopeSummary || (p.input.scopeItems && p.input.scopeItems.length > 0) ? (
         <PrintSection title="Scope of services">
           {p.input.scopeSummary ? (
-            <p className="whitespace-pre-wrap text-[11px] text-gray-700">{p.input.scopeSummary}</p>
+            <RichText text={p.input.scopeSummary} />
           ) : null}
           {p.input.scopeItems && p.input.scopeItems.length > 0 ? (
             <ul className="mt-2 space-y-1 text-[11px]">
@@ -169,19 +170,19 @@ export default async function ServiceProposalPrintPage({
 
       {p.input.assumptions ? (
         <PrintSection title="Assumptions">
-          <p className="whitespace-pre-wrap text-[11px] text-gray-700">{p.input.assumptions}</p>
+          <RichText text={p.input.assumptions} />
         </PrintSection>
       ) : null}
 
       {p.input.exclusions ? (
         <PrintSection title="Exclusions">
-          <p className="whitespace-pre-wrap text-[11px] text-gray-700">{p.input.exclusions}</p>
+          <RichText text={p.input.exclusions} />
         </PrintSection>
       ) : null}
 
       {p.input.terms ? (
         <PrintSection title="Terms & conditions">
-          <p className="whitespace-pre-wrap text-[11px] text-gray-700">{p.input.terms}</p>
+          <RichText text={p.input.terms} />
         </PrintSection>
       ) : null}
     </CaPrintShell>
