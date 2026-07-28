@@ -11,6 +11,7 @@ import { getTeam } from "@/lib/data/team";
 import { getSystemCurrency, getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { PageRules } from "@/components/print/page-rules";
 
 export const metadata: Metadata = { title: "Practice Overview · AEC-flow" };
 
@@ -86,7 +87,7 @@ export default async function PracticeOverview() {
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
-      <style>{`@page { size: A4 portrait; margin: 14mm; } @media print { html, body { background: #fff; } }`}</style>
+      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
         <Link href="/exports" className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">

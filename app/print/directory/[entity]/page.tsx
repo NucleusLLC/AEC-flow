@@ -13,6 +13,7 @@ import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { PageRules } from "@/components/print/page-rules";
 
 type Row = Record<string, unknown>;
 type Col = { label: string; key: string; right?: boolean; fmt?: (v: unknown, row: Row) => string };
@@ -123,7 +124,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
-      <style>{`@page { size: A4 portrait; margin: 14mm; } @media print { html, body { background: #fff; } }`}</style>
+      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
         <Link href="/exports" className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">

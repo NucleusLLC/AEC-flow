@@ -9,6 +9,7 @@ import { ROLE_LABEL, DISCIPLINE_LABEL, DEPARTMENT_LABEL } from "@/lib/data/team.
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { PageRules } from "@/components/print/page-rules";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -36,7 +37,7 @@ export default async function TeamMemberSheet({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
-      <style>{`@page { size: A4 portrait; margin: 14mm; } @media print { html, body { background: #fff; } }`}</style>
+      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} />
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
         <Link href={`/team/${m.id}`} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
           <ArrowLeft className="h-4 w-4" /> Back to member

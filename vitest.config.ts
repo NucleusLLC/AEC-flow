@@ -23,7 +23,11 @@ export default defineConfig({
   test: {
     // Files are named explicitly rather than broadened to `lib/**`: a wider glob
     // would collect the node:test suites described above, which Vitest can't run.
-    include: ["lib/proposals/**/*.test.ts", "lib/firm-identity.test.ts"],
+    include: [
+      "lib/proposals/**/*.test.ts",
+      "lib/firm-identity.test.ts",
+      "lib/documents/**/*.test.ts",
+    ],
     environment: "node",
   },
   resolve: {

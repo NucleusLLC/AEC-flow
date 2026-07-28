@@ -10,6 +10,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import type { PunchListItem, PunchStatus, PunchPriority } from "@/lib/ca/types";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { PageRules } from "@/components/print/page-rules";
 
 type PageProps = { params: Promise<{ project: string }> };
 
@@ -130,7 +131,7 @@ export default async function PunchListPrintPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
-      <style>{`@page { size: A4 landscape; margin: 12mm; } @media print { html, body { background: #fff; } }`}</style>
+      <PageRules orientation="landscape" margins={{ top: 12, right: 12, bottom: 12, left: 12 }} />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
         <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">

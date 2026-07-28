@@ -7,6 +7,7 @@ import { MeetingDocument } from "@/components/meetings/meeting-document";
 import { getMeeting } from "@/lib/data/meetings";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { PageRules } from "@/components/print/page-rules";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -43,7 +44,7 @@ export default async function MeetingPrintPage({ params }: PageProps) {
         <MeetingDocument meeting={meeting} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} companyLocation={firm.location} />
       </div>
 
-      <style>{`@page { size: A4; margin: 14mm; }`}</style>
+      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} whiteBackgroundOnPrint={false} />
     </div>
   );
 }
