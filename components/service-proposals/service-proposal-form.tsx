@@ -27,11 +27,14 @@ import {
 } from "@/app/(app)/design/service-proposals/actions";
 import { saveClient } from "@/app/(app)/clients/actions";
 import type { ClientWriteInput } from "@/lib/data/clients.types";
+import { saveProject } from "@/app/(app)/projects/actions";
 
 type Option = { id: string; name: string };
 
 /** Sentinel value for the "+ New client" row in the client dropdown. Never sent to the server. */
 const NEW_CLIENT = "__new_client__";
+/** Sentinel for the "+ New project" row — never submitted as a project id. */
+const NEW_PROJECT = "__new_project__";
 
 const CURRENCIES = ["USD", "AWG", "EUR", "ANG"];
 const BASIS_TYPES: CostBasisType[] = [
@@ -162,6 +165,80 @@ export function ServiceProposalForm({
     resetNewClient();
   }
 
+  /* ---- Inline "+ New project" ------------------------------------------- */
+  const [addedProjects, setAddedProjects] = useState<Option[]>([]);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectAddress, setNewProjectAddress] = useState("");
+  const [newProjectError, setNewProjectError] = useState<string | null>(null);
+  const [projectPending, startProject] = useTransition();
+
+  const projectOptions = useMemo(() => {
+    const known = new Set(projects.map((p) => p.id));
+    return [...projects, ...addedProjects.filter((p) => !known.has(p.id))];
+  }, [projects, addedProjects]);
+
+  function resetNewProject() {
+    setNewProjectName("");
+    setNewProjectAddress("");
+    setNewProjectError(null);
+  }
+
+  function onProjectChange(value: string) {
+    if (value === NEW_PROJECT) {
+      setNewProjectError(null);
+      setNewProjectOpen(true);
+      return;
+    }
+    setNewProjectOpen(false);
+    resetNewProject();
+    setProjectId(value);
+  }
+
+  function cancelNewProject() {
+    setNewProjectOpen(false);
+    resetNewProject();
+  }
+
+  function saveNewProject() {
+    const name = newProjectName.trim();
+    if (!name) {
+      setNewProjectError("Project name is required.");
+      return;
+    }
+    // createProject resolves the client by NAME and throws when it finds none,
+    // so refuse here with something actionable rather than letting the server
+    // return "Client not found".
+    const client = clientOptions.find((c) => c.id === clientId);
+    if (!client) {
+      setNewProjectError("Choose a client first — a project must belong to one.");
+      return;
+    }
+    setNewProjectError(null);
+
+    startProject(async () => {
+      // The same server action /projects/new uses, so numbering, the standard
+      // phase set, tenant scoping and activity logging all stay in one place.
+      // `manager` is left empty deliberately: resolveManagerId falls back to the
+      // most senior user, and asking for a manager here would be a second form.
+      const res = await saveProject("new", {
+        name,
+        clientName: client.name,
+        manager: "",
+        siteAddress: newProjectAddress.trim() || null,
+        currency,
+      });
+      if (!res.ok) {
+        setNewProjectError(res.error);
+        return;
+      }
+      setAddedProjects((p) => [...p, { id: res.id, name }]);
+      setProjectId(res.id);
+      setNewProjectOpen(false);
+      resetNewProject();
+    });
+  }
+
   function saveNewClient() {
     const name = newClientName.trim();
     if (!name) {
@@ -203,6 +280,13 @@ export function ServiceProposalForm({
     if (e.key !== "Enter") return;
     e.preventDefault();
     saveNewClient();
+  }
+
+  /** Enter inside the inline project fields saves the project, not the proposal. */
+  function onNewProjectKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    saveNewProject();
   }
 
   const [basisType, setBasisType] = useState<CostBasisType>(
@@ -371,7 +455,9 @@ export function ServiceProposalForm({
     e.preventDefault();
     setError(null);
     const client = clientOptions.find((c) => c.id === clientId);
-    const project = projects.find((p) => p.id === projectId);
+    // projectOptions, not projects: a project created inline in this form is
+    // not in the server-rendered list, and its name must still reach the payload.
+    const project = projectOptions.find((p) => p.id === projectId);
     const payload = {
       title,
       currency,
@@ -525,10 +611,68 @@ export function ServiceProposalForm({
             </div>
             <div>
               <label className={label}>Project</label>
-              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={field}>
+              <select
+                value={newProjectOpen ? NEW_PROJECT : projectId}
+                onChange={(e) => onProjectChange(e.target.value)}
+                className={field}
+              >
                 <option value="">— None —</option>
-                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <option value={NEW_PROJECT}>+ New project</option>
+                {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
+
+              {newProjectOpen ? (
+                <div className="mt-2 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
+                  <p className="text-xs font-medium text-muted">New project</p>
+                  <input
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyDown={onNewProjectKeyDown}
+                    className={field}
+                    placeholder="Project name *"
+                    aria-label="New project name"
+                    autoFocus
+                  />
+                  <input
+                    value={newProjectAddress}
+                    onChange={(e) => setNewProjectAddress(e.target.value)}
+                    onKeyDown={onNewProjectKeyDown}
+                    className={field}
+                    placeholder="Site address"
+                    aria-label="New project site address"
+                  />
+                  {/* A project must belong to a client, so say which one it will
+                   * be filed under rather than letting the server reject it. */}
+                  <p className="text-[11px] text-faint">
+                    {clientOptions.find((c) => c.id === clientId)
+                      ? `Filed under ${clientOptions.find((c) => c.id === clientId)!.name}. Number and standard phases are assigned automatically.`
+                      : "Choose a client above first — a project must belong to one."}
+                  </p>
+                  {newProjectError ? (
+                    <div className="flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-700 dark:text-rose-400">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {newProjectError}
+                    </div>
+                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={saveNewProject}
+                      disabled={projectPending}
+                      className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
+                    >
+                      {projectPending ? "Saving…" : "Save project"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelNewProject}
+                      disabled={projectPending}
+                      className="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-muted hover:text-fg disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div>
               <label className={label}>Contact name</label>
