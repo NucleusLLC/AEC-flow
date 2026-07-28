@@ -31,6 +31,54 @@ import { useEffect, useRef, useState } from "react";
  * mechanism that can number pages the browser itself decides on.
  */
 
+type Atom = { top: number; bottom: number; height: number };
+
+/**
+ * The blocks the browser genuinely refuses to split, in document order.
+ *
+ * Getting this set right is the whole game, and it is narrower than it looks.
+ * Text is freely breakable: a paragraph spanning a page boundary is split
+ * between lines, not moved. Treating a text element as unbreakable — because it
+ * happens to have no child elements — makes the preview push a long paragraph to
+ * the next page and end the current one three-quarters empty. Measured against
+ * SP-2026-001, that put the first boundary at 259px instead of 1017px.
+ *
+ * Only `break-inside: avoid` makes a block atomic. The shared print CSS applies
+ * it to table rows, images, figures and anything tagged `data-keep-together`;
+ * everything else is transparent to pagination and is recursed through.
+ */
+function collectAtoms(root: HTMLElement, hostTop: number): Atom[] {
+  const out: Atom[] = [];
+
+  const walk = (el: HTMLElement) => {
+    for (const child of Array.from(el.children) as HTMLElement[]) {
+      if (child.dataset.pagedPreviewChrome === "true") continue;
+      if (child.tagName === "STYLE" || child.tagName === "SCRIPT") continue;
+
+      const cs = getComputedStyle(child);
+      if (cs.display === "none") continue;
+
+      const atomic =
+        cs.breakInside === "avoid" ||
+        cs.pageBreakInside === "avoid" ||
+        child.hasAttribute("data-keep-together");
+
+      if (atomic) {
+        const rect = child.getBoundingClientRect();
+        const top = rect.top + window.scrollY - hostTop;
+        out.push({ top, bottom: top + rect.height, height: rect.height });
+      } else if (child.children.length > 0) {
+        walk(child);
+      }
+      // A splittable leaf contributes no constraint: the browser will break
+      // inside it wherever the page happens to end.
+    }
+  };
+
+  walk(root);
+  return out;
+}
+
 export function PagedPreview({
   /** Printable height of one page in millimetres (page height − top/bottom margins). */
   pageContentHeightMm,
@@ -81,38 +129,30 @@ export function PagedPreview({
         return;
       }
 
+      const atoms = collectAtoms(el, hostTop);
+      const contentHeight = hostRect.height;
+
+      // Fill each page to its full height, then pull the boundary back only if
+      // it would land inside a block that cannot be split — that block moves down
+      // whole, which is exactly what the print engine does.
       const found: { top: number; page: number }[] = [];
-      let pageStart = 0; // offset, in px from host top, where the current page begins
+      let pageStart = 0;
       let page = 1;
 
-      // Only top-level blocks are considered: that is the granularity at which
-      // the browser makes its own break decisions for flowed content.
-      for (const child of Array.from(el.children) as HTMLElement[]) {
-        if (child.dataset.pagedPreviewChrome === "true") continue;
+      while (pageStart + pageH < contentHeight - 1) {
+        let boundary = pageStart + pageH;
 
-        const rect = child.getBoundingClientRect();
-        const top = rect.top + window.scrollY - hostTop;
-        const bottom = top + rect.height;
+        const straddler = atoms.find(
+          (a) => a.top > pageStart && a.top < boundary && a.bottom > boundary && a.height <= pageH,
+        );
+        if (straddler) boundary = straddler.top;
 
-        // Fits on the current page.
-        if (bottom - pageStart <= pageH) continue;
-
-        // An element taller than a full page cannot be moved anywhere useful —
-        // the browser will slice it. Advance past however many pages it spans.
-        if (rect.height > pageH) {
-          while (bottom - pageStart > pageH) {
-            pageStart += pageH;
-            found.push({ top: pageStart, page });
-            page += 1;
-          }
-          continue;
-        }
-
-        // Otherwise the browser pushes this whole element to the next page, and
-        // the break falls at its top edge.
-        pageStart = top;
-        found.push({ top, page });
+        found.push({ top: boundary, page });
         page += 1;
+        pageStart = boundary;
+
+        // Defensive: a boundary that fails to advance would spin forever.
+        if (found.length > 200) break;
       }
 
       setBreaks(found);
