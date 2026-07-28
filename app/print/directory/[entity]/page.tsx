@@ -14,6 +14,7 @@ import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PageRules } from "@/components/print/page-rules";
+import { PagedPreview } from "@/components/print/paged-preview";
 
 type Row = Record<string, unknown>;
 type Col = { label: string; key: string; right?: boolean; fmt?: (v: unknown, row: Row) => string };
@@ -134,7 +135,8 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
         <PrintButton />
       </div>
 
-      <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
+      <div className="aec-doc mx-auto my-6 w-[210mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
+        <PagedPreview pageContentHeightMm={269}>
         {/* Letterhead */}
         <DocumentLetterhead
           logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
@@ -184,6 +186,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
         <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
           {companyName} · {cfg.title} · {rows.length} records
         </div>
+      </PagedPreview>
       </div>
     </div>
   );

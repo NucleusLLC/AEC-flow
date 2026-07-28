@@ -141,7 +141,7 @@ export default async function PunchListPrintPage({ params }: PageProps) {
         <PrintButton />
       </div>
 
-      <div className="mx-auto my-6 w-[297mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
+      <div className="aec-doc mx-auto my-6 w-[297mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* Letterhead */}
         <DocumentLetterhead
           logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}

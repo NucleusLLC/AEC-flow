@@ -6,6 +6,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PageRules } from "@/components/print/page-rules";
 import { DocumentFont } from "@/components/print/document-font";
+import { PagedPreview } from "@/components/print/paged-preview";
 
 /**
  * Shared A4 print surface for Land Development reports — practice letterhead
@@ -46,7 +47,10 @@ export async function DevPrintShell({
         <PrintButton />
       </div>
 
-      <div className="mx-auto my-6 w-[210mm] max-w-full bg-white p-[16mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
+      {/* 14mm matches the @page margin, so the preview column is the same width
+       * as the printed one and wraps text identically. */}
+      <div className="aec-doc mx-auto my-6 w-[210mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
+        <PagedPreview pageContentHeightMm={269}>
         {/* Letterhead */}
         <DocumentLetterhead
           logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
@@ -83,6 +87,7 @@ export async function DevPrintShell({
         <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
           {companyName} · {refNumber} · {docTitle}
         </div>
+        </PagedPreview>
       </div>
     </DocumentFont>
   );

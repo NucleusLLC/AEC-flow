@@ -31,6 +31,10 @@ import {
   MARGIN_PRESETS,
   TYPE_SCALE,
   BREAK_RULES,
+  SPACING,
+  TABLE_TOKENS,
+  LINE_HEIGHT,
+  type Density,
   type MarginPreset,
   type Margins,
   type Orientation,
@@ -46,6 +50,8 @@ export function PageRules({
   /** Small text in the bottom-left margin, e.g. a document reference. */
   footerLeft,
   breakRules = true,
+  /** Row and list rhythm. Registers and schedules want "compact". */
+  density = "compact",
 }: {
   paper?: PaperSize;
   orientation?: Orientation;
@@ -57,6 +63,7 @@ export function PageRules({
   footerLeft?: string;
   /** Shared keep-together / repeating-header rules. */
   breakRules?: boolean;
+  density?: Density;
 }) {
   const m: Margins = typeof margins === "string" ? MARGIN_PRESETS[margins] : margins;
   const box = `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`;
@@ -79,12 +86,78 @@ export function PageRules({
   const css = [
     `@page { size: ${paper} ${orientation}; margin: ${box}; ${marginBoxes} }`,
     whiteBackgroundOnPrint ? `@media print { html, body { background: #fff; } }` : "",
+    documentCss(density),
     breakRules ? PRINT_BREAK_CSS : "",
   ]
     .filter(Boolean)
     .join("\n");
 
   return <style>{css}</style>;
+}
+
+/**
+ * Table and list rhythm, scoped to `.aec-doc` so it reaches document sheets only
+ * and never the surrounding app chrome.
+ *
+ * Applied on screen AND print, deliberately: the preview is meant to show what
+ * will be printed, so it cannot use different row heights.
+ *
+ * Zebra banding uses a neutral slate tint rather than a colour, so it survives
+ * grayscale printing and photocopying — a banded row must still read as banded
+ * when the document reaches a contractor's black-and-white printer.
+ * `print-color-adjust: exact` is required or browsers drop the tint entirely
+ * when "Background graphics" is off, which is the common default.
+ */
+function documentCss(density: Density): string {
+  const s = SPACING[density];
+  const zebra = `rgba(15, 23, 42, ${TABLE_TOKENS.zebraOpacity})`;
+
+  return `
+.aec-doc table { border-collapse: collapse; width: 100%; }
+
+.aec-doc th,
+.aec-doc td {
+  padding: ${s.tableCellY}mm ${s.tableCellX}mm;
+  line-height: ${LINE_HEIGHT.tableBody};
+  vertical-align: top;
+}
+
+.aec-doc thead th {
+  font-weight: 600;
+  border-bottom: ${TABLE_TOKENS.headerRuleWidthPt}pt solid #111827;
+}
+
+/* Banding is applied to the cells, not the row: a background on <tr> is not
+ * painted reliably when the table has border-collapse. */
+.aec-doc tbody tr:nth-child(even) > td {
+  background-color: ${zebra};
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.aec-doc tbody tr > td { border-bottom: ${TABLE_TOKENS.bodyRuleWidthPt}pt solid #e5e7eb; }
+.aec-doc tfoot td { border-top: ${TABLE_TOKENS.totalsRuleWidthPt}pt solid #111827; font-weight: 700; }
+
+/* Lists: tight leading and minimal gaps, with the marker hung outside the text
+ * block so wrapped lines align under the first character rather than the bullet. */
+.aec-doc ul,
+.aec-doc ol {
+  margin: ${s.paragraph}mm 0;
+  padding-left: 4.5mm;
+}
+
+.aec-doc li {
+  line-height: ${LINE_HEIGHT.compactBody};
+  margin: 0;
+}
+
+.aec-doc li + li { margin-top: ${s.listItem}mm; }
+
+/* A blank paragraph between bullets is a common artefact of pasted content and
+ * doubles the height of every list. */
+.aec-doc li > p { margin: 0; }
+.aec-doc li > p + p { margin-top: ${s.listItem}mm; }
+`.trim();
 }
 
 /**

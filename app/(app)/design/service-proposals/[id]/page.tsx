@@ -59,7 +59,7 @@ export default async function ServiceProposalDetailPage({
             </Link>
           ) : null}
           <Link href={`/print/service-proposals/${p.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-            <Printer className="h-4 w-4" /> Document
+            <Printer className="h-4 w-4" /> Print / Preview
           </Link>
         </div>
       </div>
