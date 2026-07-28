@@ -11,6 +11,7 @@
  * `lib/data/settings.ts` (which stays fs/prisma-free).
  */
 import { PRACTICE, type PracticeProfile } from "@/lib/data/settings";
+import { DEFAULT_FONT_ID, selectableFonts } from "@/lib/documents/fonts";
 import { readAppConfig, writeAppConfig } from "./app-config-store";
 
 type AppConfig = {
@@ -22,6 +23,12 @@ type AppConfig = {
   currency?: string;
   /** Document footer line (printed on every page of exported documents). */
   footer?: { text?: string; fontFamily?: string; fontSize?: number };
+  /**
+   * Document typeface, stored as a catalog ID (e.g. "inter") — never a raw CSS
+   * family. An ID survives catalog edits and lets an issued document record what
+   * it was typeset in. See lib/documents/fonts.ts and directive §11.5.
+   */
+  documentFontId?: string;
   /** Logo placement on exported documents (position + height in px). */
   logo?: { position?: LogoPosition; size?: number };
 };
@@ -63,6 +70,8 @@ export type PracticeSettings = {
   currency: string;
   footer: FooterSettings;
   logo: LogoSettings;
+  /** Catalog ID of the document typeface (see lib/documents/fonts.ts). */
+  documentFontId: string;
 };
 
 /** Effective practice settings: saved values merged over the built-in defaults. */
@@ -78,7 +87,42 @@ export async function getPracticeSettings(): Promise<PracticeSettings> {
       position: pos && LOGO_POSITIONS.includes(pos) ? pos : DEFAULT_LOGO.position,
       size: cfg.logo?.size ?? DEFAULT_LOGO.size,
     },
+    documentFontId: resolveStoredFontId(cfg.documentFontId),
   };
+}
+
+/**
+ * A stored font ID is only honoured when it still names a selectable catalog
+ * entry. A face that was later disabled — say a licence lapsed — must not keep
+ * being used just because it sits in an old config row.
+ */
+function resolveStoredFontId(stored: string | undefined): string {
+  if (!stored) return DEFAULT_FONT_ID;
+  const match = selectableFonts().find((f) => f.id === stored);
+  return match ? match.id : DEFAULT_FONT_ID;
+}
+
+/** The document typeface, as a catalog ID. */
+export async function getDocumentFontId(): Promise<string> {
+  const cfg = await readConfig();
+  return resolveStoredFontId(cfg.documentFontId);
+}
+
+/**
+ * Persists the document typeface. Rejects anything that is not a selectable
+ * catalog entry, so an unlicensed or renderer-unsupported face can never be
+ * stored — the failure mode the old free-text footer font allowed.
+ */
+export async function saveDocumentFontId(fontId: string): Promise<void> {
+  const match = selectableFonts().find((f) => f.id === fontId);
+  if (!match) {
+    throw new Error(
+      `"${fontId}" is not an available document font. Choose one from Settings → Document Control.`,
+    );
+  }
+  const cfg = await readConfig();
+  cfg.documentFontId = match.id;
+  await writeConfig(cfg);
 }
 
 export async function saveLogoSettings(logo: LogoSettings): Promise<void> {

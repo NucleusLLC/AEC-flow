@@ -11,6 +11,7 @@ import {
   Check,
   X,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { PreferencesForm } from "@/components/settings/preferences-form";
 import { PracticeForm } from "@/components/settings/practice-form";
 import { TemplatesManager } from "@/components/settings/templates-manager";
 import { MembersManager } from "@/components/settings/members-manager";
+import { DocumentControlForm } from "@/components/settings/document-control-form";
 import {
   saveAnthropicApiKeyAction,
   clearAnthropicApiKeyAction,
@@ -34,10 +36,11 @@ import {
   type Preferences,
 } from "@/lib/data/settings";
 
-type Tab = "practice" | "templates" | "members" | "preferences" | "integrations";
+type Tab = "practice" | "documentControl" | "templates" | "members" | "preferences" | "integrations";
 
 const TABS: Array<{ key: Tab; label: string; icon: typeof Building2 }> = [
   { key: "practice", label: "Practice", icon: Building2 },
+  { key: "documentControl", label: "Document Control", icon: Type },
   { key: "templates", label: "Proposal Templates", icon: FileText },
   { key: "members", label: "Members & Roles", icon: Users },
   { key: "preferences", label: "Preferences", icon: SlidersHorizontal },
@@ -50,6 +53,7 @@ export function SettingsView({
   currency,
   footer,
   logoSettings,
+  documentFontId,
   templates,
   members,
   roles,
@@ -63,6 +67,7 @@ export function SettingsView({
   currency: string;
   footer: FooterSettings;
   logoSettings: LogoSettings;
+  documentFontId: string;
   templates: ProposalTemplate[];
   members: Member[];
   roles: RoleInfo[];
@@ -99,6 +104,10 @@ export function SettingsView({
 
       {tab === "practice" ? (
         <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave} canEditFooter={isFounder} />
+      ) : null}
+
+      {tab === "documentControl" ? (
+        <DocumentControlForm initialFontId={documentFontId} canSave={canSave} />
       ) : null}
 
       {tab === "templates" ? (

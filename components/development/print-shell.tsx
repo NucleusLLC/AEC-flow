@@ -5,6 +5,7 @@ import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PageRules } from "@/components/print/page-rules";
+import { DocumentFont } from "@/components/print/document-font";
 
 /**
  * Shared A4 print surface for Land Development reports — practice letterhead
@@ -30,11 +31,11 @@ export async function DevPrintShell({
   meta: { label: string; value: string }[];
   children: React.ReactNode;
 }) {
-  const { logoDataUrl, logo } = await getPracticeSettings();
+  const { logoDataUrl, logo, documentFontId } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
+    <DocumentFont fontId={documentFontId} className="min-h-screen bg-gray-100 print:bg-white">
       <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
@@ -83,7 +84,7 @@ export async function DevPrintShell({
           {companyName} · {refNumber} · {docTitle}
         </div>
       </div>
-    </div>
+    </DocumentFont>
   );
 }
 

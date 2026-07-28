@@ -52,6 +52,7 @@ export default async function SettingsPage() {
         currency={practice.currency}
         footer={practice.footer}
         logoSettings={practice.logo}
+        documentFontId={practice.documentFontId}
         templates={templates}
         members={members}
         roles={roles}

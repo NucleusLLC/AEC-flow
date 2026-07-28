@@ -19,6 +19,7 @@ import {
   saveSystemCurrency,
   saveFooter,
   saveLogoSettings,
+  saveDocumentFontId,
   type FooterSettings,
   type LogoSettings,
 } from "@/lib/server/practice-config";
@@ -139,6 +140,30 @@ export async function saveFooterAction(footer: FooterSettings): Promise<ActionRe
     return { ok: true };
   } catch (e) {
     return fail(e, "Failed to save the footer.");
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Document Control                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Document typeface. Unlike the footer (founder-only, app-level advertising),
+ * this is the company's own document branding, so any signed-in user who may
+ * save settings can change it. `saveDocumentFontId` validates against the font
+ * catalog and throws on anything unselectable, which is what stops an
+ * unlicensed or renderer-unsupported face from ever being stored.
+ */
+export async function saveDocumentFontAction(fontId: string): Promise<ActionResult> {
+  if (!(await requireUser())) return { ok: false, error: "Sign in to change the document font." };
+  try {
+    await saveDocumentFontId(fontId);
+    // Documents render outside this route, so revalidate the whole tree — the
+    // print surfaces must pick the new face up immediately, not on next deploy.
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "Failed to save the document font.");
   }
 }
 
