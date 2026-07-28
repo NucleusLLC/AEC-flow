@@ -41,7 +41,7 @@ export async function CaPrintShell({
   const companyName = firm.name;
   return (
     <DocumentFont fontId={documentFontId} className="min-h-screen bg-gray-100 print:bg-white">
-      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} />
+      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} footerLeft={refNumber} />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
         <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
@@ -108,9 +108,20 @@ export async function CaPrintShell({
   );
 }
 
+/**
+ * A titled block of document content.
+ *
+ * Deliberately NOT `break-inside: avoid`. A section whose content is taller than
+ * one page cannot be kept together, and Chrome resolves that by pushing the
+ * whole section to a fresh page — which left the first page of a Service
+ * Proposal roughly 70% blank while its Scope of Services section jumped to page
+ * two. Sections flow; the heading is held to its content by the shared
+ * `break-after: avoid` rule in PageRules, so it can never strand alone at a page
+ * foot. Genuinely atomic blocks opt in with `data-keep-together`.
+ */
 export function PrintSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-6 break-inside-avoid">
+    <section className="mt-6">
       <h2 className="border-b border-gray-300 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
         {title}
       </h2>

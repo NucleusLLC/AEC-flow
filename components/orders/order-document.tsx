@@ -116,8 +116,9 @@ export function OrderDocument({
         ) : null}
       </div>
 
-      {/* Signature / acceptance footer */}
-      <div className="mt-12 grid grid-cols-2 gap-10">
+      {/* Signature / acceptance footer. Kept whole: a signature line separated
+       * from the name it belongs to is not a signable document. */}
+      <div className="mt-12 grid grid-cols-2 gap-10" data-keep-together>
         <div>
           <div className="h-12 border-b border-gray-400" />
           <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">For {firm}</div>

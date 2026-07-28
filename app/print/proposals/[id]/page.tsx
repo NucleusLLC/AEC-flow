@@ -7,6 +7,7 @@ import { ProposalDocument } from "@/components/proposals/proposal-document";
 import { getProposal } from "@/lib/data/proposals";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { PageRules } from "@/components/print/page-rules";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -37,6 +38,10 @@ export default async function ProposalPrintPage({ params }: PageProps) {
         </Link>
         <PrintButton />
       </div>
+
+      {/* This route carried no @page rule at all, so it printed at the browser's
+       * default margins with no page numbers. */}
+      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} footerLeft={proposal.refNumber} />
 
       {/* A4-ish document sheet — shared with the in-app preview */}
       <div className="my-6 print:my-0">
