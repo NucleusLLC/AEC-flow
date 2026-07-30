@@ -2,6 +2,7 @@ import { EstimatesApp } from "@/components/estimates/estimates-app";
 import { getEstimate, getEstimateProjects } from "@/lib/data/estimates";
 import type { EstimateProject } from "@/lib/data/estimates";
 import { getProjects } from "@/lib/data/projects";
+import { getClients } from "@/lib/data/clients";
 import { getPriceBook } from "@/lib/data/price-lists";
 import { getNormSet } from "@/lib/data/norm-set";
 import { getGeneralConditions } from "@/lib/data/general-conditions-db";
@@ -14,9 +15,12 @@ export const metadata = { title: "Cost Estimation · AEC-flow" };
 
 export default async function EstimatesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const { project: initialProjectId } = await searchParams;
-  const [projects, allProjects, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, practice] = await Promise.all([
+  // `clients` is loaded so the picker can create a missing project inline —
+  // a project must belong to a client.
+  const [projects, allProjects, clients, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, practice] = await Promise.all([
     getEstimateProjects(),
     getProjects(),
+    getClients(),
     getEstimate(),
     getPriceBook(),
     getNormSet(),
@@ -60,6 +64,7 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
       <EstimatesApp
         projects={projects}
         startProjects={startProjects}
+        clients={clients.map((c) => ({ id: c.id, name: c.name }))}
         initialProjectId={initialProjectId}
         baseEstimate={baseEstimate}
         priceBook={priceBook}

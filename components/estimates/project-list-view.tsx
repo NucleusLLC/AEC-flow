@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Plus, ChevronUp, ChevronDown, ChevronsUpDown, FileSpreadsheet } from "lucide-react";
+import { Search, Plus, ChevronUp, ChevronDown, ChevronsUpDown, FileSpreadsheet, FolderPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { NewProjectPanel, type CreatedProject } from "@/components/projects/new-project-panel";
+import { getSystemCurrency } from "@/lib/format";
 import type { EstimateProject } from "@/lib/data/estimates";
 
 type SortKey = "projectNumber" | "projectName" | "address" | "client" | "date" | "amount";
@@ -15,10 +17,30 @@ const statusTone: Record<EstimateProject["status"], "slate" | "amber" | "green">
   approved: "green",
 };
 
-export function ProjectListView({ projects, startProjects = [], onSelect }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; onSelect: (p: EstimateProject) => void }) {
+export function ProjectListView({ projects, startProjects = [], clients = [], onSelect }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; clients?: { id: string; name: string }[]; onSelect: (p: EstimateProject) => void }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "date", dir: -1 });
   const [newOpen, setNewOpen] = useState(false);
+  const [addProjectOpen, setAddProjectOpen] = useState(false);
+
+  /** Created inline → straight into a fresh estimate sheet for it. */
+  function onProjectCreated(project: CreatedProject) {
+    setAddProjectOpen(false);
+    onSelect({
+      // The estimate is keyed by the project's own id — same shape the page
+      // builds for `startProjects`, so openProject behaves identically.
+      id: project.id,
+      projectNumber: project.projectNumber,
+      projectName: project.projectName,
+      address: project.location === "—" ? "" : project.location,
+      client: project.client,
+      version: "V1.0",
+      date: "",
+      currency: getSystemCurrency(),
+      status: "draft",
+      amount: 0,
+    });
+  }
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -53,34 +75,55 @@ export function ProjectListView({ projects, startProjects = [], onSelect }: { pr
           {newOpen ? (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setNewOpen(false)} aria-hidden />
-              <div className="absolute right-0 z-30 mt-2 max-h-80 w-80 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
+              <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-border bg-surface p-1 shadow-lg">
                 <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-faint">
                   Choose a project to estimate
                 </div>
-                {startProjects.length === 0 ? (
-                  <div className="px-3 py-4 text-sm text-muted">
-                    Every project already has an estimate. Create the project first under Projects.
-                  </div>
-                ) : (
-                  startProjects.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => { onSelect(p); setNewOpen(false); }}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-fg transition-colors hover:bg-surface-2"
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{p.projectName}</span>
-                        <span className="block truncate text-xs text-muted">{p.projectNumber} · {p.client}</span>
-                      </span>
-                    </button>
-                  ))
-                )}
+                <div className="max-h-72 overflow-y-auto">
+                  {startProjects.length === 0 ? (
+                    <div className="px-3 py-4 text-sm text-muted">
+                      Every project already has an estimate.
+                    </div>
+                  ) : (
+                    startProjects.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => { onSelect(p); setNewOpen(false); }}
+                        className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-fg transition-colors hover:bg-surface-2"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{p.projectName}</span>
+                          <span className="block truncate text-xs text-muted">{p.projectNumber} · {p.client}</span>
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+                {/* Pinned so the list never dead-ends when the project is missing. */}
+                <button
+                  type="button"
+                  onClick={() => { setNewOpen(false); setAddProjectOpen(true); }}
+                  className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm font-medium text-brand transition-colors hover:bg-surface-2"
+                >
+                  <FolderPlus className="h-4 w-4" /> Add new project
+                </button>
               </div>
             </>
           ) : null}
         </div>
       </div>
+
+      {addProjectOpen ? (
+        <div className="border-b border-border bg-surface-2/30 p-4">
+          <NewProjectPanel
+            clients={clients}
+            submitLabel="Create project & estimate it"
+            onCreated={onProjectCreated}
+            onCancel={() => setAddProjectOpen(false)}
+          />
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] border-collapse text-sm">

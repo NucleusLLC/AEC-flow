@@ -1,23 +1,46 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, FolderPlus } from "lucide-react";
 import { ProjectPicker, ProjectCrumb, type ProjectPickerRow } from "@/components/projects/project-picker";
 import { EmailButton } from "@/components/email/email-button";
+import { NewProjectPanel, type CreatedProject } from "@/components/projects/new-project-panel";
 import { ScheduleGantt } from "./schedule-gantt";
 import type { ProjectSchedule } from "@/lib/data/schedule";
+
+/** A project that can be scheduled, whether or not it has a programme yet. */
+export type SchedulableProject = {
+  projectNumber: string;
+  projectName: string;
+  client: string;
+};
 
 export function ScheduleApp({
   schedules,
   directory,
+  projects = [],
+  clients = [],
 }: {
   schedules: ProjectSchedule[];
   directory: Record<string, { location: string; client: string }>;
+  /**
+   * Every project in the practice. Projects with no saved programme are listed
+   * too — otherwise "New Schedule" could only offer projects that already had
+   * one, which is the opposite of what it is for.
+   */
+  projects?: SchedulableProject[];
+  /** Clients a project created inline can be filed under. */
+  clients?: { id: string; name: string }[];
 }) {
   const [sel, setSel] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [addProjectOpen, setAddProjectOpen] = useState(false);
+  // Projects created inline: saveProject revalidates /projects, not /schedule,
+  // so this page's `projects` prop does not include them until a reload.
+  const [added, setAdded] = useState<CreatedProject[]>([]);
 
-  const rows: ProjectPickerRow[] = useMemo(
+  /** Rows for projects that already have a programme (persisted or seeded). */
+  const scheduledRows: ProjectPickerRow[] = useMemo(
     () =>
       schedules.map((s) => ({
         key: s.projectId,
@@ -29,6 +52,51 @@ export function ScheduleApp({
       })),
     [schedules, directory],
   );
+
+  /**
+   * Rows for projects with no programme yet — the ones users came looking for.
+   * Keyed by project number because that is what `ProjectSchedule.projectId`
+   * holds, so selecting one and saving upserts against the right project.
+   */
+  const unscheduledRows: ProjectPickerRow[] = useMemo(() => {
+    const scheduled = new Set(schedules.map((s) => s.projectId));
+    const seen = new Set<string>();
+    const all: SchedulableProject[] = [
+      ...projects,
+      ...added.map((p) => ({ projectNumber: p.projectNumber, projectName: p.projectName, client: p.client })),
+    ];
+    return all
+      .filter((p) => {
+        if (scheduled.has(p.projectNumber) || seen.has(p.projectNumber)) return false;
+        seen.add(p.projectNumber);
+        return true;
+      })
+      .map((p) => ({
+        key: p.projectNumber,
+        projectNumber: p.projectNumber,
+        projectName: p.projectName,
+        location:
+          directory[p.projectNumber]?.location ??
+          added.find((a) => a.projectNumber === p.projectNumber)?.location ??
+          "—",
+        client: p.client || directory[p.projectNumber]?.client || "—",
+        count: 0,
+      }));
+  }, [schedules, projects, added, directory]);
+
+  const rows = useMemo(() => [...scheduledRows, ...unscheduledRows], [scheduledRows, unscheduledRows]);
+
+  function openNewProject() {
+    setNewOpen(false);
+    setAddProjectOpen(true);
+  }
+
+  /** Created inline → list it, then drop straight into its empty programme. */
+  function onProjectCreated(project: CreatedProject) {
+    setAdded((p) => [...p, project]);
+    setAddProjectOpen(false);
+    setSel(project.projectNumber);
+  }
 
   if (!sel)
     return (
@@ -45,40 +113,73 @@ export function ScheduleApp({
             {newOpen ? (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setNewOpen(false)} aria-hidden />
-                <div className="absolute right-0 z-30 mt-2 max-h-80 w-80 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-lg">
+                <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-border bg-surface p-1 shadow-lg">
                   <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-faint">
                     Choose a project to schedule
                   </div>
-                  {rows.length === 0 ? (
-                    <div className="px-3 py-4 text-sm text-muted">No projects available.</div>
-                  ) : (
-                    rows.map((r) => (
-                      <button
-                        key={r.key}
-                        type="button"
-                        onClick={() => { setSel(r.key); setNewOpen(false); }}
-                        className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-fg transition-colors hover:bg-surface-2"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{r.projectName}</span>
-                          <span className="block truncate text-xs text-muted">{r.projectNumber} · {r.client}</span>
-                        </span>
-                        <span className="shrink-0 text-[11px] text-faint">{r.count} tasks</span>
-                      </button>
-                    ))
-                  )}
+                  <div className="max-h-72 overflow-y-auto">
+                    {rows.length === 0 ? (
+                      <div className="px-3 py-4 text-sm text-muted">No projects yet.</div>
+                    ) : (
+                      rows.map((r) => (
+                        <button
+                          key={r.key}
+                          type="button"
+                          onClick={() => { setSel(r.key); setNewOpen(false); }}
+                          className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-fg transition-colors hover:bg-surface-2"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{r.projectName}</span>
+                            <span className="block truncate text-xs text-muted">{r.projectNumber} · {r.client}</span>
+                          </span>
+                          <span className="shrink-0 text-[11px] text-faint">
+                            {r.count ? `${r.count} tasks` : "No programme yet"}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  {/* Pinned so the list never dead-ends when the project is missing. */}
+                  <button
+                    type="button"
+                    onClick={openNewProject}
+                    className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm font-medium text-brand transition-colors hover:bg-surface-2"
+                  >
+                    <FolderPlus className="h-4 w-4" /> Add new project
+                  </button>
                 </div>
               </>
             ) : null}
           </div>
         </div>
+        {addProjectOpen ? (
+          <NewProjectPanel
+            clients={clients}
+            submitLabel="Create project & schedule it"
+            onCreated={onProjectCreated}
+            onCancel={() => setAddProjectOpen(false)}
+          />
+        ) : null}
         <ProjectPicker title="Schedule" countLabel="Tasks" rows={rows} onSelect={setSel} />
       </div>
     );
 
-  const selected = schedules.find((s) => s.projectId === sel);
   const row = rows.find((r) => r.key === sel);
-  if (!selected || !row) return <ProjectPicker title="Schedule" countLabel="Tasks" rows={rows} onSelect={setSel} />;
+  if (!row) return <ProjectPicker title="Schedule" countLabel="Tasks" rows={rows} onSelect={setSel} />;
+
+  // A project with no saved programme opens on an empty one; the Gantt's Save
+  // upserts by projectId, so the first save creates the row.
+  const selected: ProjectSchedule =
+    schedules.find((s) => s.projectId === sel) ?? {
+      projectId: row.key,
+      projectNumber: row.projectNumber,
+      projectName: row.projectName,
+      client: row.client === "—" ? "" : row.client,
+      manager: "",
+      start: "",
+      end: "",
+      tasks: [],
+    };
 
   return (
     <div className="space-y-4">
