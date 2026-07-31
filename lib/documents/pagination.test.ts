@@ -8,6 +8,7 @@ import {
   type PaginationBlock,
   type HeadingMetric,
 } from "@/lib/documents/pagination";
+import { UNUSED_AREA_WARN } from "@/lib/documents/tokens";
 
 /**
  * One page is 1000px throughout, so every figure below reads as a percentage of
@@ -52,6 +53,49 @@ describe("computeCuts — page boundaries", () => {
       blocks: [block(900, 1200)],
     });
     expect(cuts[0]).toMatchObject({ at: 1000, kind: "flow" });
+  });
+
+  it("splits a soft block rather than blanking most of the page it sits on", () => {
+    // 800px of unbreakable text starting 30% down the page. Moving it whole
+    // vacates 70% of the sheet — far past the §7.1 ceiling — so the boundary runs
+    // through it instead, and the caller is told to unbind it.
+    const cuts = computeCuts({
+      contentHeight: 2000,
+      pageHeight: PAGE,
+      blocks: [{ ...block(300, 800), soft: true }],
+    });
+    expect(cuts[0]).toMatchObject({ at: 1000, kind: "flow", splitBlockIndex: 0 });
+  });
+
+  it("still moves a HARD block whole, however much of the page that costs", () => {
+    // The same geometry with a block the document itself made unbreakable. The
+    // browser will move it whole whatever we would prefer, so modelling a split
+    // would only make the preview disagree with the printed page.
+    const cuts = computeCuts({
+      contentHeight: 2000,
+      pageHeight: PAGE,
+      blocks: [block(300, 800)],
+    });
+    expect(cuts[0]).toMatchObject({ at: 300, kind: "atom", blockIndex: 0 });
+    expect(cuts[0].splitBlockIndex).toBeUndefined();
+  });
+
+  it("moves a soft block whole while the hole it leaves is within the ceiling", () => {
+    // 30% unused is the ceiling itself, and the ceiling is inclusive: a block that
+    // lands exactly on it still moves down whole.
+    const cuts = computeCuts({
+      contentHeight: 2000,
+      pageHeight: PAGE,
+      blocks: [{ ...block(700, 400), soft: true }],
+    });
+    expect(cuts[0]).toMatchObject({ at: 700, kind: "atom", blockIndex: 0 });
+
+    const past = computeCuts({
+      contentHeight: 2000,
+      pageHeight: PAGE,
+      blocks: [{ ...block(699, 400), soft: true }],
+    });
+    expect(past[0]).toMatchObject({ at: 1000, kind: "flow", splitBlockIndex: 0 });
   });
 
   it("names the block that begins the next page even when the boundary is clean", () => {
@@ -233,6 +277,44 @@ describe("headingRequiredSpace", () => {
       headingRequiredSpace({ headingHeight: 20, minimumSpacePx: 75, maxUnitHeight: 350 }),
     ).toBe(95);
   });
+
+  it("never demands more room than the content under the heading occupies", () => {
+    // SP-2026-001's Exclusions section: a 22.9px heading over 43.7px of text. The
+    // 20mm floor (75.6px) is more than the section HAS, and a heading cannot
+    // strand content that does not exist.
+    expect(
+      headingRequiredSpace({
+        headingHeight: 22.9,
+        minimumSpacePx: 75.6,
+        leadInSpacePx: 35.8,
+        maxUnitHeight: 347.9,
+        followingContentHeight: 43.7,
+      }),
+    ).toBeCloseTo(66.6, 5);
+  });
+
+  it("asks only for its own height when nothing follows the heading", () => {
+    expect(
+      headingRequiredSpace({
+        headingHeight: 20,
+        minimumSpacePx: 75,
+        maxUnitHeight: 350,
+        followingContentHeight: 0,
+      }),
+    ).toBe(20);
+  });
+
+  it("keeps the floor when the section is taller than it", () => {
+    expect(
+      headingRequiredSpace({
+        headingHeight: 22.9,
+        minimumSpacePx: 75.6,
+        leadInSpacePx: 45.7,
+        maxUnitHeight: 347.9,
+        followingContentHeight: 148.4,
+      }),
+    ).toBeCloseTo(98.5, 5);
+  });
 });
 
 describe("resolveHeadingBreaks — the fixed-point loop", () => {
@@ -362,5 +444,106 @@ describe("resolveHeadingBreaks — the fixed-point loop", () => {
       [1850, "forced"],
       [2850, "flow"],
     ]);
+  });
+
+  it("reports forced cuts in the caller's heading index space", () => {
+    // The forced set is built in the order headings are pushed, so its indices are
+    // not the caller's. Handing back the raw index put every page-boundary marker
+    // on the wrong element: the pushed heading was #2, and #0 got the marker.
+    const r = resolveHeadingBreaks({
+      contentHeight: 2500,
+      pageHeight: PAGE,
+      blocks: [],
+      headings: [heading(100, 100), heading(400, 100), heading(950, 100)],
+    });
+    expect(r.forcedHeadings).toEqual([2]);
+    expect(r.cuts[0]).toMatchObject({ at: 950, kind: "forced", forcedIndex: 2 });
+  });
+});
+
+/**
+ * SP-2026-001 "Zen Villas — Phase 1 — Concept A", measured in the browser off
+ * /print/service-proposals with a 263mm content box (994px at 96dpi). Every
+ * figure below is a real measurement, not a constructed one: this is the document
+ * that printed three pages with the middle one 91% blank.
+ */
+describe("regression — SP-2026-001", () => {
+  const PAGE_H = 994;
+  const CONTENT_H = 1270.8;
+  const MIN_SPACE = 20 * 3.7794; // BREAK_RULES.minimumSpaceAfterHeadingMm in px
+  const KEEP_MAX = PAGE_H * 0.35;
+
+  /** [top, height] of every block the print CSS refuses to split. */
+  const measuredAtoms: [number, number][] = [
+    [0, 56],
+    [258.5, 45.7], [308.2, 45.7], [357.9, 45.7],
+    [258.5, 17.9], [280.4, 17.9], [302.3, 17.9], [324.1, 17.9], [346, 17.9], [367.9, 35.8],
+    [458.5, 17.9],
+    [531.3, 22.3], [553.6, 23.3], [576.9, 23.8], [600.7, 23.8], [624.6, 22.8], [655.4, 16.3],
+    [726.5, 22.3],
+    [804.2, 22.3], [826.5, 22.8],
+    [904.8, 35.8],
+    [995.4, 35.8],
+    [1071.1, 63.9],
+    [1159, 29.3],
+  ];
+
+  /** [label, top, heading height, lead-in, content below the heading in its section] */
+  const measuredHeadings: [string, number, number, number, number | undefined][] = [
+    ["Zen Villas — Phase 1 — Concept A", 175.6, 28, 22.9, undefined],
+    ["Project & client", 227.6, 22.9, 35.8, 153.1],
+    ["Scope of services", 427.6, 22.9, 17.9, 25.9],
+    ["Professional fees", 500.4, 22.9, 45.7, 148.4],
+    ["Design phases", 695.6, 22.9, 22.3, 30.8],
+    ["Payment schedule", 773.3, 22.9, 45.2, 53.6],
+    ["Exclusions", 873.9, 22.9, 35.8, 43.7],
+    ["Terms & conditions", 964.5, 22.9, 35.8, 43.7],
+  ];
+
+  const blocks: PaginationBlock[] = measuredAtoms.map(([top, h]) => block(top, h));
+  const headings: HeadingMetric[] = measuredHeadings.map(([, top, hh, leadIn, below]) => ({
+    top,
+    requiredSpace: headingRequiredSpace({
+      headingHeight: hh,
+      minimumSpacePx: MIN_SPACE,
+      leadInSpacePx: leadIn,
+      maxUnitHeight: KEEP_MAX,
+      followingContentHeight: below,
+    }),
+  }));
+
+  it("does not open a page for a section that fits in the space left", () => {
+    // THE DEFECT. "Terms & conditions" sits 29.5px above the page foot and is
+    // rightly pushed. That moves the foot to 964.5, leaving "Exclusions" 90.6px of
+    // clearance — and the whole Exclusions section is 66.6px tall, so it fits.
+    // Judging it against the 20mm floor instead pushed it too, and page two came
+    // out holding one heading and two lines of text.
+    const r = resolveHeadingBreaks({
+      contentHeight: CONTENT_H,
+      pageHeight: PAGE_H,
+      blocks,
+      headings,
+    });
+
+    expect(r.settled).toBe(true);
+    expect(r.cuts.map((c) => c.at)).toEqual([964.5]);
+    // Two pages, and the heading pushed is the last one — not Exclusions.
+    expect(r.forcedHeadings).toEqual([7]);
+  });
+
+  it("leaves no page emptier than the §7.1 ceiling allows", () => {
+    const r = resolveHeadingBreaks({
+      contentHeight: CONTENT_H,
+      pageHeight: PAGE_H,
+      blocks,
+      headings,
+    });
+
+    const tops = [0, ...r.cuts.map((c) => c.at)];
+    // Every page but the last must be filled past the unused-area ceiling.
+    for (let i = 1; i < tops.length; i++) {
+      const used = tops[i] - tops[i - 1];
+      expect(PAGE_H - used).toBeLessThanOrEqual(PAGE_H * UNUSED_AREA_WARN);
+    }
   });
 });

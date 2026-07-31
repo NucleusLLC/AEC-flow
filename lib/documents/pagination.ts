@@ -10,16 +10,30 @@
  * flow of the document, zero at the top of the sheet. The caller converts
  * millimetre tokens into that space once, using a measured px-per-mm.
  *
- * The vocabulary matches `BREAK_RULES` in ./tokens: nothing here invents a
- * threshold of its own.
+ * The vocabulary matches `BREAK_RULES` and `UNUSED_AREA_WARN` in ./tokens:
+ * nothing here invents a threshold of its own.
  */
+import { UNUSED_AREA_WARN } from "./tokens";
 
 /**
  * A block the print engine refuses to split — a table row, an image, or
  * anything carrying `break-inside: avoid`. Splittable text contributes no
  * constraint and is deliberately absent (see `collectAtoms` in PagedPreview).
+ *
+ * `soft` marks a block the MEASURING PASS itself made unbreakable (PagedPreview's
+ * `data-auto-keep`), as opposed to one the document or the print CSS made
+ * unbreakable. The distinction matters because only a soft block can be given
+ * back: when moving it whole would vacate more of the page than
+ * `UNUSED_AREA_WARN` allows, the caller drops the attribute and lets it split.
+ * A hard block cannot be argued with — the browser will move it whole whatever
+ * we model — so it is never declined, or the preview would stop matching print.
  */
-export type PaginationBlock = { top: number; bottom: number; height: number };
+export type PaginationBlock = {
+  top: number;
+  bottom: number;
+  height: number;
+  soft?: boolean;
+};
 
 /** A heading, and the space it needs below its own top to not read as stranded. */
 export type HeadingMetric = {
@@ -41,6 +55,13 @@ export type PageCut = {
   blockIndex?: number;
   /** Index into `forcedTops` of the block that begins the next page. */
   forcedIndex?: number;
+  /**
+   * Index into `blocks` of a SOFT block this boundary runs through because
+   * moving it whole would have wasted more than `maxUnusedFraction` of the page.
+   * The caller must stop making that block unbreakable, or the printed page will
+   * move it down and disagree with this layout.
+   */
+  splitBlockIndex?: number;
 };
 
 /**
@@ -75,10 +96,16 @@ export function computeCuts(input: {
   blocks: readonly PaginationBlock[];
   /** Flow coordinates of blocks stamped with a forced page break. Any order. */
   forcedTops?: readonly number[];
+  /**
+   * Most of a page that may be left unused to move a SOFT block down whole.
+   * Defaults to the §7.1 token; see the `soft` note on `PaginationBlock`.
+   */
+  maxUnusedFraction?: number;
   maxPages?: number;
 }): PageCut[] {
   const { contentHeight, pageHeight, blocks } = input;
   const maxPages = input.maxPages ?? MAX_PAGES;
+  const maxUnused = input.maxUnusedFraction ?? UNUSED_AREA_WARN;
   const cuts: PageCut[] = [];
   if (!(pageHeight > 0)) return cuts;
 
@@ -105,12 +132,27 @@ export function computeCuts(input: {
     let kind: PageCut["kind"] = "flow";
     let blockIndex: number | undefined;
     let forcedIndex: number | undefined;
+    let splitBlockIndex: number | undefined;
 
     if (moreContent) {
       const straddler = blocks.findIndex(
         (b) => b.top > pageStart && b.top < at && b.bottom > at && b.height <= pageHeight,
       );
-      if (straddler >= 0) {
+      // A block that will not fit in what is left of the page moves down whole —
+      // but only while the hole it leaves stays within the §7.1 ceiling. A soft
+      // block that would vacate more than that is worth less than the page it
+      // costs, so the boundary runs through it and the caller unbinds it. The
+      // page it would have started is the one that ends up nearly empty, which is
+      // the failure this ceiling exists to stop.
+      const vacates = straddler >= 0 ? pageHeight - (blocks[straddler].top - pageStart) : 0;
+      const declined =
+        straddler >= 0 && blocks[straddler].soft === true && vacates > pageHeight * maxUnused;
+
+      if (declined) {
+        splitBlockIndex = straddler;
+        const starter = blocks.findIndex((b, i) => i !== straddler && b.top >= at - 1);
+        if (starter >= 0) blockIndex = starter;
+      } else if (straddler >= 0) {
         at = blocks[straddler].top;
         kind = "atom";
         blockIndex = straddler;
@@ -126,6 +168,9 @@ export function computeCuts(input: {
       kind = "forced";
       forcedIndex = nextForced.index;
       blockIndex = undefined;
+      // The page now ends earlier than the block that was going to be split, so
+      // nothing has to be unbound after all.
+      splitBlockIndex = undefined;
     } else if (!moreContent) {
       // The only forced break left sits past the end of the content, or close
       // enough to the boundary to be a no-op. Nothing more to cut.
@@ -134,7 +179,7 @@ export function computeCuts(input: {
 
     if (at <= pageStart + PAGE_START_EPSILON_PX) break;
 
-    cuts.push({ at, kind, blockIndex, forcedIndex });
+    cuts.push({ at, kind, blockIndex, forcedIndex, splitBlockIndex });
     pageStart = at;
   }
 
@@ -154,15 +199,27 @@ export function computeCuts(input: {
  * governs which blocks may be made unbreakable. Without it a heading followed by
  * a tall table would demand most of a page and strand the page above it, which is
  * the waste this codebase has already been burned by twice.
+ *
+ * `followingContentHeight` is the third clamp, and the one the floor cannot do
+ * without: the height of everything that actually follows the heading inside its
+ * own section. A heading can only strand content that EXISTS, so a section whose
+ * whole body is shorter than the floor needs exactly its own height and no more.
+ * Without this, a three-line section sitting 20mm above the page foot was judged
+ * stranded and pushed — vacating the foot of one page to open another holding
+ * three lines (measured on SP-2026-001: 91% of page two blank, three printed
+ * pages where two hold the document).
  */
 export function headingRequiredSpace(input: {
   headingHeight: number;
   minimumSpacePx: number;
   leadInSpacePx?: number;
   maxUnitHeight: number;
+  /** Height of the heading's own following content, when the caller can measure it. */
+  followingContentHeight?: number;
 }): number {
   const need = Math.max(input.minimumSpacePx, input.leadInSpacePx ?? 0);
-  return input.headingHeight + Math.min(need, input.maxUnitHeight);
+  const ceiling = Math.min(input.maxUnitHeight, input.followingContentHeight ?? Infinity);
+  return input.headingHeight + Math.min(need, ceiling);
 }
 
 /**
@@ -206,6 +263,13 @@ export function selectHeadingsToPush(input: {
 }
 
 export type HeadingBreakResult = {
+  /**
+   * The final layout. `forcedIndex` on these cuts is rewritten into the caller's
+   * `headings` index space — NOT the internal forced-set space `computeCuts`
+   * reports — so `headings[cut.forcedIndex]` is the element that begins the page.
+   * Reading the raw index here put every screen page-boundary marker on the wrong
+   * element (the first two headings of the document instead of the pushed ones).
+   */
   cuts: PageCut[];
   /**
    * Heading indices that must carry `break-before: page`. Only headings whose
@@ -214,6 +278,11 @@ export type HeadingBreakResult = {
    * one for no benefit.
    */
   forcedHeadings: number[];
+  /**
+   * Indices into `blocks` of soft blocks a boundary runs through. The caller must
+   * stop making these unbreakable — see `splitBlockIndex` on `PageCut`.
+   */
+  softSplits: number[];
   /** Recomputes performed. Zero means the first layout already satisfied the rule. */
   passes: number;
   /** False when the cap was reached with work still outstanding. */
@@ -276,9 +345,18 @@ export function resolveHeadingBreaks(input: {
     passes++;
   }
 
-  const forcedHeadings = cuts
-    .filter((c) => c.kind === "forced" && c.forcedIndex !== undefined)
-    .map((c) => forced[c.forcedIndex as number]);
+  // Out of the forced-set index space and into the caller's.
+  const resolved = cuts.map((c) =>
+    c.forcedIndex === undefined ? c : { ...c, forcedIndex: forced[c.forcedIndex] },
+  );
 
-  return { cuts, forcedHeadings, passes, settled };
+  const forcedHeadings = resolved
+    .filter((c) => c.kind === "forced" && c.forcedIndex !== undefined)
+    .map((c) => c.forcedIndex as number);
+
+  const softSplits = resolved
+    .filter((c) => c.splitBlockIndex !== undefined)
+    .map((c) => c.splitBlockIndex as number);
+
+  return { cuts: resolved, forcedHeadings, softSplits, passes, settled };
 }

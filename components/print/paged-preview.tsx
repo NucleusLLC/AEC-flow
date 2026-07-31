@@ -61,7 +61,14 @@ import {
  * wrong. Printing from a squeezed window falls back to plain browser flow.
  */
 
-type Atom = { el: HTMLElement; top: number; bottom: number; height: number };
+type Atom = {
+  el: HTMLElement;
+  top: number;
+  bottom: number;
+  height: number;
+  /** True when this pass is what made the block unbreakable, so it can be undone. */
+  soft: boolean;
+};
 
 /** Every attribute this component stamps, cleared before each pass. */
 const STAMPED_ATTRS = ["data-auto-keep", "data-keep-with-next", "data-break-before"] as const;
@@ -124,7 +131,15 @@ function collectAtoms(root: HTMLElement, hostTop: number): Atom[] {
       if (atomic) {
         const rect = child.getBoundingClientRect();
         const top = rect.top + window.scrollY - hostTop;
-        out.push({ el: child, top, bottom: top + rect.height, height: rect.height });
+        out.push({
+          el: child,
+          top,
+          bottom: top + rect.height,
+          height: rect.height,
+          // Unbreakable because THIS pass said so, and therefore negotiable: see
+          // the `soft` note on PaginationBlock.
+          soft: child.hasAttribute("data-auto-keep") && !child.hasAttribute("data-keep-together"),
+        });
       } else if (child.children.length > 0) {
         walk(child);
       }
@@ -221,6 +236,22 @@ function keepUnit(heading: HTMLElement, root: HTMLElement): HTMLElement | null {
   if (parent.firstElementChild !== heading) return null;
   if (parent.childElementCount < 2) return null;
   return parent;
+}
+
+/**
+ * How much content actually follows the heading inside its own section, or null
+ * when the markup gives no section to measure — a heading sitting directly in the
+ * sheet is followed by the rest of the document, which is not a bounded figure.
+ *
+ * This is what stops the 20mm floor from demanding more room than the section
+ * occupies, and pushing a section that would have fitted (see
+ * `headingRequiredSpace`).
+ */
+function followingContentHeight(heading: HTMLElement, root: HTMLElement): number | undefined {
+  const unit = keepUnit(heading, root);
+  if (!unit) return undefined;
+  const below = unit.getBoundingClientRect().bottom - heading.getBoundingClientRect().bottom;
+  return Math.max(0, below);
 }
 
 /**
@@ -344,16 +375,25 @@ export function PagedPreview({
             minimumSpacePx,
             leadInSpacePx: leadInSpace(heading),
             maxUnitHeight: keepMax,
+            followingContentHeight: followingContentHeight(heading, el),
           }),
         };
       });
 
-      const { cuts, forcedHeadings } = resolveHeadingBreaks({
+      const { cuts, forcedHeadings, softSplits } = resolveHeadingBreaks({
         contentHeight,
         pageHeight: pageH,
         blocks: atoms,
         headings: metrics,
       });
+
+      // A block this pass made unbreakable, which the layout then decided to run
+      // a boundary through because moving it whole would have wasted most of a
+      // page. The stamp has to go, or the print engine would move it after all
+      // and print the page this layout says does not exist.
+      for (const i of softSplits) {
+        atoms[i].el.removeAttribute("data-auto-keep");
+      }
 
       // `break-before: page` has no effect on a continuous screen, so the pass
       // has already modelled these breaks itself — the attribute is what carries
@@ -365,6 +405,8 @@ export function PagedPreview({
       // The block that will begin each next page — the one to push down so the
       // gutter opens in the right place.
       const starterOf = (cut: PageCut): HTMLElement | undefined => {
+        // `forcedIndex` from resolveHeadingBreaks is already in this array's index
+        // space — see the note on HeadingBreakResult.cuts.
         if (cut.kind === "forced" && cut.forcedIndex !== undefined) {
           return breakTarget(headings[cut.forcedIndex], el);
         }
@@ -434,9 +476,13 @@ export function PagedPreview({
           style={{ top: b.top, height: `${GUTTER_MM}mm` }}
         >
           {/* The page's own footer band — the practice line left, the page
-           * number right, exactly as the printed margin boxes place them. */}
-          <div className="flex items-end justify-between border-t border-gray-200 pt-1 text-[9px] text-gray-400">
-            <span className="truncate pr-4">{footerText}</span>
+           * number right, exactly as the printed margin boxes place them. The
+           * strapline WRAPS rather than truncating: the printed `@bottom-left`
+           * margin box wraps too, and a preview that ellipsised what print
+           * carries onto a second line reported a truncation that was not there
+           * — and hid one that was. */}
+          <div className="flex items-end justify-between gap-4 border-t border-gray-200 pt-1 text-[9px] leading-snug text-gray-400">
+            <span className="min-w-0">{footerText}</span>
             <span className="shrink-0 tabular-nums">
               Page {b.page} of {total}
             </span>

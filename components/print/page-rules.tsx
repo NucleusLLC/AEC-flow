@@ -34,12 +34,28 @@ import {
   SPACING,
   TABLE_TOKENS,
   LINE_HEIGHT,
+  pageSizeMm,
   type Density,
   type MarginPreset,
   type Margins,
   type Orientation,
   type PaperSize,
 } from "@/lib/documents/tokens";
+
+/**
+ * Width reserved for "Page N of M" in the bottom margin strip, in millimetres.
+ *
+ * Chrome sizes the bottom margin boxes by distributing the strip between them in
+ * proportion to their max-content widths. A footer line wider than the strip
+ * therefore squeezes the page-number box below the width of its own text, and the
+ * total wraps onto a second line — which is how a printed proposal came to read
+ * "Page 1 of" with the "3" stranded on a line of its own below it. An explicit
+ * width takes the box out of that distribution altogether.
+ *
+ * "Page 1 of 3" measures 13.8mm at the footer type size, so this is set with room
+ * to spare: a hundred-page register still fits on one line.
+ */
+const PAGE_NUMBER_WIDTH_MM = 30;
 
 export function PageRules({
   paper = DEFAULT_PAGE.paper,
@@ -72,15 +88,29 @@ export function PageRules({
   // otherwise terminate the content string and break the whole rule.
   const cssString = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 
-  const marginBoxStyle = `font-size: ${TYPE_SCALE.footer}pt; color: #6b7280; font-family: inherit;`;
+  const marginBoxStyle = `font-size: ${TYPE_SCALE.footer}pt; line-height: ${LINE_HEIGHT.footer}; color: #6b7280; font-family: inherit;`;
 
   // Footer band layout, matching the Estimates sheet: the practice's footer line
   // on the left, the page number on the right. Nothing sits centred, so a long
   // footer line and the page number cannot collide.
+  //
+  // Both boxes carry an EXPLICIT width, and the two add up to the strip between
+  // the page's left and right margins. Left to the browser's proportional sizing,
+  // a footer line longer than the strip took the page number's width with it (see
+  // PAGE_NUMBER_WIDTH_MM) and pushed its own tail — a practice's web address — to
+  // wherever the remaining width happened to break, which on a real proposal fell
+  // inside the address. With a fixed width the line always breaks in the same
+  // place, well before its end, and the bottom margin has room for both lines.
+  const stripMm = pageSizeMm({ paper, orientation }).width - m.left - m.right;
+  const numberWidthMm = pageNumbers ? Math.min(PAGE_NUMBER_WIDTH_MM, stripMm) : 0;
+  const footerWidthMm = Math.max(0, stripMm - numberWidthMm);
+
   const marginBoxes = [
-    footerLeft ? `@bottom-left { content: ${cssString(footerLeft)}; ${marginBoxStyle} }` : "",
+    footerLeft
+      ? `@bottom-left { content: ${cssString(footerLeft)}; width: ${footerWidthMm}mm; text-align: left; ${marginBoxStyle} }`
+      : "",
     pageNumbers
-      ? `@bottom-right { content: "Page " counter(page) " of " counter(pages); ${marginBoxStyle} }`
+      ? `@bottom-right { content: "Page " counter(page) " of " counter(pages); width: ${numberWidthMm}mm; white-space: nowrap; text-align: right; ${marginBoxStyle} }`
       : "",
   ]
     .filter(Boolean)

@@ -1711,6 +1711,13 @@ enum TaskStatus {
   DONE
 }
 
+/// A task proper, or a dated reminder. One table so a project's Agenda reads a
+/// single source; `kind` is what the widgets branch on.
+enum AgendaKind {
+  TASK
+  REMINDER
+}
+
 model Task {
   companyId String?
   id        String     @id @default(cuid())
@@ -1724,7 +1731,19 @@ model Task {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
+  /// Set when the item belongs to a project's dashboard/agenda; null for the
+  /// practice-wide list at /tasks, which is why every column here is optional.
+  projectId   String?
+  kind        AgendaKind @default(TASK)
+  /// User id the item is assigned to — this is what lets one member plan an
+  /// action in another member's agenda. `assignee` stays as the display name.
+  assigneeId  String?
+  /// User id that created / delegated it, so an assignee can see who asked.
+  createdById String?
+
   @@index([status])
+  @@index([projectId])
+  @@index([assigneeId])
   @@map("tasks")
 }
 
