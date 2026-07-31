@@ -29,6 +29,10 @@ import {
   type ServiceProposalStatus,
 } from "@/lib/proposals/engine/status";
 import type { ServiceProposalInput } from "@/lib/proposals/schema/proposal";
+import {
+  resolveProposalIdentification,
+  type ProposalIdentification,
+} from "@/lib/proposals/identification";
 import type {
   ServiceProposalDTO,
   ServiceProposalListItem,
@@ -247,6 +251,60 @@ export async function getServiceProposal(id: string): Promise<ServiceProposalDTO
     include: FULL_INCLUDE,
   });
   return p ? toDto(p) : null;
+}
+
+/**
+ * Read the project / client identification block for a proposal.
+ *
+ * ServiceProposal holds only scalar `clientId` / `projectId` (no Prisma relation), so the
+ * linked rows are fetched separately — through the tenant-scoped client, so a foreign
+ * companyId simply resolves to null rather than leaking another tenant's client details.
+ * Both links are optional; a proposal with neither returns an empty, non-rendering block.
+ *
+ * The precedence and the omit-when-empty rules live in the pure
+ * lib/proposals/identification module, which is unit-tested.
+ */
+export async function getServiceProposalIdentification(
+  p: Pick<
+    ServiceProposalDTO,
+    "clientId" | "clientName" | "projectId" | "projectName" | "contactName" | "contactEmail" | "contactTitle"
+  >,
+): Promise<ProposalIdentification> {
+  const [client, project] = await Promise.all([
+    p.clientId
+      ? prisma.client.findFirst({
+          where: { id: p.clientId },
+          select: {
+            name: true,
+            companyName: true,
+            contactPerson: true,
+            email: true,
+            phone: true,
+            addresses: {
+              select: { line1: true, line2: true, city: true, emirate: true, country: true, isPrimary: true },
+            },
+          },
+        })
+      : null,
+    p.projectId
+      ? prisma.project.findFirst({
+          where: { id: p.projectId },
+          select: { name: true, projectNumber: true, siteAddress: true },
+        })
+      : null,
+  ]);
+
+  return resolveProposalIdentification({
+    proposal: {
+      clientName: p.clientName,
+      projectName: p.projectName,
+      contactName: p.contactName,
+      contactEmail: p.contactEmail,
+      contactTitle: p.contactTitle,
+    },
+    client,
+    project,
+  });
 }
 
 export interface ProposalVersionInfo {

@@ -21,12 +21,19 @@ import { z } from "zod";
 
 // ── Primitives ───────────────────────────────────────────────────────────────
 
-/** A monetary amount in major units. Finite, non-negative, at most 2 decimals. */
+/** A monetary amount in major units. Finite, non-negative, at most 2 decimals.
+ *
+ *  The cent check round-trips through `toFixed(2)` rather than comparing `n * 100` to its
+ *  rounded self. Multiplying by 100 introduces IEEE-754 error, so the naive form rejected
+ *  perfectly legal two-decimal amounts — 8.29 * 100 is 828.9999999999999 and 1120.35 * 100
+ *  is 112034.99999999999, neither of which equals its own rounding. `toFixed(2)` formats
+ *  from the decimal value, so a genuine two-decimal amount round-trips exactly while true
+ *  sub-cent precision (100.005) still does not. */
 const moneyAmount = z
   .number()
   .finite("Amount must be a number")
   .nonnegative("Amount cannot be negative")
-  .refine((n) => Math.round(n * 100) === n * 100, "Amount cannot have more than 2 decimal places");
+  .refine((n) => Number(n.toFixed(2)) === n, "Amount cannot have more than 2 decimal places");
 
 /** A percentage (0–100 by default). Fees above 100% are almost always a typo. */
 const percent = (max = 100) =>

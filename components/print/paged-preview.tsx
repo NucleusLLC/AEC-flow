@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BREAK_RULES, TABLE_TOKENS } from "@/lib/documents/tokens";
+import {
+  headingRequiredSpace,
+  resolveHeadingBreaks,
+  type PageCut,
+} from "@/lib/documents/pagination";
 
 /**
- * PagedPreview — makes the on-screen document look like the printed one.
+ * PagedPreview — makes the on-screen document look like the printed one, and
+ * makes the printed one break where a human would break it.
  *
  * The print routes render the document as one continuous sheet. When printed,
  * the browser paginates it and the `@page` margin boxes in PageRules add page
@@ -25,19 +32,62 @@ import { useEffect, useRef, useState } from "react";
  * disagreement with the printed PDF is a bug worth chasing, not an accepted
  * tolerance.
  *
- * ALL OF THIS IS SCREEN ONLY. Every element added here is `print:hidden`, and no
- * layout property is changed for print, so the printed output is byte-identical
- * to what it was before. Print numbering stays with `@page`, which is the only
- * mechanism that can number pages the browser itself decides on.
+ * WHAT REACHES THE PRINTED PAGE — read this before changing anything here.
+ * An earlier version of this comment claimed the component was screen-only and
+ * left print byte-identical. That was never true: the attributes stamped below
+ * resolve against rules in PageRules that are deliberately NOT wrapped in
+ * `@media print`, so they governed the printed page too whenever the preview had
+ * rendered first. That is now the intended design, not an accident:
+ *
+ *   - `data-auto-keep`      short text blocks that may not be split
+ *   - `data-keep-with-next` a heading bound to its opening content
+ *   - `data-break-before`   a heading pushed off the foot of a page
+ *
+ * are measurement results, and the measurement is the only thing in the stack
+ * that knows where a page ends — Chrome's print path largely ignores
+ * `break-after: avoid`, so a heading cannot be held to its content by CSS alone.
+ * The preview and the printer must agree, so both are driven by the same pass.
+ * A `beforeprint` listener runs it as well, which covers printing straight from
+ * the route without the preview having settled, and repeated prints cannot
+ * compound because every pass clears the previous pass's stamps first.
+ *
+ * Only the page chrome — the boundary rules, footer bands and labels — is
+ * screen-only, via `print:hidden` and the `@media screen` gutter rule.
+ *
+ * The limit of that agreement: heights are measured in screen media. The sheet
+ * is laid out at the printed content width (see the note in CaPrintShell), so
+ * the two match — but a viewport too narrow to hold paper width wraps text
+ * differently, and the pass then refuses to stamp anything rather than stamp
+ * wrong. Printing from a squeezed window falls back to plain browser flow.
  */
 
 type Atom = { el: HTMLElement; top: number; bottom: number; height: number };
+
+/** Every attribute this component stamps, cleared before each pass. */
+const STAMPED_ATTRS = ["data-auto-keep", "data-keep-with-next", "data-break-before"] as const;
 
 /** Removes the spacing applied by a previous measuring pass. */
 function clearGutters(root: HTMLElement): void {
   for (const el of Array.from(root.querySelectorAll<HTMLElement>("[data-paged-break]"))) {
     el.removeAttribute("data-paged-break");
     el.style.removeProperty("--paged-gutter");
+  }
+}
+
+/**
+ * Removes the break decisions of a previous pass.
+ *
+ * Without this a second run — a resize, or a second trip through the print
+ * dialog — would paginate a document already carrying the first run's forced
+ * breaks, and every pass would push headings a little further down the document.
+ * Author-written `data-keep-together` is left alone: it is markup, not a
+ * measurement, which is why the stamped equivalent has its own attribute.
+ */
+function clearStamps(root: HTMLElement): void {
+  for (const attr of STAMPED_ATTRS) {
+    for (const el of Array.from(root.querySelectorAll<HTMLElement>(`[${attr}]`))) {
+      el.removeAttribute(attr);
+    }
   }
 }
 
@@ -87,6 +137,103 @@ function collectAtoms(root: HTMLElement, hostTop: number): Atom[] {
   return out;
 }
 
+const HEADING_SELECTOR = "h1, h2, h3, h4";
+
+/**
+ * Elements that are content in their own right rather than a layout wrapper.
+ * The lead-in walk stops at the first of these, so `<div class="mt-2"><p>…` —
+ * the shape every PrintSection produces — resolves to the paragraph.
+ */
+const CONTENT_LEAF = /^(P|UL|OL|DL|TABLE|FIGURE|IMG|BLOCKQUOTE|PRE|H1|H2|H3|H4)$/;
+
+/** The first thing the reader sees under a heading. */
+function leadInElement(heading: HTMLElement): HTMLElement | null {
+  let node = (heading.nextElementSibling ??
+    heading.parentElement?.nextElementSibling ??
+    null) as HTMLElement | null;
+
+  for (let depth = 0; depth < 8; depth++) {
+    if (!node || CONTENT_LEAF.test(node.tagName) || !node.firstElementChild) break;
+    node = node.firstElementChild as HTMLElement;
+  }
+  return node;
+}
+
+/** Resolved line height in pixels; `normal` computes to a keyword, not a number. */
+function lineHeightPx(el: HTMLElement): number {
+  const cs = getComputedStyle(el);
+  const lh = parseFloat(cs.lineHeight);
+  if (Number.isFinite(lh)) return lh;
+  const fs = parseFloat(cs.fontSize);
+  return Number.isFinite(fs) ? fs * 1.4 : 0;
+}
+
+/**
+ * How much of a heading's opening content has to stay on the heading's page.
+ *
+ * A table is the interesting case: its header repeats on a continuation page, so
+ * what must not be stranded is the header plus its first rows (§7.2,
+ * `TABLE_TOKENS.minRowsAfterHeader`). Everything else is measured in lines, and
+ * capped at what the block actually is — a one-line lead-in needs one line, not
+ * two.
+ */
+function leadInSpace(heading: HTMLElement): number {
+  const el = leadInElement(heading);
+  if (!el) return 0;
+
+  const table = el.tagName === "TABLE" ? el : el.querySelector("table");
+  if (table) {
+    const head = table.querySelector("thead");
+    const rows = Array.from(table.querySelectorAll("tbody tr")).slice(
+      0,
+      TABLE_TOKENS.minRowsAfterHeader,
+    );
+    return (
+      (head?.getBoundingClientRect().height ?? 0) +
+      rows.reduce((sum, r) => sum + r.getBoundingClientRect().height, 0)
+    );
+  }
+
+  if (el.tagName === "UL" || el.tagName === "OL") {
+    return Array.from(el.children)
+      .slice(0, BREAK_RULES.minimumFollowingLines)
+      .reduce((sum, li) => sum + li.getBoundingClientRect().height, 0);
+  }
+
+  const line = lineHeightPx(el);
+  return Math.min(el.getBoundingClientRect().height, BREAK_RULES.minimumFollowingLines * line);
+}
+
+/**
+ * The element that binds a heading to the content under it, or null when the
+ * markup gives us nothing to bind with.
+ *
+ * A document section is `<section><h2/>…content…</section>`, so the section
+ * itself already IS "the heading plus what follows it" — tagging it is how a
+ * heading is made to move down whole without rewriting every template's JSX. The
+ * walk deliberately climbs no further than one level: the grandparent holds
+ * unrelated sections, and binding those together is how a page ends up
+ * three-quarters empty.
+ */
+function keepUnit(heading: HTMLElement, root: HTMLElement): HTMLElement | null {
+  const parent = heading.parentElement;
+  if (!parent || parent === root) return null;
+  if (parent.firstElementChild !== heading) return null;
+  if (parent.childElementCount < 2) return null;
+  return parent;
+}
+
+/**
+ * Where a forced break is stamped. When the heading opens a section, the section
+ * carries it: breaking before the section takes its top margin with it, and the
+ * screen gutter then replaces that margin instead of adding to it. The two
+ * elements share a border-box top, so this never moves the boundary.
+ */
+function breakTarget(heading: HTMLElement, root: HTMLElement): HTMLElement {
+  const parent = heading.parentElement;
+  return parent && parent !== root && parent.firstElementChild === heading ? parent : heading;
+}
+
 /** Height of the on-screen gutter drawn between two pages, in millimetres. */
 const GUTTER_MM = 16;
 
@@ -129,12 +276,21 @@ export function PagedPreview({
       if (!pxPerMm) return;
 
       const pageH = pageContentHeightMm * pxPerMm;
+
+      // Anything a previous pass applied must go before measuring, or each run
+      // would paginate a document already inflated — or already re-broken — by
+      // the last one. This is also what keeps a second trip through the print
+      // dialog from compounding stamps.
+      clearGutters(el);
+      clearStamps(el);
+
       const hostRect = el.getBoundingClientRect();
       const hostTop = hostRect.top + window.scrollY;
 
       // `max-w-full` on the sheet lets a narrow viewport shrink it below paper
       // width. Text then wraps differently from print and every measured height
-      // is wrong, so show no boundaries rather than confident wrong ones.
+      // is wrong, so show no boundaries — and stamp no break decisions — rather
+      // than confident wrong ones.
       const squeezed = hostRect.width < pageContentWidthMm * pxPerMm - 2;
       setNarrow(squeezed);
       if (squeezed) {
@@ -142,10 +298,6 @@ export function PagedPreview({
         setTotal(1);
         return;
       }
-
-      // Any gutters from a previous pass must go before measuring, or each run
-      // would paginate a document already inflated by the last run's spacing.
-      clearGutters(el);
 
       // A page should not end mid-sentence, so short text blocks are made
       // unbreakable and move whole. The ceiling matters: marking EVERY paragraph
@@ -158,52 +310,84 @@ export function PagedPreview({
       )) {
         const h = block.getBoundingClientRect().height;
         if (h > 0 && h <= keepMax) block.setAttribute("data-auto-keep", "");
-        else block.removeAttribute("data-auto-keep");
+      }
+
+      const headings = Array.from(el.querySelectorAll<HTMLElement>(HEADING_SELECTOR)).filter(
+        (h) => getComputedStyle(h).display !== "none",
+      );
+
+      // KEEP WITH NEXT. A heading and its opening content become one unbreakable
+      // unit, so a boundary that would fall between them moves the pair down
+      // instead. Bound only when the unit is SHORT, against the same ceiling: a
+      // tall unit made atomic is the stranded-page waste described above.
+      for (const heading of headings) {
+        const unit = keepUnit(heading, el);
+        if (unit && unit.getBoundingClientRect().height <= keepMax) {
+          unit.setAttribute("data-keep-with-next", "");
+        }
       }
 
       const atoms = collectAtoms(el, hostTop);
       const contentHeight = el.getBoundingClientRect().height;
 
-      // Fill each page to its full height, then pull the boundary back only if
-      // it would land inside a block that cannot be split — that block moves down
-      // whole, which is exactly what the print engine does.
-      const cuts: { at: number; atom?: Atom }[] = [];
-      let pageStart = 0;
+      // MINIMUM SPACE AT THE FOOT. Binding only helps a section short enough to
+      // move whole; a long one still opens with its heading wherever the page
+      // happens to be. So measure each heading against the space left below it
+      // and push the ones that would arrive with nothing to show.
+      const minimumSpacePx = BREAK_RULES.minimumSpaceAfterHeadingMm * pxPerMm;
+      const metrics = headings.map((heading) => {
+        const rect = heading.getBoundingClientRect();
+        return {
+          top: rect.top + window.scrollY - hostTop,
+          requiredSpace: headingRequiredSpace({
+            headingHeight: rect.height,
+            minimumSpacePx,
+            leadInSpacePx: leadInSpace(heading),
+            maxUnitHeight: keepMax,
+          }),
+        };
+      });
 
-      while (pageStart + pageH < contentHeight - 1) {
-        let boundary = pageStart + pageH;
+      const { cuts, forcedHeadings } = resolveHeadingBreaks({
+        contentHeight,
+        pageHeight: pageH,
+        blocks: atoms,
+        headings: metrics,
+      });
 
-        const straddler = atoms.find(
-          (a) => a.top > pageStart && a.top < boundary && a.bottom > boundary && a.height <= pageH,
-        );
-        if (straddler) boundary = straddler.top;
-
-        // The block that will begin the next page — the one to push down so the
-        // gutter opens in the right place.
-        const starter = straddler ?? atoms.find((a) => a.top >= boundary - 1);
-
-        cuts.push({ at: boundary, atom: starter });
-        pageStart = boundary;
-
-        // Defensive: a boundary that fails to advance would spin forever.
-        if (cuts.length > 200) break;
+      // `break-before: page` has no effect on a continuous screen, so the pass
+      // has already modelled these breaks itself — the attribute is what carries
+      // the same decision into the print engine.
+      for (const i of forcedHeadings) {
+        breakTarget(headings[i], el).setAttribute("data-break-before", "");
       }
+
+      // The block that will begin each next page — the one to push down so the
+      // gutter opens in the right place.
+      const starterOf = (cut: PageCut): HTMLElement | undefined => {
+        if (cut.kind === "forced" && cut.forcedIndex !== undefined) {
+          return breakTarget(headings[cut.forcedIndex], el);
+        }
+        return cut.blockIndex !== undefined ? atoms[cut.blockIndex].el : undefined;
+      };
 
       // Open a real gap at each cut so the page footer has room and content is
       // never printed into the band. Screen-only: see the CSS note in PageRules.
       const gutterPx = GUTTER_MM * pxPerMm;
-      for (const cut of cuts) {
-        if (!cut.atom) continue;
-        cut.atom.el.setAttribute("data-paged-break", "");
-        cut.atom.el.style.setProperty("--paged-gutter", `${gutterPx}px`);
+      const starters = cuts.map(starterOf);
+      for (const starter of starters) {
+        if (!starter) continue;
+        starter.setAttribute("data-paged-break", "");
+        starter.style.setProperty("--paged-gutter", `${gutterPx}px`);
       }
 
       // Positions shifted when the gutters opened, so read them back rather than
       // predicting where everything landed.
       const hostTop2 = el.getBoundingClientRect().top + window.scrollY;
       const bands = cuts.map((cut, i) => {
-        const top = cut.atom
-          ? cut.atom.el.getBoundingClientRect().top + window.scrollY - hostTop2 - gutterPx
+        const starter = starters[i];
+        const top = starter
+          ? starter.getBoundingClientRect().top + window.scrollY - hostTop2 - gutterPx
           : cut.at;
         return { top, page: i + 1 };
       });
@@ -219,9 +403,15 @@ export function PagedPreview({
     ro.observe(host);
     if (document.fonts?.ready) void document.fonts.ready.then(measure);
     window.addEventListener("resize", measure);
+    // Printing straight from the route, without the preview having settled,
+    // must get the same pagination. Chrome fires this before it switches to
+    // print layout, so the measurement still reads the screen sheet — which is
+    // laid out at the printed content width.
+    window.addEventListener("beforeprint", measure);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
+      window.removeEventListener("beforeprint", measure);
     };
     // `children` is deliberately NOT a dependency. It arrives as an opaque
     // server payload whose identity changes on every render, which would re-run

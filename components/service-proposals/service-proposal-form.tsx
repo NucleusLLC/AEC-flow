@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, useRef } from "react";
+import { useEffect, useMemo, useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -48,6 +48,110 @@ const BASIS_TYPES: CostBasisType[] = [
 const field =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
 const label = "mb-1 block text-xs font-medium text-muted";
+/** Applied on top of `field` when the server rejected that input. */
+const fieldInvalid = "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20";
+
+/* ---- Server-side validation issues ------------------------------------- */
+
+/**
+ * A rejected field, rewritten for this form.
+ *
+ * The server validates the payload, so its issue paths carry payload array indexes
+ * (`phases.4.name`). Rows here are keyed by a stable `uid()`, and two of the payload
+ * arrays are filtered before they are sent, so index ≠ render position. `mapIssues`
+ * rewrites the index to the row key it came from — `path` is therefore
+ * `phases.<rowKey>.name` and the JSX can look an issue up without re-deriving the
+ * payload order. `label` is a human location so every message can be listed in the
+ * summary, including ones for inputs this form does not render.
+ */
+type FieldIssue = { path: string; message: string; label: string };
+
+/** Payload-array name → the row keys that were sent, in payload order. */
+type RowKeyMap = Record<string, string[]>;
+
+/** Tax and discount are single fixed rows rather than a repeater, so they get fixed keys. */
+const TAX_KEY = "tax";
+const DISCOUNT_KEY = "discount";
+
+/**
+ * Is this phase / milestone row worth sending?
+ *
+ * "Add phase" and "Add milestone" insert a blank row. A user who adds one and then thinks
+ * better of it leaves an empty row behind, and the schema requires a name — which rejected
+ * the whole proposal over a row the user had already abandoned. Blank rows are dropped the
+ * same way blank reimbursables and scope items already are. A row with a percentage but no
+ * name is still sent, so that genuine mistake is reported rather than silently discarded.
+ */
+const isUsedRow = (r: { name: string; percent: string }) => r.name.trim() !== "" || Number(r.percent) > 0;
+
+const GROUP_LABEL: Record<string, string> = {
+  feeComponents: "Professional fees",
+  phases: "Design phases",
+  paymentMilestones: "Payment schedule",
+  reimbursables: "Reimbursable expenses",
+  scopeItems: "Scope of services",
+  taxes: "Tax",
+  discounts: "Discount",
+  costBasis: "Cost basis",
+};
+
+const FIELD_LABEL: Record<string, string> = {
+  title: "Title",
+  currency: "Currency",
+  contactName: "Contact name",
+  contactEmail: "Contact email",
+  clientName: "Client",
+  projectName: "Project",
+  amount: "Amount",
+  label: "Description",
+  name: "Name",
+  percent: "Percentage",
+  fixedAmount: "Amount",
+  quantity: "Quantity",
+  unitRate: "Rate",
+  baseAmount: "Base cost",
+  markupPercent: "Markup %",
+  value: "Value",
+  scopeSummary: "Scope summary",
+  exclusions: "Exclusions",
+  assumptions: "Assumptions",
+  terms: "Terms & conditions",
+  validUntil: "Valid until",
+};
+
+const humanField = (segment: string) => FIELD_LABEL[segment] ?? segment;
+
+/**
+ * Rewrite server issue paths from payload indexes to stable row keys, and build a
+ * readable location for each one. Anything that does not match the row-keyed shape is
+ * passed through untouched so it still reaches the summary.
+ */
+function mapIssues(
+  raw: { path: string; message: string }[],
+  keys: RowKeyMap,
+): FieldIssue[] {
+  return raw.map((issue) => {
+    const [group, second, ...rest] = issue.path.split(".");
+    const rowKeys = keys[group];
+    const index = Number(second);
+    if (rowKeys && Number.isInteger(index) && rowKeys[index] !== undefined) {
+      const leaf = rest.join(".");
+      return {
+        path: [group, rowKeys[index], leaf].filter(Boolean).join("."),
+        message: issue.message,
+        label: `${GROUP_LABEL[group] ?? group} — line ${index + 1}${leaf ? ` — ${humanField(leaf)}` : ""}`,
+      };
+    }
+    if (group === "costBasis") {
+      return {
+        path: issue.path,
+        message: issue.message,
+        label: `${GROUP_LABEL.costBasis}${second ? ` — ${humanField(second)}` : ""}`,
+      };
+    }
+    return { path: issue.path, message: issue.message, label: humanField(group) };
+  });
+}
 
 type FeeRow = {
   key: string;
@@ -114,7 +218,22 @@ export function ServiceProposalForm({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<FieldIssue[]>([]);
   const nav = useRef<HTMLDivElement>(null);
+  const errorBox = useRef<HTMLDivElement>(null);
+
+  /** The message for an input, or undefined when it was accepted. */
+  const issueFor = (path: string) => issues.find((i) => i.path === path)?.message;
+
+  // Take the user to the first rejected input. The form is long and the error banner sits
+  // at the bottom, so without this a rejection off-screen looks like nothing happened.
+  useEffect(() => {
+    if (issues.length === 0) return;
+    const first = nav.current?.querySelector<HTMLElement>("[data-invalid='true']");
+    const target = first ?? errorBox.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    first?.focus({ preventScroll: true });
+  }, [issues]);
 
   const init = initial?.input;
 
@@ -433,8 +552,11 @@ export function ServiceProposalForm({
       currency,
       costBasis: buildCostBasis(),
       feeComponents: fees.map(feeToComponent),
-      phases: phases.map((p) => ({ id: p.key, name: p.name, percent: Number(p.percent) || 0 })),
-      paymentMilestones: milestones.map((m) => ({ id: m.key, name: m.name, percent: Number(m.percent) || 0 })),
+      // Blank rows are dropped here too, so the preview matches the payload exactly.
+      phases: phases.filter(isUsedRow).map((p) => ({ id: p.key, name: p.name, percent: Number(p.percent) || 0 })),
+      paymentMilestones: milestones
+        .filter(isUsedRow)
+        .map((m) => ({ id: m.key, name: m.name, percent: Number(m.percent) || 0 })),
       reimbursables: reimb
         .filter((r) => r.label || Number(r.amount) > 0)
         .map((r) => ({ id: r.key, label: r.label || "Reimbursable", amount: Number(r.amount) || 0 })),
@@ -454,10 +576,33 @@ export function ServiceProposalForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setIssues([]);
     const client = clientOptions.find((c) => c.id === clientId);
     // projectOptions, not projects: a project created inline in this form is
     // not in the server-rendered list, and its name must still reach the payload.
     const project = projectOptions.find((p) => p.id === projectId);
+
+    // Rows are filtered before they are sent, so the payload order is captured here and
+    // reused to map server issue indexes back onto the row that produced them.
+    const sentPhases = phases.filter(isUsedRow);
+    const sentMilestones = milestones.filter(isUsedRow);
+    const sentReimb = reimb.filter((r) => r.label || Number(r.amount) > 0);
+    const sentScope = scopeRows.filter((s) => s.title.trim() !== "");
+    const sentTaxes = taxName && Number(taxPercent) > 0 ? [{ name: taxName, percent: Number(taxPercent), mode: "EXCLUSIVE" }] : [];
+    const sentDiscounts =
+      discountLabel && Number(discountValue) > 0
+        ? [{ id: "d", label: discountLabel, type: discountType, value: Number(discountValue) }]
+        : [];
+    const rowKeys: RowKeyMap = {
+      feeComponents: fees.map((f) => f.key),
+      phases: sentPhases.map((p) => p.key),
+      paymentMilestones: sentMilestones.map((m) => m.key),
+      reimbursables: sentReimb.map((r) => r.key),
+      scopeItems: sentScope.map((s) => s.key),
+      taxes: sentTaxes.map(() => TAX_KEY),
+      discounts: sentDiscounts.map(() => DISCOUNT_KEY),
+    };
+
     const payload = {
       title,
       currency,
@@ -469,20 +614,18 @@ export function ServiceProposalForm({
       contactEmail: contactEmail || null,
       costBasis: buildCostBasis(),
       feeComponents: fees.map(feeToComponent),
-      phases: phases.map((p) => ({ id: p.key, name: p.name, percent: Number(p.percent) || 0 })),
-      paymentMilestones: milestones.map((m) => ({ id: m.key, name: m.name, percent: Number(m.percent) || 0 })),
-      reimbursables: reimb
-        .filter((r) => r.label || Number(r.amount) > 0)
-        .map((r) => ({ id: r.key, label: r.label || "Reimbursable", amount: Number(r.amount) || 0 })),
-      taxes: taxName && Number(taxPercent) > 0 ? [{ name: taxName, percent: Number(taxPercent), mode: "EXCLUSIVE" }] : [],
-      discounts:
-        discountLabel && Number(discountValue) > 0
-          ? [{ id: "d", label: discountLabel, type: discountType, value: Number(discountValue) }]
-          : [],
+      phases: sentPhases.map((p) => ({ id: p.key, name: p.name, percent: Number(p.percent) || 0 })),
+      paymentMilestones: sentMilestones.map((m) => ({ id: m.key, name: m.name, percent: Number(m.percent) || 0 })),
+      reimbursables: sentReimb.map((r) => ({ id: r.key, label: r.label || "Reimbursable", amount: Number(r.amount) || 0 })),
+      taxes: sentTaxes,
+      discounts: sentDiscounts,
       scopeSummary: scopeSummary || null,
-      scopeItems: scopeRows
-        .filter((s) => s.title.trim() !== "")
-        .map((s) => ({ title: s.title, description: s.description || null, included: s.included, category: "BASE" as const })),
+      scopeItems: sentScope.map((s) => ({
+        title: s.title,
+        description: s.description || null,
+        included: s.included,
+        category: "BASE" as const,
+      })),
       exclusions: exclusions || null,
       assumptions: assumptions || null,
       terms: terms || null,
@@ -497,6 +640,7 @@ export function ServiceProposalForm({
           : await createServiceProposalAction(payload);
       if (!res.ok) {
         setError(res.error);
+        setIssues(res.fieldIssues ? mapIssues(res.fieldIssues, rowKeys) : []);
         return;
       }
       router.push(`/design/service-proposals/${res.id}`);
@@ -505,6 +649,40 @@ export function ServiceProposalForm({
   }
 
   const phasePct = phases.reduce((s, p) => s + (Number(p.percent) || 0), 0);
+
+  /**
+   * Every issue path that has an inline slot below. Anything outside this set — a rule on a
+   * field this form does not render, or one whose row was dropped — is listed verbatim in
+   * the summary instead, so a rejection can never be invisible.
+   */
+  const reachablePaths = useMemo(() => {
+    // `currency` is deliberately absent: it is a fixed dropdown with no error slot, so a
+    // rule that somehow rejected it must reach the summary rather than vanish.
+    const p = new Set<string>(["title", "contactName", "contactEmail", "validUntil", "costBasis.amount"]);
+    for (const f of fees) {
+      p.add(`feeComponents.${f.key}.label`);
+      if (f.method === "PERCENT_OF_BASIS") p.add(`feeComponents.${f.key}.percent`);
+      if (LUMP_METHODS.includes(f.method)) p.add(`feeComponents.${f.key}.fixedAmount`);
+      if (RATE_METHODS.includes(f.method)) {
+        p.add(`feeComponents.${f.key}.quantity`);
+        p.add(`feeComponents.${f.key}.unitRate`);
+      }
+      if (MARKUP_METHODS.includes(f.method)) {
+        p.add(`feeComponents.${f.key}.baseAmount`);
+        p.add(`feeComponents.${f.key}.markupPercent`);
+      }
+    }
+    const addAll = (...paths: string[]) => paths.forEach((x) => p.add(x));
+    for (const x of phases) addAll(`phases.${x.key}.name`, `phases.${x.key}.percent`);
+    for (const x of milestones) addAll(`paymentMilestones.${x.key}.name`, `paymentMilestones.${x.key}.percent`);
+    for (const x of reimb) addAll(`reimbursables.${x.key}.label`, `reimbursables.${x.key}.amount`);
+    for (const x of scopeRows) addAll(`scopeItems.${x.key}.title`, `scopeItems.${x.key}.description`);
+    addAll(`taxes.${TAX_KEY}.name`, `taxes.${TAX_KEY}.percent`);
+    addAll(`discounts.${DISCOUNT_KEY}.label`, `discounts.${DISCOUNT_KEY}.value`);
+    return p;
+  }, [fees, phases, milestones, reimb, scopeRows]);
+
+  const orphanIssues = issues.filter((i) => !reachablePaths.has(i.path));
 
   return (
     <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -540,7 +718,15 @@ export function ServiceProposalForm({
           <CardBody className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className={label}>Title *</label>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder="Architectural design services — Palm Beach Residence" />
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={`${field} ${issueFor("title") ? fieldInvalid : ""}`}
+                data-invalid={issueFor("title") ? "true" : undefined}
+                aria-invalid={issueFor("title") ? true : undefined}
+                placeholder="Architectural design services — Palm Beach Residence"
+              />
+              <FieldError msg={issueFor("title")} />
             </div>
             <div>
               <label className={label}>Client</label>
@@ -676,11 +862,26 @@ export function ServiceProposalForm({
             </div>
             <div>
               <label className={label}>Contact name</label>
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} className={field} />
+              <input
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                className={`${field} ${issueFor("contactName") ? fieldInvalid : ""}`}
+                data-invalid={issueFor("contactName") ? "true" : undefined}
+                aria-invalid={issueFor("contactName") ? true : undefined}
+              />
+              <FieldError msg={issueFor("contactName")} />
             </div>
             <div>
               <label className={label}>Contact email</label>
-              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={field} />
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                className={`${field} ${issueFor("contactEmail") ? fieldInvalid : ""}`}
+                data-invalid={issueFor("contactEmail") ? "true" : undefined}
+                aria-invalid={issueFor("contactEmail") ? true : undefined}
+              />
+              <FieldError msg={issueFor("contactEmail")} />
             </div>
             <div>
               <label className={label}>Currency</label>
@@ -704,7 +905,18 @@ export function ServiceProposalForm({
               </div>
               <div>
                 <label className={label}>Amount *</label>
-                <input type="number" step="any" min="0" value={basisAmount} onChange={(e) => setBasisAmount(e.target.value)} className={`${field} text-right`} placeholder="2500000" />
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={basisAmount}
+                  onChange={(e) => setBasisAmount(e.target.value)}
+                  className={`${field} text-right ${issueFor("costBasis.amount") ? fieldInvalid : ""}`}
+                  data-invalid={issueFor("costBasis.amount") ? "true" : undefined}
+                  aria-invalid={issueFor("costBasis.amount") ? true : undefined}
+                  placeholder="2500000"
+                />
+                <FieldError msg={issueFor("costBasis.amount")} />
               </div>
               <div className="sm:col-span-3">
                 <label className={label}>Source note (e.g. which estimate figure)</label>
@@ -747,11 +959,22 @@ export function ServiceProposalForm({
             {fees.map((f) => {
               const set = (patch: Partial<FeeRow>) =>
                 setFees((p) => p.map((x) => (x.key === f.key ? { ...x, ...patch } : x)));
+              const iss = (leaf: string) => issueFor(`feeComponents.${f.key}.${leaf}`);
               const compAmount = calc.components.find((c) => c.id === f.key)?.calculatedAmount ?? 0;
               return (
                 <div key={f.key} className="rounded-lg border border-border p-3">
                   <div className="grid gap-2 sm:grid-cols-[1fr_180px_40px]">
-                    <input value={f.label} onChange={(e) => set({ label: e.target.value })} className={field} placeholder="Architecture" />
+                    <div>
+                      <input
+                        value={f.label}
+                        onChange={(e) => set({ label: e.target.value })}
+                        className={`${field} ${iss("label") ? fieldInvalid : ""}`}
+                        data-invalid={iss("label") ? "true" : undefined}
+                        aria-invalid={iss("label") ? true : undefined}
+                        placeholder="Architecture"
+                      />
+                      <FieldError msg={iss("label")} />
+                    </div>
                     <select value={f.method} onChange={(e) => set({ method: e.target.value as FeeMethod })} className={field}>
                       {FEE_METHOD_ORDER.map((m) => <option key={m} value={m}>{FEE_METHOD_LABEL[m]}</option>)}
                     </select>
@@ -762,31 +985,37 @@ export function ServiceProposalForm({
                   <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_140px]">
                     {f.method === "PERCENT_OF_BASIS" ? (
                       <label className="text-xs text-muted">Percentage
-                        <input type="number" step="any" min="0" value={f.percent} onChange={(e) => set({ percent: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="7.5" />
+                        <input type="number" step="any" min="0" value={f.percent} onChange={(e) => set({ percent: e.target.value })} className={`${field} mt-0.5 text-right ${iss("percent") ? fieldInvalid : ""}`} data-invalid={iss("percent") ? "true" : undefined} aria-invalid={iss("percent") ? true : undefined} placeholder="7.5" />
+                        <FieldError msg={iss("percent")} />
                       </label>
                     ) : null}
                     {LUMP_METHODS.includes(f.method) ? (
                       <label className="text-xs text-muted">Amount
-                        <input type="number" step="any" min="0" value={f.fixedAmount} onChange={(e) => set({ fixedAmount: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="55000" />
+                        <input type="number" step="any" min="0" value={f.fixedAmount} onChange={(e) => set({ fixedAmount: e.target.value })} className={`${field} mt-0.5 text-right ${iss("fixedAmount") ? fieldInvalid : ""}`} data-invalid={iss("fixedAmount") ? "true" : undefined} aria-invalid={iss("fixedAmount") ? true : undefined} placeholder="55000" />
+                        <FieldError msg={iss("fixedAmount")} />
                       </label>
                     ) : null}
                     {RATE_METHODS.includes(f.method) ? (
                       <>
                         <label className="text-xs text-muted">{(RATE_METHOD_UNIT[f.method] ?? "quantity")[0].toUpperCase() + (RATE_METHOD_UNIT[f.method] ?? "quantity").slice(1)}
-                          <input type="number" step="any" min="0" value={f.quantity} onChange={(e) => set({ quantity: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="120" />
+                          <input type="number" step="any" min="0" value={f.quantity} onChange={(e) => set({ quantity: e.target.value })} className={`${field} mt-0.5 text-right ${iss("quantity") ? fieldInvalid : ""}`} data-invalid={iss("quantity") ? "true" : undefined} aria-invalid={iss("quantity") ? true : undefined} placeholder="120" />
+                          <FieldError msg={iss("quantity")} />
                         </label>
                         <label className="text-xs text-muted">Rate
-                          <input type="number" step="any" min="0" value={f.unitRate} onChange={(e) => set({ unitRate: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="150" />
+                          <input type="number" step="any" min="0" value={f.unitRate} onChange={(e) => set({ unitRate: e.target.value })} className={`${field} mt-0.5 text-right ${iss("unitRate") ? fieldInvalid : ""}`} data-invalid={iss("unitRate") ? "true" : undefined} aria-invalid={iss("unitRate") ? true : undefined} placeholder="150" />
+                          <FieldError msg={iss("unitRate")} />
                         </label>
                       </>
                     ) : null}
                     {MARKUP_METHODS.includes(f.method) ? (
                       <>
                         <label className="text-xs text-muted">Base cost
-                          <input type="number" step="any" min="0" value={f.baseAmount} onChange={(e) => set({ baseAmount: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="40000" />
+                          <input type="number" step="any" min="0" value={f.baseAmount} onChange={(e) => set({ baseAmount: e.target.value })} className={`${field} mt-0.5 text-right ${iss("baseAmount") ? fieldInvalid : ""}`} data-invalid={iss("baseAmount") ? "true" : undefined} aria-invalid={iss("baseAmount") ? true : undefined} placeholder="40000" />
+                          <FieldError msg={iss("baseAmount")} />
                         </label>
                         <label className="text-xs text-muted">Markup %
-                          <input type="number" step="any" min="0" value={f.markupPercent} onChange={(e) => set({ markupPercent: e.target.value })} className={`${field} mt-0.5 text-right`} placeholder="10" />
+                          <input type="number" step="any" min="0" value={f.markupPercent} onChange={(e) => set({ markupPercent: e.target.value })} className={`${field} mt-0.5 text-right ${iss("markupPercent") ? fieldInvalid : ""}`} data-invalid={iss("markupPercent") ? "true" : undefined} aria-invalid={iss("markupPercent") ? true : undefined} placeholder="10" />
+                          <FieldError msg={iss("markupPercent")} />
                         </label>
                       </>
                     ) : null}
@@ -822,16 +1051,25 @@ export function ServiceProposalForm({
         <Card>
           <CardHeader title="Design phases" subtitle="How the base fee is distributed — should total 100%" />
           <CardBody className="space-y-2">
-            {phases.map((ph) => (
-              <div key={ph.key} className="grid gap-2 sm:grid-cols-[1fr_100px_120px_40px]">
-                <input value={ph.name} onChange={(e) => setPhases((p) => p.map((x) => x.key === ph.key ? { ...x, name: e.target.value } : x))} className={field} />
-                <input type="number" step="any" min="0" value={ph.percent} onChange={(e) => setPhases((p) => p.map((x) => x.key === ph.key ? { ...x, percent: e.target.value } : x))} className={`${field} text-right`} />
-                <div className="flex h-9 items-center justify-end px-1 text-sm tabular-nums text-muted">
-                  {money((calc.totals.baseFeeTotal * (Number(ph.percent) || 0)) / 100)}
+            {phases.map((ph) => {
+              const iss = (leaf: string) => issueFor(`phases.${ph.key}.${leaf}`);
+              return (
+                <div key={ph.key} className="grid gap-2 sm:grid-cols-[1fr_100px_120px_40px]">
+                  <div>
+                    <input value={ph.name} onChange={(e) => setPhases((p) => p.map((x) => x.key === ph.key ? { ...x, name: e.target.value } : x))} className={`${field} ${iss("name") ? fieldInvalid : ""}`} data-invalid={iss("name") ? "true" : undefined} aria-invalid={iss("name") ? true : undefined} />
+                    <FieldError msg={iss("name")} />
+                  </div>
+                  <div>
+                    <input type="number" step="any" min="0" value={ph.percent} onChange={(e) => setPhases((p) => p.map((x) => x.key === ph.key ? { ...x, percent: e.target.value } : x))} className={`${field} text-right ${iss("percent") ? fieldInvalid : ""}`} data-invalid={iss("percent") ? "true" : undefined} aria-invalid={iss("percent") ? true : undefined} />
+                    <FieldError msg={iss("percent")} />
+                  </div>
+                  <div className="flex h-9 items-center justify-end px-1 text-sm tabular-nums text-muted">
+                    {money((calc.totals.baseFeeTotal * (Number(ph.percent) || 0)) / 100)}
+                  </div>
+                  <button type="button" onClick={() => setPhases((p) => p.length === 1 ? p : p.filter((x) => x.key !== ph.key))} disabled={phases.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label="Remove phase"><Trash2 className="h-4 w-4" /></button>
                 </div>
-                <button type="button" onClick={() => setPhases((p) => p.length === 1 ? p : p.filter((x) => x.key !== ph.key))} disabled={phases.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label="Remove phase"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}
+              );
+            })}
             <div className="flex items-center gap-3 pt-1">
               <button type="button" onClick={() => setPhases((p) => [...p, { key: uid(), name: "", percent: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
                 <Plus className="h-4 w-4" /> Add phase
@@ -849,16 +1087,25 @@ export function ServiceProposalForm({
           <CardBody className="space-y-2">
             {milestones.length === 0 ? (
               <p className="text-sm text-muted">No payment milestones yet.</p>
-            ) : milestones.map((m) => (
-              <div key={m.key} className="grid gap-2 sm:grid-cols-[1fr_100px_120px_40px]">
-                <input value={m.name} onChange={(e) => setMilestones((p) => p.map((x) => x.key === m.key ? { ...x, name: e.target.value } : x))} className={field} placeholder="On acceptance" />
-                <input type="number" step="any" min="0" value={m.percent} onChange={(e) => setMilestones((p) => p.map((x) => x.key === m.key ? { ...x, percent: e.target.value } : x))} className={`${field} text-right`} />
-                <div className="flex h-9 items-center justify-end px-1 text-sm tabular-nums text-muted">
-                  {money((calc.totals.grandTotal * (Number(m.percent) || 0)) / 100)}
+            ) : milestones.map((m) => {
+              const iss = (leaf: string) => issueFor(`paymentMilestones.${m.key}.${leaf}`);
+              return (
+                <div key={m.key} className="grid gap-2 sm:grid-cols-[1fr_100px_120px_40px]">
+                  <div>
+                    <input value={m.name} onChange={(e) => setMilestones((p) => p.map((x) => x.key === m.key ? { ...x, name: e.target.value } : x))} className={`${field} ${iss("name") ? fieldInvalid : ""}`} data-invalid={iss("name") ? "true" : undefined} aria-invalid={iss("name") ? true : undefined} placeholder="On acceptance" />
+                    <FieldError msg={iss("name")} />
+                  </div>
+                  <div>
+                    <input type="number" step="any" min="0" value={m.percent} onChange={(e) => setMilestones((p) => p.map((x) => x.key === m.key ? { ...x, percent: e.target.value } : x))} className={`${field} text-right ${iss("percent") ? fieldInvalid : ""}`} data-invalid={iss("percent") ? "true" : undefined} aria-invalid={iss("percent") ? true : undefined} />
+                    <FieldError msg={iss("percent")} />
+                  </div>
+                  <div className="flex h-9 items-center justify-end px-1 text-sm tabular-nums text-muted">
+                    {money((calc.totals.grandTotal * (Number(m.percent) || 0)) / 100)}
+                  </div>
+                  <button type="button" onClick={() => setMilestones((p) => p.filter((x) => x.key !== m.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove milestone"><Trash2 className="h-4 w-4" /></button>
                 </div>
-                <button type="button" onClick={() => setMilestones((p) => p.filter((x) => x.key !== m.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove milestone"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}
+              );
+            })}
             <button type="button" onClick={() => setMilestones((p) => [...p, { key: uid(), name: "", percent: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Plus className="h-4 w-4" /> Add milestone
             </button>
@@ -871,13 +1118,22 @@ export function ServiceProposalForm({
           <CardBody className="space-y-2">
             {reimb.length === 0 ? (
               <p className="text-sm text-muted">No reimbursables yet.</p>
-            ) : reimb.map((r) => (
-              <div key={r.key} className="grid gap-2 sm:grid-cols-[1fr_140px_40px]">
-                <input value={r.label} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, label: e.target.value } : x))} className={field} placeholder="Printing & plotting" />
-                <input type="number" step="any" min="0" value={r.amount} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, amount: e.target.value } : x))} className={`${field} text-right`} placeholder="1500" />
-                <button type="button" onClick={() => setReimb((p) => p.filter((x) => x.key !== r.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove reimbursable"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}
+            ) : reimb.map((r) => {
+              const iss = (leaf: string) => issueFor(`reimbursables.${r.key}.${leaf}`);
+              return (
+                <div key={r.key} className="grid gap-2 sm:grid-cols-[1fr_140px_40px]">
+                  <div>
+                    <input value={r.label} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, label: e.target.value } : x))} className={`${field} ${iss("label") ? fieldInvalid : ""}`} data-invalid={iss("label") ? "true" : undefined} aria-invalid={iss("label") ? true : undefined} placeholder="Printing & plotting" />
+                    <FieldError msg={iss("label")} />
+                  </div>
+                  <div>
+                    <input type="number" step="any" min="0" value={r.amount} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, amount: e.target.value } : x))} className={`${field} text-right ${iss("amount") ? fieldInvalid : ""}`} data-invalid={iss("amount") ? "true" : undefined} aria-invalid={iss("amount") ? true : undefined} placeholder="1500" />
+                    <FieldError msg={iss("amount")} />
+                  </div>
+                  <button type="button" onClick={() => setReimb((p) => p.filter((x) => x.key !== r.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove reimbursable"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              );
+            })}
             <button type="button" onClick={() => setReimb((p) => [...p, { key: uid(), label: "", amount: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Plus className="h-4 w-4" /> Add reimbursable
             </button>
@@ -891,17 +1147,20 @@ export function ServiceProposalForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={label}>Tax name</label>
-                <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={field} placeholder="BBO" />
+                <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={`${field} ${issueFor(`taxes.${TAX_KEY}.name`) ? fieldInvalid : ""}`} data-invalid={issueFor(`taxes.${TAX_KEY}.name`) ? "true" : undefined} aria-invalid={issueFor(`taxes.${TAX_KEY}.name`) ? true : undefined} placeholder="BBO" />
+                <FieldError msg={issueFor(`taxes.${TAX_KEY}.name`)} />
               </div>
               <div>
                 <label className={label}>Tax %</label>
-                <input type="number" step="any" min="0" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} className={`${field} text-right`} />
+                <input type="number" step="any" min="0" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} className={`${field} text-right ${issueFor(`taxes.${TAX_KEY}.percent`) ? fieldInvalid : ""}`} data-invalid={issueFor(`taxes.${TAX_KEY}.percent`) ? "true" : undefined} aria-invalid={issueFor(`taxes.${TAX_KEY}.percent`) ? true : undefined} />
+                <FieldError msg={issueFor(`taxes.${TAX_KEY}.percent`)} />
               </div>
             </div>
             <div className="grid grid-cols-[1fr_90px_90px] gap-3">
               <div>
                 <label className={label}>Discount</label>
-                <input value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} className={field} placeholder="Repeat client" />
+                <input value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} className={`${field} ${issueFor(`discounts.${DISCOUNT_KEY}.label`) ? fieldInvalid : ""}`} data-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? "true" : undefined} aria-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? true : undefined} placeholder="Repeat client" />
+                <FieldError msg={issueFor(`discounts.${DISCOUNT_KEY}.label`)} />
               </div>
               <div>
                 <label className={label}>Type</label>
@@ -912,7 +1171,8 @@ export function ServiceProposalForm({
               </div>
               <div>
                 <label className={label}>Value</label>
-                <input type="number" step="any" min="0" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className={`${field} text-right`} />
+                <input type="number" step="any" min="0" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className={`${field} text-right ${issueFor(`discounts.${DISCOUNT_KEY}.value`) ? fieldInvalid : ""}`} data-invalid={issueFor(`discounts.${DISCOUNT_KEY}.value`) ? "true" : undefined} aria-invalid={issueFor(`discounts.${DISCOUNT_KEY}.value`) ? true : undefined} />
+                <FieldError msg={issueFor(`discounts.${DISCOUNT_KEY}.value`)} />
               </div>
             </div>
           </CardBody>
@@ -926,10 +1186,17 @@ export function ServiceProposalForm({
               <p className="text-sm text-muted">No scope items yet — add inclusions and exclusions, or use the free-text summary below.</p>
             ) : scopeRows.map((s) => {
               const setS = (patch: Partial<ScopeRow>) => setScopeRows((p) => p.map((x) => x.key === s.key ? { ...x, ...patch } : x));
+              const iss = (leaf: string) => issueFor(`scopeItems.${s.key}.${leaf}`);
               return (
                 <div key={s.key} className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto_32px] sm:items-center">
-                  <input value={s.title} onChange={(e) => setS({ title: e.target.value })} className={field} placeholder="Site analysis & feasibility" />
-                  <input value={s.description} onChange={(e) => setS({ description: e.target.value })} className={field} placeholder="Optional detail" />
+                  <div>
+                    <input value={s.title} onChange={(e) => setS({ title: e.target.value })} className={`${field} ${iss("title") ? fieldInvalid : ""}`} data-invalid={iss("title") ? "true" : undefined} aria-invalid={iss("title") ? true : undefined} placeholder="Site analysis & feasibility" />
+                    <FieldError msg={iss("title")} />
+                  </div>
+                  <div>
+                    <input value={s.description} onChange={(e) => setS({ description: e.target.value })} className={`${field} ${iss("description") ? fieldInvalid : ""}`} data-invalid={iss("description") ? "true" : undefined} aria-invalid={iss("description") ? true : undefined} placeholder="Optional detail" />
+                    <FieldError msg={iss("description")} />
+                  </div>
                   <label className="inline-flex items-center gap-1.5 text-xs text-muted">
                     <input type="checkbox" checked={s.included} onChange={(e) => setS({ included: e.target.checked })} />
                     {s.included ? "Included" : "Excluded"}
@@ -969,7 +1236,8 @@ export function ServiceProposalForm({
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className={label}>Valid until</label>
-                <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className={field} />
+                <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className={`${field} ${issueFor("validUntil") ? fieldInvalid : ""}`} data-invalid={issueFor("validUntil") ? "true" : undefined} aria-invalid={issueFor("validUntil") ? true : undefined} />
+                <FieldError msg={issueFor("validUntil")} />
               </div>
               <label className="flex items-end gap-2 pb-1.5 text-sm text-muted">
                 <input type="checkbox" checked={showFeeDerivation} onChange={(e) => setShowFeeDerivation(e.target.checked)} />
@@ -980,8 +1248,28 @@ export function ServiceProposalForm({
         </Card>
 
         {error ? (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+          <div
+            ref={errorBox}
+            className="rounded-lg border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-700 dark:text-rose-400"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {/* Only claim fields are highlighted when at least one of them actually is. */}
+              {issues.length > 0 && orphanIssues.length === issues.length
+                ? "The proposal could not be saved:"
+                : error}
+            </div>
+            {orphanIssues.length > 0 ? (
+              // Issues with no input to highlight — spelled out here so the user is never
+              // told to fix a field they cannot find.
+              <ul className="mt-2 list-disc space-y-1 pl-8 text-xs">
+                {orphanIssues.map((i, n) => (
+                  <li key={`${i.path}-${n}`}>
+                    <span className="font-medium">{i.label}:</span> {i.message}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
 
@@ -1036,6 +1324,12 @@ export function ServiceProposalForm({
       </div>
     </form>
   );
+}
+
+/** Inline message under a rejected input. Renders nothing when the field was accepted. */
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{msg}</p>;
 }
 
 function Row({ k, v, muted }: { k: string; v: string; muted?: boolean }) {

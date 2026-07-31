@@ -258,11 +258,38 @@ export const TABLE_TOKENS = {
 
 /* ─────────────────────────── pagination controls ────────────────────────── */
 
-/** Break-control vocabulary the renderers translate into CSS or engine rules (§24). */
+/**
+ * Break-control vocabulary the renderers translate into CSS or engine rules (§24).
+ *
+ * `minimumOrphanLines` / `minimumWidowLines` map straight onto the CSS `orphans`
+ * and `widows` properties, which browsers apply themselves.
+ *
+ * The heading rules have no CSS equivalent that Chrome honours — `break-after:
+ * avoid` on a heading is declared in PageRules and largely ignored by the print
+ * path — so they are enforced by measurement in PagedPreview instead. See
+ * lib/documents/pagination.ts.
+ */
 export const BREAK_RULES = {
+  /**
+   * Lines of its own opening content a heading must keep on the same page. Read
+   * by the paged preview when it measures a heading's lead-in: a heading whose
+   * first paragraph cannot show this many lines above the page foot is pushed to
+   * the next page.
+   */
   minimumFollowingLines: 2,
   minimumOrphanLines: 2,
   minimumWidowLines: 2,
+  /**
+   * Floor, in millimetres, for the space that must remain below a heading before
+   * the page foot — the generic expression of `minimumFollowingLines` for content
+   * whose lead-in cannot be measured in lines (a table, a figure, a list).
+   *
+   * Twenty millimetres is a heading plus roughly four lines of body text at the
+   * document type scale, and 7.6% of an A4 text block: large enough that a
+   * pushed heading never reads as stranded, small enough that pushing one can
+   * never approach the `UNUSED_AREA_WARN` ceiling on the page it leaves behind.
+   */
+  minimumSpaceAfterHeadingMm: 20,
 } as const;
 
 /** Fraction of a non-final page that may sit unused before it is flagged (§7.1). */

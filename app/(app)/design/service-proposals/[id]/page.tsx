@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Printer } from "lucide-react";
 import {
   getServiceProposal,
+  getServiceProposalIdentification,
   listServiceProposalVersions,
   listStatusHistory,
 } from "@/lib/data/service-proposals";
@@ -13,6 +14,7 @@ import { isLocked, STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
+import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { formatCurrency } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Service Proposal · AEC-flow" };
@@ -26,9 +28,10 @@ export default async function ServiceProposalDetailPage({
   const p = await getServiceProposal(id);
   if (!p) notFound();
 
-  const [versions, history] = await Promise.all([
+  const [versions, history, identification] = await Promise.all([
     listServiceProposalVersions(p.id),
     listStatusHistory(p.id),
+    getServiceProposalIdentification(p),
   ]);
   const calc = computeProposal(p.input as ProposalCalcInput);
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
@@ -48,8 +51,8 @@ export default async function ServiceProposalDetailPage({
           </div>
           <p className="mt-1 font-mono text-sm text-muted">
             {p.number}{p.revision > 1 ? ` · rev ${p.revision}` : ""}
-            {p.clientName ? ` · ${p.clientName}` : ""}
-            {p.projectName ? ` · ${p.projectName}` : ""}
+            {identification.clientDisplayName ? ` · ${identification.clientDisplayName}` : ""}
+            {identification.projectDisplayName ? ` · ${identification.projectDisplayName}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -68,6 +71,17 @@ export default async function ServiceProposalDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
+          {/* Mirrors the identification block that opens the printed document, so what is on
+           * screen matches what the client receives. Hidden when there is nothing to show. */}
+          {identification.hasAny ? (
+            <Card>
+              <CardHeader title="Project & client" />
+              <CardBody>
+                <ProposalIdentificationDetail identification={identification} />
+              </CardBody>
+            </Card>
+          ) : null}
+
           <Card>
             <CardHeader title="Fee breakdown" />
             <CardBody>

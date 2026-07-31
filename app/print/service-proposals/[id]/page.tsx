@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getServiceProposal } from "@/lib/data/service-proposals";
+import { getServiceProposal, getServiceProposalIdentification } from "@/lib/data/service-proposals";
 import { computeProposal } from "@/lib/proposals/engine/engine";
 import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
 import { STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { formatCurrency } from "@/lib/format";
 import { CaPrintShell, PrintSection } from "@/components/construction-admin/print-shell";
 import { RichText } from "@/components/print/rich-text";
+import { ProposalIdentificationPrint } from "@/components/service-proposals/proposal-identification";
 
 export const metadata: Metadata = { title: "Service Proposal · Print" };
 
@@ -27,6 +28,7 @@ export default async function ServiceProposalPrintPage({
   const p = await getServiceProposal(id);
   if (!p) notFound();
 
+  const identification = await getServiceProposalIdentification(p);
   const calc = computeProposal(p.input as ProposalCalcInput);
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
 
@@ -42,8 +44,8 @@ export default async function ServiceProposalPrintPage({
       statusLabel={STATUS_LABEL[p.status]}
       title={p.title}
       meta={[
-        { label: "Client", value: p.clientName ?? "—" },
-        { label: "Project", value: p.projectName ?? "—" },
+        { label: "Client", value: identification.clientDisplayName ?? "—" },
+        { label: "Project", value: identification.projectDisplayName ?? "—" },
         { label: "Issued", value: p.issuedAt ? p.issuedAt.slice(0, 10) : "—" },
         { label: "Valid until", value: p.validUntil ?? "—" },
       ]}
@@ -53,6 +55,14 @@ export default async function ServiceProposalPrintPage({
         { role: "Date", name: "" },
       ]}
     >
+      {/* Identification block — the default opening section of the document. Absent entirely
+       * when the proposal has no linked client or project. */}
+      {identification.hasAny ? (
+        <PrintSection title="Project & client">
+          <ProposalIdentificationPrint identification={identification} />
+        </PrintSection>
+      ) : null}
+
       {p.input.scopeSummary || (p.input.scopeItems && p.input.scopeItems.length > 0) ? (
         <PrintSection title="Scope of services">
           {p.input.scopeSummary ? (
