@@ -10,6 +10,13 @@ import type { ProjectSchedule } from "@/lib/data/schedule";
 
 /** A project that can be scheduled, whether or not it has a programme yet. */
 export type SchedulableProject = {
+  /**
+   * Project row id. A saved `ProjectSchedule.projectId` holds THIS, not the
+   * project number — only the in-code demo seeds are keyed by number. So a new
+   * programme must be keyed by id too, or the same project would end up with
+   * two schedules.
+   */
+  id: string;
   projectNumber: string;
   projectName: string;
   client: string;
@@ -55,24 +62,34 @@ export function ScheduleApp({
 
   /**
    * Rows for projects with no programme yet — the ones users came looking for.
-   * Keyed by project number because that is what `ProjectSchedule.projectId`
-   * holds, so selecting one and saving upserts against the right project.
+   *
+   * A project counts as scheduled when a schedule is keyed by EITHER its row id
+   * (what the app writes) or its project number (what the in-code demo seeds
+   * use). Checking only one of the two listed already-scheduled projects a
+   * second time, and starting a programme from that row would have written a
+   * duplicate schedule for the same project.
    */
   const unscheduledRows: ProjectPickerRow[] = useMemo(() => {
     const scheduled = new Set(schedules.map((s) => s.projectId));
     const seen = new Set<string>();
     const all: SchedulableProject[] = [
       ...projects,
-      ...added.map((p) => ({ projectNumber: p.projectNumber, projectName: p.projectName, client: p.client })),
+      ...added.map((p) => ({
+        id: p.id,
+        projectNumber: p.projectNumber,
+        projectName: p.projectName,
+        client: p.client,
+      })),
     ];
     return all
       .filter((p) => {
-        if (scheduled.has(p.projectNumber) || seen.has(p.projectNumber)) return false;
-        seen.add(p.projectNumber);
+        if (scheduled.has(p.id) || scheduled.has(p.projectNumber) || seen.has(p.id)) return false;
+        seen.add(p.id);
         return true;
       })
       .map((p) => ({
-        key: p.projectNumber,
+        // Keyed by row id so the first save matches the app's own convention.
+        key: p.id,
         projectNumber: p.projectNumber,
         projectName: p.projectName,
         location:
@@ -95,7 +112,7 @@ export function ScheduleApp({
   function onProjectCreated(project: CreatedProject) {
     setAdded((p) => [...p, project]);
     setAddProjectOpen(false);
-    setSel(project.projectNumber);
+    setSel(project.id);
   }
 
   if (!sel)

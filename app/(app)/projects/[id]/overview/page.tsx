@@ -7,6 +7,8 @@ import { ProgressBar } from "@/components/ui/progress";
 import { getProject, DISCIPLINE_LABEL, type PhaseStatus } from "@/lib/data/projects";
 import { getProjectModulesRollup } from "@/lib/data/project-rollup";
 import { ProjectModulesRollupCard } from "@/components/projects/project-modules-rollup";
+import { getProjectScheduleSummary } from "@/lib/integrations/schedule/adapter";
+import { ProjectProgrammeStatusCard } from "@/components/projects/project-programme-status";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
@@ -40,6 +42,12 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
   const project = await getProject(id);
   if (!project) notFound();
   const rollup = await getProjectModulesRollup(id);
+  // `ProjectSchedule.projectId` holds the project ROW ID for everything the app
+  // saves, but the in-code demo seeds are keyed by project NUMBER — so try the
+  // id, then fall back. Read-only: lib/integrations/schedule/adapter.ts.
+  const byId = await getProjectScheduleSummary(id);
+  const programme = byId.found ? byId : await getProjectScheduleSummary(project.projectNumber);
+  const scheduleKey = byId.found ? id : project.projectNumber;
 
   return (
     <div className="space-y-6">
@@ -151,6 +159,8 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
               ) : null}
             </CardBody>
           </Card>
+
+          <ProjectProgrammeStatusCard summary={programme} scheduleKey={scheduleKey} />
 
           <ProjectModulesRollupCard rollup={rollup} projectId={id} />
 

@@ -30,6 +30,7 @@ export default async function SchedulePage() {
         schedules={schedules}
         directory={directory}
         projects={projects.map((p) => ({
+          id: p.id,
           projectNumber: p.projectNumber,
           projectName: p.name,
           client: p.clientName,
