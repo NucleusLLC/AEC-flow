@@ -250,3 +250,37 @@ Test count grew 117 → 141; tsc, eslint, `next build`, `npm run golden` green a
   configurable approval thresholds.
 - **Release D:** convert accepted proposal → project / phases / budget / invoice schedule
   (new table + Project integration); analytics dashboard and reports.
+
+---
+
+## 2026-07-31 — Duplicate Proposal + editable, uniqueness-enforced proposal number
+
+**Duplicate Proposal.** `Duplicate` on the proposal detail action bar (next to `New revision`,
+tooltips spell out the difference) copies a proposal into a new editable DRAFT and opens its
+edit form. `lib/proposals/duplicate.ts` holds the pure rules and the reasoning;
+`duplicateServiceProposal` in `lib/data/service-proposals.ts` does the writing.
+
+- Copied: all 8 content child tables (disciplines, phases, fee components, development-cost
+  items, payment milestones, reimbursables, discounts, taxes) plus the whole header content.
+  Totals are re-derived through `buildWriteData` → `computeProposal`, never copied from the
+  source's stored columns.
+- NOT copied: status history, version snapshots, attachments. Reset: `status` → DRAFT,
+  `revision` → 1, `versionLabel` / `issuedAt` / `lockedAt` / `deletedAt` → null, and
+  `preparedById` / `reviewedById` / `approvedById` / `ownerId` → null. A duplicate is a new
+  document, not a revision — `reviseServiceProposal` is still the way to continue an offer.
+- The original is left completely untouched (no supersede, no history row).
+- Title gets a `(copy)` / `(copy 2)` suffix so the copy is distinguishable immediately.
+
+**Proposal number is now editable.** New `number` field on the payload schema (optional; blank
+means "assign the next one" on create, "leave it alone" on edit) and a `Proposal number` input
+in the form. A clash is refused at the DATA LAYER — pre-flight `assertNumberFree` plus a P2002
+translation behind it — and comes back as a field issue on the `number` path, so the input turns
+red inline with "That number is already used — choose a different one." Case-only near-misses
+("sp-2026-001") are refused too, which the Postgres index alone would not catch.
+
+The unique index `service_proposals_companyId_number_key` already existed (migration 0003) and
+was verified present in the live database, so no new migration was needed. As with
+`PurchaseOrder` / `MaterialSelection`, it does not constrain rows with a null `companyId`
+(Postgres NULLs are distinct); every live row is company-stamped, so this is noted, not "fixed".
+
+Duplicating is gated on `create`, so STAFF keeps it. Test count 267 → 294.

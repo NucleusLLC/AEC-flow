@@ -10,15 +10,36 @@ import {
   transitionStatus,
   issueServiceProposal,
   reviseServiceProposal,
+  duplicateServiceProposal,
   getServiceProposal,
+  ProposalNumberInUseError,
 } from "@/lib/data/service-proposals";
 import { parseServiceProposalInput } from "@/lib/proposals/schema/proposal";
 import { assertCan, type ProposalActor } from "@/lib/proposals/permissions";
+import { NUMBER_IN_USE_MESSAGE } from "@/lib/proposals/duplicate";
 import type { ServiceProposalStatus } from "@/lib/proposals/engine/status";
 
 export type SaveResult =
   | { ok: true; id: string; number: string }
   | { ok: false; error: string; fieldIssues?: { path: string; message: string }[] };
+
+/**
+ * Turn a rejected write into a response the form can render.
+ *
+ * A clashing proposal number comes back as an issue on the `number` PATH — the same shape zod
+ * issues use — so the existing inline-error machinery in the form paints that one input red
+ * without a special case or a toast.
+ */
+function saveFailure(e: unknown, fallback: string): SaveResult {
+  if (e instanceof ProposalNumberInUseError) {
+    return {
+      ok: false,
+      error: NUMBER_IN_USE_MESSAGE,
+      fieldIssues: [{ path: "number", message: NUMBER_IN_USE_MESSAGE }],
+    };
+  }
+  return { ok: false, error: e instanceof Error ? e.message : fallback };
+}
 
 /** The signed-in actor for permission checks. Falls back to VIEWER when unknown, so a missing
  *  session can only ever reduce privilege, never grant it. */
@@ -48,7 +69,7 @@ export async function createServiceProposalAction(data: unknown): Promise<SaveRe
     revalidatePath("/design/service-proposals");
     return { ok: true, id: p.id, number: p.number };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Failed to create proposal." };
+    return saveFailure(e, "Failed to create proposal.");
   }
 }
 
@@ -70,7 +91,7 @@ export async function updateServiceProposalAction(id: string, data: unknown): Pr
     revalidatePath(`/design/service-proposals/${id}`);
     return { ok: true, id: p.id, number: p.number };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Failed to update proposal." };
+    return saveFailure(e, "Failed to update proposal.");
   }
 }
 
@@ -127,6 +148,25 @@ export async function reviseServiceProposalAction(id: string): Promise<SaveResul
     revalidatePath("/design/service-proposals");
     return { ok: true, id: p.id, number: p.number };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Failed to revise proposal." };
+    return saveFailure(e, "Failed to revise proposal.");
+  }
+}
+
+/**
+ * Duplicate a proposal into a new draft.
+ *
+ * Gated on "create", not on a new privilege: duplicating produces a proposal, so anyone who may
+ * create one may duplicate one. STAFF — the beta default — therefore keeps it, per the
+ * permissive policy in lib/proposals/permissions.ts.
+ */
+export async function duplicateServiceProposalAction(id: string): Promise<SaveResult> {
+  const actor = await currentActor();
+  try {
+    assertCan(actor, "create");
+    const p = await duplicateServiceProposal(id);
+    revalidatePath("/design/service-proposals");
+    return { ok: true, id: p.id, number: p.number };
+  } catch (e) {
+    return saveFailure(e, "Failed to duplicate proposal.");
   }
 }

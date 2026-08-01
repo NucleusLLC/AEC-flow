@@ -20,6 +20,13 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { computeProposal } from "@/lib/proposals/engine/engine";
 import { buildWriteData, nextProposalNumber } from "@/lib/proposals/persist";
+import {
+  duplicateResetData,
+  duplicateTitle,
+  isProposalNumberTaken,
+  normalizeProposalNumber,
+  suggestDuplicateNumber,
+} from "@/lib/proposals/duplicate";
 import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { COST_BASIS_LABEL } from "@/lib/proposals/engine/types";
 import {
@@ -87,6 +94,7 @@ const FULL_INCLUDE = {
 function toInput(p: FullProposal): ServiceProposalInput {
   return {
     title: p.title,
+    number: p.number,
     kind: p.kind,
     status: p.status,
     clientId: p.clientId,
@@ -388,34 +396,100 @@ export class ProposalLockedError extends Error {
   }
 }
 
+/**
+ * The proposal number the user asked for is already in use.
+ *
+ * Thrown from the DATA LAYER — both from the pre-flight check below and from the Prisma P2002
+ * raised by the unique index on (companyId, number) — so a duplicate number is refused even if
+ * a caller bypasses the UI entirely. Server actions translate it into an inline issue on the
+ * `number` field.
+ */
+export class ProposalNumberInUseError extends Error {
+  readonly number: string;
+  constructor(number: string) {
+    super(`Proposal number ${number} is already used.`);
+    this.name = "ProposalNumberInUseError";
+    this.number = number;
+  }
+}
+
+/** Every number this practice has ever used, soft-deleted included, so one is never reused. */
+async function allProposalNumbers(): Promise<string[]> {
+  const rows = await prisma.serviceProposal.findMany({ select: { number: true } });
+  return rows.map((r) => r.number);
+}
+
+/**
+ * Pre-flight availability check.
+ *
+ * The unique index is the real guarantee; this exists so the common case produces a clean
+ * field error instead of a raw constraint violation, and so a case-only difference
+ * ("sp-2026-001" vs "SP-2026-001") is rejected too — Postgres would happily store both.
+ * `exceptId` lets an edit keep its own number. Soft-deleted rows are INCLUDED: the index
+ * covers them, so their numbers are genuinely taken.
+ */
+async function assertNumberFree(number: string, exceptId?: string): Promise<void> {
+  const rows = await prisma.serviceProposal.findMany({
+    where: exceptId ? { id: { not: exceptId } } : {},
+    select: { number: true },
+  });
+  if (isProposalNumberTaken(rows.map((r) => r.number), number)) {
+    throw new ProposalNumberInUseError(number);
+  }
+}
+
+/**
+ * Re-throw Prisma's P2002 on (companyId, number) as ProposalNumberInUseError.
+ *
+ * Belt and braces behind `assertNumberFree`: two simultaneous saves can both pass the
+ * pre-flight and only the index can settle it. NOTE: the index is on (companyId, number) and
+ * Postgres treats NULLs as distinct, so it does NOT constrain rows with a null companyId —
+ * the same caveat as PurchaseOrder and MaterialSelection. Every live row is company-stamped,
+ * and the tenant extension stamps new ones, so in practice the constraint always applies.
+ */
+function asNumberConflict(e: unknown, number: string): unknown {
+  const err = e as { code?: string; meta?: { target?: unknown } };
+  if (err?.code === "P2002") {
+    const target = Array.isArray(err.meta?.target) ? err.meta.target.join(",") : String(err.meta?.target ?? "");
+    if (target.includes("number")) return new ProposalNumberInUseError(number);
+  }
+  return e;
+}
+
 // ── Writes ────────────────────────────────────────────────────────────────────
 
 export async function createServiceProposal(input: ServiceProposalInput): Promise<ServiceProposalDTO> {
   const who = await actor();
   const cid = await getCurrentCompanyId();
-  const existing = await prisma.serviceProposal.findMany({ select: { number: true } });
-  const number = nextProposalNumber(existing.map((e) => e.number), new Date().getFullYear());
+  // A number the user typed wins; blank falls back to the practice sequence.
+  const asked = normalizeProposalNumber(input.number);
+  const number = asked ?? nextProposalNumber(await allProposalNumbers(), new Date().getFullYear());
+  if (asked) await assertNumberFree(asked);
   const { header, children } = buildWriteData(input);
 
-  const created = await prisma.serviceProposal.create({
-    data: {
-      ...header,
-      number,
-      status: input.status ?? "DRAFT",
-      createdById: who.id,
-      createdByName: who.name,
-      updatedById: who.id,
-      feeComponents: { create: stampCompany(children.feeComponents, cid) },
-      phases: { create: stampCompany(children.phases, cid) },
-      paymentMilestones: { create: stampCompany(children.paymentMilestones, cid) },
-      reimbursables: { create: stampCompany(children.reimbursables, cid) },
-      discounts: { create: stampCompany(children.discounts, cid) },
-      taxes: { create: stampCompany(children.taxes, cid) },
-      developmentCostItems: { create: stampCompany(children.developmentCostItems, cid) },
-    },
-    include: FULL_INCLUDE,
-  });
-  return toDto(created);
+  try {
+    const created = await prisma.serviceProposal.create({
+      data: {
+        ...header,
+        number,
+        status: input.status ?? "DRAFT",
+        createdById: who.id,
+        createdByName: who.name,
+        updatedById: who.id,
+        feeComponents: { create: stampCompany(children.feeComponents, cid) },
+        phases: { create: stampCompany(children.phases, cid) },
+        paymentMilestones: { create: stampCompany(children.paymentMilestones, cid) },
+        reimbursables: { create: stampCompany(children.reimbursables, cid) },
+        discounts: { create: stampCompany(children.discounts, cid) },
+        taxes: { create: stampCompany(children.taxes, cid) },
+        developmentCostItems: { create: stampCompany(children.developmentCostItems, cid) },
+      },
+      include: FULL_INCLUDE,
+    });
+    return toDto(created);
+  } catch (e) {
+    throw asNumberConflict(e, number);
+  }
 }
 
 export async function updateServiceProposal(
@@ -430,6 +504,11 @@ export async function updateServiceProposal(
 
   const who = await actor();
   const cid = current.companyId; // stamp children with the PARENT's company so scoping is exact
+  // The number is editable. Keeping your own number is a no-op; taking someone else's is
+  // refused here, before anything is written.
+  const asked = normalizeProposalNumber(input.number);
+  const renumber = asked && asked !== current.number ? asked : null;
+  if (renumber) await assertNumberFree(renumber, id);
   const { header, children } = buildWriteData(input);
 
   // Replace children wholesale inside one transaction. The delete is a raw, unscoped delete by
@@ -437,7 +516,7 @@ export async function updateServiceProposal(
   // written with a NULL companyId before the stamping fix — which is what caused edits to
   // duplicate the children. Version snapshots preserve issued history, so rebuilding the
   // working children is safe.
-  const updated = await prisma.$transaction(async (tx) => {
+  const run = () => prisma.$transaction(async (tx) => {
     // Raw, UNSCOPED deletes by parent id: removes EVERY existing child (including legacy rows
     // written with NULL companyId before the stamping fix) so an edit never duplicates them.
     // Safe — the parent was already verified to belong to this company above.
@@ -454,6 +533,7 @@ export async function updateServiceProposal(
       where: { id },
       data: {
         ...header,
+        ...(renumber ? { number: renumber } : {}),
         status: input.status ?? undefined,
         updatedById: who.id,
         feeComponents: { create: stampCompany(children.feeComponents, cid) },
@@ -466,6 +546,11 @@ export async function updateServiceProposal(
       },
       include: FULL_INCLUDE,
     });
+  });
+
+  // The unique index settles a race that two pre-flight checks could both pass.
+  const updated = await run().catch((e) => {
+    throw asNumberConflict(e, renumber ?? current.number);
   });
   return toDto(updated);
 }
@@ -605,6 +690,78 @@ export async function reviseServiceProposal(id: string): Promise<ServiceProposal
     return created;
   });
   return toDto(revised);
+}
+
+/**
+ * Duplicate a proposal into a brand-new editable DRAFT.
+ *
+ * Distinct from `reviseServiceProposal`: a revision continues the same offer (revision + 1, the
+ * original superseded), whereas a duplicate is an unrelated document that merely starts from
+ * this one's content. The original is left completely untouched — no supersede, no history row.
+ *
+ * WHAT IS AND IS NOT CARRIED OVER is decided in the pure lib/proposals/duplicate module and
+ * documented there; in short, content yes, commercial state and audit trail no. The copy's
+ * number is the next free one in the practice sequence (`suggestDuplicateNumber`, which
+ * delegates to the same `nextProposalNumber` used everywhere else), and it is editable
+ * afterwards — the unique index on (companyId, number) is what refuses a clash.
+ *
+ * Totals are NOT copied from the source columns: the content goes back through
+ * `buildWriteData`, so every figure on the duplicate is recomputed by the engine.
+ */
+export async function duplicateServiceProposal(id: string): Promise<ServiceProposalDTO> {
+  const who = await actor();
+  const src = await prisma.serviceProposal.findFirstOrThrow({
+    where: { id, deletedAt: null },
+    include: FULL_INCLUDE,
+  });
+  const cid = src.companyId;
+  const number = suggestDuplicateNumber(await allProposalNumbers(), new Date().getFullYear());
+  const { header, children } = buildWriteData(toInput(src));
+  const reset = duplicateResetData();
+
+  try {
+    const copy = await prisma.serviceProposal.create({
+      data: {
+        ...header,
+        title: duplicateTitle(src.title),
+        number,
+        // A fresh document: draft, revision 1, never issued, never locked, nobody's approval.
+        ...reset,
+        kind: src.kind,
+        languageCode: src.languageCode,
+        taxJurisdiction: src.taxJurisdiction,
+        documentStructure: (src.documentStructure ?? undefined) as Prisma.InputJsonValue | undefined,
+        createdById: who.id,
+        createdByName: who.name,
+        updatedById: who.id,
+        // `disciplines` are not part of the engine input, so they are copied row-for-row rather
+        // than rebuilt by buildWriteData. They carry no money.
+        disciplines: {
+          create: stampCompany(
+            src.disciplines.map((d) => ({
+              disciplineKey: d.disciplineKey,
+              label: d.label,
+              leadName: d.leadName,
+              scope: d.scope,
+              sortOrder: d.sortOrder,
+            })),
+            cid,
+          ),
+        },
+        feeComponents: { create: stampCompany(children.feeComponents, cid) },
+        phases: { create: stampCompany(children.phases, cid) },
+        paymentMilestones: { create: stampCompany(children.paymentMilestones, cid) },
+        reimbursables: { create: stampCompany(children.reimbursables, cid) },
+        discounts: { create: stampCompany(children.discounts, cid) },
+        taxes: { create: stampCompany(children.taxes, cid) },
+        developmentCostItems: { create: stampCompany(children.developmentCostItems, cid) },
+      },
+      include: FULL_INCLUDE,
+    });
+    return toDto(copy);
+  } catch (e) {
+    throw asNumberConflict(e, number);
+  }
 }
 
 export interface ProposalAnalytics {

@@ -97,6 +97,7 @@ const GROUP_LABEL: Record<string, string> = {
 
 const FIELD_LABEL: Record<string, string> = {
   title: "Title",
+  number: "Proposal number",
   currency: "Currency",
   contactName: "Contact name",
   contactEmail: "Contact email",
@@ -238,6 +239,10 @@ export function ServiceProposalForm({
   const init = initial?.input;
 
   const [title, setTitle] = useState(init?.title ?? "");
+  /** The visible proposal number. Blank on a new proposal means "assign the next one". On an
+   *  existing one it is prefilled and editable — a clash is refused by the server, which sends
+   *  the rejection back on the `number` path so the input below turns red. */
+  const [number, setNumber] = useState(initial?.number ?? "");
   const [clientId, setClientId] = useState(init?.clientId ?? "");
   const [projectId, setProjectId] = useState(init?.projectId ?? "");
   const [contactName, setContactName] = useState(init?.contactName ?? "");
@@ -605,6 +610,9 @@ export function ServiceProposalForm({
 
     const payload = {
       title,
+      // Blank is sent as null: "leave the number to the sequence" on a new proposal, "leave it
+      // alone" on an edit. Never a client-invented number.
+      number: number.trim() || null,
       currency,
       clientId: clientId || null,
       clientName: client?.name ?? null,
@@ -658,7 +666,7 @@ export function ServiceProposalForm({
   const reachablePaths = useMemo(() => {
     // `currency` is deliberately absent: it is a fixed dropdown with no error slot, so a
     // rule that somehow rejected it must reach the summary rather than vanish.
-    const p = new Set<string>(["title", "contactName", "contactEmail", "validUntil", "costBasis.amount"]);
+    const p = new Set<string>(["title", "number", "contactName", "contactEmail", "validUntil", "costBasis.amount"]);
     for (const f of fees) {
       p.add(`feeComponents.${f.key}.label`);
       if (f.method === "PERCENT_OF_BASIS") p.add(`feeComponents.${f.key}.percent`);
@@ -727,6 +735,26 @@ export function ServiceProposalForm({
                 placeholder="Architectural design services — Palm Beach Residence"
               />
               <FieldError msg={issueFor("title")} />
+            </div>
+            <div>
+              <label className={label}>Proposal number</label>
+              <input
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                className={`${field} font-mono ${issueFor("number") ? fieldInvalid : ""}`}
+                data-invalid={issueFor("number") ? "true" : undefined}
+                aria-invalid={issueFor("number") ? true : undefined}
+                placeholder={mode === "new" ? "Assigned automatically" : undefined}
+                aria-label="Proposal number"
+              />
+              <FieldError msg={issueFor("number")} />
+              {!issueFor("number") ? (
+                <p className="mt-1 text-xs text-faint">
+                  {mode === "new"
+                    ? "Leave blank for the next number in the sequence."
+                    : "Must be unique — a number already in use is refused."}
+                </p>
+              ) : null}
             </div>
             <div>
               <label className={label}>Client</label>

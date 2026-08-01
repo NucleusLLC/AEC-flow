@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Send, CopyPlus, Check, X, ClipboardCheck, ThumbsUp } from "lucide-react";
+import { Trash2, Send, CopyPlus, Copy, Check, X, ClipboardCheck, ThumbsUp } from "lucide-react";
 import {
   deleteServiceProposalAction,
+  duplicateServiceProposalAction,
   issueServiceProposalAction,
   reviseServiceProposalAction,
   transitionServiceProposalAction,
@@ -33,6 +34,26 @@ export function ServiceProposalActions({
         setError(res.error ?? "Something went wrong.");
         return;
       }
+      router.refresh();
+    });
+  }
+
+  /**
+   * Duplicate, then open the copy's edit form.
+   *
+   * The copy already has the next free number, so landing on the editor is what makes the
+   * number visible and changeable straight away — which is the whole point of duplicating
+   * rather than re-typing the proposal.
+   */
+  function duplicate() {
+    setError(null);
+    start(async () => {
+      const res = await duplicateServiceProposalAction(id);
+      if (!res.ok) {
+        setError(res.error ?? "Could not duplicate this proposal.");
+        return;
+      }
+      router.push(`/design/service-proposals/${res.id}/edit`);
       router.refresh();
     });
   }
@@ -70,7 +91,24 @@ export function ServiceProposalActions({
           <X className="h-4 w-4" /> Mark rejected
         </button>
       ) : null}
-      <button type="button" disabled={pending} className={btn} onClick={() => run(() => reviseServiceProposalAction(id))}>
+      {/* Duplicate sits next to "New revision" on purpose — the two are easily confused, so
+        * they are shown together with the distinction spelled out in the tooltips. */}
+      <button
+        type="button"
+        disabled={pending}
+        className={btn}
+        title="Copy this proposal into a new draft with the next proposal number"
+        onClick={duplicate}
+      >
+        <Copy className="h-4 w-4" /> Duplicate
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        className={btn}
+        title="Continue this offer as the next revision, superseding the issued one"
+        onClick={() => run(() => reviseServiceProposalAction(id))}
+      >
         <CopyPlus className="h-4 w-4" /> New revision
       </button>
       <DeleteButton id={id} onError={setError} />

@@ -225,6 +225,25 @@ export type ScopeItem = z.infer<typeof scopeItemSchema>;
  */
 export const serviceProposalInputSchema = z.object({
   title: nonEmpty("Proposal title"),
+  /**
+   * The visible proposal number, user-editable.
+   *
+   * Optional and empty-string-tolerant on purpose: blank means "let the sequence assign it"
+   * (a new proposal) or "leave it as it is" (an edit). Only the SHAPE is checked here —
+   * whether the number is free is a database question, enforced by the unique index on
+   * (companyId, number) and reported back as an issue on this same `number` path.
+   */
+  number: z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .min(3, "A proposal number needs at least 3 characters")
+        .max(40, "A proposal number cannot be longer than 40 characters"),
+    ])
+    .optional()
+    .nullable(),
   kind: serviceProposalKindSchema.default("QUICK"),
   status: serviceProposalStatusSchema.optional(),
   clientId: optionalText,
