@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MARGIN_PRESETS, PAPER_MM } from "./tokens";
 import {
+  FOOTER_FROM_EDGE_MM,
   gutterZones,
   intrudesIntoMargin,
   printableHeightMm,
@@ -15,6 +16,7 @@ describe("gutterZones", () => {
     expect(gutterZones(SHELL)).toEqual({
       gutterMm: 40,
       footerBandMm: 20,
+      footerPadBottomMm: 8,
       sheetEdgeAtMm: 20,
       topMarginStartsAtMm: 26,
       contentResumesAtMm: 40,
@@ -41,6 +43,28 @@ describe("gutterZones", () => {
     expect(z.sheetEdgeAtMm).toBe(z.footerBandMm);
   });
 
+  it("holds the footer 8mm clear of the paper edge", () => {
+    // Reported as "too close to the bottom page edge"; 8mm is the requested
+    // clearance and is inside a typical printer's unprintable border.
+    expect(gutterZones(SHELL).footerPadBottomMm).toBe(FOOTER_FROM_EDGE_MM);
+    expect(FOOTER_FROM_EDGE_MM).toBe(8);
+  });
+
+  it("yields the clearance rather than pushing the footer out of a thin margin", () => {
+    // A 12mm bottom margin cannot hold 8mm of clearance and a line of text.
+    expect(gutterZones({ topMm: 12, bottomMm: 12, sheetGapMm: 6 }).footerPadBottomMm).toBe(8);
+    expect(gutterZones({ topMm: 6, bottomMm: 6, sheetGapMm: 6 }).footerPadBottomMm).toBe(2);
+    expect(gutterZones({ topMm: 2, bottomMm: 2, sheetGapMm: 0 }).footerPadBottomMm).toBe(0);
+  });
+
+  it("never lets the clearance exceed the band it sits in", () => {
+    for (const bottomMm of [0, 2, 4, 8, 12, 20, 30]) {
+      const z = gutterZones({ topMm: 14, bottomMm, sheetGapMm: 6 });
+      expect(z.footerPadBottomMm).toBeLessThanOrEqual(z.footerBandMm);
+      expect(z.footerPadBottomMm).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it("holds for every documented margin preset", () => {
     for (const preset of Object.values(MARGIN_PRESETS)) {
       const margins: PageMargins = { topMm: preset.top, bottomMm: preset.bottom, sheetGapMm: 6 };
@@ -48,6 +72,7 @@ describe("gutterZones", () => {
       expect(z.gutterMm).toBe(preset.bottom + 6 + preset.top);
       expect(z.contentResumesAtMm - z.topMarginStartsAtMm).toBe(preset.top);
       expect(z.footerBandMm).toBe(preset.bottom);
+      expect(z.footerPadBottomMm).toBeLessThanOrEqual(preset.bottom);
     }
   });
 
@@ -55,6 +80,7 @@ describe("gutterZones", () => {
     expect(gutterZones({ topMm: 0, bottomMm: 0, sheetGapMm: 0 })).toEqual({
       gutterMm: 0,
       footerBandMm: 0,
+      footerPadBottomMm: 0,
       sheetEdgeAtMm: 0,
       topMarginStartsAtMm: 0,
       contentResumesAtMm: 0,

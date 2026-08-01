@@ -41,6 +41,7 @@ import {
   type Orientation,
   type PaperSize,
 } from "@/lib/documents/tokens";
+import { gutterZones } from "@/lib/documents/preview-geometry";
 
 /**
  * Width reserved for "Page N of M" in the bottom margin strip, in millimetres.
@@ -100,7 +101,15 @@ export function pageRulesCss({
   // otherwise terminate the content string and break the whole rule.
   const cssString = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 
-  const marginBoxStyle = `font-size: ${TYPE_SCALE.footer}pt; line-height: ${LINE_HEIGHT.footer}; color: #6b7280; font-family: inherit;`;
+  // The footer sits FOOTER_FROM_EDGE_MM above the paper edge rather than at the
+  // foot of the bottom margin, which read as crowding the edge — and that
+  // clearance is inside the unprintable border of a typical desktop printer, so
+  // the line cannot be clipped. `vertical-align: bottom` puts the content at the
+  // foot of the margin box and the padding then lifts it. The same figure drives
+  // the on-screen band (lib/documents/preview-geometry), so the two agree.
+  const footerPadMm = gutterZones({ topMm: m.top, bottomMm: m.bottom, sheetGapMm: 0 })
+    .footerPadBottomMm;
+  const marginBoxStyle = `font-size: ${TYPE_SCALE.footer}pt; line-height: ${LINE_HEIGHT.footer}; color: #6b7280; font-family: inherit; vertical-align: bottom; padding-bottom: ${footerPadMm}mm;`;
 
   // Footer band layout, matching the Estimates sheet: the practice's footer line
   // on the left, the page number on the right. Nothing sits centred, so a long
@@ -273,5 +282,24 @@ const PRINT_BREAK_CSS = `
   /* A table split across pages must carry its header onto the next one. */
   .aec-doc thead { display: table-header-group; }
   .aec-doc tfoot { display: table-footer-group; }
+
+  /* ── Adopted from the Cost Estimation sheet (components/estimates/estimate-view.tsx),
+   * which was asked for as the reference for how a document should print. Estimates
+   * is a protected system, so these were read from it, not moved out of it.
+   *
+   * A row is never split, and the cells opt in too: Chrome honours break-inside on
+   * a <tr> unreliably unless the cells carry it as well, which is what produced
+   * half-cut rows there. */
+  .aec-doc tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+  .aec-doc td,
+  .aec-doc th { break-inside: avoid !important; page-break-inside: avoid !important; }
+  /* Breaks between a section's rows are fine; inside one is not. */
+  .aec-doc tbody { break-inside: auto; page-break-inside: auto; }
+  /* Print the colours that are on screen — without this browsers drop light text
+   * and backgrounds, which is how the turquoise version label would have printed
+   * as nothing. Estimates applies this globally for the same reason. */
+  .aec-doc * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  /* Card chrome is screen furniture; the printed sheet carries none. */
+  .aec-doc [data-print-plain] { box-shadow: none !important; border: none !important; }
 }
 `.trim();

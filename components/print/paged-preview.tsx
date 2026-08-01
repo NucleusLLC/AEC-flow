@@ -523,7 +523,11 @@ export function PagedPreview({
             * that was. */}
           <div
             className="flex flex-col justify-end"
-            style={{ height: `${zones.footerBandMm}mm` }}
+            style={{
+              height: `${zones.footerBandMm}mm`,
+              // Clearance from the paper edge, matching the printed margin box.
+              paddingBottom: `${zones.footerPadBottomMm}mm`,
+            }}
           >
             <div className="flex items-end justify-between gap-4 border-t border-gray-200 pt-1 text-[9px] leading-snug text-gray-400">
               <span className="min-w-0">{footerText}</span>

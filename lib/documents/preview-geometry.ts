@@ -27,11 +27,23 @@ export type PageMargins = {
   sheetGapMm: number;
 };
 
+/**
+ * How far the footer line sits above the bottom edge of the paper.
+ *
+ * It used to sit at the very foot of the bottom margin, which read as crowding
+ * the paper edge. Eight millimetres is the requested clearance, and it is also
+ * inside the unprintable border of every common desktop printer, so the line
+ * cannot be clipped.
+ */
+export const FOOTER_FROM_EDGE_MM = 8;
+
 export type GutterZones = {
   /** Total gap opened between the two pages. */
   gutterMm: number;
   /** Height of the footer band: the bottom margin of the page that is ending. */
   footerBandMm: number;
+  /** Clearance left below the footer line, so it does not crowd the paper edge. */
+  footerPadBottomMm: number;
   /** Offset within the gutter where the sheet edge is drawn. */
   sheetEdgeAtMm: number;
   /** Offset within the gutter where the next page's top margin begins. */
@@ -47,6 +59,10 @@ export function gutterZones({ topMm, bottomMm, sheetGapMm }: PageMargins): Gutte
   return {
     gutterMm: bottomMm + sheetGapMm + topMm,
     footerBandMm: bottomMm,
+    // Never negative, and never so large it would push the footer up out of the
+    // margin it belongs to: a 12mm margin cannot hold an 8mm clearance and a line
+    // of text, so the clearance yields.
+    footerPadBottomMm: Math.max(0, Math.min(FOOTER_FROM_EDGE_MM, bottomMm - 4)),
     sheetEdgeAtMm: bottomMm,
     topMarginStartsAtMm: bottomMm + sheetGapMm,
     contentResumesAtMm: bottomMm + sheetGapMm + topMm,
