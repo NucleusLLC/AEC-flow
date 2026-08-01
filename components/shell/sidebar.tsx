@@ -9,6 +9,7 @@ import { useModule } from "@/components/shell/module-provider";
 import { ModuleSwitcher } from "@/components/shell/module-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { VERSION_COLOR } from "@/lib/version";
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin",
@@ -205,7 +206,14 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
           </div>
         </div>
         {version ? (
-          <div className="px-2 pt-1 font-mono text-[10px] tracking-tight text-sidebar-muted/60" title="Deployed version · build">
+          /* Bright Turquoise, from the same constant the proposal version tag
+           * uses: the deployed build is the version people check first, so it is
+           * the one that has to stand out against the dark sidebar. */
+          <div
+            className="px-2 pt-1 font-mono text-[10px] font-semibold tracking-tight"
+            style={{ color: VERSION_COLOR }}
+            title="Deployed version · build"
+          >
             {version}
           </div>
         ) : null}

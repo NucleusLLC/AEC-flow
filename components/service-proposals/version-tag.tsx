@@ -1,17 +1,16 @@
 import { versionDisplay } from "@/lib/proposals/versioning";
+import { VERSION_COLOR } from "@/lib/version";
 
 /**
  * The proposal version, in Bright Turquoise (#08E8DE) — one definition so the app, the list
  * and the printed document cannot drift apart.
  *
- * The colour is set literally rather than through a theme token because it was asked for by
- * name. `print-color-adjust: exact` keeps it on paper: browsers drop background and light
+ * The colour comes from lib/version (VERSION_COLOR), the same constant the sidebar's
+ * deployed-build label uses, so every version in the product is the one colour. `print-color-adjust: exact` keeps it on paper: browsers drop background and light
  * text when printing unless told not to.
  *
  * Renders nothing when the proposal has no version, rather than inventing one.
  */
-export const VERSION_COLOR = "#08E8DE";
-
 export function VersionTag({
   label,
   className = "",
