@@ -55,20 +55,9 @@ import {
  * "Page 1 of 3" measures 13.8mm at the footer type size, so this is set with room
  * to spare: a hundred-page register still fits on one line.
  */
-const PAGE_NUMBER_WIDTH_MM = 30;
+export const PAGE_NUMBER_WIDTH_MM = 30;
 
-export function PageRules({
-  paper = DEFAULT_PAGE.paper,
-  orientation = DEFAULT_PAGE.orientation,
-  margins = "standard",
-  whiteBackgroundOnPrint = true,
-  pageNumbers = true,
-  /** Small text in the bottom-left margin, e.g. a document reference. */
-  footerLeft,
-  breakRules = true,
-  /** Row and list rhythm. Registers and schedules want "compact". */
-  density = "compact",
-}: {
+export type PageRulesOptions = {
   paper?: PaperSize;
   orientation?: Orientation;
   /** A named preset, or explicit millimetre margins for a document that needs them. */
@@ -76,11 +65,34 @@ export function PageRules({
   whiteBackgroundOnPrint?: boolean;
   /** "Page N of M" in the bottom margin of every page. */
   pageNumbers?: boolean;
+  /** Small text in the bottom-left margin, e.g. a document reference. */
   footerLeft?: string;
   /** Shared keep-together / repeating-header rules. */
   breakRules?: boolean;
+  /** Row and list rhythm. Registers and schedules want "compact". */
   density?: Density;
-}) {
+};
+
+/**
+ * The stylesheet `PageRules` renders, as a string.
+ *
+ * Split out from the component so the page geometry can be asserted without a
+ * DOM: the `@page` margin box work (see `PAGE_NUMBER_WIDTH_MM`) put two at-rules
+ * inside the same block as the `margin` shorthand, and a malformed one there
+ * would take the document's whole margin down with it. That failure is silent —
+ * the page simply prints flush to the paper edge — so it is guarded by
+ * lib/documents/page-css.test.ts rather than by reading the output.
+ */
+export function pageRulesCss({
+  paper = DEFAULT_PAGE.paper,
+  orientation = DEFAULT_PAGE.orientation,
+  margins = "standard",
+  whiteBackgroundOnPrint = true,
+  pageNumbers = true,
+  footerLeft,
+  breakRules = true,
+  density = "compact",
+}: PageRulesOptions): string {
   const m: Margins = typeof margins === "string" ? MARGIN_PRESETS[margins] : margins;
   const box = `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`;
 
@@ -116,7 +128,7 @@ export function PageRules({
     .filter(Boolean)
     .join(" ");
 
-  const css = [
+  return [
     `@page { size: ${paper} ${orientation}; margin: ${box}; ${marginBoxes} }`,
     whiteBackgroundOnPrint ? `@media print { html, body { background: #fff; } }` : "",
     documentCss(density),
@@ -124,8 +136,10 @@ export function PageRules({
   ]
     .filter(Boolean)
     .join("\n");
+}
 
-  return <style>{css}</style>;
+export function PageRules(props: PageRulesOptions) {
+  return <style>{pageRulesCss(props)}</style>;
 }
 
 /**
