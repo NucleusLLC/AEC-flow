@@ -62,7 +62,16 @@ export async function CaPrintShell({
        * differently, so it cannot be an accurate preview. */}
       <div className="aec-doc mx-auto my-6 w-[210mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
         {/* A4 (297mm) less the 14mm top and bottom @page margins. */}
-        <PagedPreview pageContentHeightMm={263} footerText={footer.text}>
+        {/* The margins MUST be the same numbers passed to PageRules above: the
+          * preview's inter-page gap stands for the bottom margin of one page plus
+          * the top margin of the next, so a mismatch would draw content where a
+          * margin belongs. */}
+        <PagedPreview
+          pageContentHeightMm={263}
+          topMarginMm={14}
+          bottomMarginMm={20}
+          footerText={footer.text}
+        >
         {/* Letterhead */}
         <DocumentLetterhead
           logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}

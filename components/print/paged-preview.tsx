@@ -7,6 +7,7 @@ import {
   resolveHeadingBreaks,
   type PageCut,
 } from "@/lib/documents/pagination";
+import { gutterZones } from "@/lib/documents/preview-geometry";
 
 /**
  * PagedPreview — makes the on-screen document look like the printed one, and
@@ -137,8 +138,12 @@ function collectAtoms(root: HTMLElement, hostTop: number): Atom[] {
           bottom: top + rect.height,
           height: rect.height,
           // Unbreakable because THIS pass said so, and therefore negotiable: see
-          // the `soft` note on PaginationBlock.
-          soft: child.hasAttribute("data-auto-keep") && !child.hasAttribute("data-keep-together"),
+          // the `soft` note on PaginationBlock. A heading bound to its opening
+          // content counts too — holding the pair is worth less than the page it
+          // would cost, so the §7.1 ceiling must be able to decline it.
+          soft:
+            (child.hasAttribute("data-auto-keep") || child.hasAttribute("data-keep-with-next")) &&
+            !child.hasAttribute("data-keep-together"),
         });
       } else if (child.children.length > 0) {
         walk(child);
@@ -265,23 +270,47 @@ function breakTarget(heading: HTMLElement, root: HTMLElement): HTMLElement {
   return parent && parent !== root && parent.firstElementChild === heading ? parent : heading;
 }
 
-/** Height of the on-screen gutter drawn between two pages, in millimetres. */
-const GUTTER_MM = 16;
+/** The visible break drawn between one sheet and the next, in millimetres. */
+const SHEET_GAP_MM = 6;
 
 export function PagedPreview({
   /** Printable height of one page in millimetres (page height − top/bottom margins). */
   pageContentHeightMm,
   /** Printable width, used only to detect a sheet squeezed narrower than paper. */
   pageContentWidthMm = 182,
+  /**
+   * The page's own margins in millimetres — the SAME numbers handed to PageRules.
+   *
+   * The gap between two previewed pages is not decoration: it stands for the
+   * bottom margin of the page above plus the top margin of the page below. It
+   * used to be a flat 16mm, which is less than the bottom margin alone, so the
+   * footer band filled the whole gap and the next page's content resumed with NO
+   * top margin — drawn inside the header zone, in paper a printer cannot reach.
+   */
+  topMarginMm = 14,
+  bottomMarginMm = 20,
   /** The practice footer line, shown at the left of each page's footer band. */
   footerText,
   children,
 }: {
   pageContentHeightMm: number;
   pageContentWidthMm?: number;
+  topMarginMm?: number;
+  bottomMarginMm?: number;
   footerText?: string;
   children: React.ReactNode;
 }) {
+  // The gap opened between two pages: the bottom margin of the page ending, the
+  // visible break between two sheets, then the top margin of the page beginning.
+  // Content resumes only after all three. The arithmetic lives in
+  // lib/documents/preview-geometry so it is unit-tested — a wrong constant here is
+  // precisely what drew a continuation page's first line inside the header zone.
+  const zones = gutterZones({
+    topMm: topMarginMm,
+    bottomMm: bottomMarginMm,
+    sheetGapMm: SHEET_GAP_MM,
+  });
+  const gutterMm = zones.gutterMm;
   const hostRef = useRef<HTMLDivElement>(null);
   const [breaks, setBreaks] = useState<{ top: number; page: number }[]>([]);
   const [total, setTotal] = useState(1);
@@ -393,6 +422,10 @@ export function PagedPreview({
       // and print the page this layout says does not exist.
       for (const i of softSplits) {
         atoms[i].el.removeAttribute("data-auto-keep");
+        // A declined heading-unit must lose its binding too, or print would hold
+        // the pair together and produce the near-empty page this decision
+        // rejected.
+        atoms[i].el.removeAttribute("data-keep-with-next");
       }
 
       // `break-before: page` has no effect on a continuous screen, so the pass
@@ -413,9 +446,10 @@ export function PagedPreview({
         return cut.blockIndex !== undefined ? atoms[cut.blockIndex].el : undefined;
       };
 
-      // Open a real gap at each cut so the page footer has room and content is
-      // never printed into the band. Screen-only: see the CSS note in PageRules.
-      const gutterPx = GUTTER_MM * pxPerMm;
+      // Open a real gap at each cut: the bottom margin of the page ending, plus
+      // the top margin of the page beginning. Screen-only — in print the same gap
+      // IS the @page margins. See the CSS note in PageRules.
+      const gutterPx = gutterMm * pxPerMm;
       const starters = cuts.map(starterOf);
       for (const starter of starters) {
         if (!starter) continue;
@@ -459,7 +493,11 @@ export function PagedPreview({
     // server payload whose identity changes on every render, which would re-run
     // this effect — and tear down the observer — on each one. Content changes
     // are already caught by the ResizeObserver.
-  }, [pageContentHeightMm, pageContentWidthMm]);
+    //
+    // `gutterMm` IS one: it is the size of the gap the pass opens between pages,
+    // so a margin change has to re-measure or every boundary keeps the old
+    // spacing.
+  }, [pageContentHeightMm, pageContentWidthMm, gutterMm]);
 
   return (
     <div ref={hostRef} className="relative">
@@ -473,23 +511,42 @@ export function PagedPreview({
           data-paged-preview-chrome="true"
           aria-hidden
           className="pointer-events-none absolute left-0 right-0 z-10 print:hidden"
-          style={{ top: b.top, height: `${GUTTER_MM}mm` }}
+          style={{ top: b.top, height: `${gutterMm}mm` }}
         >
-          {/* The page's own footer band — the practice line left, the page
-           * number right, exactly as the printed margin boxes place them. The
-           * strapline WRAPS rather than truncating: the printed `@bottom-left`
-           * margin box wraps too, and a preview that ellipsised what print
-           * carries onto a second line reported a truncation that was not there
-           * — and hid one that was. */}
-          <div className="flex items-end justify-between gap-4 border-t border-gray-200 pt-1 text-[9px] leading-snug text-gray-400">
-            <span className="min-w-0">{footerText}</span>
-            <span className="shrink-0 tabular-nums">
-              Page {b.page} of {total}
-            </span>
+          {/* The bottom margin of the page that is ending. The footer sits at ITS
+            * foot, where the printed @bottom-left / @bottom-right margin boxes
+            * are, so the strip above the footer reads as the margin it is.
+            *
+            * The strapline WRAPS rather than truncating: the printed margin box
+            * wraps too, and a preview that ellipsised what print carries onto a
+            * second line reported a truncation that was not there — and hid one
+            * that was. */}
+          <div
+            className="flex flex-col justify-end"
+            style={{ height: `${zones.footerBandMm}mm` }}
+          >
+            <div className="flex items-end justify-between gap-4 border-t border-gray-200 pt-1 text-[9px] leading-snug text-gray-400">
+              <span className="min-w-0">{footerText}</span>
+              <span className="shrink-0 tabular-nums">
+                Page {b.page} of {total}
+              </span>
+            </div>
           </div>
-          {/* The sheet edge: everything below is the next page. */}
-          <div className="absolute inset-x-[-14mm] bottom-0 border-b border-gray-300" />
-          <div className="absolute inset-x-[-14mm] bottom-0 h-[6mm] translate-y-full bg-gray-100" />
+          {/* The sheet edge, then the break between sheets. Below that lies the
+            * next page's TOP MARGIN — the remaining `topMarginMm` of this gutter,
+            * left empty so content cannot begin inside the header zone. */}
+          <div
+            className="absolute inset-x-[-14mm] border-b border-gray-300"
+            style={{ top: `${zones.sheetEdgeAtMm}mm` }}
+          />
+          <div
+            className="absolute inset-x-[-14mm] bg-gray-100"
+            style={{ top: `${zones.sheetEdgeAtMm}mm`, height: `${SHEET_GAP_MM}mm` }}
+          />
+          <div
+            className="absolute inset-x-[-14mm] border-t border-gray-300"
+            style={{ top: `${zones.topMarginStartsAtMm}mm` }}
+          />
         </div>
       ))}
 

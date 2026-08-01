@@ -243,6 +243,17 @@ const PRINT_BREAK_CSS = `
 /* Applied by PagedPreview to text blocks short enough to move whole. Keeps a
  * page from ending mid-sentence without stranding a page for a long block. */
 .aec-doc [data-auto-keep] { break-inside: avoid; page-break-inside: avoid; }
+
+/* Applied by PagedPreview to a heading plus its opening content, and ONLY when
+ * that unit is short enough to move whole. Chrome largely ignores
+ * \`break-after: avoid\` on the heading itself, so without this rule the pair was
+ * never actually held together: a heading could sit at the foot of a page with
+ * its body starting the next one — which is exactly what happened to "TERMS &
+ * CONDITIONS" on SP-2026-001. The measuring pass treats these units as SOFT, so
+ * if honouring one would vacate more of a page than §7.1 allows, the boundary
+ * runs through it and the stamp is removed instead. */
+.aec-doc [data-keep-with-next] { break-inside: avoid; page-break-inside: avoid; }
+
 .aec-doc [data-break-before] { break-before: page; page-break-before: always; }
 
 .aec-doc p,
