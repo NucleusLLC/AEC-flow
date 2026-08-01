@@ -42,6 +42,7 @@ export default async function ServiceProposalPrintPage({
       docTitle="Service Proposal"
       refNumber={`${p.number}${p.revision > 1 ? ` r${p.revision}` : ""}`}
       statusLabel={STATUS_LABEL[p.status]}
+      versionLabel={p.versionLabel}
       title={p.title}
       meta={[
         { label: "Client", value: identification.clientDisplayName ?? "—" },

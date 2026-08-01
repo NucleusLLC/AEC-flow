@@ -15,6 +15,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
+import { VersionTag } from "@/components/service-proposals/version-tag";
 import { formatCurrency } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Service Proposal · AEC-flow" };
@@ -48,6 +49,10 @@ export default async function ServiceProposalDetailPage({
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold text-fg">{p.title}</h2>
             <ServiceProposalStatusBadge status={p.status} />
+            <VersionTag
+              label={p.versionLabel}
+              title="Whole numbers are versions issued to the client; a minor means work in progress."
+            />
           </div>
           <p className="mt-1 font-mono text-sm text-muted">
             {p.number}{p.revision > 1 ? ` · rev ${p.revision}` : ""}
@@ -218,7 +223,7 @@ export default async function ServiceProposalDetailPage({
                 {versions.map((v) => (
                   <li key={v.id} className="flex items-baseline justify-between gap-2">
                     <span>
-                      <span className="font-medium text-fg">v{v.versionLabel}</span>
+                      <VersionTag label={v.versionLabel} />
                       <span className="ml-1.5 text-xs text-muted">{v.createdAt.slice(0, 10)}</span>
                       {v.createdByName ? <span className="text-xs text-faint"> · {v.createdByName}</span> : null}
                     </span>

@@ -7,6 +7,7 @@ import { getFirmIdentity } from "@/lib/server/firm";
 import { PageRules } from "@/components/print/page-rules";
 import { DocumentFont } from "@/components/print/document-font";
 import { PagedPreview } from "@/components/print/paged-preview";
+import { VersionTag } from "@/components/service-proposals/version-tag";
 
 /**
  * Shared A4 print surface for Construction Admin documents. Renders the
@@ -23,6 +24,7 @@ export async function CaPrintShell({
   docTitle,
   refNumber,
   statusLabel,
+  versionLabel,
   title,
   meta,
   children,
@@ -32,6 +34,9 @@ export async function CaPrintShell({
   docTitle: string;
   refNumber: string;
   statusLabel: string;
+  /** Optional document version, printed in Bright Turquoise. Documents without a version
+   *  concept simply omit it and nothing renders. */
+  versionLabel?: string | null;
   title: string;
   meta: { label: string; value: string }[];
   children: React.ReactNode;
@@ -68,7 +73,15 @@ export async function CaPrintShell({
             <div className="text-right">
               <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
               <div className="mt-1 font-mono text-xs text-gray-600">{refNumber}</div>
-              <div className="text-[11px] text-gray-500">{statusLabel}</div>
+              <div className="text-[11px] text-gray-500">
+                {statusLabel}
+                {versionLabel ? (
+                  <>
+                    {" · "}
+                    <VersionTag label={versionLabel} className="text-[11px]" />
+                  </>
+                ) : null}
+              </div>
             </div>
           }
         />

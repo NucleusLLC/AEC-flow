@@ -35,6 +35,7 @@
  * matches what `reviseServiceProposal` already carries.
  */
 import { nextProposalNumber } from "./persist";
+import { INITIAL_VERSION } from "./versioning";
 
 /** The inline message shown against the number input when the number is not free. */
 export const NUMBER_IN_USE_MESSAGE = "That number is already used — choose a different one.";
@@ -73,7 +74,8 @@ export const DUPLICATE_EXCLUDED_CHILDREN = ["statusHistory", "versions", "attach
 export interface DuplicateResetData {
   status: "DRAFT";
   revision: 1;
-  versionLabel: null;
+  /** A copy is a brand-new draft, so it starts the version scheme over at 0.1. */
+  versionLabel: typeof INITIAL_VERSION;
   issuedAt: null;
   lockedAt: null;
   deletedAt: null;
@@ -92,7 +94,7 @@ export function duplicateResetData(): DuplicateResetData {
   return {
     status: "DRAFT",
     revision: 1,
-    versionLabel: null,
+    versionLabel: INITIAL_VERSION,
     issuedAt: null,
     lockedAt: null,
     deletedAt: null,

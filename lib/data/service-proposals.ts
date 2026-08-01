@@ -27,6 +27,12 @@ import {
   normalizeProposalNumber,
   suggestDuplicateNumber,
 } from "@/lib/proposals/duplicate";
+import {
+  INITIAL_VERSION,
+  bumpDraftVersion,
+  issuedVersion,
+  revisionStartVersion,
+} from "@/lib/proposals/versioning";
 import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { COST_BASIS_LABEL } from "@/lib/proposals/engine/types";
 import {
@@ -243,6 +249,7 @@ export async function listServiceProposals(opts?: {
     title: p.title,
     status: p.status,
     revision: p.revision,
+    versionLabel: p.versionLabel,
     clientName: p.clientName,
     projectName: p.projectName,
     currency: p.currency,
@@ -473,6 +480,9 @@ export async function createServiceProposal(input: ServiceProposalInput): Promis
         ...header,
         number,
         status: input.status ?? "DRAFT",
+        // A draft starts at 0.1 and moves on every save; issuing rounds it up. See
+        // lib/proposals/versioning.ts.
+        versionLabel: INITIAL_VERSION,
         createdById: who.id,
         createdByName: who.name,
         updatedById: who.id,
@@ -498,7 +508,7 @@ export async function updateServiceProposal(
 ): Promise<ServiceProposalDTO> {
   const current = await prisma.serviceProposal.findFirstOrThrow({
     where: { id, deletedAt: null },
-    select: { status: true, number: true, companyId: true },
+    select: { status: true, number: true, companyId: true, versionLabel: true },
   });
   if (isLocked(current.status)) throw new ProposalLockedError(current.number);
 
@@ -535,6 +545,9 @@ export async function updateServiceProposal(
         ...header,
         ...(renumber ? { number: renumber } : {}),
         status: input.status ?? undefined,
+        // Every saved edit moves the minor, which is what makes the version track the work.
+        // A legacy null joins the scheme here at 0.1 rather than staying blank forever.
+        versionLabel: bumpDraftVersion(current.versionLabel),
         updatedById: who.id,
         feeComponents: { create: stampCompany(children.feeComponents, cid) },
         phases: { create: stampCompany(children.phases, cid) },
@@ -615,7 +628,9 @@ export async function issueServiceProposal(id: string, reason?: string): Promise
 
   const input = toInput(p);
   const calc = computeProposal(input as Parameters<typeof computeProposal>[0]);
-  const versionLabel = `${p.revision}.0`;
+  // Rounds the working minor up to the next whole number, so an issued document never carries
+  // a work-in-progress version. Was `${p.revision}.0`, which never moved while editing.
+  const versionLabel = issuedVersion(p.versionLabel);
 
   await prisma.$transaction([
     prisma.serviceProposal.update({
@@ -671,6 +686,8 @@ export async function reviseServiceProposal(id: string): Promise<ServiceProposal
         number,
         status: "DRAFT",
         revision: src.revision + 1,
+        // Carries on from the issued major: 1.0 issued → this drafts at 1.1 → issues as 2.0.
+        versionLabel: revisionStartVersion(src.versionLabel),
         createdById: who.id,
         createdByName: who.name,
         updatedById: who.id,

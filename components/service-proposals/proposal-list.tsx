@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, FileSignature } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
+import { VersionTag } from "@/components/service-proposals/version-tag";
 import { STATUS_LABEL, type ServiceProposalStatus } from "@/lib/proposals/engine/status";
 import type { ServiceProposalListItem } from "@/lib/proposals/dto";
 
@@ -82,6 +83,7 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
                     {p.number}
                   </Link>
                   {p.revision > 1 ? <span className="ml-1.5 text-xs text-faint">rev {p.revision}</span> : null}
+                  <VersionTag label={p.versionLabel} className="ml-1.5 text-xs" />
                 </td>
                 <td className="px-4 py-2.5 text-fg">{p.title}</td>
                 <td className="px-4 py-2.5 text-muted">{p.clientName ?? "—"}</td>

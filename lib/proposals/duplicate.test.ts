@@ -10,6 +10,7 @@ import {
   suggestDuplicateNumber,
 } from "./duplicate";
 import { nextProposalNumber } from "./persist";
+import { INITIAL_VERSION, isIssuedVersion } from "./versioning";
 import { serviceProposalInputSchema } from "./schema/proposal";
 
 describe("suggestDuplicateNumber", () => {
@@ -84,10 +85,13 @@ describe("duplicateResetData — what a copy must NOT inherit", () => {
     expect(reset.revision).toBe(1);
   });
 
-  it("has never been issued, locked or labelled a version", () => {
+  it("has never been issued or locked, and restarts the version scheme", () => {
     expect(reset.issuedAt).toBeNull();
     expect(reset.lockedAt).toBeNull();
-    expect(reset.versionLabel).toBeNull();
+    // A copy is a fresh draft, so it begins at 0.1 like any other new proposal — it must not
+    // inherit the source's issued label, which would read as a version a client received.
+    expect(reset.versionLabel).toBe(INITIAL_VERSION);
+    expect(isIssuedVersion(reset.versionLabel)).toBe(false);
   });
 
   it("is live even when the source was soft-deleted", () => {

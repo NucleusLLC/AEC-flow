@@ -61,6 +61,7 @@ export interface ServiceProposalListItem {
   title: string;
   status: ServiceProposalStatus;
   revision: number;
+  versionLabel: string | null;
   clientName: string | null;
   projectName: string | null;
   currency: string;
