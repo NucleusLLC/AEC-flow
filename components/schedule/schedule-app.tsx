@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, FolderPlus } from "lucide-react";
+import Link from "next/link";
+import { Plus, FolderPlus, Printer } from "lucide-react";
 import { ProjectPicker, ProjectCrumb, type ProjectPickerRow } from "@/components/projects/project-picker";
 import { EmailButton } from "@/components/email/email-button";
 import { NewProjectPanel, type CreatedProject } from "@/components/projects/new-project-panel";
@@ -199,10 +200,29 @@ export function ScheduleApp({
     };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ProjectCrumb row={row} onBack={() => setSel(null)} />
-        <EmailButton subject={`Programme — ${row.projectName}`} attachment={`${row.projectName} — Schedule.pdf`} />
+    <div className="space-y-3">
+      {/* PROTECTED SYSTEM — layout/chrome change, approved 2026-08-04.
+        *
+        * One header row, owned here. Email and Print preview used to live in
+        * different components — Email here, Print preview inside ScheduleGantt —
+        * so they rendered as two right-aligned rows stacked on top of each other.
+        * They belong together under the topbar's account button, and this is the
+        * only component that already holds everything both of them need: the row
+        * for Email's subject, and `row.projectId` for the print href. Pulling the
+        * link up therefore lifts no state; ScheduleGantt simply stopped drawing a
+        * header of its own.
+        */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <ProjectCrumb row={row} onBack={() => setSel(null)} emphasizeNumber />
+        <div className="flex items-center gap-2">
+          <EmailButton subject={`Programme — ${row.projectName}`} attachment={`${row.projectName} — Schedule.pdf`} />
+          <Link
+            href={`/print/schedule/${selected.projectId}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          >
+            <Printer className="h-4 w-4" /> Print preview
+          </Link>
+        </div>
       </div>
       <ScheduleGantt schedules={[selected]} />
     </div>

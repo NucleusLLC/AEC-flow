@@ -1,10 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import {
   CalendarClock,
-  Printer,
   ZoomIn,
   ZoomOut,
   Link2,
@@ -141,39 +139,30 @@ const slugify = (s: string) =>
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
 
+// PROTECTED SYSTEM — layout/chrome change, approved 2026-08-04.
+//
+// The header row this used to draw is gone. Its project `<select>` was dead
+// chrome: the sole caller renders `<ScheduleGantt schedules={[selected]} />`, so
+// the dropdown never had a second option to offer, and the project it named is
+// already stated by the crumb one line above. Its Print preview link moved to
+// ScheduleApp so it could sit beside Email instead of below it. Which schedule
+// renders is unchanged — the picker in ScheduleApp always decided that.
 export function ScheduleGantt({ schedules }: { schedules: ProjectSchedule[] }) {
-  const [selectedId, setSelectedId] = useState(schedules[0]?.projectId ?? "");
-  const selected = schedules.find((s) => s.projectId === selectedId) ?? schedules[0];
+  const selected = schedules[0];
 
   if (!selected) return <p className="text-sm text-muted">No schedules available.</p>;
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="h-9 max-w-full rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
-        >
-          {schedules.map((s) => (
-            <option key={s.projectId} value={s.projectId}>
-              {s.projectNumber} — {s.projectName}
-            </option>
-          ))}
-        </select>
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/print/schedule/${selected.projectId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
-          >
-            <Printer className="h-3.5 w-3.5" /> Print preview
-          </Link>
-        </div>
-      </div>
+  // Remount per project so local edits reset cleanly
+  return <GanttBoard key={selected.projectId} schedule={selected} />;
+}
 
-      {/* Remount per project so local edits reset cleanly */}
-      <GanttBoard key={selected.projectId} schedule={selected} />
-    </div>
+/** One reading on the summary strip: label, then the figure it belongs to. */
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      {label}
+      <span className="text-sm font-semibold tabular-nums tracking-tight text-fg">{value}</span>
+    </span>
   );
 }
 
@@ -654,19 +643,19 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
 
   return (
     <div className="space-y-4">
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { label: "Tasks", value: String(tasks.length) },
-          { label: "Overall progress", value: `${overall}%` },
-          { label: "Critical tasks", value: String(cpm.critical.size) },
-          { label: "Critical path", value: `${cpm.projectDays} days` },
-        ].map((t) => (
-          <Card key={t.label} className="p-4">
-            <div className="text-xs text-muted">{t.label}</div>
-            <div className="mt-1 text-xl font-semibold tracking-tight text-fg">{t.value}</div>
-          </Card>
-        ))}
+      {/* Summary — PROTECTED SYSTEM: layout/chrome change, approved 2026-08-04.
+        *
+        * Four figures, four words each: they never justified four cards and a
+        * two-row grid above the programme. Same four readings, same order, one
+        * line. `flex-wrap` rather than a fixed grid so a narrow stage reflows to
+        * two or three lines instead of pushing the page sideways — the Gantt
+        * itself is the only thing here allowed to scroll horizontally.
+        */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted">
+        <Stat label="Tasks" value={String(tasks.length)} />
+        <Stat label="Overall progress" value={`${overall}%`} />
+        <Stat label="Critical tasks" value={String(cpm.critical.size)} />
+        <Stat label="Critical path" value={`${cpm.projectDays} days`} />
       </div>
 
       {/* Status board — where the project is vs plan */}

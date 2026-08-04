@@ -100,14 +100,31 @@ function Th({ label, k, sort, onSort, align }: { label: string; k: SortKey; sort
   );
 }
 
-export function ProjectCrumb({ row, onBack }: { row: ProjectPickerRow; onBack: () => void }) {
+/**
+ * Shared by Schedule, Documents and Drawings — restyling it moves three modules
+ * at once. `emphasizeNumber` is therefore opt-in and defaults to off, so callers
+ * that do not pass it render exactly what they always did.
+ *
+ * Schedule opts in: with its page heading removed the crumb is the first line on
+ * the stage, and the project number has to read as the page's identity rather
+ * than as trailing metadata.
+ */
+export function ProjectCrumb({
+  row,
+  onBack,
+  emphasizeNumber = false,
+}: {
+  row: ProjectPickerRow;
+  onBack: () => void;
+  emphasizeNumber?: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg">
         <ArrowLeft className="h-4 w-4" /> All projects
       </button>
       <span className="text-sm text-faint">/</span>
-      <span className="font-mono text-xs text-faint">{row.projectNumber}</span>
+      <span className={emphasizeNumber ? "font-mono text-sm font-medium text-fg" : "font-mono text-xs text-faint"}>{row.projectNumber}</span>
       <span className="text-sm font-semibold text-fg">{row.projectName}</span>
       <span className="text-xs text-muted">· {row.client} · {row.location}</span>
     </div>
