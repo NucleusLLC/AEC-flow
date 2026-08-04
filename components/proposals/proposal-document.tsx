@@ -25,6 +25,7 @@ export function ProposalDocument({
   logo,
   companyName,
   companyLocation,
+  sheet = true,
 }: {
   proposal: ProposalRecord;
   logo?: LetterheadLogo;
@@ -33,6 +34,16 @@ export function ProposalDocument({
   companyName?: string;
   /** Configured practice location for the footer; omitted entirely when unset. */
   companyLocation?: string;
+  /**
+   * Whether to draw the paper this document sits on.
+   *
+   * The print route passes false, because `PrintSurface` supplies a sheet sized
+   * from the page tokens and nesting an 820px column inside a 210mm one would
+   * make the measuring pass paginate against a width the printer never uses. The
+   * Preview modal leaves it true: it has no surface around it, and the sheet IS
+   * what makes the modal read as a document.
+   */
+  sheet?: boolean;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
@@ -40,8 +51,8 @@ export function ProposalDocument({
   const optional = optionalFee(proposal);
   const lineItems = [...proposal.lineItems].sort((a, b) => a.sortOrder - b.sortOrder);
 
-  return (
-    <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+  const body = (
+    <>
       {/* Letterhead */}
       <DocumentLetterhead
         logo={logo}
@@ -226,6 +237,13 @@ export function ProposalDocument({
           proposal.revision > 1 ? `Rev ${proposal.revision}` : "",
         )}
       </div>
+    </>
+  );
+
+  if (!sheet) return body;
+  return (
+    <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+      {body}
     </div>
   );
 }

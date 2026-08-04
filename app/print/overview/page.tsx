@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { PrintButton } from "@/components/print/print-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
@@ -11,8 +8,7 @@ import { getTeam } from "@/lib/data/team";
 import { getSystemCurrency, getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
-import { PageRules } from "@/components/print/page-rules";
-import { PagedPreview } from "@/components/print/paged-preview";
+import { PrintSurface } from "@/components/print/print-surface";
 
 export const metadata: Metadata = { title: "Practice Overview · AEC-flow" };
 
@@ -87,60 +83,46 @@ export default async function PracticeOverview() {
   const avgUtil = team.length ? Math.round(team.reduce((n, t) => n + t.utilisation, 0) / team.length) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
-      <PageRules margins={{ top: 14, right: 14, bottom: 14, left: 14 }} />
+    <PrintSurface backHref="/exports" backLabel="Back to Data">
+      <DocumentLetterhead
+        logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
+        name={companyName}
+        borderClass="border-b-2 border-gray-900 pb-4"
+        details={
+          <div className="text-right">
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Practice Overview</div>
+            <div className="mt-1 text-xs text-gray-500">{formatDate(new Date())}</div>
+          </div>
+        }
+      />
 
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
-        <Link href="/exports" className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Data
-        </Link>
-        <PrintButton />
+      {/* KPI grid */}
+      <div className="mt-5 grid grid-cols-4 gap-3">
+        <Kpi label="Clients" value={String(clients.length)} sub={`${activeClients} active · ${prospects} prospect`} />
+        <Kpi label="Active Projects" value={String(activeProjects)} sub={`${projects.length} total · ${overdue} overdue`} />
+        <Kpi label="Avg Progress" value={`${avgProgress}%`} sub="across all projects" />
+        <Kpi label="Team" value={String(team.length)} sub={`${teamActive} active · ${avgUtil}% utilisation`} />
+        <Kpi label="Open Proposals" value={String(openProposals.length)} sub={`${proposals.length} total`} />
+        <Kpi label="Pipeline Value" value={formatCurrency(pipeline, currency)} sub="open proposals" />
+        <Kpi label="Won Value" value={formatCurrency(won, currency)} sub="approved proposals" />
+        <Kpi label="Order Book" value={formatCurrency(orderValue, currency)} sub={`${orders.length} orders`} />
       </div>
 
-      <div className="aec-doc mx-auto my-6 w-[210mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
-        <PagedPreview pageContentHeightMm={269}>
-        <DocumentLetterhead
-          logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
-          name={companyName}
-          borderClass="border-b-2 border-gray-900 pb-4"
-          details={
-            <div className="text-right">
-              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Practice Overview</div>
-              <div className="mt-1 text-xs text-gray-500">{formatDate(new Date())}</div>
-            </div>
-          }
-        />
-
-        {/* KPI grid */}
-        <div className="mt-5 grid grid-cols-4 gap-3">
-          <Kpi label="Clients" value={String(clients.length)} sub={`${activeClients} active · ${prospects} prospect`} />
-          <Kpi label="Active Projects" value={String(activeProjects)} sub={`${projects.length} total · ${overdue} overdue`} />
-          <Kpi label="Avg Progress" value={`${avgProgress}%`} sub="across all projects" />
-          <Kpi label="Team" value={String(team.length)} sub={`${teamActive} active · ${avgUtil}% utilisation`} />
-          <Kpi label="Open Proposals" value={String(openProposals.length)} sub={`${proposals.length} total`} />
-          <Kpi label="Pipeline Value" value={formatCurrency(pipeline, currency)} sub="open proposals" />
-          <Kpi label="Won Value" value={formatCurrency(won, currency)} sub="approved proposals" />
-          <Kpi label="Order Book" value={formatCurrency(orderValue, currency)} sub={`${orders.length} orders`} />
-        </div>
-
-        {/* Breakdowns */}
-        <div className="mt-7 grid grid-cols-3 gap-8">
-          <Breakdown title="Projects by status" data={countBy(projects, (p) => p.status)} />
-          <Breakdown title="Proposals by status" data={countBy(proposals, (p) => p.status)} />
-          <Breakdown title="Orders by status" data={countBy(orders, (o) => o.status)} />
-        </div>
-
-        <div className="mt-7 grid grid-cols-2 gap-8">
-          <Breakdown title="Clients by type" data={countBy(clients, (c) => c.type)} />
-          <Breakdown title="Team by department" data={countBy(team, (t) => t.department)} />
-        </div>
-
-        <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          {companyName} · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
-        </div>
-      </PagedPreview>
+      {/* Breakdowns */}
+      <div className="mt-7 grid grid-cols-3 gap-8">
+        <Breakdown title="Projects by status" data={countBy(projects, (p) => p.status)} />
+        <Breakdown title="Proposals by status" data={countBy(proposals, (p) => p.status)} />
+        <Breakdown title="Orders by status" data={countBy(orders, (o) => o.status)} />
       </div>
-    </div>
+
+      <div className="mt-7 grid grid-cols-2 gap-8">
+        <Breakdown title="Clients by type" data={countBy(clients, (c) => c.type)} />
+        <Breakdown title="Team by department" data={countBy(team, (t) => t.department)} />
+      </div>
+
+      <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
+        {companyName} · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
+      </div>
+    </PrintSurface>
   );
 }

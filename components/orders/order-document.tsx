@@ -20,6 +20,7 @@ export function OrderDocument({
   logo,
   companyName,
   companyLocation,
+  sheet = true,
 }: {
   order: OrderRecord;
   logoDataUrl?: string | null;
@@ -30,11 +31,17 @@ export function OrderDocument({
   companyName?: string;
   /** Configured practice location for the footer; omitted entirely when unset. */
   companyLocation?: string;
+  /**
+   * Whether to draw the paper this document sits on. False when `PrintSurface`
+   * supplies a sheet sized from the page tokens — see the same note on
+   * MeetingDocument.
+   */
+  sheet?: boolean;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
-  return (
-    <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+  const body = (
+    <>
       {/* Letterhead */}
       <DocumentLetterhead
         logo={{ dataUrl: logoDataUrl, position: logo?.position, size: logo?.size }}
@@ -134,6 +141,13 @@ export function OrderDocument({
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
         {documentFooterLine(firm, location, `Order ${order.orderNumber}`)}
       </div>
+    </>
+  );
+
+  if (!sheet) return body;
+  return (
+    <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+      {body}
     </div>
   );
 }

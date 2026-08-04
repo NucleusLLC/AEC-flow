@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SYSTEM_LOCALE } from "@/lib/format";
 import { firmName } from "@/lib/firm-identity";
+import { footerMarginBoxesCss } from "@/lib/documents/footer-boxes";
 
 const PAPERS: Record<string, [number, number]> = {
   A4: [210, 297],
@@ -51,6 +52,7 @@ export function SchedulePrint({
   generatedAt,
   logo,
   companyName,
+  footerText,
 }: {
   schedule: ProjectSchedule;
   generatedAt: string;
@@ -58,6 +60,9 @@ export function SchedulePrint({
   /** Configured practice name. The print route passes it; otherwise it resolves
    *  through the client-seeded firm identity (see lib/firm-identity.ts). */
   companyName?: string;
+  /** Practice strapline for the printed footer. Optional: omitted, the page still
+   *  prints exactly as before but with only the page counter in the bottom margin. */
+  footerText?: string;
 }) {
   const [paper, setPaper] = useState<PaperKey>("A3");
   const [orient, setOrient] = useState<Orientation>("landscape");
@@ -135,7 +140,28 @@ export function SchedulePrint({
     return out;
   })();
 
-  const pageStyle = `@page { size: ${pageWmm}mm ${pageHmm}mm; margin: ${MARGIN_MM}mm; }
+  // PROTECTED SYSTEM — integration-only change, approved 2026-08-03.
+  //
+  // The page size and margin are UNCHANGED, so every bar, band and break guide
+  // lands exactly where it did. What the programme sheet lacked were the `@page`
+  // margin boxes: it was, with Estimates, one of the two documents printing with
+  // no page counter and no practice strapline. A Gantt that runs to four A3
+  // sheets with nothing numbering them is the case those boxes exist for.
+  //
+  // The widths and the clearance above the paper edge come from the same helper
+  // as every other document, so the footer reads identically across the app —
+  // and the clamp inside it matters here: this sheet's margin is 10mm, too thin
+  // for the full 8mm clearance, so the helper yields it down rather than pushing
+  // the line up out of its band.
+  const footerBoxes = footerMarginBoxesCss({
+    pageWidthMm: pageWmm,
+    marginLeftMm: MARGIN_MM,
+    marginRightMm: MARGIN_MM,
+    marginBottomMm: MARGIN_MM,
+    footerLeft: footerText,
+  });
+
+  const pageStyle = `@page { size: ${pageWmm}mm ${pageHmm}mm; margin: ${MARGIN_MM}mm; ${footerBoxes} }
 @media print {
   .no-print { display: none !important; }
   html, body { background: #fff !important; }

@@ -19,6 +19,15 @@
  *      topMarginMm      the next page's top margin — must stay empty
  *      ── first line of page N+1 ──
  */
+import {
+  MARGIN_PRESETS,
+  pageSizeMm,
+  printableAreaMm,
+  type Margins,
+  type MarginPreset,
+  type Orientation,
+  type PaperSize,
+} from "./tokens";
 
 export type PageMargins = {
   topMm: number;
@@ -36,6 +45,17 @@ export type PageMargins = {
  * cannot be clipped.
  */
 export const FOOTER_FROM_EDGE_MM = 8;
+
+/**
+ * The visible break drawn between one sheet and the next, in millimetres.
+ *
+ * Screen furniture — there is no such gap on paper, where one page simply ends
+ * and the next begins. It lived as a private constant inside `PagedPreview`,
+ * which meant nothing that computed a gutter outside that component could agree
+ * with it; the print surface needs the same figure to size its sheet, so it is
+ * declared here with the rest of the gutter arithmetic.
+ */
+export const SHEET_GAP_MM = 6;
 
 export type GutterZones = {
   /** Total gap opened between the two pages. */
@@ -84,4 +104,62 @@ export function intrudesIntoMargin(offsetMm: number, margins: PageMargins): bool
 /** A4 less its margins, as the printable content box the preview must model. */
 export function printableHeightMm(pageHeightMm: number, margins: Pick<PageMargins, "topMm" | "bottomMm">): number {
   return pageHeightMm - margins.topMm - margins.bottomMm;
+}
+
+/* ─────────────────────────── the document sheet ─────────────────────────── */
+
+/** What a document asks for; everything else about its sheet follows from this. */
+export type SheetRequest = {
+  paper?: PaperSize;
+  orientation?: Orientation;
+  /** A named preset, or explicit millimetre margins for a document that needs them. */
+  margins?: MarginPreset | Margins;
+};
+
+export type SheetGeometry = {
+  paper: PaperSize;
+  orientation: Orientation;
+  /** The resolved margins — the SAME numbers `@page` is given. */
+  margins: Margins;
+  /** Trim size after orientation, i.e. the width the on-screen sheet is drawn at. */
+  sheetWidthMm: number;
+  sheetHeightMm: number;
+  /** The text block: trim less margins, which is what the preview must model. */
+  contentWidthMm: number;
+  contentHeightMm: number;
+  /** The gap this document opens between two previewed pages. */
+  gutter: GutterZones;
+};
+
+/**
+ * Everything a print surface needs, derived once from the page tokens.
+ *
+ * WHY IT IS HERE RATHER THAN IN THE COMPONENT. Every print route used to carry
+ * its own copy of this arithmetic as literals — `w-[210mm]`, `p-[14mm]`,
+ * `pageContentHeightMm={269}` — and the copies disagreed: a landscape register
+ * declared 12mm page margins and then padded its sheet by 14, so the preview
+ * wrapped its text at a width the printer would never use. Deriving the sheet,
+ * the text block and the gutter from ONE set of margins is what makes "the
+ * preview is what prints" a property of the code rather than of three literals
+ * happening to agree.
+ */
+export function sheetGeometry({
+  paper = "A4",
+  orientation = "portrait",
+  margins = "document",
+}: SheetRequest = {}): SheetGeometry {
+  const m: Margins = typeof margins === "string" ? MARGIN_PRESETS[margins] : margins;
+  const trim = pageSizeMm({ paper, orientation });
+  const area = printableAreaMm({ paper, orientation, margins: m });
+
+  return {
+    paper,
+    orientation,
+    margins: m,
+    sheetWidthMm: trim.width,
+    sheetHeightMm: trim.height,
+    contentWidthMm: area.width,
+    contentHeightMm: area.height,
+    gutter: gutterZones({ topMm: m.top, bottomMm: m.bottom, sheetGapMm: SHEET_GAP_MM }),
+  };
 }

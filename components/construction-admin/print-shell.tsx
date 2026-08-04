@@ -1,12 +1,7 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { PrintButton } from "@/components/construction-admin/print-button";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
-import { PageRules } from "@/components/print/page-rules";
-import { DocumentFont } from "@/components/print/document-font";
-import { PagedPreview } from "@/components/print/paged-preview";
+import { PrintSurface } from "@/components/print/print-surface";
 import { VersionTag } from "@/components/service-proposals/version-tag";
 
 /**
@@ -15,6 +10,12 @@ import { VersionTag } from "@/components/service-proposals/version-tag";
  * a fallback), a meta strip, the spec's signature blocks and a disclaimer; the
  * toolbar is hidden when printing. `@page { size: A4 }` gives a true A4 PDF via
  * the browser's "Save as PDF".
+ *
+ * The page geometry, the paged preview and the footer band are NOT here: they
+ * are `PrintSurface`, which every document in the app now sits on. This file is
+ * only the Construction Admin document's own furniture. What used to live here —
+ * the 14/14/20/14 margins, the 210mm sheet, `pageContentHeightMm={263}` — is
+ * `MARGIN_PRESETS.document` and the arithmetic in lib/documents/preview-geometry.
  *
  * Async server component: it loads the org-wide practice settings itself so
  * every consuming print route gets the logo without threading props.
@@ -42,98 +43,71 @@ export async function CaPrintShell({
   children: React.ReactNode;
   signatures: { role: string; name: string }[];
 }) {
-  const { logoDataUrl, logo, documentFontId, footer } = await getPracticeSettings();
+  const { logoDataUrl, logo } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   return (
-    <DocumentFont fontId={documentFontId} className="min-h-screen bg-gray-100 print:bg-white">
-      <PageRules margins={{ top: 14, right: 14, bottom: 20, left: 14 }} footerLeft={footer.text} />
+    <PrintSurface backHref={backHref}>
+      {/* Letterhead */}
+      <DocumentLetterhead
+        logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
+        name={companyName}
+        tagline="Architecture · Engineering · Project Management"
+        borderClass="border-b-2 border-gray-900 pb-4"
+        details={
+          <div className="text-right">
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
+            <div className="mt-1 font-mono text-xs text-gray-600">{refNumber}</div>
+            <div className="text-[11px] text-gray-500">
+              {statusLabel}
+              {versionLabel ? (
+                <>
+                  {" · "}
+                  <VersionTag label={versionLabel} className="text-[11px]" />
+                </>
+              ) : null}
+            </div>
+          </div>
+        }
+      />
 
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
-        <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Link>
-        <PrintButton />
+      {/* Meta strip */}
+      <div className="mt-4 grid grid-cols-4 gap-3 rounded-md bg-gray-50 px-4 py-3 text-[11px] print:bg-gray-50">
+        {meta.map((m) => (
+          <div key={m.label}>
+            <div className="text-gray-400">{m.label}</div>
+            <div className="font-medium text-gray-900">{m.value}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Screen padding equals the @page margin (14mm), not 16mm: a preview whose
-       * content column is a different width from the printed one wraps its text
-       * differently, so it cannot be an accurate preview. */}
-      <div className="aec-doc mx-auto my-6 w-[210mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
-        {/* A4 (297mm) less the 14mm top and bottom @page margins. */}
-        {/* The margins MUST be the same numbers passed to PageRules above: the
-          * preview's inter-page gap stands for the bottom margin of one page plus
-          * the top margin of the next, so a mismatch would draw content where a
-          * margin belongs. */}
-        <PagedPreview
-          pageContentHeightMm={263}
-          topMarginMm={14}
-          bottomMarginMm={20}
-          footerText={footer.text}
-        >
-        {/* Letterhead */}
-        <DocumentLetterhead
-          logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
-          name={companyName}
-          tagline="Architecture · Engineering · Project Management"
-          borderClass="border-b-2 border-gray-900 pb-4"
-          details={
-            <div className="text-right">
-              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
-              <div className="mt-1 font-mono text-xs text-gray-600">{refNumber}</div>
-              <div className="text-[11px] text-gray-500">
-                {statusLabel}
-                {versionLabel ? (
-                  <>
-                    {" · "}
-                    <VersionTag label={versionLabel} className="text-[11px]" />
-                  </>
-                ) : null}
-              </div>
-            </div>
-          }
-        />
+      <h1 className="mt-6 text-lg font-bold text-gray-900">{title}</h1>
 
-        {/* Meta strip */}
-        <div className="mt-4 grid grid-cols-4 gap-3 rounded-md bg-gray-50 px-4 py-3 text-[11px] print:bg-gray-50">
-          {meta.map((m) => (
-            <div key={m.label}>
-              <div className="text-gray-400">{m.label}</div>
-              <div className="font-medium text-gray-900">{m.value}</div>
+      {children}
+
+      {/* Signatures */}
+      <div className="mt-10 break-inside-avoid border-t border-gray-300 pt-6">
+        <div className="grid grid-cols-3 gap-8">
+          {signatures.map((s) => (
+            <div key={s.role}>
+              <div className="h-px w-full bg-gray-400" />
+              <div className="mt-1 text-xs text-gray-600">{s.role}</div>
+              <div className="text-[11px] text-gray-400">{s.name || "Name"} · Date</div>
             </div>
           ))}
         </div>
-
-        <h1 className="mt-6 text-lg font-bold text-gray-900">{title}</h1>
-
-        {children}
-
-        {/* Signatures */}
-        <div className="mt-10 break-inside-avoid border-t border-gray-300 pt-6">
-          <div className="grid grid-cols-3 gap-8">
-            {signatures.map((s) => (
-              <div key={s.role}>
-                <div className="h-px w-full bg-gray-400" />
-                <div className="mt-1 text-xs text-gray-600">{s.role}</div>
-                <div className="text-[11px] text-gray-400">{s.name || "Name"} · Date</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
-          Disclaimer: This document is issued for construction administration purposes. Figures are
-          based on information available at the date of issue and remain subject to verification and
-          final account. © {companyName}.
-        </p>
-
-        <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          {companyName} · {refNumber} · {docTitle}
-        </div>
-        </PagedPreview>
       </div>
-    </DocumentFont>
+
+      <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
+        Disclaimer: This document is issued for construction administration purposes. Figures are
+        based on information available at the date of issue and remain subject to verification and
+        final account. © {companyName}.
+      </p>
+
+      <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
+        {companyName} · {refNumber} · {docTitle}
+      </div>
+    </PrintSurface>
   );
 }
 

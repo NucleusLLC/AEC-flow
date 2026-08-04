@@ -41,6 +41,22 @@ export const MARGIN_PRESETS = {
   compact: { top: 12, right: 12, bottom: 12, left: 12 },
   standard: { top: 15, right: 16, bottom: 15, left: 16 },
   comfortable: { top: 18, right: 20, bottom: 18, left: 20 },
+  /**
+   * The geometry every AEC-Flow document sheet is laid out on.
+   *
+   * It was hard-coded as `{ top: 14, right: 14, bottom: 20, left: 14 }` inside
+   * the Construction Admin print shell, and then copied — sometimes as
+   * 14/14/14/14, sometimes as 12mm on the landscape register — into every other
+   * print route, which is the drift this file exists to stop.
+   *
+   * The bottom margin is DEEPER than the other three on purpose: it is the strip
+   * the `@bottom-left` / `@bottom-right` margin boxes live in, and it has to hold
+   * the practice strapline, the page counter and `FOOTER_FROM_EDGE_MM` of
+   * clearance off the paper edge. Fourteen millimetres holds all three, but only
+   * just; twenty leaves the footer room to wrap onto a second line without
+   * touching the text block above it.
+   */
+  document: { top: 14, right: 14, bottom: 20, left: 14 },
 } as const satisfies Record<string, Margins>;
 
 export type MarginPreset = keyof typeof MARGIN_PRESETS;

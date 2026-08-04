@@ -29,7 +29,6 @@
 import {
   DEFAULT_PAGE,
   MARGIN_PRESETS,
-  TYPE_SCALE,
   BREAK_RULES,
   SPACING,
   TABLE_TOKENS,
@@ -41,22 +40,26 @@ import {
   type Orientation,
   type PaperSize,
 } from "@/lib/documents/tokens";
-import { gutterZones } from "@/lib/documents/preview-geometry";
+import { footerMarginBoxesCss, PAGE_NUMBER_WIDTH_MM } from "@/lib/documents/footer-boxes";
 
 /**
- * Width reserved for "Page N of M" in the bottom margin strip, in millimetres.
- *
- * Chrome sizes the bottom margin boxes by distributing the strip between them in
- * proportion to their max-content widths. A footer line wider than the strip
- * therefore squeezes the page-number box below the width of its own text, and the
- * total wraps onto a second line — which is how a printed proposal came to read
- * "Page 1 of" with the "3" stranded on a line of its own below it. An explicit
- * width takes the box out of that distribution altogether.
- *
- * "Page 1 of 3" measures 13.8mm at the footer type size, so this is set with room
- * to spare: a hundred-page register still fits on one line.
+ * Re-exported so the emitter stays the one obvious place to read about the
+ * footer strip, while the arithmetic itself lives where the protected systems
+ * can reach it without pulling in this whole stylesheet.
  */
-export const PAGE_NUMBER_WIDTH_MM = 30;
+export { PAGE_NUMBER_WIDTH_MM };
+
+/**
+ * Class the on-screen document sheet carries so `@page`'s geometry can be
+ * mirrored onto it.
+ *
+ * The sheet used to declare its own size in Tailwind literals — `w-[210mm]`
+ * beside `p-[14mm]` — next to a `<PageRules margins={…} />` holding a different
+ * set of numbers. Nothing tied the two together, and on the landscape register
+ * they had already drifted apart. Emitting the screen geometry from the same
+ * function that emits `@page` means one edit moves both, or neither.
+ */
+export const DOCUMENT_SHEET_CLASS = "aec-doc-sheet";
 
 export type PageRulesOptions = {
   paper?: PaperSize;
@@ -97,49 +100,33 @@ export function pageRulesCss({
   const m: Margins = typeof margins === "string" ? MARGIN_PRESETS[margins] : margins;
   const box = `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`;
 
-  // CSS strings are escaped: a stray quote in a document reference would
-  // otherwise terminate the content string and break the whole rule.
-  const cssString = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-
-  // The footer sits FOOTER_FROM_EDGE_MM above the paper edge rather than at the
-  // foot of the bottom margin, which read as crowding the edge — and that
-  // clearance is inside the unprintable border of a typical desktop printer, so
-  // the line cannot be clipped. `vertical-align: bottom` puts the content at the
-  // foot of the margin box and the padding then lifts it. The same figure drives
-  // the on-screen band (lib/documents/preview-geometry), so the two agree.
-  const footerPadMm = gutterZones({ topMm: m.top, bottomMm: m.bottom, sheetGapMm: 0 })
-    .footerPadBottomMm;
-  const marginBoxStyle = `font-size: ${TYPE_SCALE.footer}pt; line-height: ${LINE_HEIGHT.footer}; color: #6b7280; font-family: inherit; vertical-align: bottom; padding-bottom: ${footerPadMm}mm;`;
-
   // Footer band layout, matching the Estimates sheet: the practice's footer line
   // on the left, the page number on the right. Nothing sits centred, so a long
-  // footer line and the page number cannot collide.
-  //
-  // Both boxes carry an EXPLICIT width, and the two add up to the strip between
-  // the page's left and right margins. Left to the browser's proportional sizing,
-  // a footer line longer than the strip took the page number's width with it (see
-  // PAGE_NUMBER_WIDTH_MM) and pushed its own tail — a practice's web address — to
-  // wherever the remaining width happened to break, which on a real proposal fell
-  // inside the address. With a fixed width the line always breaks in the same
-  // place, well before its end, and the bottom margin has room for both lines.
-  const stripMm = pageSizeMm({ paper, orientation }).width - m.left - m.right;
-  const numberWidthMm = pageNumbers ? Math.min(PAGE_NUMBER_WIDTH_MM, stripMm) : 0;
-  const footerWidthMm = Math.max(0, stripMm - numberWidthMm);
+  // footer line and the page number cannot collide. The escaping, the clearance
+  // above the paper edge and the two explicit widths all live in
+  // lib/documents/footer-boxes, which is also what the protected Estimates and
+  // Schedule sheets call — so all three footers are the same footer.
+  const pageWidthMm = pageSizeMm({ paper, orientation }).width;
+  const marginBoxes = footerMarginBoxesCss({
+    pageWidthMm,
+    marginLeftMm: m.left,
+    marginRightMm: m.right,
+    marginBottomMm: m.bottom,
+    footerLeft,
+    pageNumbers,
+  });
 
-  const marginBoxes = [
-    footerLeft
-      ? `@bottom-left { content: ${cssString(footerLeft)}; width: ${footerWidthMm}mm; text-align: left; ${marginBoxStyle} }`
-      : "",
-    pageNumbers
-      ? `@bottom-right { content: "Page " counter(page) " of " counter(pages); width: ${numberWidthMm}mm; white-space: nowrap; text-align: right; ${marginBoxStyle} }`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  // The on-screen sheet, sized from the same margins. Screen-only: in print the
+  // sheet has no width and no padding of its own, because `@page` supplies both —
+  // physical padding as well would double every margin. That is the same
+  // arrangement the Tailwind `print:w-auto print:p-0` classes used to express,
+  // moved here so the numbers cannot part company with the ones above.
+  const screenSheet = `@media screen { .${DOCUMENT_SHEET_CLASS} { box-sizing: border-box; width: ${pageWidthMm}mm; padding: ${box}; } }`;
 
   return [
     `@page { size: ${paper} ${orientation}; margin: ${box}; ${marginBoxes} }`,
     whiteBackgroundOnPrint ? `@media print { html, body { background: #fff; } }` : "",
+    screenSheet,
     documentCss(density),
     breakRules ? PRINT_BREAK_CSS : "",
   ]

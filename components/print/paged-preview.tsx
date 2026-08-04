@@ -7,7 +7,7 @@ import {
   resolveHeadingBreaks,
   type PageCut,
 } from "@/lib/documents/pagination";
-import { gutterZones } from "@/lib/documents/preview-geometry";
+import { gutterZones, SHEET_GAP_MM } from "@/lib/documents/preview-geometry";
 
 /**
  * PagedPreview — makes the on-screen document look like the printed one, and
@@ -270,9 +270,6 @@ function breakTarget(heading: HTMLElement, root: HTMLElement): HTMLElement {
   return parent && parent !== root && parent.firstElementChild === heading ? parent : heading;
 }
 
-/** The visible break drawn between one sheet and the next, in millimetres. */
-const SHEET_GAP_MM = 6;
-
 export function PagedPreview({
   /** Printable height of one page in millimetres (page height − top/bottom margins). */
   pageContentHeightMm,
@@ -289,6 +286,13 @@ export function PagedPreview({
    */
   topMarginMm = 14,
   bottomMarginMm = 20,
+  /**
+   * The sheet's left/right padding, which the boundary chrome bleeds out over so
+   * the sheet edge is drawn across the full width of the paper rather than only
+   * across the text block. It was hard-coded at 14mm, which is wrong for any
+   * document whose side margins are not 14 — the landscape register, for one.
+   */
+  sideMarginMm = 14,
   /** The practice footer line, shown at the left of each page's footer band. */
   footerText,
   children,
@@ -297,6 +301,7 @@ export function PagedPreview({
   pageContentWidthMm?: number;
   topMarginMm?: number;
   bottomMarginMm?: number;
+  sideMarginMm?: number;
   footerText?: string;
   children: React.ReactNode;
 }) {
@@ -311,6 +316,9 @@ export function PagedPreview({
     sheetGapMm: SHEET_GAP_MM,
   });
   const gutterMm = zones.gutterMm;
+  // The sheet edge and the grey break run the full width of the paper, so they
+  // reach back out over the sheet's own side padding.
+  const bleed = { left: `-${sideMarginMm}mm`, right: `-${sideMarginMm}mm` };
   const hostRef = useRef<HTMLDivElement>(null);
   const [breaks, setBreaks] = useState<{ top: number; page: number }[]>([]);
   const [total, setTotal] = useState(1);
@@ -540,16 +548,16 @@ export function PagedPreview({
             * next page's TOP MARGIN — the remaining `topMarginMm` of this gutter,
             * left empty so content cannot begin inside the header zone. */}
           <div
-            className="absolute inset-x-[-14mm] border-b border-gray-300"
-            style={{ top: `${zones.sheetEdgeAtMm}mm` }}
+            className="absolute border-b border-gray-300"
+            style={{ ...bleed, top: `${zones.sheetEdgeAtMm}mm` }}
           />
           <div
-            className="absolute inset-x-[-14mm] bg-gray-100"
-            style={{ top: `${zones.sheetEdgeAtMm}mm`, height: `${SHEET_GAP_MM}mm` }}
+            className="absolute bg-gray-100"
+            style={{ ...bleed, top: `${zones.sheetEdgeAtMm}mm`, height: `${SHEET_GAP_MM}mm` }}
           />
           <div
-            className="absolute inset-x-[-14mm] border-t border-gray-300"
-            style={{ top: `${zones.topMarginStartsAtMm}mm` }}
+            className="absolute border-t border-gray-300"
+            style={{ ...bleed, top: `${zones.topMarginStartsAtMm}mm` }}
           />
         </div>
       ))}

@@ -23,6 +23,7 @@ export function MeetingDocument({
   logo,
   companyName,
   companyLocation,
+  sheet = true,
 }: {
   meeting: MeetingRecord;
   logo?: LetterheadLogo;
@@ -31,11 +32,21 @@ export function MeetingDocument({
   companyName?: string;
   /** Configured practice location for the footer; omitted entirely when unset. */
   companyLocation?: string;
+  /**
+   * Whether to draw the paper this document sits on.
+   *
+   * False when the caller is `PrintSurface`, which supplies a sheet sized from
+   * the page tokens. Drawing our own inside it would nest an 820px column in a
+   * 210mm one, and the measuring pass would then paginate against a width the
+   * printer never uses — the exact failure a preview exists to rule out. True is
+   * for a standalone on-screen render with no surface around it.
+   */
+  sheet?: boolean;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
-  return (
-    <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+  const body = (
+    <>
       {/* Letterhead */}
       <DocumentLetterhead
         logo={logo}
@@ -148,6 +159,13 @@ export function MeetingDocument({
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
         {documentFooterLine(firm, location, `Minutes recorded by ${meeting.author}`)}
       </div>
+    </>
+  );
+
+  if (!sheet) return body;
+  return (
+    <div className="mx-auto w-[820px] max-w-full bg-white p-12 text-[13px] leading-relaxed text-gray-900 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+      {body}
     </div>
   );
 }

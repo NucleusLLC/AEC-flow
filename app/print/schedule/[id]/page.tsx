@@ -15,7 +15,7 @@ export default async function SchedulePrintPage({
   const { id } = await params;
   const schedule = await getSchedule(id);
   if (!schedule) notFound();
-  const { logoDataUrl, logo } = await getPracticeSettings();
+  const { logoDataUrl, logo, footer } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
 
@@ -25,5 +25,5 @@ export default async function SchedulePrintPage({
     year: "numeric",
   });
 
-  return <SchedulePrint schedule={schedule} generatedAt={generatedAt} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} />;
+  return <SchedulePrint schedule={schedule} generatedAt={generatedAt} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} footerText={footer.text} />;
 }

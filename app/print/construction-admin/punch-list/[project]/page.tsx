@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { PrintButton } from "@/components/construction-admin/print-button";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
 import { PUNCH_STATUS_LABEL } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
@@ -10,7 +7,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import type { PunchListItem, PunchStatus, PunchPriority } from "@/lib/ca/types";
 import { getFirmIdentity } from "@/lib/server/firm";
-import { PageRules } from "@/components/print/page-rules";
+import { PrintSurface } from "@/components/print/print-surface";
 
 type PageProps = { params: Promise<{ project: string }> };
 
@@ -130,75 +127,69 @@ export default async function PunchListPrintPage({ params }: PageProps) {
   const backHref = "/construction-admin/punch-list";
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
-      <PageRules orientation="landscape" margins={{ top: 12, right: 12, bottom: 12, left: 12 }} />
-
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
-        <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Link>
-        <PrintButton />
-      </div>
-
-      <div className="aec-doc mx-auto my-6 w-[297mm] max-w-full bg-white p-[14mm] text-[12px] leading-relaxed text-gray-900 shadow-sm print:my-0 print:w-auto print:p-0 print:shadow-none">
-        {/* Letterhead */}
-        <DocumentLetterhead
-          logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
-          name={companyName}
-          borderClass="border-b-2 border-gray-900 pb-4"
-          details={
-            <div className="text-right">
-              <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
-              <div className="mt-1 font-mono text-xs text-gray-600">{reportRef}</div>
-              <div className="text-[11px] text-gray-500">Issued {formatDate(new Date().toISOString())}</div>
-            </div>
-          }
-        />
-
-        <h1 className="mt-6 text-lg font-bold text-gray-900">{heading}</h1>
-        <Summary items={items} />
-
-        {projects.map(([projectName, projectItems]) => (
-          <section key={projectName} className="mt-8">
-            {all ? (
-              <h2 className="mb-2 border-b border-gray-300 pb-1 text-[12px] font-semibold text-gray-900">
-                {projectName}
-                <span className="ml-2 font-normal text-gray-400">({projectItems.length} items)</span>
-              </h2>
-            ) : null}
-            {byLocation(projectItems).map(([location, locItems]) => (
-              <div key={location} className="mt-4 break-inside-avoid">
-                <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{location}</h3>
-                <div className="mt-1">
-                  <ItemsTable items={locItems} />
-                </div>
-              </div>
-            ))}
-          </section>
-        ))}
-
-        {/* Sign-off */}
-        <div className="mt-10 break-inside-avoid border-t border-gray-300 pt-6">
-          <div className="grid grid-cols-3 gap-8">
-            {["Prepared by (Consultant)", "Acknowledged (Contractor)", "Verified (Owner / Lender)"].map((role) => (
-              <div key={role}>
-                <div className="h-px w-full bg-gray-400" />
-                <div className="mt-1 text-xs text-gray-600">{role}</div>
-                <div className="text-[11px] text-gray-400">Name · Signature · Date</div>
-              </div>
-            ))}
+    // Landscape: eight columns of defect data do not fit a portrait text block.
+    // Everything else — margins, footer band, paged preview — is the standard
+    // document geometry. This register used to declare 12mm page margins and then
+    // pad its sheet by 14, so its preview wrapped at a width the printer never
+    // used; and it had no paged preview at all, which is why a register long
+    // enough to run to six sheets showed as one endless page.
+    <PrintSurface backHref={backHref} orientation="landscape">
+      {/* Letterhead */}
+      <DocumentLetterhead
+        logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
+        name={companyName}
+        borderClass="border-b-2 border-gray-900 pb-4"
+        details={
+          <div className="text-right">
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
+            <div className="mt-1 font-mono text-xs text-gray-600">{reportRef}</div>
+            <div className="text-[11px] text-gray-500">Issued {formatDate(new Date().toISOString())}</div>
           </div>
-        </div>
+        }
+      />
 
-        <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
-          Disclaimer: This snag and defect register is issued for construction administration purposes. Items
-          remain subject to site verification and final inspection prior to handover. © {companyName}.
-        </p>
-        <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-          {companyName} · {reportRef} · {docTitle}
+      <h1 className="mt-6 text-lg font-bold text-gray-900">{heading}</h1>
+      <Summary items={items} />
+
+      {projects.map(([projectName, projectItems]) => (
+        <section key={projectName} className="mt-8">
+          {all ? (
+            <h2 className="mb-2 border-b border-gray-300 pb-1 text-[12px] font-semibold text-gray-900">
+              {projectName}
+              <span className="ml-2 font-normal text-gray-400">({projectItems.length} items)</span>
+            </h2>
+          ) : null}
+          {byLocation(projectItems).map(([location, locItems]) => (
+            <div key={location} className="mt-4 break-inside-avoid">
+              <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{location}</h3>
+              <div className="mt-1">
+                <ItemsTable items={locItems} />
+              </div>
+            </div>
+          ))}
+        </section>
+      ))}
+
+      {/* Sign-off */}
+      <div className="mt-10 break-inside-avoid border-t border-gray-300 pt-6">
+        <div className="grid grid-cols-3 gap-8">
+          {["Prepared by (Consultant)", "Acknowledged (Contractor)", "Verified (Owner / Lender)"].map((role) => (
+            <div key={role}>
+              <div className="h-px w-full bg-gray-400" />
+              <div className="mt-1 text-xs text-gray-600">{role}</div>
+              <div className="text-[11px] text-gray-400">Name · Signature · Date</div>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+
+      <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
+        Disclaimer: This snag and defect register is issued for construction administration purposes. Items
+        remain subject to site verification and final inspection prior to handover. © {companyName}.
+      </p>
+      <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
+        {companyName} · {reportRef} · {docTitle}
+      </div>
+    </PrintSurface>
   );
 }

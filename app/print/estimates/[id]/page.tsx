@@ -8,6 +8,7 @@ import { getEstimateById } from "@/lib/data/estimates";
 import { getGeneralConditions } from "@/lib/data/general-conditions-db";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { footerMarginBoxesCss } from "@/lib/documents/footer-boxes";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -25,7 +26,7 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
   const { gc, usd } = await searchParams;
   const est = await getEstimateById(id);
   if (!est) notFound();
-  const { logoDataUrl, logo, profile } = await getPracticeSettings();
+  const { logoDataUrl, logo, profile, footer } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
 
@@ -39,7 +40,26 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
-      <style>{`@page { size: A4; margin: 14mm; } @media print { html, body { background: #fff; } }`}</style>
+      {/* PROTECTED SYSTEM — integration-only change, approved 2026-08-03.
+        *
+        * The geometry is UNCHANGED: A4 at 14mm on all four sides, exactly as this
+        * route has always declared it, so not a single line of the estimate moves.
+        * What it lacked were the two `@page` margin boxes, which is why the Cost
+        * Estimate was the one document in the app that printed with no page
+        * numbers and no practice strapline — the two things every other document
+        * gained. Nothing inside EstimateDocument or the estimate engines is
+        * touched; the boxes live in the page context, not in the layout.
+        *
+        * The box arithmetic is shared with every other document (clearance above
+        * the paper edge, explicit widths so "Page 1 of 3" cannot wrap) via
+        * lib/documents/footer-boxes. */}
+      <style>{`@page { size: A4; margin: 14mm; ${footerMarginBoxesCss({
+        pageWidthMm: 210,
+        marginLeftMm: 14,
+        marginRightMm: 14,
+        marginBottomMm: 14,
+        footerLeft: footer.text,
+      })} } @media print { html, body { background: #fff; } }`}</style>
 
       {/* Toolbar — hidden when printing */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
