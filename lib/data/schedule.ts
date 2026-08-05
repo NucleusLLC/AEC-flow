@@ -30,6 +30,23 @@ export type ScheduleTask = {
   durationUnit?: "days" | "hours"; // how the duration is entered/displayed
   category?: string; // editable category id (overrides discipline for colour/label)
   subCategory?: string; // editable sub-category (e.g. construction activity)
+  // PROTECTED SYSTEM (schedule) — additive cost fields, approved 2026-08-04.
+  //
+  // Carried on the task so the existing Save button persists a budget with the rest
+  // of the programme; `saveSchedule` rewrites the task list wholesale, so a budget
+  // held anywhere else on this shape would be dropped on the next save.
+  //
+  // NOTHING IN THE CPM OR HEALTH ENGINES READS THESE. `computeCpm` and
+  // `computeScheduleHealth` take only dates, dependencies and progress; adding money
+  // to the task shape does not put money into the critical path. That separation is
+  // what `npm run golden` pins.
+  /** Budget for this activity, in the org System Currency. Undefined = not set,
+   *  which is deliberately distinct from a budget of zero. */
+  budgetAmount?: number | null;
+  /** "manual" when typed, "estimate" when taken from the project's Cost Estimate. */
+  budgetSource?: "manual" | "estimate" | null;
+  /** Comma-separated estimate line refs behind an "estimate"-sourced figure. */
+  budgetRef?: string | null;
 };
 
 /** Working hours per day used to convert an hours-based duration to grid days. */

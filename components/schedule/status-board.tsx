@@ -11,6 +11,12 @@ import {
 import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import {
+  countVisibleTiles,
+  defaultDisplayPrefs,
+  tileGridClass,
+  type DisplayPrefs,
+} from "@/lib/schedule/display-prefs";
 import type { ScheduleHealth, TaskHealth } from "@/lib/data/schedule";
 
 // Light mode keeps the original soft tints; dark mode uses deep tints (the
@@ -62,15 +68,29 @@ function Tile({
   );
 }
 
+// PROTECTED SYSTEM (schedule) — display/chrome change, approved 2026-08-04.
+//
+// `display` decides which readouts are PAINTED. It is threaded no further than
+// the JSX below on purpose: `health` still arrives fully computed, every tile's
+// value is still derived on every render, and hiding one removes a `<div>` and
+// nothing else. No calculation may ever be put behind one of these flags — a
+// board with SPI hidden and a board with SPI shown must agree on the numbers.
+//
+// It is optional and defaults to all-on so the print renderer and any future
+// caller that has no opinion get the original board unchanged.
 export function StatusBoard({
   health,
   statusDate,
   onStatusDate,
+  display,
 }: {
   health: ScheduleHealth;
   statusDate: string;
   onStatusDate: (iso: string) => void;
+  display?: DisplayPrefs;
 }) {
+  const show = display ?? defaultDisplayPrefs();
+  const visibleTiles = countVisibleTiles(show);
   const o = OVERALL[health.overall];
   const culprit = health.attention.find((a) => a.isCritical) ?? health.attention[0] ?? null;
   const spiTone =
@@ -122,57 +142,80 @@ export function StatusBoard({
         </div>
       </div>
 
-      {/* Metric tiles */}
-      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-6">
-        <Tile
-          label="Actual / Planned"
-          value={`${Math.round(health.pctActual)}% / ${Math.round(health.pctPlanned)}%`}
-          sub="duration-weighted"
-        />
-        <Tile label="SPI" value={health.spi.toFixed(2)} sub="earned ÷ planned" tone={spiTone} />
-        <Tile
-          label="Schedule variance"
-          value={`${health.varianceDays >= 0 ? "+" : ""}${health.varianceDays}d`}
-          sub={health.varianceDays >= 0 ? "ahead of plan" : "behind plan"}
-          tone={varTone}
-        />
-        <Tile
-          label="Behind / Overdue"
-          value={`${health.behindCount} / ${health.overdueCount}`}
-          sub={`${health.doneCount}/${health.total} done`}
-          tone={health.behindCount + health.overdueCount > 0 ? "text-red-600" : "text-fg"}
-        />
-        <Tile
-          label="Baseline finish"
-          value={formatDate(health.baselineFinish)}
-          sub="planned completion"
-        />
-        <Tile
-          label="Forecast finish"
-          value={formatDate(health.forecastFinish)}
-          sub={
-            health.finishSlipDays > 0 ? `+${health.finishSlipDays}d slip` : "on baseline"
-          }
-          tone={health.finishSlipDays > 0 ? "text-red-600" : "text-emerald-600"}
-        />
-      </div>
+      {/* Metric tiles — the grid is sized to what survives the Display Control
+        * filter, not to the six tiles written below, so hiding four does not
+        * leave four gaps. Dropped entirely at zero: an empty `p-4` band reads as
+        * a rendering fault rather than as a deliberately quiet board. */}
+      {visibleTiles > 0 ? (
+        <div className={cn("grid gap-3 p-4", tileGridClass(visibleTiles))}>
+          {show.actualPlanned ? (
+            <Tile
+              label="Actual / Planned"
+              value={`${Math.round(health.pctActual)}% / ${Math.round(health.pctPlanned)}%`}
+              sub="duration-weighted"
+            />
+          ) : null}
+          {show.spi ? (
+            <Tile label="SPI" value={health.spi.toFixed(2)} sub="earned ÷ planned" tone={spiTone} />
+          ) : null}
+          {show.scheduleVariance ? (
+            <Tile
+              label="Schedule variance"
+              value={`${health.varianceDays >= 0 ? "+" : ""}${health.varianceDays}d`}
+              sub={health.varianceDays >= 0 ? "ahead of plan" : "behind plan"}
+              tone={varTone}
+            />
+          ) : null}
+          {show.behindOverdue ? (
+            <Tile
+              label="Behind / Overdue"
+              value={`${health.behindCount} / ${health.overdueCount}`}
+              sub={`${health.doneCount}/${health.total} done`}
+              tone={health.behindCount + health.overdueCount > 0 ? "text-red-600" : "text-fg"}
+            />
+          ) : null}
+          {show.baselineFinish ? (
+            <Tile
+              label="Baseline finish"
+              value={formatDate(health.baselineFinish)}
+              sub="planned completion"
+            />
+          ) : null}
+          {show.forecast ? (
+            <Tile
+              label="Forecast finish"
+              value={formatDate(health.forecastFinish)}
+              sub={
+                health.finishSlipDays > 0 ? `+${health.finishSlipDays}d slip` : "on baseline"
+              }
+              tone={health.finishSlipDays > 0 ? "text-red-600" : "text-emerald-600"}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Critical path callout + attention list */}
       <div className="border-t border-border px-4 py-3">
-        <div className="mb-2 flex items-center gap-2">
-          <Crosshair className={cn("h-4 w-4", health.criticalSlipDays > 0 ? "text-red-600" : "text-emerald-600")} />
-          <span className="text-sm font-semibold text-fg">Critical Path Status</span>
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-              health.criticalSlipDays > 0
-                ? "bg-red-100 text-red-700"
-                : "bg-emerald-100 text-emerald-700",
-            )}
-          >
-            {health.criticalSlipDays > 0 ? `Slipping ${health.finishSlipDays}d` : "Nominal"}
-          </span>
-        </div>
+        {/* "Critical Path Slipping" hides this callout — the heading and the
+          * Slipping/Nominal badge. The attention list below it stays: it is the
+          * behind/overdue roster, a different readout that the owner's list
+          * never named, and it is what makes this band worth its border. */}
+        {show.criticalPathSlipping ? (
+          <div className="mb-2 flex items-center gap-2">
+            <Crosshair className={cn("h-4 w-4", health.criticalSlipDays > 0 ? "text-red-600" : "text-emerald-600")} />
+            <span className="text-sm font-semibold text-fg">Critical Path Status</span>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                health.criticalSlipDays > 0
+                  ? "bg-red-100 text-red-700"
+                  : "bg-emerald-100 text-emerald-700",
+              )}
+            >
+              {health.criticalSlipDays > 0 ? `Slipping ${health.finishSlipDays}d` : "Nominal"}
+            </span>
+          </div>
+        ) : null}
 
         {health.attention.length === 0 ? (
           <p className="text-xs text-muted">All tasks at or ahead of plan as of {formatDate(statusDate)}. ✅</p>

@@ -74,3 +74,42 @@ describe("tenant scoping integrity", () => {
     expect(unscoped, `models with companyId not in TENANT_MODELS: ${unscoped.join(", ")}`).toEqual([]);
   });
 });
+
+/**
+ * Schedule Budget (approved 2026-08-04) added no new model — it added columns to two
+ * existing ones. That is precisely the case the check above cannot see: a column can
+ * carry another tenant's money into a rollup without any new table appearing.
+ *
+ * The two facts the feature's tenant safety rests on are asserted here so a later edit
+ * that breaks either one fails the suite instead of leaking silently.
+ */
+describe("schedule budget tenant scoping", () => {
+  const models = tenantModels();
+
+  it("scopes PurchaseOrder, which now carries the task attribution", () => {
+    // scheduleTaskKey attributes a commitment to an activity. If PurchaseOrder ever left
+    // TENANT_MODELS, the budget rollup would read every company's orders for a project id.
+    expect(/scheduleTaskKey\s+String\?/.test(schema)).toBe(true);
+    expect(models.has("PurchaseOrder")).toBe(true);
+  });
+
+  it("keeps ScheduleTask scoped through its parent, not by a companyId of its own", () => {
+    // ScheduleTask holds budgetAmount but deliberately has NO companyId: it is reached
+    // only via ProjectSchedule (which IS scoped) and is cascade-deleted with it. Adding a
+    // companyId here without also adding it to TENANT_MODELS would create an unscoped
+    // money-bearing table — so assert both halves of that invariant.
+    const task = /model\s+ScheduleTask\s*\{([\s\S]*?)\n\}/.exec(schema);
+    expect(task, "ScheduleTask model not found").not.toBeNull();
+    const body = task![1];
+    expect(/\n\s*budgetAmount\s+Decimal\?/.test(body), "budgetAmount must be a nullable Decimal").toBe(true);
+    // Money is never a float. Decimal, like PurchaseOrder.total.
+    expect(/\n\s*budgetAmount\s+Float/.test(body)).toBe(false);
+    const hasCompanyId = /\n\s*companyId\s+String/.test(body);
+    expect(
+      !hasCompanyId || models.has("ScheduleTask"),
+      "ScheduleTask gained a companyId but is not in TENANT_MODELS — cross-tenant leak",
+    ).toBe(true);
+    expect(/\n\s*schedule\s+ProjectSchedule\s+@relation/.test(body)).toBe(true);
+    expect(models.has("ProjectSchedule")).toBe(true);
+  });
+});

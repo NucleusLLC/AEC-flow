@@ -9,7 +9,19 @@
     "moduleResolution": "node",
     "noEmit": false,
     "isolatedModules": false,
-    "jsx": "react"
+    "jsx": "react",
+    // `paths` REPLACES the inherited map rather than merging, so "@/*" is restated
+    // verbatim. Both entries are relative to the INHERITED baseUrl, which "extends"
+    // keeps anchored to the repo root (where ../tsconfig.json declares it) — not to
+    // this folder.
+    //
+    // "server-only" is Next's bundler-supplied tripwire and does not exist on disk; it is
+    // mapped to a no-op so a script can import the real server-only data-access modules
+    // instead of duplicating their queries. See scripts/server-only-shim.ts.
+    "paths": {
+      "@/*": ["./*"],
+      "server-only": ["./scripts/server-only-shim.ts"]
+    }
   },
   "ts-node": {
     "transpileOnly": true

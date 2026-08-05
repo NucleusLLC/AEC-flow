@@ -1428,6 +1428,20 @@ model ScheduleTask {
   category     String?
   subCategory  String?
   sortOrder    Int             @default(0)
+  /// PROTECTED SYSTEM (schedule) — additive cost fields, approved 2026-08-04.
+  /// Per-task budget, in the schedule's presentation currency (the org System
+  /// Currency — Schedule carries no currency of its own). NULL means "no budget
+  /// set", which is deliberately distinct from a budget of zero. Decimal, never
+  /// Float: this column is money and matches PurchaseOrder.total.
+  budgetAmount Decimal?
+  /// Provenance of `budgetAmount`: "manual" when typed, or "estimate" when it was
+  /// taken from the project's Cost Estimate. Recorded so the panel can say where a
+  /// figure came from instead of implying every number is equally authoritative.
+  budgetSource String?
+  /// When budgetSource = "estimate", the estimate category/item ids the amount was
+  /// summed from (comma-separated). Audit trail for a seeded figure — it is a
+  /// snapshot, not a live link: re-seeding is an explicit user action.
+  budgetRef    String?
   schedule     ProjectSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
   @@index([scheduleId])
@@ -1854,10 +1868,20 @@ model PurchaseOrder {
   createdByName String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+  /// Which schedule activity this commitment belongs to — `ScheduleTask.taskKey`,
+  /// scoped by this order's own `projectId`. Deliberately a loose string and NOT a
+  /// foreign key to `ScheduleTask.id`: saving a schedule deletes and recreates every
+  /// task row (see lib/data/schedule-db.ts `saveSchedule`), so a real FK would either
+  /// cascade-delete the attribution or block the save on every edit. `taskKey` is the
+  /// stable identifier across those rewrites. Same pattern as
+  /// MaterialSelection.purchaseOrderId. NULL = not attributed to a task; such orders
+  /// are reported as an explicit unassigned bucket, never spread or dropped.
+  scheduleTaskKey String?
 
   @@unique([companyId, poNumber])
   @@index([projectId])
   @@index([status])
+  @@index([projectId, scheduleTaskKey])
   @@map("purchase_orders")
 }
 

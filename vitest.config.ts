@@ -27,6 +27,11 @@ export default defineConfig({
       "lib/proposals/**/*.test.ts",
       "lib/firm-identity.test.ts",
       "lib/documents/**/*.test.ts",
+      // Named file, not a `lib/schedule/**` sweep: the schedule module's other
+      // code is protected and untested, and a directory glob here would be the
+      // first step toward re-collecting the node:test suites described above.
+      "lib/schedule/display-prefs.test.ts",
+      "lib/schedule/budget.test.ts",
     ],
     environment: "node",
   },

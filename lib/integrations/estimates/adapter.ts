@@ -8,8 +8,9 @@
  */
 import "server-only";
 import { getEstimateById, getEstimateProjects } from "@/lib/data/estimates";
-import { estimateTotals } from "@/lib/estimates/calc";
+import { calcItem, categoryTotals, estimateTotals } from "@/lib/estimates/calc";
 import type { EstimateStatus } from "@/lib/data/estimates.types";
+import type { EstimateLine } from "@/lib/schedule/budget";
 
 export interface EstimateSummary {
   found: boolean;
@@ -124,6 +125,85 @@ export async function getEstimateSummaries(): Promise<EstimateListItem[]> {
     amount: h.amount,
     date: h.date,
   }));
+}
+
+/**
+ * The estimate, broken into pickable lines, for cost-loading a schedule.
+ *
+ * ADDED TO THE ADAPTER RATHER THAN REACHING PAST IT. The Schedule Budget panel needs
+ * per-category and per-line amounts, which `getProjectEstimateSummary` does not carry.
+ * Policy (docs/protected-systems.md) says a missing read is the adapter's job to add,
+ * so it is added here instead of the schedule importing estimate internals.
+ *
+ * STILL STRICTLY READ-ONLY, AND STILL NOT A RECALCULATION. Every amount comes from the
+ * estimate's own `categoryTotals` / `calcItem` at the estimate's own labour rate — the
+ * same functions the estimate sheet itself renders from and that `npm run golden` pins.
+ * Nothing here re-derives a cost, applies a markup, or writes anything.
+ *
+ * `direct` is the sum of the category lines. Profit and BBO are deliberately NOT
+ * distributed onto the lines: they are whole-estimate markups with no per-category
+ * meaning, and spreading them would manufacture a per-task figure the estimate never
+ * asserted. The panel therefore reconciles task budgets against DIRECT cost and shows
+ * the grand total separately.
+ */
+export interface EstimateBudgetSource {
+  found: boolean;
+  currency: string;
+  grandTotal: number;
+  direct: number;
+  version: string;
+  locked: boolean;
+  lines: EstimateLine[];
+}
+
+const NO_SOURCE: EstimateBudgetSource = {
+  found: false,
+  currency: "USD",
+  grandTotal: 0,
+  direct: 0,
+  version: "",
+  locked: false,
+  lines: [],
+};
+
+export async function getEstimateBudgetSource(projectId: string): Promise<EstimateBudgetSource> {
+  const id = await resolveEstimateId(projectId);
+  if (!id) return NO_SOURCE;
+  const est = await getEstimateById(id);
+  if (!est) return NO_SOURCE;
+
+  const totals = estimateTotals(est);
+  const rate = est.avgLaborRate;
+  const lines: EstimateLine[] = [];
+  for (const cat of est.categories) {
+    const catRef = `cat:${cat.id}`;
+    lines.push({
+      ref: catRef,
+      label: [cat.code, cat.name].filter(Boolean).join(" · ") || cat.name,
+      kind: "category",
+      parentRef: null,
+      amount: categoryTotals(cat, rate).total,
+    });
+    for (const it of cat.items) {
+      lines.push({
+        ref: `item:${it.id}`,
+        label: it.task,
+        kind: "item",
+        parentRef: catRef,
+        amount: calcItem(it, rate).total,
+      });
+    }
+  }
+
+  return {
+    found: true,
+    currency: est.currency,
+    grandTotal: totals.grandTotal,
+    direct: totals.direct,
+    version: est.version,
+    locked: est.locked ?? false,
+    lines,
+  };
 }
 
 /** Stable URL into the existing Estimates system (routes unchanged). */

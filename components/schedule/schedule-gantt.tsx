@@ -25,6 +25,13 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatDate, SYSTEM_LOCALE } from "@/lib/format";
 import { StatusBoard } from "@/components/schedule/status-board";
+import { DisplayControl } from "@/components/schedule/display-control";
+import { hiddenCount, useDisplayPrefs } from "@/components/schedule/use-display-prefs";
+import {
+  BudgetPanel,
+  type BudgetChange,
+  type BudgetPanelTask,
+} from "@/components/schedule/budget-panel";
 import {
   HOURS_PER_DAY,
   computeCpm,
@@ -194,6 +201,15 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
   const [calPanel, setCalPanel] = useState(false);
   const [statusDate, setStatusDate] = useState(schedule.config?.statusDate ?? isoToday());
   const idCounter = useRef(1);
+
+  // PROTECTED SYSTEM (schedule) — display/chrome change, approved 2026-08-04.
+  //
+  // Which readouts are shown. Deliberately NOT part of `boardConfig` above:
+  // that object is the saved programme, shared by everyone who opens the
+  // project, and one person's preference for a quieter board is not a change to
+  // the schedule. It therefore never marks the board dirty and never reaches
+  // `saveScheduleAction` — it lives in this browser (see use-display-prefs).
+  const { prefs: display, toggle: toggleDisplay, showAll: showAllDisplay } = useDisplayPrefs();
 
   // --- Persistence (declared after the config state above so Save can include it) ---
   const boardConfig = { categories, subcats, hoursPerDay, offDays, holidays, statusDate };
@@ -427,6 +443,42 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
     setTasks((prev) => prev.map((t) => (t.id === id ? fn(t) : t)));
   }
 
+  // PROTECTED SYSTEM (schedule) — Budget feature, approved 2026-08-04.
+  //
+  // A budget edit is an edit to the PROGRAMME, so it goes through the same task list,
+  // marks the board dirty the same way, and is written by the same Save button. Giving
+  // money its own save would mean two ways to persist a task and two ways for them to
+  // disagree about which one won.
+  //
+  // Nothing downstream of this reads the money: `computeCpm` and `computeScheduleHealth`
+  // take dates, dependencies and progress only, so a budget can never move a bar or
+  // change the critical path. That is the property `npm run golden` locks.
+  function setTaskBudget(id: string, change: BudgetChange) {
+    patch(id, (t) => ({
+      ...t,
+      budgetAmount: change.amount,
+      budgetSource: change.source,
+      budgetRef: change.ref,
+    }));
+  }
+
+  // The panel wants exactly what the label column already renders — the same rows in the
+  // same order at the same indent — so it is fed from `ordered` rather than re-deriving a
+  // hierarchy that could drift from the one on screen.
+  const budgetTasks = useMemo<BudgetPanelTask[]>(
+    () =>
+      ordered.map(({ task, depth }) => ({
+        id: task.id,
+        name: task.name,
+        parentId: task.parentId ?? null,
+        depth,
+        budgetAmount: task.budgetAmount ?? null,
+        budgetSource: task.budgetSource ?? null,
+        budgetRef: task.budgetRef ?? null,
+      })),
+    [ordered],
+  );
+
   function startDrag(
     e: React.PointerEvent,
     task: ScheduleTask,
@@ -659,7 +711,12 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
       </div>
 
       {/* Status board — where the project is vs plan */}
-      <StatusBoard health={health} statusDate={statusDate} onStatusDate={setStatusDate} />
+      <StatusBoard
+        health={health}
+        statusDate={statusDate}
+        onStatusDate={setStatusDate}
+        display={display}
+      />
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -841,21 +898,19 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
           Critical path
         </button>
 
-        {/* Budget (coming soon) */}
+        {/* Budget — the toggle and its state are unchanged; only what it reveals is new. */}
         <button
           type="button"
           onClick={() => setShowBudget((v) => !v)}
+          aria-expanded={showBudget}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+            "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
             showBudget ? "border-brand bg-brand/10 text-brand" : "border-border bg-surface text-muted hover:text-fg",
           )}
-          title="Cost-load the schedule with budgets (coming soon)"
+          title="Cost-load the schedule: budget vs committed vs received, per activity"
         >
           <CircleDollarSign className="h-3.5 w-3.5" />
           Budget
-          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700">
-            Soon
-          </span>
         </button>
 
         {/* Link mode */}
@@ -933,6 +988,14 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
           ) : null}
         </div>
 
+        {/* Display Control — next to Categories, and built on the same popover */}
+        <DisplayControl
+          prefs={display}
+          hidden={hiddenCount(display)}
+          onToggle={toggleDisplay}
+          onShowAll={showAllDisplay}
+        />
+
         {/* New task category (+ sub-category) + add */}
         <div className="ml-auto inline-flex items-center overflow-hidden rounded-lg border border-border">
           <select
@@ -982,49 +1045,18 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
         </div>
       </div>
 
-      {/* Budget on the schedule — coming soon */}
+      {/* Budget on the schedule — BUDGET vs COMMITTED vs RECEIVED, per activity.
+          PROTECTED SYSTEM (schedule) — approved 2026-08-04. The Gantt gains exactly this
+          conditional render: the panel is its own component (as display-control.tsx is),
+          so a change to how cost is presented is never a change to timeline geometry.
+          Mounted only when the toggle is on, which is also what defers its data load. */}
       {showBudget ? (
-        <Card className="overflow-hidden border-dashed">
-          <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2 px-5 py-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
-              <CircleDollarSign className="h-5 w-5" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-fg">
-                Cost-loaded schedule
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                  Coming soon
-                </span>
-              </div>
-              <p className="text-xs text-muted">
-                Attach budgets to each task and spread cost across the timeline.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowBudget(false)}
-              className="ml-auto rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted hover:text-fg"
-            >
-              Hide
-            </button>
-          </div>
-          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { t: "Budget per task", d: "Assign a cost/value to every activity and roll it up by phase, category, and project." },
-              { t: "Cash-flow S-curve", d: "Planned vs earned value spread across the timeline — see spend over time." },
-              { t: "Earned Value (EVM)", d: "CPI / SPI, BCWP/BCWS/ACWP, and cost variance alongside schedule variance." },
-              { t: "Payment milestones", d: "Tie the proposal's payment schedule to programme dates and forecast invoicing." },
-            ].map((x) => (
-              <div key={x.t} className="rounded-lg border border-dashed border-border bg-surface p-4">
-                <div className="text-sm font-medium text-fg">{x.t}</div>
-                <div className="mt-1 text-xs text-muted">{x.d}</div>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-border px-5 py-3 text-center text-xs text-faint">
-            Budget integration arrives once the database is connected — this toggle reserves its place in the schedule.
-          </div>
-        </Card>
+        <BudgetPanel
+          projectId={schedule.projectId}
+          tasks={budgetTasks}
+          onBudgetChange={setTaskBudget}
+          onHide={() => setShowBudget(false)}
+        />
       ) : null}
 
       {/* Gantt */}
@@ -1183,8 +1215,11 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 <div key={`r${i}`} className="absolute border-b border-border/70" style={{ left: 0, top: HEADER_H + i * ROW_H, width: timelineWidth, height: ROW_H }} />
               ))}
 
-              {/* Today */}
-              {todayLeft !== null ? (
+              {/* Today — the red current-date rule. `todayLeft` is still
+                * computed above whether or not this paints; the Display Control
+                * only decides whether the rule is drawn. The STATUS (data date)
+                * marker below is a different line and is not covered by it. */}
+              {display.todayLine && todayLeft !== null ? (
                 <div className="absolute z-10 w-0.5 bg-red-500/80" style={{ left: todayLeft, top: HEADER_H - 6, height: rowsHeight + 6 }}>
                   <span className="absolute -top-0 left-1 text-[9px] font-semibold text-red-600">today</span>
                 </div>

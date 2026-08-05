@@ -28,6 +28,7 @@ export function ScheduleApp({
   directory,
   projects = [],
   clients = [],
+  initialProjectId,
 }: {
   schedules: ProjectSchedule[];
   directory: Record<string, { location: string; client: string }>;
@@ -39,8 +40,20 @@ export function ScheduleApp({
   projects?: SchedulableProject[];
   /** Clients a project created inline can be filed under. */
   clients?: { id: string; name: string }[];
+  /**
+   * Programme to open on arrival — `/schedule?project=<id>`. Same contract as
+   * `/estimates?project=<id>`. An id nothing matches is simply ignored (see the
+   * `row` guard below), so a stale or hand-typed link still lands on the picker.
+   */
+  initialProjectId?: string;
 }) {
-  const [sel, setSel] = useState<string | null>(null);
+  // PROTECTED SYSTEM — navigation change, approved 2026-08-04.
+  //
+  // Seeded from the URL rather than adopted in an effect, so the programme is in
+  // the FIRST render — server and client agree and there is no flash of the
+  // picker on a deep link. With no param this is `null`, byte-for-byte the
+  // behaviour every existing entry into /schedule has always had.
+  const [sel, setSel] = useState<string | null>(initialProjectId ?? null);
   const [newOpen, setNewOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   // Projects created inline: saveProject revalidates /projects, not /schedule,
@@ -104,6 +117,12 @@ export function ScheduleApp({
 
   const rows = useMemo(() => [...scheduledRows, ...unscheduledRows], [scheduledRows, unscheduledRows]);
 
+  // The selection is only real once a row backs it. This is also what makes an
+  // unknown `?project=` harmless: no row, so the picker renders — the same
+  // picker as an empty selection, not the bare fallback this guard used to hand
+  // back further down, and never an empty programme.
+  const row = sel ? rows.find((r) => r.key === sel) : undefined;
+
   function openNewProject() {
     setNewOpen(false);
     setAddProjectOpen(true);
@@ -116,7 +135,7 @@ export function ScheduleApp({
     setSel(project.id);
   }
 
-  if (!sel)
+  if (!row)
     return (
       <div className="space-y-4">
         <div className="flex justify-end">
@@ -181,9 +200,6 @@ export function ScheduleApp({
         <ProjectPicker title="Schedule" countLabel="Tasks" rows={rows} onSelect={setSel} />
       </div>
     );
-
-  const row = rows.find((r) => r.key === sel);
-  if (!row) return <ProjectPicker title="Schedule" countLabel="Tasks" rows={rows} onSelect={setSel} />;
 
   // A project with no saved programme opens on an empty one; the Gantt's Save
   // upserts by projectId, so the first save creates the row.

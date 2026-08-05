@@ -5,7 +5,22 @@ import { getClients } from "@/lib/data/clients";
 
 export const metadata = { title: "Schedule · AEC-flow" };
 
-export default async function SchedulePage() {
+export default async function SchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  // PROTECTED SYSTEM — navigation change, approved 2026-08-04.
+  //
+  // `?project=<id>` preselects a programme. Until now project selection was
+  // client state only, so every link back into Schedule — the print preview's
+  // most of all — landed on the picker with the programme forgotten. The param
+  // name and the `initialProjectId` prop are deliberately the same contract
+  // `/estimates?project=<id>` already uses (app/(app)/estimates/page.tsx), not a
+  // second convention. Omitted or unknown, the page renders the picker exactly
+  // as before — ScheduleApp validates the id against its own rows.
+  const { project: initialProjectId } = await searchParams;
+
   // Projects and clients are loaded so "New Schedule" can offer projects that
   // have no programme yet, and create a missing project inline.
   const [schedules, directory, projects, clients] = await Promise.all([
@@ -28,6 +43,7 @@ export default async function SchedulePage() {
       <ScheduleApp
         schedules={schedules}
         directory={directory}
+        initialProjectId={initialProjectId}
         projects={projects.map((p) => ({
           id: p.id,
           projectNumber: p.projectNumber,

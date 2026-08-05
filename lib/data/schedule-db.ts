@@ -38,6 +38,13 @@ function rowToSchedule(row: ScheduleRow): ProjectSchedule {
       durationUnit: (t.durationUnit as "days" | "hours" | null) ?? undefined,
       category: t.category ?? undefined,
       subCategory: t.subCategory ?? undefined,
+      // PROTECTED SYSTEM (schedule) — additive cost fields, approved 2026-08-04.
+      // Decimal → number at the boundary, exactly as procurement does. The rollup
+      // re-enters exact integer minor units immediately (lib/schedule/budget.ts);
+      // this hop is only to cross the server/client line, where a Decimal cannot go.
+      budgetAmount: t.budgetAmount === null ? null : Number(t.budgetAmount),
+      budgetSource: (t.budgetSource as "manual" | "estimate" | null) ?? null,
+      budgetRef: t.budgetRef ?? null,
     }));
   return {
     ...withWindow({
@@ -97,6 +104,12 @@ export async function saveSchedule(input: SaveScheduleInput): Promise<{ id: stri
     durationUnit: t.durationUnit ?? null,
     category: t.category ?? null,
     subCategory: t.subCategory ?? null,
+    // PROTECTED SYSTEM (schedule) — additive cost fields, approved 2026-08-04.
+    // `undefined` and `null` both mean "no budget set" and both must persist as NULL:
+    // a task whose budget was cleared has to come back cleared, not as zero.
+    budgetAmount: t.budgetAmount ?? null,
+    budgetSource: t.budgetSource ?? null,
+    budgetRef: t.budgetRef ?? null,
     sortOrder: i,
   }));
   const scalars = {

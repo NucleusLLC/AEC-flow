@@ -2,8 +2,9 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Printer, FileDown, Maximize2 } from "lucide-react";
+import { X, Printer, FileDown, Maximize2 } from "lucide-react";
 import type { LetterheadLogo } from "@/components/print/document-letterhead";
+import { useT } from "@/components/i18n/language-provider";
 import {
   DISCIPLINE_LABEL,
   computeCpm,
@@ -64,6 +65,7 @@ export function SchedulePrint({
    *  prints exactly as before but with only the page counter in the bottom margin. */
   footerText?: string;
 }) {
+  const t = useT();
   const [paper, setPaper] = useState<PaperKey>("A3");
   const [orient, setOrient] = useState<Orientation>("landscape");
   const [zoom, setZoom] = useState(0.7);
@@ -174,6 +176,30 @@ export function SchedulePrint({
   const approxSheetPx = 96 + HEADER_H + rowsHeight + 52; // title + chart + legend
   const pageCount = Math.max(1, Math.ceil(approxSheetPx / contentHpx));
 
+  // PROTECTED SYSTEM — navigation/chrome change, approved 2026-08-04.
+  //
+  // The way out of the preview used to be a bare `/schedule`. Project selection
+  // on that page was client state and not in the URL, so leaving the preview
+  // always landed on the project picker having forgotten which programme was
+  // being printed — reported as "it jumps out of the project". The link was
+  // never broken; the destination could not remember. `/schedule` now accepts
+  // `?project=<id>` (same contract as `/estimates?project=<id>`), so carrying
+  // the id here is the whole fix. `schedule.projectId` is the key the picker
+  // itself uses for a scheduled row, so the round-trip lands on the same row.
+  //
+  // ONE control, not two. "Back to schedule" and an "Exit" button would now
+  // resolve to the same URL — the programme is both what you go back to and
+  // what you exit into — and two buttons a finger apart doing the identical
+  // thing invite the question of how they differ. So the existing link becomes
+  // the Exit control the owner asked for: named for the state it leaves, sized
+  // as a button, still first in the toolbar where the back link always was.
+  //
+  // `.no-print` is on the toolbar already; it is repeated on the control so a
+  // later reshuffle cannot leak a navigation button onto the printed sheet.
+  const exitHref = schedule.projectId
+    ? `/schedule?project=${encodeURIComponent(schedule.projectId)}`
+    : "/schedule";
+
   return (
     <div className="min-h-screen bg-slate-100">
       <style>{pageStyle}</style>
@@ -181,11 +207,12 @@ export function SchedulePrint({
       {/* Controls (screen only) */}
       <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-border bg-surface px-4 py-3 shadow-sm">
         <Link
-          href={`/schedule`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
+          href={exitHref}
+          title={`${t("Exit preview")} — ${schedule.projectName}`}
+          className="no-print inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to schedule
+          <X className="h-4 w-4" />
+          {t("Exit preview")}
         </Link>
 
         <div className="mx-2 h-5 w-px bg-border" />
