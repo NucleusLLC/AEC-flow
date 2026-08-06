@@ -32,6 +32,9 @@ export default defineConfig({
       // first step toward re-collecting the node:test suites described above.
       "lib/schedule/display-prefs.test.ts",
       "lib/schedule/budget.test.ts",
+      // Drawing intake: named files for the same reason as the two above.
+      "lib/drawings/extraction.test.ts",
+      "lib/drawings/intake.test.ts",
     ],
     environment: "node",
   },
