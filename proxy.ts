@@ -37,6 +37,16 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Decorative imagery in /public must stay ungated, and not only so a browser
+  // can fetch it. `next/image` optimises a local file by fetching it back over
+  // HTTP from this same deployment, and that internal request carries NO session
+  // cookie — so gating this path made the optimiser redirect to /login and the
+  // dashboard backgrounds never rendered, for signed-in users too. These files
+  // are stock architectural photographs: no tenant data, nothing to protect.
+  if (pathname.startsWith("/backgrounds/")) {
+    return NextResponse.next();
+  }
+
   // Beta subdomain: it's the portal, not the app.
   if (isBetaHost(req)) {
     if (pathname === "/") {
