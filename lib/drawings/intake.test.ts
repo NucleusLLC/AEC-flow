@@ -10,6 +10,7 @@ import {
   DrawingPersistenceNotConfiguredError,
   createUnpdfReader,
   layoutToText,
+  LOSSY_DISCIPLINES,
   MAX_FILE_BYTES,
   MAX_FILES_PER_BATCH,
   notConfiguredRepository,
@@ -273,5 +274,20 @@ describe("discipline mapping", () => {
     expect(toDataDiscipline("ARCHITECTURAL")).toBe("ARCHITECTURE");
     expect(toDataDiscipline("STRUCTURAL")).toBe("STRUCTURAL");
     expect(toDataDiscipline("INTERIORS")).toBe("INTERIOR");
+  });
+
+  // These three used to be filed under the nearest wrong heading because the
+  // register's union had nowhere to put them. It does now, and a landscape
+  // sheet that arrives as landscape is the whole point of the widening.
+  it("no longer misfiles civil, landscape and general sheets", () => {
+    expect(toDataDiscipline("CIVIL")).toBe("CIVIL");
+    expect(toDataDiscipline("LANDSCAPE")).toBe("LANDSCAPE");
+    expect(toDataDiscipline("GENERAL")).toBe("GENERAL");
+  });
+
+  it("declares exactly the disciplines it still narrows", () => {
+    expect([...LOSSY_DISCIPLINES].sort()).toEqual(
+      ["ELECTRICAL", "FIRE_PROTECTION", "MECHANICAL", "PLUMBING", "TELECOM"].sort(),
+    );
   });
 });

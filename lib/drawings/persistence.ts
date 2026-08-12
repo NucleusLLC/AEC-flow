@@ -26,7 +26,7 @@
  * difference between a guessed number in a document and a measured one.
  */
 
-import type { Discipline, DrawingStatus, FileType } from "@/lib/data/drawings";
+import type { Discipline, DrawingStatus, FileType } from "@/lib/data/drawings.types";
 import type { DraftFieldKey, DrawingMetadataDraft } from "./types";
 
 /** Metadata as confirmed by a human, ready to store. No confidences: by this
@@ -40,6 +40,12 @@ export type ConfirmedDrawingMetadata = {
   /** ISO `YYYY-MM-DD`. */
   issueDate: string;
   status: DrawingStatus;
+  /**
+   * The finer reading the extractor made (`MECHANICAL`, `PLUMBING`, …) before
+   * `discipline` collapsed it onto the register's vocabulary. Kept as evidence,
+   * not as something the register filters on — see ./mapping.ts.
+   */
+  sheetDiscipline?: string | null;
 };
 
 /** An object that already exists in storage. */

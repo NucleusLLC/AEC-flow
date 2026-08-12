@@ -22,7 +22,7 @@ const TENANT_MODELS = new Set<string>([
   "DevelopmentProject", "CostEstimate", "ProjectSchedule", "PriceItem",
   "NormSetTask", "Vendor", "GeneralConditionItem", "EstimateTemplate",
   "WikiArticle", "Task", "ActivityLog", "GeneratedDocument", "PurchaseOrder",
-  "MaterialSelection", "DesignDeliverable",
+  "MaterialSelection", "DesignDeliverable", "Drawing",
   // Service Proposal module (Module 1). Every model here is company-owned; leaving any one
   // out is a cross-tenant data leak. A test in lib/proposals asserts this list matches the
   // schema's @@map'd service-proposal tables.

@@ -1,22 +1,27 @@
 /**
  * Bridge between the fine-grained `SheetDiscipline` this module infers from a
- * sheet prefix and the coarser `Discipline` union the existing drawings
- * register stores (`lib/data/drawings.ts`).
+ * sheet prefix and the `Discipline` vocabulary the drawing register stores
+ * (`lib/data/drawings.types.ts`).
  *
- * The two are deliberately different. A sheet prefix distinguishes M, E and P;
- * the register lumps them into `MEP`. Extraction should not throw away what it
- * can see, and the register should not be widened by a module that is not yet
- * allowed to touch the schema — so the narrowing happens here, at the seam,
- * where it is one obvious function to revisit if `Discipline` ever grows.
+ * The two are still deliberately different, but they no longer disagree. When
+ * the register was placeholder data its union had six values, so `CIVIL`,
+ * `LANDSCAPE` and `GENERAL` were being filed under the nearest wrong heading —
+ * a landscape sheet stored as architecture is a small lie that a register then
+ * repeats forever. The stored union now carries all three, so the only
+ * narrowing left is the honest one: M, E, P, fire protection and telecom all
+ * become `MEP`, which is how a drawing set is actually filtered.
+ *
+ * Nothing is thrown away even there — `sheetDiscipline` on the row keeps the
+ * exact reading, so "which of these MEP sheets are plumbing" stays answerable.
  */
 
-import type { Discipline } from "@/lib/data/drawings";
+import type { Discipline } from "@/lib/data/drawings.types";
 import type { SheetDiscipline } from "./types";
 
 const TO_DATA_DISCIPLINE: Readonly<Record<SheetDiscipline, Discipline>> = {
-  GENERAL: "PROJECT_MANAGEMENT",
-  CIVIL: "CONSTRUCTION",
-  LANDSCAPE: "ARCHITECTURE",
+  GENERAL: "GENERAL",
+  CIVIL: "CIVIL",
+  LANDSCAPE: "LANDSCAPE",
   ARCHITECTURAL: "ARCHITECTURE",
   INTERIORS: "INTERIOR",
   STRUCTURAL: "STRUCTURAL",
@@ -27,16 +32,20 @@ const TO_DATA_DISCIPLINE: Readonly<Record<SheetDiscipline, Discipline>> = {
   TELECOM: "MEP",
 };
 
-/**
- * Narrow to the stored vocabulary. Lossy by construction — `LANDSCAPE` and
- * `CIVIL` have no home in the current union and are mapped to the nearest
- * truthful bucket rather than silently dropped. Both mappings are wrong enough
- * to be worth fixing when the schema is free; they are recorded here so the
- * next run can find them.
- */
+/** Narrow to the stored vocabulary. */
 export function toDataDiscipline(d: SheetDiscipline): Discipline {
   return TO_DATA_DISCIPLINE[d] ?? "ARCHITECTURE";
 }
 
-/** Disciplines with no faithful destination in the stored union. */
-export const LOSSY_DISCIPLINES: readonly SheetDiscipline[] = ["CIVIL", "LANDSCAPE", "GENERAL"];
+/**
+ * Disciplines the stored union cannot express exactly. All five collapse into
+ * `MEP` by design; the original reading survives on the row's `sheetDiscipline`
+ * column, so this is a display narrowing rather than data loss.
+ */
+export const LOSSY_DISCIPLINES: readonly SheetDiscipline[] = [
+  "MECHANICAL",
+  "ELECTRICAL",
+  "PLUMBING",
+  "FIRE_PROTECTION",
+  "TELECOM",
+];

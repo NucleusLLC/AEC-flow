@@ -13,7 +13,8 @@ import {
   type Drawing,
   type Discipline,
   type DrawingStatus,
-} from "@/lib/data/drawings";
+} from "@/lib/data/drawings.types";
+import { drawingFileUrlAction } from "@/app/(app)/drawings/actions";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,28 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
   const [discipline, setDiscipline] = useState<"ALL" | Discipline>("ALL");
   const [status, setStatus] = useState<"ALL" | DrawingStatus>("ALL");
   const [preview, setPreview] = useState<PreviewDoc | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  /**
+   * Downloads go through a signed URL minted on demand: the bucket is private,
+   * so there is no durable link to put in an `href`, and a link that outlived
+   * the click would be a copy of the file handed out with no further checks.
+   */
+  async function download(id: string) {
+    setDownloading(id);
+    setDownloadError(null);
+    try {
+      const result = await drawingFileUrlAction(id);
+      if (!result.ok) {
+        setDownloadError(result.error);
+        return;
+      }
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloading(null);
+    }
+  }
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -192,8 +215,11 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                       <EmailButton variant="icon" subject={`${d.code} ${d.title} — ${d.projectNumber}`} attachment={`${d.code} ${d.title}.${d.fileType.toLowerCase()}`} />
                       <button
                         type="button"
-                        aria-label="Download"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg"
+                        aria-label={`Download ${d.code}`}
+                        title={d.hasFile ? "Download" : "No file stored for this sheet"}
+                        disabled={!d.hasFile || downloading === d.id}
+                        onClick={() => download(d.id)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Download className="h-4 w-4" />
                       </button>
@@ -215,6 +241,12 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
           </div>
         ) : null}
       </Card>
+
+      {downloadError ? (
+        <p role="alert" className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+          {downloadError}
+        </p>
+      ) : null}
 
       <p className="px-1 text-xs text-faint">
         Showing {rows.length} of {drawings.length} drawings

@@ -4,10 +4,17 @@
  *
  * THE LIMITS AND WHY THEY ARE WHAT THEY ARE
  *
- *   100 MiB per file      A single PDF sheet is 1-10 MB, a multi-sheet issue
- *                         set 20-60 MB, a DWG with xrefs bound 30-80 MB. 100
- *                         MiB clears real work with headroom and still stops a
- *                         mis-drop of a Revit central model or a video.
+ *   50 MiB per file       NOT the number this policy would choose on its own.
+ *                         A PDF sheet is 1-10 MB and a multi-sheet issue set
+ *                         20-60 MB, so 100 MiB was the intended ceiling — but
+ *                         Supabase enforces a PROJECT-WIDE upload limit that is
+ *                         50 MiB on the current plan, and a limit we cannot
+ *                         enforce is worse than a lower one we can: the upload
+ *                         would fail at the storage edge after the whole file
+ *                         had been transferred. Rejecting it here costs the
+ *                         user nothing. A bound DWG with xrefs CAN exceed this;
+ *                         raising the Supabase plan and then this constant plus
+ *                         DRAWINGS_MAX_UPLOAD_BYTES is the way out.
  *   25 files per drop     A discipline issue is typically 10-40 sheets. 25 is
  *                         a batch a person can actually review one-by-one in a
  *                         confirmation step, which is the point of this design.
@@ -28,7 +35,7 @@
  * transferring anything.
  */
 
-export const MAX_FILE_BYTES = 100 * 1024 * 1024;
+export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 export const MIN_FILE_BYTES = 1;
 export const MAX_FILES_PER_BATCH = 25;
 export const MAX_FILENAME_LENGTH = 255;

@@ -35,6 +35,7 @@ export default defineConfig({
       // Drawing intake: named files for the same reason as the two above.
       "lib/drawings/extraction.test.ts",
       "lib/drawings/intake.test.ts",
+      "lib/drawings/storage-key.test.ts",
     ],
     environment: "node",
   },
