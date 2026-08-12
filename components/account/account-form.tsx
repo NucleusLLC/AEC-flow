@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, AlertTriangle, Loader2 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { updateProfileAction, changePasswordAction } from "@/app/(app)/account/actions";
+import { PASSWORD_MIN_LENGTH, validatePasswordConfirmation } from "@/lib/password-policy";
 import type { AccountProfile } from "@/lib/data/account";
 
 const inputCls =
@@ -44,8 +45,10 @@ export function AccountForm({ account }: { account: AccountProfile }) {
 
   function changePw() {
     setPwSaved(false); setPwError(null);
-    if (next !== confirm) { setPwError("New passwords do not match."); return; }
-    if (next.length < 8) { setPwError("New password must be at least 8 characters."); return; }
+    // Mirror of lib/password-policy for instant feedback. The same rules are
+    // re-applied server-side in changeOwnPassword — this is UX, not a control.
+    const check = validatePasswordConfirmation(next, confirm);
+    if (!check.ok) { setPwError(check.error); return; }
     pwStart(async () => {
       const res = await changePasswordAction(current, next);
       if (res.ok) { setPwSaved(true); setCurrent(""); setNext(""); setConfirm(""); }
@@ -98,34 +101,50 @@ export function AccountForm({ account }: { account: AccountProfile }) {
 
       {/* Change password */}
       <Card>
-        <CardHeader
-          title="Password"
-          subtitle={account.hasPassword ? "Change your sign-in password." : "Set a sign-in password for your account."}
-        />
-        <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {account.hasPassword ? (
-            <label className="block sm:col-span-2">
-              <span className={labelCls}>Current password</span>
-              <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputCls} disabled={pwPending} />
-            </label>
-          ) : null}
-          <label className="block">
-            <span className={labelCls}>New password</span>
-            <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputCls} disabled={pwPending} placeholder="At least 8 characters" />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Confirm new password</span>
-            <input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} disabled={pwPending} />
-          </label>
-        </CardBody>
-        <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
-          <Status saved={pwSaved} error={pwError} />
-          <button type="button" onClick={changePw} disabled={pwPending || !next}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60">
-            {pwPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {pwPending ? "Updating…" : account.hasPassword ? "Change password" : "Set password"}
-          </button>
-        </div>
+        <CardHeader title="Password" subtitle="Change your sign-in password." />
+        {account.hasPassword ? (
+          <>
+            <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className={labelCls}>Current password</span>
+                <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputCls} disabled={pwPending} />
+              </label>
+              <label className="block">
+                <span className={labelCls}>New password</span>
+                <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputCls} disabled={pwPending} placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`} />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Confirm new password</span>
+                <input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} disabled={pwPending} />
+              </label>
+              {/* Say what actually happens. NextAuth sessions here are JWTs, which stay
+                  valid until they expire — implying otherwise would be a lie. */}
+              <p className="sm:col-span-2 text-[11px] text-faint">
+                A longer passphrase beats a short complicated one — there is no maximum length and no
+                required mix of characters. Changing your password here does not sign you out on other
+                devices; sessions you have already started stay signed in until they expire.
+              </p>
+            </CardBody>
+            <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
+              <Status saved={pwSaved} error={pwError} />
+              <button type="button" onClick={changePw} disabled={pwPending || !next}
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60">
+                {pwPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {pwPending ? "Updating…" : "Change password"}
+              </button>
+            </div>
+          </>
+        ) : (
+          // An account with no password hash cannot sign in at all, so in practice
+          // nobody sees this. It exists so the state is stated rather than offering a
+          // form the server will refuse.
+          <CardBody>
+            <p className="text-sm text-muted">
+              This account has no sign-in password yet. An administrator or director at your company can set
+              one from <span className="font-medium text-fg">Settings → Members &amp; Roles</span>.
+            </p>
+          </CardBody>
+        )}
       </Card>
     </div>
   );

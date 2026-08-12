@@ -32,6 +32,9 @@ import {
   type TemplateInput,
 } from "@/lib/data/proposal-templates";
 import { setMemberRole, setMemberStatus, createTeamMember } from "@/lib/data/team";
+import { setMemberPassword } from "@/lib/server/password";
+import { requireMemberAdmin } from "@/lib/server/actor";
+import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { Preferences, PracticeProfile, ProposalTemplate } from "@/lib/data/settings";
 import type { UserRole, UserStatus, Department } from "@/lib/data/team.types";
 
@@ -231,8 +234,11 @@ export async function setDefaultTemplateAction(id: string): Promise<ActionResult
 /* ------------------------------------------------------------------ */
 
 export async function setMemberRoleAction(id: string, role: UserRole): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to manage members." };
   try {
+    // Was `requireUser()` — i.e. "is anyone signed in". That let any account,
+    // a VIEWER included, promote itself to ADMIN, which made every other
+    // administrative gate (including password reset) reachable in two steps.
+    await requireMemberAdmin();
     await setMemberRole(id, role);
     revalidatePath("/settings");
     return { ok: true };
@@ -242,8 +248,9 @@ export async function setMemberRoleAction(id: string, role: UserRole): Promise<A
 }
 
 export async function setMemberStatusAction(id: string, status: UserStatus): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to manage members." };
   try {
+    // Deactivating a colleague is an administrative act; same gate as the rest.
+    await requireMemberAdmin();
     await setMemberStatus(id, status);
     revalidatePath("/settings");
     return { ok: true };
@@ -260,7 +267,13 @@ export type InviteMemberInput = {
 };
 
 export async function inviteMemberAction(input: InviteMemberInput): Promise<ActionResult<{ id: string }>> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to invite members." };
+  // Gated because this creates a user AT A CHOSEN ROLE — ungated it is the same
+  // escalation as setMemberRoleAction, just via a new account instead of your own.
+  try {
+    await requireMemberAdmin();
+  } catch (e) {
+    return fail(e, "Only an administrator or director can invite members.");
+  }
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
   if (!name) return { ok: false, error: "Name is required." };
@@ -282,6 +295,45 @@ export async function inviteMemberAction(input: InviteMemberInput): Promise<Acti
   } catch (e) {
     // Most likely a unique-email collision.
     return fail(e, "Failed to invite the member — the email may already be in use.");
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Member passwords                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Set a new password for another member of the caller's own company — the answer
+ * to "somebody forgot their password", and the only way an invited user who has no
+ * password yet ever gets one.
+ *
+ * The role gate (ADMIN / DIRECTOR / founder) and the company scope are BOTH
+ * enforced inside `setMemberPassword`, against the actor's database row — not by
+ * the `canManagePasswords` prop that hides the button in the UI. Returns ok/error
+ * only: no hash and no password ever crosses back to the client.
+ */
+export async function setMemberPasswordAction(
+  memberId: string,
+  newPassword: string,
+): Promise<ActionResult> {
+  try {
+    const target = await setMemberPassword(memberId, newPassword);
+    const actorId = await getActivityActorId();
+    if (actorId) {
+      // Audit: which administrator reset which member's password, and when. The
+      // value is never recorded — `label` is the member's name, nothing more.
+      await logActivity({
+        userId: actorId,
+        action: "set the password for",
+        entityType: "user",
+        entityId: target.id,
+        meta: { label: target.name },
+      });
+    }
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (e) {
+    return fail(e, "Failed to set the member's password.");
   }
 }
 

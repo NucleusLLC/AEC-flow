@@ -1,11 +1,10 @@
 /**
- * Account data-access — the signed-in user's own profile + password.
+ * Account data-access — the signed-in user's own profile.
  *
- * SERVER-ONLY (imports Prisma → pg + bcrypt). Never import from a client
- * component (see [[aec-prisma-client-boundary]]); client code goes through the
- * server actions in `app/(app)/account/actions.ts`.
+ * SERVER-ONLY (imports Prisma → pg). Never import from a client component (see
+ * [[aec-prisma-client-boundary]]); client code goes through the server actions in
+ * `app/(app)/account/actions.ts`. Password changes live in `lib/server/password.ts`.
  */
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
 export type AccountProfile = {
@@ -91,29 +90,9 @@ export async function updateProfile(userId: string, input: ProfileInput): Promis
   });
 }
 
-/**
- * Change the user's password. Verifies the current password with bcrypt; if the
- * account has no password yet (seeded/invited), the current-password check is
- * skipped so they can set one. Throws a user-facing Error on failure.
+/*
+ * Password changes used to live here. They now live in `lib/server/password.ts`,
+ * which holds BOTH flows (self-change and admin-set) next to each other so the
+ * company scoping and the role gate are enforced in one reviewable place. Nothing
+ * in this file hashes or compares a password any more.
  */
-export async function changePassword(
-  userId: string,
-  currentPassword: string,
-  newPassword: string,
-): Promise<void> {
-  if (newPassword.length < 8) throw new Error("New password must be at least 8 characters.");
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { passwordHash: true },
-  });
-  if (!user) throw new Error("Account not found.");
-
-  if (user.passwordHash) {
-    const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!ok) throw new Error("Current password is incorrect.");
-  }
-
-  const passwordHash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-}

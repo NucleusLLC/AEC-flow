@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { updateProfile, changePassword, type ProfileInput } from "@/lib/data/account";
+import { updateProfile, type ProfileInput } from "@/lib/data/account";
+import { changeOwnPassword } from "@/lib/server/password";
+import { logActivity } from "@/lib/data/activity";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -25,14 +27,29 @@ export async function updateProfileAction(input: ProfileInput): Promise<ActionRe
   }
 }
 
+/**
+ * Change the signed-in user's own password.
+ *
+ * Every check that matters happens in `changeOwnPassword` (server): the current
+ * password is verified there with `bcrypt.compare`, and the policy is re-applied
+ * there. This action takes no "verified" flag from the client and returns nothing
+ * but ok/error — never a hash, never the password.
+ */
 export async function changePasswordAction(
   currentPassword: string,
   newPassword: string,
 ): Promise<ActionResult> {
-  const userId = await currentUserId();
-  if (!userId) return { ok: false, error: "You must be signed in." };
   try {
-    await changePassword(userId, currentPassword, newPassword);
+    const self = await changeOwnPassword(currentPassword, newPassword);
+    // Audit: who, whose, when. The value is never recorded.
+    await logActivity({
+      userId: self.id,
+      action: "changed their own password",
+      entityType: "user",
+      entityId: self.id,
+      meta: { label: self.name },
+    });
+    revalidatePath("/account");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not change password." };

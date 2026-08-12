@@ -89,18 +89,25 @@ function reducer(state: State, action: Action): State {
 }
 
 /**
- * Full-bleed photo behind the dashboard, with the page's cards turned to glass
- * over it (the styling hangs off `[data-dashboard-bg="on"]` in globals.css).
+ * Full-bleed photo behind EVERY view in the app shell, with cards turned to
+ * glass over it (the styling hangs off `[data-dashboard-bg="on"]` in globals.css).
+ *
+ * It began on the dashboard alone, which turned out to be almost nobody's
+ * screen: a user whose active module is 1, 2 or 3 lands on `/modules/<key>` and
+ * the sidebar offers no route to `/dashboard` at all, so the feature was
+ * invisible to them. It now wraps the shell's content area. The attribute and
+ * the preference keys keep their original `dashboard*` names deliberately —
+ * renaming them would orphan the values already saved in users' preference blobs.
  *
  * Rendered only when the user's `dashboardBackground` preference is on, so with
- * it off the dashboard emits exactly the markup it always did.
+ * it off the app emits exactly the markup it always did.
  *
  * `initialIndex` is chosen on the server and hydrated from this prop — the
  * rotation and the Shuffle button are the only sources of change, and both run
  * after mount, so there is nothing here for the server and client to disagree
  * about.
  */
-export function DashboardBackdrop({
+export function AppBackdrop({
   initialIndex,
   intervalSeconds,
   children,

@@ -8,6 +8,7 @@ import { listTemplates } from "@/lib/data/proposal-templates";
 import { getTeam } from "@/lib/data/team";
 import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
 import { isFounderEmail } from "@/lib/server/founder";
+import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
 
 export const metadata = { title: "Settings · AEC-flow" };
@@ -37,6 +38,15 @@ export default async function SettingsPage() {
   }));
   const roles = rolesFromMembers(members);
 
+  // Whether to DRAW the per-member "Set password" control. Derived from the actor's
+  // row in the company-scoped team list rather than from the session token, so a
+  // demoted user doesn't keep the button on a stale JWT. This is presentation only —
+  // `setMemberPasswordAction` re-derives and enforces the same gate server-side.
+  const canManagePasswords = canManagePasswordsFor(
+    team.find((m) => m.id === userId)?.role,
+    isFounder,
+  );
+
   return (
     <div className="w-full space-y-6">
       <div>
@@ -60,6 +70,7 @@ export default async function SettingsPage() {
         keyStatus={keyStatus}
         canSave={!!userId}
         isFounder={isFounder}
+        canManagePasswords={canManagePasswords}
       />
     </div>
   );
