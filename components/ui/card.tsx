@@ -10,7 +10,10 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-card)] border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
+        // `card-surface` carries no styling of its own — it is a hook so a page
+        // can restyle every card it owns (the dashboard's glass background) from
+        // one scoped rule instead of threading a prop through every call site.
+        "card-surface rounded-[var(--radius-card)] border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className,
       )}
     >

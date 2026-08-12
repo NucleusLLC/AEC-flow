@@ -214,30 +214,30 @@ model Invitation {
 }
 
 model User {
-  id              String      @id @default(cuid())
-  email           String      @unique
-  passwordHash    String?
-  name            String
-  companyId       String?
-  company         Company?    @relation(fields: [companyId], references: [id])
-  phone           String?
-  avatarUrl       String?
-  role            UserRole    @default(STAFF)
-  discipline      Discipline?
-  department      Department?
-  status          UserStatus  @default(ACTIVE)
-  capacity        Int         @default(100)
-  utilisation     Int         @default(0)
-  bio             String?
-  skills          String[]
-  annualLeaveTotal Int        @default(22)
-  annualLeaveTaken Int        @default(0)
-  workingHours    Json?
-  preferences     Json?     // per-user settings blob (see lib/data/preferences.ts)
-  officeLocation  String?
-  joiningDate     DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  email            String      @unique
+  passwordHash     String?
+  name             String
+  companyId        String?
+  company          Company?    @relation(fields: [companyId], references: [id])
+  phone            String?
+  avatarUrl        String?
+  role             UserRole    @default(STAFF)
+  discipline       Discipline?
+  department       Department?
+  status           UserStatus  @default(ACTIVE)
+  capacity         Int         @default(100)
+  utilisation      Int         @default(0)
+  bio              String?
+  skills           String[]
+  annualLeaveTotal Int         @default(22)
+  annualLeaveTaken Int         @default(0)
+  workingHours     Json?
+  preferences      Json? // per-user settings blob (see lib/data/preferences.ts)
+  officeLocation   String?
+  joiningDate      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   sessions         Session[]
   managedProjects  Project[]         @relation("ProjectManager")
@@ -261,8 +261,8 @@ model Session {
 }
 
 model Client {
-  companyId String?
-  id            String        @id @default(cuid())
+  companyId     String?
+  id            String       @id @default(cuid())
   name          String
   companyName   String?
   contactPerson String?
@@ -270,12 +270,12 @@ model Client {
   phone         String?
   website       String?
   taxNumber     String?
-  type          ClientType    @default(PRIVATE)
-  status        ClientStatus  @default(ACTIVE)
+  type          ClientType   @default(PRIVATE)
+  status        ClientStatus @default(ACTIVE)
   notes         String?
   tags          String[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   addresses    ClientAddress[]
   proposals    Proposal[]
@@ -299,7 +299,7 @@ model ClientAddress {
 }
 
 model Proposal {
-  companyId String?
+  companyId         String?
   id                String         @id @default(cuid())
   refNumber         String         @unique
   title             String
@@ -327,10 +327,10 @@ model Proposal {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  client        Client             @relation(fields: [clientId], references: [id])
-  owner         User               @relation("ProposalOwner", fields: [ownerId], references: [id])
-  followUpOwner User?              @relation("FollowUpOwner", fields: [followUpOwnerId], references: [id])
-  template      ProposalTemplate?  @relation(fields: [templateId], references: [id])
+  client        Client              @relation(fields: [clientId], references: [id])
+  owner         User                @relation("ProposalOwner", fields: [ownerId], references: [id])
+  followUpOwner User?               @relation("FollowUpOwner", fields: [followUpOwnerId], references: [id])
+  template      ProposalTemplate?   @relation(fields: [templateId], references: [id])
   lineItems     ProposalLineItem[]
   milestones    ProposalMilestone[]
   attachments   Attachment[]
@@ -358,7 +358,7 @@ model ProposalMilestone {
 }
 
 model ProposalTemplate {
-  companyId String?
+  companyId  String?
   id         String      @id @default(cuid())
   name       String
   discipline Discipline?
@@ -369,7 +369,7 @@ model ProposalTemplate {
 }
 
 model Order {
-  companyId String?
+  companyId         String?
   id                String      @id @default(cuid())
   orderNumber       String      @unique
   clientId          String
@@ -394,7 +394,7 @@ model Order {
 }
 
 model Project {
-  companyId String?
+  companyId     String?
   id            String        @id @default(cuid())
   projectNumber String        @unique
   name          String
@@ -423,6 +423,7 @@ model Project {
   meetings     MeetingMinute[]
   attachments  Attachment[]
   activityLogs ActivityLog[]
+  drawings     Drawing[]
 }
 
 model ProjectPhase {
@@ -471,7 +472,7 @@ model PhaseAssignment {
 }
 
 model MeetingMinute {
-  companyId String?
+  companyId    String?
   id           String      @id @default(cuid())
   projectId    String
   authorId     String
@@ -494,19 +495,19 @@ model MeetingMinute {
 }
 
 model ActionItem {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   meetingId   String
   assigneeId  String
   description String
   dueDate     DateTime?
-  status      ActionStatus @default(OPEN)
+  status      ActionStatus  @default(OPEN)
   completedAt DateTime?
   meeting     MeetingMinute @relation(fields: [meetingId], references: [id])
   assignee    User          @relation(fields: [assigneeId], references: [id])
 }
 
 model LeaveRequest {
-  companyId String?
+  companyId  String?
   id         String      @id @default(cuid())
   userId     String
   type       LeaveType
@@ -530,29 +531,29 @@ model PublicHoliday {
 }
 
 model Attachment {
-  id         String   @id @default(cuid())
-  filename   String
-  url        String
-  mimeType   String
-  sizeBytes  Int
-  proposalId String?
-  orderId    String?
-  projectId  String?
-  meetingId  String?
+  id                String   @id @default(cuid())
+  filename          String
+  url               String
+  mimeType          String
+  sizeBytes         Int
+  proposalId        String?
+  orderId           String?
+  projectId         String?
+  meetingId         String?
   // Service Proposal module (Module 1). The only column this module adds to an existing
   // table; nullable, so every existing attachment is unaffected.
   serviceProposalId String?
-  uploadedAt DateTime @default(now())
+  uploadedAt        DateTime @default(now())
 
-  proposal Proposal?     @relation(fields: [proposalId], references: [id])
-  order    Order?        @relation(fields: [orderId], references: [id])
-  project  Project?      @relation(fields: [projectId], references: [id])
-  meeting  MeetingMinute? @relation(fields: [meetingId], references: [id])
+  proposal        Proposal?        @relation(fields: [proposalId], references: [id])
+  order           Order?           @relation(fields: [orderId], references: [id])
+  project         Project?         @relation(fields: [projectId], references: [id])
+  meeting         MeetingMinute?   @relation(fields: [meetingId], references: [id])
   serviceProposal ServiceProposal? @relation(fields: [serviceProposalId], references: [id])
 }
 
 model ActivityLog {
-  companyId String?
+  companyId  String?
   id         String   @id @default(cuid())
   userId     String
   action     String
@@ -689,7 +690,7 @@ enum PunchStatus {
 }
 
 model CaReport {
-  companyId String?
+  companyId             String?
   id                    String         @id @default(cuid())
   projectId             String
   projectName           String?
@@ -725,50 +726,50 @@ model CaReport {
 }
 
 model ChangeOrder {
-  companyId String?
-  id                        String            @id @default(cuid())
-  projectId                 String
-  projectName               String?
-  changeOrderNumber         String            @unique
-  version                   Int               @default(1)
-  title                     String
-  description               String?
-  reason                    String?
-  requestedBy               String?
-  contractorId              String?
-  architectId               String?
-  engineerId                String?
-  ownerId                   String?
-  status                    ChangeOrderStatus @default(DRAFT)
-  costLabor                 Decimal           @default(0)
-  costMaterial              Decimal           @default(0)
-  costEquipment             Decimal           @default(0)
-  costSubcontractor         Decimal           @default(0)
-  overheadPercentage        Decimal           @default(0)
-  profitPercentage          Decimal           @default(0)
-  contingencyPercentage     Decimal           @default(0)
-  vatPercentage             Decimal           @default(0)
-  totalCost                 Decimal           @default(0)
-  currency                  String            @default("USD")
-  scheduleImpactDays        Int               @default(0)
-  originalContractValue     Decimal           @default(0)
-  approvedChangeOrdersToDate Decimal          @default(0)
-  revisedContractValue      Decimal           @default(0)
+  companyId                  String?
+  id                         String            @id @default(cuid())
+  projectId                  String
+  projectName                String?
+  changeOrderNumber          String            @unique
+  version                    Int               @default(1)
+  title                      String
+  description                String?
+  reason                     String?
+  requestedBy                String?
+  contractorId               String?
+  architectId                String?
+  engineerId                 String?
+  ownerId                    String?
+  status                     ChangeOrderStatus @default(DRAFT)
+  costLabor                  Decimal           @default(0)
+  costMaterial               Decimal           @default(0)
+  costEquipment              Decimal           @default(0)
+  costSubcontractor          Decimal           @default(0)
+  overheadPercentage         Decimal           @default(0)
+  profitPercentage           Decimal           @default(0)
+  contingencyPercentage      Decimal           @default(0)
+  vatPercentage              Decimal           @default(0)
+  totalCost                  Decimal           @default(0)
+  currency                   String            @default("USD")
+  scheduleImpactDays         Int               @default(0)
+  originalContractValue      Decimal           @default(0)
+  approvedChangeOrdersToDate Decimal           @default(0)
+  revisedContractValue       Decimal           @default(0)
   // Estimate-module link + BIM/5D placeholders (Phase 3)
-  estimateLineItemId        String?
-  bimElementId              String?
-  revitCategory             String?
-  ifcCategory               String?
-  quantitySource            String?
-  modelRevision             String?
-  costLink5d                String?
-  dateRequested             DateTime?
-  dateSubmitted             DateTime?
-  dateApproved              DateTime?
-  attachments               Json?
-  notes                     String?
-  createdAt                 DateTime          @default(now())
-  updatedAt                 DateTime          @updatedAt
+  estimateLineItemId         String?
+  bimElementId               String?
+  revitCategory              String?
+  ifcCategory                String?
+  quantitySource             String?
+  modelRevision              String?
+  costLink5d                 String?
+  dateRequested              DateTime?
+  dateSubmitted              DateTime?
+  dateApproved               DateTime?
+  attachments                Json?
+  notes                      String?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -776,27 +777,27 @@ model ChangeOrder {
 }
 
 model RfiLog {
-  companyId String?
-  id            String       @id @default(cuid())
-  projectId     String
-  projectName   String?
-  rfiNumber     String       @unique
-  subject       String
-  question      String?
-  submittedBy   String?
-  assignedTo    String?
-  discipline    CaDiscipline @default(OTHER)
-  priority      RfiPriority  @default(NORMAL)
-  status        RfiStatus    @default(OPEN)
-  response      String?
-  responseBy    String?
-  dateSubmitted DateTime?
-  dateRequired  DateTime?
-  dateResponded DateTime?
+  companyId           String?
+  id                  String       @id @default(cuid())
+  projectId           String
+  projectName         String?
+  rfiNumber           String       @unique
+  subject             String
+  question            String?
+  submittedBy         String?
+  assignedTo          String?
+  discipline          CaDiscipline @default(OTHER)
+  priority            RfiPriority  @default(NORMAL)
+  status              RfiStatus    @default(OPEN)
+  response            String?
+  responseBy          String?
+  dateSubmitted       DateTime?
+  dateRequired        DateTime?
+  dateResponded       DateTime?
   linkedChangeOrderId String?
-  attachments   Json?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  attachments         Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -804,7 +805,7 @@ model RfiLog {
 }
 
 model SiteInstruction {
-  companyId String?
+  companyId           String?
   id                  String                @id @default(cuid())
   projectId           String
   projectName         String?
@@ -829,7 +830,7 @@ model SiteInstruction {
 }
 
 model SubmittalLog {
-  companyId String?
+  companyId        String?
   id               String          @id @default(cuid())
   projectId        String
   projectName      String?
@@ -854,7 +855,7 @@ model SubmittalLog {
 }
 
 model DelayNotice {
-  companyId String?
+  companyId         String?
   id                String      @id @default(cuid())
   projectId         String
   projectName       String?
@@ -879,31 +880,31 @@ model DelayNotice {
 }
 
 model ProgressCertification {
-  companyId String?
-  id                        String              @id @default(cuid())
-  projectId                 String
-  projectName               String?
-  certificationNumber       String              @unique
-  version                   Int                 @default(1)
-  inspectionDate            DateTime?
-  certifiedBy               String?
-  lenderName                String?
-  contractorName            String?
-  contractValue             Decimal             @default(0)
-  currency                  String              @default("USD")
-  previousPercentComplete   Decimal             @default(0)
-  currentPercentComplete    Decimal             @default(0)
-  workCompletedValue        Decimal             @default(0)
-  retentionPercentage       Decimal             @default(0)
-  retentionAmount           Decimal             @default(0)
-  previousPaymentsValue     Decimal             @default(0)
-  amountRecommendedForPayment Decimal           @default(0)
-  deficiencies              String?
-  recommendation            String?
-  status                    CertificationStatus @default(DRAFT)
-  photos                    Json?
-  createdAt                 DateTime            @default(now())
-  updatedAt                 DateTime            @updatedAt
+  companyId                   String?
+  id                          String              @id @default(cuid())
+  projectId                   String
+  projectName                 String?
+  certificationNumber         String              @unique
+  version                     Int                 @default(1)
+  inspectionDate              DateTime?
+  certifiedBy                 String?
+  lenderName                  String?
+  contractorName              String?
+  contractValue               Decimal             @default(0)
+  currency                    String              @default("USD")
+  previousPercentComplete     Decimal             @default(0)
+  currentPercentComplete      Decimal             @default(0)
+  workCompletedValue          Decimal             @default(0)
+  retentionPercentage         Decimal             @default(0)
+  retentionAmount             Decimal             @default(0)
+  previousPaymentsValue       Decimal             @default(0)
+  amountRecommendedForPayment Decimal             @default(0)
+  deficiencies                String?
+  recommendation              String?
+  status                      CertificationStatus @default(DRAFT)
+  photos                      Json?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -911,7 +912,7 @@ model ProgressCertification {
 }
 
 model PunchListItem {
-  companyId String?
+  companyId        String?
   id               String      @id @default(cuid())
   projectId        String
   projectName      String?
@@ -937,11 +938,13 @@ model PunchListItem {
   @@map("punch_list_items")
 }
 
-/* ───────────────────────── Land Development / Parceling ─────────────────────
+/**
+ * ───────────────────────── Land Development / Parceling ─────────────────────
  * Self-contained module (denormalised `projectId` strings, no FKs to the core
  * project tables) — portable across Aruba / Caribbean / NL jurisdictions. Money
  * is Decimal; areas / rates / percentages are Float. See lib/development/calc.ts
- * for the calculation engine and lib/development/seed-data.ts for the demo. */
+ * for the calculation engine and lib/development/seed-data.ts for the demo.
+ */
 
 enum DevProjectStatus {
   PLANNING
@@ -1061,7 +1064,7 @@ enum DevDocumentKind {
 }
 
 model DevelopmentProject {
-  companyId String?
+  companyId             String?
   id                    String           @id @default(cuid())
   projectNumber         String           @unique
   name                  String
@@ -1301,6 +1304,7 @@ model DevDocument {
   @@index([projectId])
   @@map("dev_documents")
 }
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Cost-Estimation module (BOQ estimate sheets). Self-contained: projectId is a
 // denormalised string (no FK) so it stays portable, mirroring the CA module.
@@ -1315,7 +1319,7 @@ enum EstimateStatus {
 }
 
 model CostEstimate {
-  companyId String?
+  companyId     String?
   id            String         @id @default(cuid())
   projectId     String?
   projectNumber String?
@@ -1396,7 +1400,7 @@ model EstimateItem {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model ProjectSchedule {
-  companyId String?
+  companyId     String?
   id            String         @id @default(cuid())
   projectId     String         @unique
   projectNumber String
@@ -1485,26 +1489,28 @@ model PriceItem {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model NormSetTask {
-  companyId String?
-  id                  String  @id @default(cuid())
+  companyId           String?
+  id                  String   @id @default(cuid())
   trade               String
   task                String
   unit                String
-  laborNorm           Float   @default(0)
+  laborNorm           Float    @default(0)
   materialUnitCost    Float?
   equipmentUnitCost   Float?
   subcontractUnitCost Float?
   code                String?
-  sortOrder           Int     @default(0)
+  sortOrder           Int      @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@map("norm_set_tasks")
 }
 
-/* ──────────────── Land Development — commercial entities ────────────────────
+/**
+ * ──────────────── Land Development — commercial entities ────────────────────
  * Procurement chain (Vendor → Contract → Invoice → Payment) and sales side
- * (BuyerReservation → SalesContract). Self-contained, denormalised projectId. */
+ * (BuyerReservation → SalesContract). Self-contained, denormalised projectId.
+ */
 
 enum DevContractStatus {
   DRAFT
@@ -1551,18 +1557,18 @@ model Vendor {
 }
 
 model DevContract {
-  id            String            @id @default(cuid())
-  projectId     String
-  contractRef   String
-  title         String
-  vendorName    String?
-  costCode      Int?
-  value         Decimal           @default(0)
-  retentionPct  Float             @default(0)
-  status        DevContractStatus @default(DRAFT)
-  startDate     DateTime?
-  endDate       DateTime?
-  notes         String?
+  id           String            @id @default(cuid())
+  projectId    String
+  contractRef  String
+  title        String
+  vendorName   String?
+  costCode     Int?
+  value        Decimal           @default(0)
+  retentionPct Float             @default(0)
+  status       DevContractStatus @default(DRAFT)
+  startDate    DateTime?
+  endDate      DateTime?
+  notes        String?
 
   @@index([projectId])
   @@map("dev_contracts")
@@ -1660,7 +1666,7 @@ model GeneralConditionItem {
 // ═══════════════════════════════════════════════════════════════════════════
 
 model EstimateTemplate {
-  companyId String?
+  companyId   String?
   id          String   @id
   name        String
   description String   @default("")
@@ -1801,13 +1807,13 @@ model BetaReport {
 /// reference to the source system, record id, its version, and an optional
 /// snapshot so an issued document never silently changes (spec §14).
 model GeneratedDocument {
-  companyId    String?
-  id           String   @id @default(cuid())
+  companyId           String?
+  id                  String   @id @default(cuid())
   /// "estimates" | "schedule"
-  sourceSystem String
+  sourceSystem        String
   /// The document type produced (e.g. "cost_summary", "construction_schedule").
-  docType      String
-  title        String
+  docType             String
+  title               String
   /// Source record identity (estimate id, or schedule projectId).
   sourceRecordId      String
   /// Source record version when one exists (Estimates: "V1.0"; Schedule: null —
@@ -1816,13 +1822,13 @@ model GeneratedDocument {
   /// Optional JSON snapshot / reference so the issued document is reproducible.
   sourceSnapshot      Json?
   /// The module active when the document was generated (e.g. "Module 3").
-  generatedInModule String?
-  moduleVersion     String?
+  generatedInModule   String?
+  moduleVersion       String?
   /// URL the document was rendered from (an existing print route).
-  renderUrl String?
-  createdById   String?
-  createdByName String?
-  createdAt     DateTime @default(now())
+  renderUrl           String?
+  createdById         String?
+  createdByName       String?
+  createdAt           DateTime @default(now())
 
   @@index([sourceSystem, sourceRecordId])
   @@index([createdAt])
@@ -1843,31 +1849,31 @@ enum PurchaseOrderStatus {
 /// protected Estimates/Schedule systems. Line items live as JSON on the order;
 /// subtotal/tax/total are denormalized from lib/procurement/calc.ts.
 model PurchaseOrder {
-  companyId     String?
-  id            String              @id @default(cuid())
-  poNumber      String
-  projectId     String?
-  projectName   String?
-  vendorName    String
-  vendorContact String?
-  vendorEmail   String?
-  status        PurchaseOrderStatus @default(DRAFT)
-  currency      String              @default("USD")
+  companyId       String?
+  id              String              @id @default(cuid())
+  poNumber        String
+  projectId       String?
+  projectName     String?
+  vendorName      String
+  vendorContact   String?
+  vendorEmail     String?
+  status          PurchaseOrderStatus @default(DRAFT)
+  currency        String              @default("USD")
   /// [{ description, quantity, unit, unitPrice }]
-  lineItems     Json?
-  subtotal      Decimal             @default(0)
-  taxPercentage Decimal             @default(0)
-  shipping      Decimal             @default(0)
-  total         Decimal             @default(0)
-  orderDate     DateTime?
-  expectedDate  DateTime?
-  receivedDate  DateTime?
-  terms         String?
-  notes         String?
-  createdById   String?
-  createdByName String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  lineItems       Json?
+  subtotal        Decimal             @default(0)
+  taxPercentage   Decimal             @default(0)
+  shipping        Decimal             @default(0)
+  total           Decimal             @default(0)
+  orderDate       DateTime?
+  expectedDate    DateTime?
+  receivedDate    DateTime?
+  terms           String?
+  notes           String?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   /// Which schedule activity this commitment belongs to — `ScheduleTask.taskKey`,
   /// scoped by this order's own `projectId`. Deliberately a loose string and NOT a
   /// foreign key to `ScheduleTask.id`: saving a schedule deletes and recreates every
@@ -2067,7 +2073,7 @@ enum TaxMode {
 /// A professional service proposal. The aggregate root of the module.
 model ServiceProposal {
   companyId String?
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   number    String
   title     String
 
@@ -2355,4 +2361,103 @@ model TaxRate {
 
   @@index([companyId])
   @@map("tax_rates")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DRAWING REGISTER (drawing intake — docs/drawings-intake/01-FEASIBILITY.md)
+//
+// The file-backed sheet register behind `/drawings`. A row is one REVISION of
+// one sheet on one project, with the bytes in a private Supabase Storage bucket
+// (`storageKey`, never a public URL — see lib/server/storage.ts).
+//
+// NOT the same thing as `DesignDeliverable`. That register lists the documents a
+// discipline has promised to produce; this one records the files actually
+// received, revision by revision. `DesignDeliverable` has no revision dimension
+// and no bytes, which is exactly why it could not absorb this.
+//
+// Company-owned: `Drawing` MUST stay in TENANT_MODELS (lib/db.ts).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Register vocabulary. Wider than the shared `Discipline` enum because a sheet
+/// prefix distinguishes civil, landscape and general-arrangement sheets that the
+/// project-level enum has no home for. The finer M/E/P distinction the extractor
+/// can see is kept verbatim in `sheetDiscipline` rather than being thrown away.
+enum DrawingDiscipline {
+  ARCHITECTURE
+  STRUCTURAL
+  INTERIOR
+  MEP
+  CIVIL
+  LANDSCAPE
+  PROJECT_MANAGEMENT
+  CONSTRUCTION
+  GENERAL
+}
+
+enum DrawingRegisterStatus {
+  DRAFT
+  FOR_REVIEW
+  APPROVED
+  ISSUED
+  SUPERSEDED
+}
+
+enum DrawingFileType {
+  PDF
+  DWG
+  RVT
+}
+
+model Drawing {
+  companyId String?
+  id        String  @id @default(cuid())
+  projectId String
+
+  sheetNumber     String
+  title           String                @default("")
+  discipline      DrawingDiscipline     @default(ARCHITECTURE)
+  /// The extractor's finer reading (MECHANICAL / ELECTRICAL / PLUMBING / …),
+  /// kept because `discipline` collapses those into MEP. Free text, not an enum:
+  /// it is evidence of what was read, not a value the register filters on.
+  sheetDiscipline String?
+  revision        String                @default("-")
+  status          DrawingRegisterStatus @default(DRAFT)
+  issueDate       DateTime?
+
+  /// Storage object key inside the private bucket. NOT a URL — reads are served
+  /// as short-lived signed URLs minted per request.
+  storageKey String
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  fileType   DrawingFileType @default(PDF)
+
+  /// What extraction PROPOSED alongside which fields the user changed. The
+  /// per-field edit rate in production is the per-field error rate — the only
+  /// route to a measured accuracy figure on real files rather than a fixture
+  /// set. See the feasibility doc §7.
+  extractionAudit Json?
+
+  /// Set on the OLD row when a newer revision replaces it; the old row's status
+  /// becomes SUPERSEDED in the same transaction.
+  supersededById String?
+
+  uploadedById   String?
+  uploadedByName String?
+  uploadedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  /// One row per revision of a sheet. NOTE the standing Postgres caveat: this
+  /// does not constrain rows whose `companyId` is NULL, because NULLs compare
+  /// distinct. In-app writes always carry a companyId; unscoped script inserts
+  /// do not and will not be deduplicated.
+  @@unique([companyId, projectId, sheetNumber, revision])
+  @@index([companyId])
+  @@index([projectId])
+  @@index([status])
+  @@index([discipline])
+  @@map("drawings")
 }

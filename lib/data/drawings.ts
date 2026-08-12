@@ -1,97 +1,94 @@
 /**
- * Drawings data-access layer (the per-project "drawings bin" / plans library).
+ * Drawings data-access layer (the per-project drawing register).
  *
- * IMPORTANT (single-tenant -> SaaS hedge): pages call functions from this module
- * rather than touching Prisma directly. Live version maps to `Attachment` rows
- * scoped by `projectId` (mimeType/url/size already on that model). Placeholder
- * data for now; project numbers/names match `lib/data/projects.ts`.
+ * SERVER-ONLY — it queries Prisma. Types, labels and `summarizeDrawings` live in
+ * `./drawings.types.ts` so client components can import those without pulling
+ * the database client into the browser bundle.
+ *
+ * WAS PLACEHOLDER, NOW REAL. Until the `Drawing` table existed this module
+ * returned thirteen invented rows. Every query below is company-scoped by the
+ * Prisma tenant extension in lib/db.ts — `Drawing` is in TENANT_MODELS, so
+ * there is no `where: { companyId }` to forget here.
  */
 
-export type DrawingStatus = "DRAFT" | "FOR_REVIEW" | "APPROVED" | "ISSUED" | "SUPERSEDED";
-export type Discipline =
-  | "ARCHITECTURE"
-  | "STRUCTURAL"
-  | "INTERIOR"
-  | "MEP"
-  | "PROJECT_MANAGEMENT"
-  | "CONSTRUCTION";
-export type FileType = "PDF" | "DWG" | "RVT";
+import "server-only";
+import { prisma } from "@/lib/db";
+import type { Discipline, Drawing, DrawingStatus, FileType } from "./drawings.types";
 
-export type Drawing = {
+export * from "./drawings.types";
+
+/** Prisma row shape this module reads. Kept explicit so a schema change that
+ *  drops a column fails here, at the seam, rather than at a call site. */
+type DrawingRow = {
   id: string;
-  code: string; // sheet number, e.g. A-101
+  sheetNumber: string;
   title: string;
   projectId: string;
-  projectNumber: string;
-  projectName: string;
-  discipline: Discipline;
-  status: DrawingStatus;
-  revision: string; // e.g. "C"
-  fileType: FileType;
-  sizeKb: number;
-  uploadedBy: string;
-  uploadedAt: string; // ISO yyyy-mm-dd
+  discipline: string;
+  status: string;
+  revision: string;
+  fileType: string;
+  sizeBytes: number;
+  storageKey: string;
+  uploadedByName: string | null;
+  uploadedAt: Date;
+  project: { projectNumber: string; name: string } | null;
 };
 
-export type DrawingsSummary = {
-  total: number;
-  approved: number; // APPROVED + ISSUED
-  forReview: number;
-  projects: number;
-};
+const SELECT = {
+  id: true,
+  sheetNumber: true,
+  title: true,
+  projectId: true,
+  discipline: true,
+  status: true,
+  revision: true,
+  fileType: true,
+  sizeBytes: true,
+  storageKey: true,
+  uploadedByName: true,
+  uploadedAt: true,
+  project: { select: { projectNumber: true, name: true } },
+} as const;
 
-export const DISCIPLINE_LABEL: Record<Discipline, string> = {
-  ARCHITECTURE: "Architecture",
-  STRUCTURAL: "Structural",
-  INTERIOR: "Interior",
-  MEP: "MEP",
-  PROJECT_MANAGEMENT: "Project Mgmt",
-  CONSTRUCTION: "Construction",
-};
-
-export const DRAWING_STATUS_LABEL: Record<DrawingStatus, string> = {
-  DRAFT: "Draft",
-  FOR_REVIEW: "For review",
-  APPROVED: "Approved",
-  ISSUED: "Issued",
-  SUPERSEDED: "Superseded",
-};
-
-const DRAWINGS: Drawing[] = [
-  // Marina Heights Tower — Phase 2
-  { id: "d1", code: "A-101", title: "Ground Floor Plan", projectId: "ZA-2026-014", projectNumber: "ZA-2026-014", projectName: "Marina Heights Tower — Phase 2", discipline: "ARCHITECTURE", status: "APPROVED", revision: "C", fileType: "PDF", sizeKb: 2480, uploadedBy: "Idris Mansour", uploadedAt: "2026-04-08" },
-  { id: "d2", code: "A-201", title: "North & East Elevations", projectId: "ZA-2026-014", projectNumber: "ZA-2026-014", projectName: "Marina Heights Tower — Phase 2", discipline: "ARCHITECTURE", status: "FOR_REVIEW", revision: "B", fileType: "PDF", sizeKb: 1850, uploadedBy: "Idris Mansour", uploadedAt: "2026-05-22" },
-  { id: "d3", code: "S-301", title: "Foundation Layout", projectId: "ZA-2026-014", projectNumber: "ZA-2026-014", projectName: "Marina Heights Tower — Phase 2", discipline: "STRUCTURAL", status: "APPROVED", revision: "B", fileType: "DWG", sizeKb: 5120, uploadedBy: "Wei Chen", uploadedAt: "2026-04-30" },
-  { id: "d4", code: "M-401", title: "HVAC Layout — Level 1", projectId: "ZA-2026-014", projectNumber: "ZA-2026-014", projectName: "Marina Heights Tower — Phase 2", discipline: "MEP", status: "DRAFT", revision: "A", fileType: "DWG", sizeKb: 3320, uploadedBy: "Nadia Roy", uploadedAt: "2026-05-18" },
-  // Saadiyat Cultural Pavilion
-  { id: "d5", code: "A-100", title: "Site Plan", projectId: "ZA-2026-011", projectNumber: "ZA-2026-011", projectName: "Saadiyat Cultural Pavilion", discipline: "ARCHITECTURE", status: "ISSUED", revision: "A", fileType: "PDF", sizeKb: 2960, uploadedBy: "Hana Yusuf", uploadedAt: "2026-04-12" },
-  { id: "d6", code: "A-205", title: "Pavilion Sections", projectId: "ZA-2026-011", projectNumber: "ZA-2026-011", projectName: "Saadiyat Cultural Pavilion", discipline: "ARCHITECTURE", status: "FOR_REVIEW", revision: "A", fileType: "PDF", sizeKb: 2210, uploadedBy: "Hana Yusuf", uploadedAt: "2026-06-02" },
-  { id: "d7", code: "S-300", title: "Steel Frame Concept", projectId: "ZA-2026-011", projectNumber: "ZA-2026-011", projectName: "Saadiyat Cultural Pavilion", discipline: "STRUCTURAL", status: "DRAFT", revision: "A", fileType: "RVT", sizeKb: 8800, uploadedBy: "Wei Chen", uploadedAt: "2026-06-10" },
-  // Emirates Hills Private Villa
-  { id: "d8", code: "A-101", title: "Ground Floor Plan", projectId: "ZA-2026-006", projectNumber: "ZA-2026-006", projectName: "Emirates Hills Private Villa", discipline: "ARCHITECTURE", status: "APPROVED", revision: "B", fileType: "PDF", sizeKb: 1620, uploadedBy: "Hana Yusuf", uploadedAt: "2026-03-05" },
-  { id: "d9", code: "ID-501", title: "Interior Layout & Finishes", projectId: "ZA-2026-006", projectNumber: "ZA-2026-006", projectName: "Emirates Hills Private Villa", discipline: "INTERIOR", status: "APPROVED", revision: "A", fileType: "PDF", sizeKb: 2040, uploadedBy: "Tom Becker", uploadedAt: "2026-04-18" },
-  { id: "d10", code: "S-301", title: "Structural GA", projectId: "ZA-2026-006", projectNumber: "ZA-2026-006", projectName: "Emirates Hills Private Villa", discipline: "STRUCTURAL", status: "FOR_REVIEW", revision: "A", fileType: "DWG", sizeKb: 4400, uploadedBy: "Wei Chen", uploadedAt: "2026-06-12" },
-  // Downtown Retail Fit-out
-  { id: "d11", code: "ID-101", title: "Concourse Layout", projectId: "ZA-2025-097", projectNumber: "ZA-2025-097", projectName: "Downtown Retail Fit-out", discipline: "INTERIOR", status: "ISSUED", revision: "C", fileType: "PDF", sizeKb: 1990, uploadedBy: "Tom Becker", uploadedAt: "2026-01-10" },
-  { id: "d12", code: "M-201", title: "MEP Coordination Model", projectId: "ZA-2025-097", projectNumber: "ZA-2025-097", projectName: "Downtown Retail Fit-out", discipline: "MEP", status: "APPROVED", revision: "B", fileType: "DWG", sizeKb: 6100, uploadedBy: "Nadia Roy", uploadedAt: "2026-05-05" },
-  { id: "d13", code: "ID-102", title: "Storefront Details", projectId: "ZA-2025-097", projectNumber: "ZA-2025-097", projectName: "Downtown Retail Fit-out", discipline: "INTERIOR", status: "SUPERSEDED", revision: "A", fileType: "PDF", sizeKb: 1450, uploadedBy: "Tom Becker", uploadedAt: "2026-02-12" },
-];
+function toDrawing(row: DrawingRow): Drawing {
+  return {
+    id: row.id,
+    code: row.sheetNumber,
+    title: row.title,
+    projectId: row.projectId,
+    projectNumber: row.project?.projectNumber ?? "—",
+    projectName: row.project?.name ?? "—",
+    discipline: row.discipline as Discipline,
+    status: row.status as DrawingStatus,
+    revision: row.revision,
+    fileType: row.fileType as FileType,
+    sizeKb: Math.max(1, Math.round(row.sizeBytes / 1024)),
+    uploadedBy: row.uploadedByName ?? "—",
+    uploadedAt: row.uploadedAt.toISOString().slice(0, 10),
+    hasFile: row.storageKey.length > 0,
+  };
+}
 
 export async function getDrawings(): Promise<Drawing[]> {
-  return [...DRAWINGS].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+  const rows = await prisma.drawing.findMany({
+    select: SELECT,
+    orderBy: [{ uploadedAt: "desc" }, { sheetNumber: "asc" }],
+  });
+  return rows.map(toDrawing);
 }
 
 export async function getProjectDrawings(projectId: string): Promise<Drawing[]> {
-  return DRAWINGS.filter((d) => d.projectId === projectId).sort((a, b) =>
-    b.uploadedAt.localeCompare(a.uploadedAt),
-  );
+  const rows = await prisma.drawing.findMany({
+    where: { projectId },
+    select: SELECT,
+    orderBy: [{ sheetNumber: "asc" }, { revision: "desc" }],
+  });
+  return rows.map(toDrawing);
 }
 
-export function summarizeDrawings(list: Drawing[]): DrawingsSummary {
-  return {
-    total: list.length,
-    approved: list.filter((d) => d.status === "APPROVED" || d.status === "ISSUED").length,
-    forReview: list.filter((d) => d.status === "FOR_REVIEW").length,
-    projects: new Set(list.map((d) => d.projectId)).size,
-  };
+/** One row, or null when it does not exist or belongs to another company. */
+export async function getDrawing(id: string): Promise<Drawing | null> {
+  const row = await prisma.drawing.findUnique({ where: { id }, select: SELECT });
+  return row ? toDrawing(row) : null;
 }

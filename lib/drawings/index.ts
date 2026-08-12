@@ -70,6 +70,12 @@ export {
 } from "./upload-policy";
 export { LOSSY_DISCIPLINES, toDataDiscipline } from "./mapping";
 export {
+  buildStorageKey,
+  isKeyForProject,
+  projectDrawingPrefix,
+  sanitiseFilename,
+} from "./storage-key";
+export {
   DrawingPersistenceNotConfiguredError,
   EXTRACTION_ENGINE_VERSION,
   notConfiguredRepository,

@@ -17,10 +17,10 @@
  * hunting for it. A drop zone that only works with a mouse would not be
  * finished, and neither would one whose results are only visible.
  *
- * PERSISTENCE IS NOT WIRED. The component depends on `DrawingIntakeRepository`
- * (types only, `lib/drawings/persistence.ts`) and nothing else. Passing a real
- * implementation is the whole of the next step; without one the confirm button
- * says so rather than pretending.
+ * PERSISTENCE. The component depends on `DrawingIntakeRepository`
+ * (`lib/drawings/persistence.ts`) and nothing else — the real implementation is
+ * passed in (`components/drawings/intake-repository.ts`, which calls server
+ * actions). Without one, the confirm button says so rather than pretending.
  */
 
 import { useCallback, useId, useMemo, useRef, useState } from "react";
@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import {
   ACCEPT_ATTRIBUTE,
   EXTRACTION_ENGINE_VERSION,
+  MAX_FILE_BYTES,
   MAX_FILES_PER_BATCH,
   SHEET_DISCIPLINE_LABEL,
   extractDrawingMetadata,
@@ -42,6 +43,7 @@ import {
   type DrawingFileKind,
   type DrawingIntakeRepository,
   type DrawingMetadataDraft,
+  type ExistingSheet,
   type Field,
   type SheetDiscipline,
   toDataDiscipline,
@@ -68,14 +70,21 @@ type IntakeItem = {
   draft: DrawingMetadataDraft;
   values: EditableValues;
   edited: DraftFieldKey[];
+  /** Revisions of this sheet number already in the register, newest first.
+   *  `null` until we have looked, which is not the same as "none". */
+  existing: ExistingSheet[] | null;
+  /** Id of the revision this upload replaces, when the user asks for that. */
+  supersedes?: string;
 };
 
 export type DrawingIntakeResult = {
   file: File;
+  kind: DrawingFileKind;
   metadata: ConfirmedDrawingMetadata;
   projectNumber: string;
   projectName: string;
   audit: DrawingExtractionAudit;
+  supersedes?: string;
 };
 
 export type DrawingIntakeProps = {
@@ -89,6 +98,9 @@ export type DrawingIntakeProps = {
   /** Called with the confirmed rows. Fires whether or not a repository exists,
    *  so a parent can drive its own optimistic list today. */
   onConfirm?: (results: DrawingIntakeResult[]) => void;
+  /** Called after at least one row reached the database, so the page can
+   *  refresh the register it is showing. */
+  onSaved?: () => void;
 };
 
 function initialValues(draft: DrawingMetadataDraft): EditableValues {
@@ -149,10 +161,14 @@ function ProposalRow({
   item,
   onChange,
   onRemove,
+  onLookup,
+  onSupersedeChange,
 }: {
   item: IntakeItem;
   onChange: (id: string, key: DraftFieldKey, value: string) => void;
   onRemove: (id: string) => void;
+  onLookup: (id: string, sheetNumber: string) => void;
+  onSupersedeChange: (id: string, supersedes: string | undefined) => void;
 }) {
   const uid = useId();
   const isEdited = (k: DraftFieldKey) => item.edited.includes(k);
@@ -176,10 +192,23 @@ function ProposalRow({
         value={item.values[key]}
         placeholder={placeholder}
         onChange={(e) => onChange(item.id, key, e.target.value)}
+        onBlur={
+          key === "sheetNumber" ? () => onLookup(item.id, item.values.sheetNumber) : undefined
+        }
         className={cn(inputClass, "mt-1")}
       />
       <EvidenceLine field={item.draft[key]} />
     </div>
+  );
+
+  // What is already on file under this sheet number. The point is to make a
+  // second upload of the same sheet an explicit choice — supersede the old
+  // revision, or file a new one — instead of a silent duplicate or a save that
+  // fails at the database with a constraint message.
+  const existing = item.existing ?? [];
+  const live = existing.filter((s) => s.status !== "SUPERSEDED");
+  const clash = existing.find(
+    (s) => s.revision.toUpperCase() === (item.values.revision.trim() || "-").toUpperCase(),
   );
 
   return (
@@ -251,6 +280,32 @@ function ProposalRow({
           ))}
         </ul>
       ) : null}
+
+      {existing.length > 0 ? (
+        <div className="mt-3 rounded-lg border border-border bg-surface px-3 py-2">
+          <p className="flex items-start gap-2 text-[11px] leading-snug text-muted">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>
+              {item.values.sheetNumber.trim().toUpperCase()} is already on this project:{" "}
+              {existing.map((s) => `rev ${s.revision}${s.status === "SUPERSEDED" ? " (superseded)" : ""}`).join(", ")}.
+              {clash
+                ? ` Revision ${clash.revision} exists — change the revision, or supersede it below.`
+                : ""}
+            </span>
+          </p>
+          {live.length > 0 ? (
+            <label className="mt-2 flex items-center gap-2 text-[11px] text-fg">
+              <input
+                type="checkbox"
+                checked={Boolean(item.supersedes)}
+                onChange={(e) => onSupersedeChange(item.id, e.target.checked ? live[0].id : undefined)}
+                className="h-3.5 w-3.5 rounded border-border text-brand focus:ring-brand/30"
+              />
+              Mark revision {live[0].revision} as superseded by this upload
+            </label>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -259,7 +314,12 @@ function ProposalRow({
  * The intake surface
  * ------------------------------------------------------------------ */
 
-export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntakeProps) {
+export function DrawingIntake({
+  projectId,
+  repository,
+  onConfirm,
+  onSaved,
+}: DrawingIntakeProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -303,6 +363,7 @@ export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntak
         draft,
         values: initialValues(draft),
         edited: [],
+        existing: null,
       });
     });
 
@@ -352,6 +413,30 @@ export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntak
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  const onSupersedeChange = useCallback((id: string, supersedes: string | undefined) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, supersedes } : i)));
+  }, []);
+
+  /**
+   * Ask the register what it already holds under this sheet number. Fired on
+   * blur rather than on every keystroke: it is a network call, and a
+   * half-typed sheet number has nothing useful to say.
+   */
+  const onLookup = useCallback(
+    async (id: string, sheetNumber: string) => {
+      if (!repository || !projectId) return;
+      const sheet = sheetNumber.trim();
+      if (!sheet) return;
+      try {
+        const existing = await repository.findSheets(projectId, sheet);
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, existing } : i)));
+      } catch {
+        // A failed lookup must not block the upload — it only removes a hint.
+      }
+    },
+    [repository, projectId],
+  );
+
   const incomplete = useMemo(
     () => items.filter((i) => !i.values.sheetNumber.trim()).map((i) => i.file.name),
     [items],
@@ -362,12 +447,17 @@ export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntak
 
     const results: DrawingIntakeResult[] = items.map((item) => ({
       file: item.file,
+      kind: item.kind,
+      supersedes: item.supersedes,
       projectNumber: item.values.projectNumber.trim(),
       projectName: item.values.projectName.trim(),
       metadata: {
         sheetNumber: item.values.sheetNumber.trim(),
         title: item.values.title.trim(),
         discipline: toDataDiscipline(item.values.discipline || "ARCHITECTURAL"),
+        // The reading before the narrowing — MEP covers five sheet prefixes, and
+        // which one it was is worth keeping.
+        sheetDiscipline: item.values.discipline || null,
         revision: item.values.revision.trim(),
         issueDate: item.values.issueDate,
         status: "DRAFT",
@@ -391,45 +481,66 @@ export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntak
       return;
     }
 
+    if (!projectId) {
+      setSaveState("error");
+      setSaveMessage("Choose a project before saving — a drawing has to belong to one.");
+      return;
+    }
+
     setSaveState("saving");
     setSaveMessage("");
+    // Saved rows are dropped from the list as they succeed, so a failure on the
+    // fourth file does not re-upload the first three when the user retries.
+    const saved = new Set<string>();
     try {
       for (const r of results) {
+        const mimeType = r.file.type || "application/octet-stream";
         const ticket = await repository.createUploadTicket({
-          projectId: projectId ?? r.projectNumber,
+          projectId,
           filename: r.file.name,
-          mimeType: r.file.type || "application/octet-stream",
+          mimeType,
           sizeBytes: r.file.size,
         });
         // The bytes go straight to storage; see persistence.ts for why.
-        await fetch(ticket.uploadUrl, {
+        const upload = await fetch(ticket.uploadUrl, {
           method: "PUT",
           headers: ticket.headers,
           body: r.file,
         });
+        if (!upload.ok) {
+          // Registering after a failed PUT would create a register entry
+          // pointing at nothing, which is worse than not saving at all.
+          throw new Error(`${r.file.name} did not upload (${upload.status}).`);
+        }
         await repository.registerDrawing({
-          projectId: projectId ?? r.projectNumber,
+          projectId,
           file: {
             storageKey: ticket.storageKey,
             filename: r.file.name,
-            mimeType: r.file.type || "application/octet-stream",
+            mimeType,
             sizeBytes: r.file.size,
-            fileType: r.file.name.toLowerCase().endsWith(".pdf") ? "PDF" : "DWG",
+            fileType: r.kind,
           },
           metadata: r.metadata,
           audit: r.audit,
+          supersedes: r.supersedes,
         });
+        saved.add(r.file.name);
       }
       setItems([]);
       setSaveState("idle");
       setAnnouncement(`${results.length} drawing${results.length === 1 ? "" : "s"} saved.`);
+      onSaved?.();
     } catch (err) {
+      setItems((prev) => prev.filter((i) => !saved.has(i.file.name)));
       setSaveState("error");
       const message = err instanceof Error ? err.message : "Saving failed.";
-      setSaveMessage(message);
-      setAnnouncement(`Saving failed. ${message}`);
+      const prefix = saved.size > 0 ? `${saved.size} saved, then stopped. ` : "";
+      setSaveMessage(prefix + message);
+      setAnnouncement(`Saving failed. ${prefix}${message}`);
+      if (saved.size > 0) onSaved?.();
     }
-  }, [items, incomplete, onConfirm, repository, projectId]);
+  }, [items, incomplete, onConfirm, onSaved, repository, projectId]);
 
   return (
     <div className="space-y-4">
@@ -457,7 +568,8 @@ export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntak
             <div>
               <p className="text-sm font-medium text-fg">Drop drawing files here</p>
               <p className="mt-0.5 text-xs text-muted">
-                PDF, DWG, DXF or RVT · up to {MAX_FILES_PER_BATCH} files · 100 MB each
+                PDF, DWG, DXF or RVT · up to {MAX_FILES_PER_BATCH} files ·{" "}
+                {formatBytes(MAX_FILE_BYTES)} each
               </p>
             </div>
 
@@ -517,7 +629,14 @@ export function DrawingIntake({ projectId, repository, onConfirm }: DrawingIntak
           />
           <CardBody className="space-y-4">
             {items.map((item) => (
-              <ProposalRow key={item.id} item={item} onChange={onChange} onRemove={removeItem} />
+              <ProposalRow
+                key={item.id}
+                item={item}
+                onChange={onChange}
+                onRemove={removeItem}
+                onLookup={onLookup}
+                onSupersedeChange={onSupersedeChange}
+              />
             ))}
 
             {incomplete.length > 0 ? (

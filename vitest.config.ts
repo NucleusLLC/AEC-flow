@@ -35,6 +35,9 @@ export default defineConfig({
       // Drawing intake: named files for the same reason as the two above.
       "lib/drawings/extraction.test.ts",
       "lib/drawings/intake.test.ts",
+      "lib/drawings/storage-key.test.ts",
+      // Dashboard background manifest: named file, same reason as those above.
+      "lib/dashboard/backgrounds.test.ts",
     ],
     environment: "node",
   },

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { DRAWING_STATUS_LABEL, type DrawingStatus, type FileType } from "@/lib/data/drawings";
+import { DRAWING_STATUS_LABEL, type DrawingStatus, type FileType } from "@/lib/data/drawings.types";
 
 type Tone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";
 
