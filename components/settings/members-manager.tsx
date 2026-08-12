@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, AlertTriangle, Loader2, X, Check, Lock } from "lucide-react";
+import { Plus, AlertTriangle, Loader2, X, Check, Lock, KeyRound } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   setMemberRoleAction, setMemberStatusAction, inviteMemberAction,
 } from "@/app/(app)/settings/actions";
+import { MemberPasswordDialog } from "@/components/settings/member-password-dialog";
 import { initials } from "@/lib/utils";
 import { DEPARTMENT_LABEL } from "@/lib/data/team.types";
 import {
@@ -33,15 +34,24 @@ export function MembersManager({
   members: initial,
   roles: initialRoles,
   canSave,
+  canManagePasswords = false,
 }: {
   members: Member[];
   roles: RoleInfo[];
   canSave: boolean;
+  /**
+   * Draws the "Set password" control. Presentation only — the server re-derives
+   * this from the actor's own database row before it will change anything (see
+   * `setMemberPasswordAction`). Passing `true` from a tampered client buys nothing.
+   */
+  canManagePasswords?: boolean;
 }) {
   const [members, setMembers] = useState<Member[]>(initial);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [pwMember, setPwMember] = useState<Member | null>(null);
+  const [pwDone, setPwDone] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Role-summary cards recomputed from the live list so counts track edits.
@@ -119,6 +129,12 @@ export function MembersManager({
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {error}
           </div>
         ) : null}
+        {pwDone ? (
+          <div className="mx-5 mb-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+            <Check className="h-3.5 w-3.5 shrink-0" />
+            New password set for {pwDone}. They can sign in with it now — existing sessions elsewhere are unaffected.
+          </div>
+        ) : null}
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-sm">
@@ -127,7 +143,8 @@ export function MembersManager({
                 <th className="px-5 py-2.5 font-medium">Member</th>
                 <th className="px-3 py-2.5 font-medium">Role</th>
                 <th className="px-3 py-2.5 font-medium">Department</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-3 py-2.5 font-medium">Status</th>
+                {canManagePasswords ? <th className="px-5 py-2.5 font-medium">Password</th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -156,7 +173,7 @@ export function MembersManager({
                   <td className="px-3 py-3 text-muted">
                     {m.department ? DEPARTMENT_LABEL[m.department] : "—"}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-3 py-3">
                     {canSave ? (
                       <select value={m.status} disabled={pending} onChange={(e) => changeStatus(m.id, e.target.value as Member["status"])} className={selectCls}>
                         {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ").toLowerCase()}</option>)}
@@ -165,6 +182,17 @@ export function MembersManager({
                       <Badge tone={statusTone[m.status]}>{m.status.replace(/_/g, " ").toLowerCase()}</Badge>
                     )}
                   </td>
+                  {canManagePasswords ? (
+                    <td className="px-5 py-3">
+                      <button
+                        type="button"
+                        onClick={() => { setError(null); setPwDone(null); setPwMember(m); }}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
+                      >
+                        <KeyRound className="h-3.5 w-3.5" /> Set password
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -173,6 +201,14 @@ export function MembersManager({
       </Card>
 
       {inviting ? <InviteDialog onClose={() => setInviting(false)} onInvited={onInvited} /> : null}
+
+      {pwMember ? (
+        <MemberPasswordDialog
+          member={pwMember}
+          onClose={() => setPwMember(null)}
+          onDone={() => { setPwDone(pwMember.name); setPwMember(null); }}
+        />
+      ) : null}
     </div>
   );
 }

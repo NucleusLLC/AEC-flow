@@ -61,6 +61,7 @@ export function SettingsView({
   keyStatus,
   canSave,
   isFounder = false,
+  canManagePasswords = false,
 }: {
   profile: PracticeProfile;
   logoDataUrl: string | null;
@@ -75,6 +76,8 @@ export function SettingsView({
   keyStatus: AnthropicKeyStatus;
   canSave: boolean;
   isFounder?: boolean;
+  /** Draws the per-member "Set password" control. Presentation only — the server enforces the real gate. */
+  canManagePasswords?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("practice");
 
@@ -115,7 +118,7 @@ export function SettingsView({
       ) : null}
 
       {tab === "members" ? (
-        <MembersManager members={members} roles={roles} canSave={canSave} />
+        <MembersManager members={members} roles={roles} canSave={canSave} canManagePasswords={canManagePasswords} />
       ) : null}
 
       {tab === "preferences" ? (

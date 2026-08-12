@@ -38,6 +38,9 @@ export default defineConfig({
       "lib/drawings/storage-key.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
+      // Password policy + the password-management role gate: named file, same
+      // reason as those above. Pure module — no Prisma, no session, no bcrypt.
+      "lib/password-policy.test.ts",
     ],
     environment: "node",
   },

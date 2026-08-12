@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { AppShell } from "@/components/shell/app-shell";
+import { AppBackdrop } from "@/components/shell/app-backdrop";
+import { getUserPreferences } from "@/lib/data/preferences";
+import { pickDashboardBackgroundIndex } from "@/lib/dashboard/backgrounds";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { BetaReportWidget } from "@/components/beta-report/beta-report-widget";
 import { SystemCurrencyInit } from "@/components/shell/system-currency-init";
@@ -47,13 +52,33 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (licence.denied) redirect("/expired");
   }
 
-  const [notifications, systemCurrency, isFounder, cookieStore, firm] = await Promise.all([
+  const [notifications, systemCurrency, isFounder, cookieStore, firm, session] = await Promise.all([
     getNotificationsForCurrentUser(),
     getSystemCurrency(),
     isCurrentUserFounder(),
     cookies(),
     getFirmIdentity(),
+    getServerSession(authOptions),
   ]);
+
+  // Photo background, opt-in per user. It lives HERE rather than on the dashboard
+  // page because the dashboard is not where most people are: with module 1, 2 or 3
+  // active the sidebar has no /dashboard link at all, so a feature wired only to
+  // that route is invisible to anyone but a Complete-AEC user. Off (the default)
+  // means `children` is returned untouched — no wrapper, no attribute, no rotation.
+  const { dashboardBackground, dashboardBackgroundIntervalSeconds } = await getUserPreferences(
+    session?.user?.id,
+  );
+  const content = dashboardBackground ? (
+    <AppBackdrop
+      initialIndex={pickDashboardBackgroundIndex(session?.user?.id)}
+      intervalSeconds={dashboardBackgroundIntervalSeconds}
+    >
+      {children}
+    </AppBackdrop>
+  ) : (
+    children
+  );
   // Seed the System Currency for server-rendered formatting this request…
   setSystemCurrency(systemCurrency);
   // Active module persisted client-side; drives the sidebar nav on first paint.
@@ -67,7 +92,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <FirmIdentityInit name={firm.name} location={firm.location} logo={firm.logo} />
       {/* Shell owns the collapsible "full screen" sidebar state (sidebar + topbar). */}
       <AppShell notifications={notifications} version={appVersionLabel()} isFounder={isFounder} initialModule={initialModule}>
-        {children}
+        {content}
       </AppShell>
       {/* Global ⌘K / Ctrl+K command palette (renders null until opened). */}
       <CommandPalette />
