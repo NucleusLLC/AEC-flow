@@ -160,3 +160,143 @@ body,
   background-color: var(--c-select-accent);
   color: #10140c;
 }
+
+/*
+ * Dashboard background — Settings › Preferences › "Dashboard background".
+ *
+ * Everything here is scoped to `[data-dashboard-bg="on"]`, a wrapper the
+ * dashboard renders ONLY when that per-user preference is on. With the
+ * preference off (the default) nothing below matches, so the dashboard — and
+ * every other page in the app — is byte-for-byte what it was.
+ *
+ * Like the dark-mode <select> block above, these rules are UNLAYERED and so
+ * outrank the layered Tailwind utilities the shared Card already carries
+ * (`bg-surface`, `border-border`, its flat `shadow-[0_1px_2px…]`). That is what
+ * turns every card on this one page to glass without threading a prop through a
+ * dozen call sites; the `.card-surface` hook on the Card root is styleless.
+ *
+ * ONE LEVEL OF BLUR. `backdrop-filter` compounds when blurred surfaces nest, so
+ * it is applied at the card root and nowhere inside it. The only other blurred
+ * element on the page is the Shuffle chip, which is a sibling of the cards, not
+ * a descendant, and shares these knobs.
+ *
+ * The corner radius stays on the app's own `--radius-card` (14px) rather than
+ * the 16px of the reference this treatment came from — a card is a card.
+ */
+:root {
+  /* ==== Glass knobs. Tune here; nothing else hard-codes these values. ====
+   *
+   * Dark theme carries the values signed off against the real photo set; light
+   * theme is derived from them (light surface, dark hairline, shallower shadow,
+   * light wash instead of a dark one) and has NOT had the same live review.
+   *
+   * Three layers share the legibility work:
+   *   1. --glass-photo-filter — scales the photo BEFORE anything is laid over
+   *      it. Only dark theme needs it, and only because of one image: a white
+   *      atrium behind a 50% dark card leaves grey text on a grey card
+   *      (3.01:1). Halving its brightness fixes that and costs the already-dark
+   *      photos nothing. Light theme needs none — its scrim does the work.
+   *   2. --glass-scrim-* — the wash between photo and page. Light theme leans
+   *      on it (69%→46%), dark theme barely does (34.5%→20.7%): dark text over
+   *      a dark photograph is the hard case, and washing toward white is what
+   *      buys it back WITHOUT pushing the card toward opaque. If a contrast
+   *      problem tempts you to raise --glass-surface, raise the scrim instead.
+   *   3. the card: a genuinely translucent surface + blur, so the photo behind
+   *      it stays identifiable.
+   *
+   * Worst case over all twelve images (darkest and brightest block of each,
+   * body and secondary text): light 6.76:1 outside a card and 6.70:1 inside
+   * one, both on 01-blueprint-desk; dark 5.74:1 and 8.50:1, both on
+   * 05-atrium-light. Out-of-card text also gets --glass-text-shadow, which
+   * those figures do not credit.
+   */
+  --glass-photo-filter: none;
+  --glass-scrim-color: #ffffff;
+  --glass-scrim-top: 69%;
+  --glass-scrim-mid: 58%;
+  --glass-scrim-bottom: 46%;
+  /* 42%, not the 50% of dark theme: white washes out faster than black, and at
+   * 50% the card reads as a milky slab with the photo gone from behind it. */
+  --glass-surface-color: #ffffff;
+  --glass-surface: 42%;
+  --glass-blur: 16px;
+  --glass-saturate: 1.2;
+  /* Hairline that catches the light — a dark edge on a light UI, never white. */
+  --glass-edge: rgb(15 23 42 / 0.1);
+  /* Shallower than dark theme's: a 60px black shadow on a light ground reads
+   * as dirt rather than as height. */
+  --glass-shadow: 0 18px 40px -22px rgb(15 23 42 / 0.45);
+  /* Halo for text that sits on the photo rather than on a card. */
+  --glass-text-shadow: 0 1px 5px rgb(255 255 255 / 0.85);
+  --c-muted-on-photo: #1f2937;
+  --c-faint-on-photo: #4b5563;
+}
+
+.dark {
+  /* Blacks are already on-theme here; it is the bright photos that have to come
+   * down, so this is a straight brightness scale rather than a range squeeze. */
+  --glass-photo-filter: brightness(0.5);
+  --glass-scrim-color: #0f1013;
+  /* The mid stop is where a straight two-stop ramp would have been, so this
+   * theme's wash is the reviewed one; only light theme is top-weighted. */
+  --glass-scrim-top: 34.5%;
+  --glass-scrim-mid: 29.7%;
+  --glass-scrim-bottom: 20.7%;
+  --glass-surface-color: #15161c;
+  --glass-surface: 50%;
+  --glass-edge: rgb(255 255 255 / 0.12);
+  --glass-shadow: 0 24px 60px -24px #000;
+  --glass-text-shadow: 0 1px 5px rgb(0 0 0 / 0.75);
+  --c-muted-on-photo: #e2e6ec;
+  --c-faint-on-photo: #c9cfd8;
+}
+
+[data-dashboard-bg="on"] {
+  --c-muted: var(--c-muted-on-photo);
+  --c-faint: var(--c-faint-on-photo);
+  /* Inherited, so it reaches the greeting and any heading on the photo… */
+  text-shadow: var(--glass-text-shadow);
+}
+
+/* …and is cancelled inside the cards, where there is no photo to fight. */
+[data-dashboard-bg="on"] .card-surface {
+  text-shadow: none;
+}
+
+.dashboard-bg-photo {
+  filter: var(--glass-photo-filter);
+}
+
+/*
+ * Sits above both photo layers, below the page content. Top-weighted, not a
+ * flat wash: the greeting and its sub-line are the only text on the page with
+ * no card under them, they live in the first band, and that is where the photo
+ * has to give way. Lower down the cards are doing the work, so the image opens
+ * back up.
+ */
+.dashboard-bg-scrim {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--glass-scrim-color) var(--glass-scrim-top), transparent) 0%,
+    color-mix(in srgb, var(--glass-scrim-color) var(--glass-scrim-mid), transparent) 35%,
+    color-mix(in srgb, var(--glass-scrim-color) var(--glass-scrim-bottom), transparent) 100%
+  );
+}
+
+[data-dashboard-bg="on"] .card-surface,
+.dashboard-bg-chip {
+  background-color: color-mix(in srgb, var(--glass-surface-color) var(--glass-surface), transparent);
+  border-color: var(--glass-edge);
+  /* ONE level only — see the note above. */
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+[data-dashboard-bg="on"] .card-surface {
+  box-shadow: var(--glass-shadow);
+}
+
+/* Row hovers inside a glass card would otherwise flash an opaque plate. */
+[data-dashboard-bg="on"] .card-surface .hover\:bg-surface-2:hover {
+  background-color: color-mix(in srgb, var(--c-surface-2) 45%, transparent);
+}

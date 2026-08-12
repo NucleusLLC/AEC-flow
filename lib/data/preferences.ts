@@ -11,6 +11,7 @@
  * back gracefully (and new pref fields work without a migration of stored rows).
  */
 import { prisma } from "@/lib/db";
+import { coerceBackgroundIntervalSeconds } from "@/lib/dashboard/backgrounds";
 import { PREFERENCES, type Preferences } from "./settings";
 
 export async function getUserPreferences(userId?: string | null): Promise<Preferences> {
@@ -20,7 +21,13 @@ export async function getUserPreferences(userId?: string | null): Promise<Prefer
     select: { preferences: true },
   });
   const saved = (user?.preferences ?? {}) as Partial<Preferences>;
-  return { ...PREFERENCES, ...saved };
+  const merged = { ...PREFERENCES, ...saved };
+  // The blob is free-form JSON on the user row, so anything that drives a timer
+  // or a loop is validated here rather than trusted from storage.
+  merged.dashboardBackgroundIntervalSeconds = coerceBackgroundIntervalSeconds(
+    merged.dashboardBackgroundIntervalSeconds,
+  );
+  return merged;
 }
 
 export async function saveUserPreferences(userId: string, prefs: Preferences): Promise<void> {

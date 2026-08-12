@@ -10,6 +10,8 @@
  * so the bodies can be swapped for Prisma queries without touching call sites.
  */
 
+import { DEFAULT_BACKGROUND_INTERVAL_SECONDS } from "@/lib/dashboard/backgrounds";
+
 export type UserRole = "ADMIN" | "DIRECTOR" | "MANAGER" | "STAFF" | "VIEWER";
 export type Department = "DESIGN" | "ENGINEERING" | "MANAGEMENT" | "ADMIN" | "FINANCE";
 
@@ -64,6 +66,8 @@ export type Preferences = {
   notifyPhaseOverdue: boolean;
   notifyLeaveRequest: boolean;
   weeklyDigest: boolean;
+  dashboardBackground: boolean;
+  dashboardBackgroundIntervalSeconds: number;
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
@@ -134,6 +138,10 @@ export const PREFERENCES: Preferences = {
   notifyPhaseOverdue: true,
   notifyLeaveRequest: true,
   weeklyDigest: false,
+  // Off by default: with no saved value the merge in `getUserPreferences` falls
+  // back to this, so every existing user keeps today's plain dashboard.
+  dashboardBackground: false,
+  dashboardBackgroundIntervalSeconds: DEFAULT_BACKGROUND_INTERVAL_SECONDS,
 };
 
 export async function getPracticeProfile(): Promise<PracticeProfile> {

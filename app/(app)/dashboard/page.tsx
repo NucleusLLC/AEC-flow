@@ -5,6 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { getBetaMembership } from "@/lib/data/account";
 import { getServerT } from "@/lib/i18n/server";
 import { Greeting } from "@/components/dashboard/greeting";
+import { DashboardBackdrop } from "@/components/dashboard/dashboard-backdrop";
+import { getUserPreferences } from "@/lib/data/preferences";
+import { pickDashboardBackgroundIndex } from "@/lib/dashboard/backgrounds";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
@@ -49,8 +52,11 @@ export default async function DashboardPage() {
   const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
   const pipelineMax = Math.max(...pipeline.map((s) => s.value));
   const t = await getServerT();
+  const { dashboardBackground, dashboardBackgroundIntervalSeconds } = await getUserPreferences(
+    session?.user?.id,
+  );
 
-  return (
+  const content = (
     <div className="w-full space-y-6">
       {/* Beta access countdown (beta testers only) */}
       {betaDaysLeft !== null && betaUntil ? (
@@ -252,5 +258,18 @@ export default async function DashboardPage() {
         </Card>
       </div>
     </div>
+  );
+
+  // Opt-in per user. Off (the default) returns the markup above untouched — the
+  // backdrop wrapper, the glass hook and the rotation only exist when it is on.
+  if (!dashboardBackground) return content;
+
+  return (
+    <DashboardBackdrop
+      initialIndex={pickDashboardBackgroundIndex(session?.user?.id)}
+      intervalSeconds={dashboardBackgroundIntervalSeconds}
+    >
+      {content}
+    </DashboardBackdrop>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, AlertTriangle, Loader2, Lock } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { savePreferencesAction } from "@/app/(app)/settings/actions";
+import { BACKGROUND_INTERVALS } from "@/lib/dashboard/backgrounds";
 import type { Preferences } from "@/lib/data/settings";
 
 const inputCls =
@@ -48,6 +49,33 @@ function ToggleField({
         onChange={(e) => onChange(e.target.checked)}
         className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand)] disabled:opacity-60"
       />
+    </label>
+  );
+}
+
+function SelectField({
+  label, hint, value, options, onChange, disabled,
+}: {
+  label: string; hint?: string; value: number;
+  options: ReadonlyArray<{ seconds: number; label: string }>;
+  onChange: (v: number) => void; disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-start justify-between gap-4 py-3">
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-fg">{label}</span>
+        {hint ? <span className="block text-xs text-muted">{hint}</span> : null}
+      </span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-9 shrink-0 rounded-lg border border-border bg-surface px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
+      >
+        {options.map((o) => (
+          <option key={o.seconds} value={o.seconds}>{o.label}</option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -130,6 +158,16 @@ export function PreferencesForm({
             {pending ? "Saving…" : "Save changes"}
           </button>
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Appearance" subtitle="How the app looks for you." />
+        <CardBody className="divide-y divide-border py-0">
+          <ToggleField label="Dashboard background" hint="Show a full-bleed architectural photo behind the dashboard; its cards turn translucent over it and the photo rotates on its own." checked={prefs.dashboardBackground} onChange={(v) => set("dashboardBackground", v)} disabled={disabled} />
+          {/* Greyed out with the background off — a rotation speed for something
+              that is not running is a control that lies. */}
+          <SelectField label="Change background every" hint="How long each photo is held before it cross-fades to the next." value={prefs.dashboardBackgroundIntervalSeconds} options={BACKGROUND_INTERVALS} onChange={(v) => set("dashboardBackgroundIntervalSeconds", v)} disabled={disabled || !prefs.dashboardBackground} />
+        </CardBody>
       </Card>
 
       <Card>
