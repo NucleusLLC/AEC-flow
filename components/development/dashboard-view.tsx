@@ -15,7 +15,7 @@ const PIE_COLORS = ["#94a3b8", "#f59e0b", "#8b5cf6", "#10b981"];
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
+    <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
       <div className="text-[11px] uppercase tracking-wide text-muted">{label}</div>
       <div className="mt-1 text-lg font-semibold text-fg">{value}</div>
       {hint ? <div className="mt-0.5 text-[11px] text-faint">{hint}</div> : null}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Globe, Plus, X } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 const KEY = "aecflow:worldclocks";
 
@@ -81,7 +82,9 @@ export function WorldClocks() {
   const available = PRESETS.filter((p) => !cities.some((c) => c.tz === p.tz));
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    // Was a hand-rolled copy of Card's exact class string, which meant it stayed
+    // opaque while every real card around it turned to glass. Same markup.
+    <Card className="p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
           <Globe className="h-4 w-4 text-brand" /> World Clocks
@@ -137,6 +140,6 @@ export function WorldClocks() {
         })}
         {cities.length === 0 ? <li className="py-4 text-center text-xs text-muted">Add a city to start.</li> : null}
       </ul>
-    </div>
+    </Card>
   );
 }

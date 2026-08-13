@@ -9,6 +9,7 @@ import {
   coerceBackgroundIntervalSeconds,
   nextBackgroundIndex,
 } from "@/lib/dashboard/backgrounds";
+import { cardOpacityVars } from "@/lib/dashboard/glass";
 import { cn } from "@/lib/utils";
 
 /** How long the cross-fade to the next photo takes. The hold is a preference. */
@@ -110,10 +111,13 @@ function reducer(state: State, action: Action): State {
 export function AppBackdrop({
   initialIndex,
   intervalSeconds,
+  cardOpacityPercent,
   children,
 }: {
   initialIndex: number;
   intervalSeconds: number;
+  /** Dark-theme card opacity %; the light value is derived. See lib/dashboard/glass.ts. */
+  cardOpacityPercent: number;
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -209,7 +213,18 @@ export function AppBackdrop({
         </div>
       ) : null}
 
-      <div data-dashboard-bg={on ? "on" : undefined}>
+      {/* The two ends of the user's transparency preference ride on the wrapper
+        * as custom properties; globals.css picks one of them into
+        * `--glass-surface` per theme. It has to be done in two properties
+        * rather than one: the theme is a `.dark` class decided in the browser,
+        * this value is rendered on the server, and a single number written here
+        * would apply to both themes — collapsing the 50/42 split the glass
+        * depends on. Emitted only while the backdrop is live, so with the
+        * preference off there is no wrapper and no style attribute at all. */}
+      <div
+        data-dashboard-bg={on ? "on" : undefined}
+        style={on ? (cardOpacityVars(cardOpacityPercent) as React.CSSProperties) : undefined}
+      >
         {on ? (
           <div className="mb-4 flex justify-end print:hidden">
             <button

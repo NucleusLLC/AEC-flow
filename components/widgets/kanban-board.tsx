@@ -58,7 +58,12 @@ export function KanbanBoard() {
     setCards((c) => c.map((x) => (x.id === id ? { ...x, col } : x)));
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    // Card's exact class string plus the hook, rather than the shared <Card>:
+    // this file already owns a local `type Card` for the board's data, and
+    // aliasing the import to dodge that collision is more noise than one class.
+    // The columns inside keep their own opaque plate — a coloured status edge
+    // that the glass hairline would erase, and a second blur if it were glass.
+    <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
         <KanbanSquare className="h-4 w-4 text-brand" /> Kanban Board
       </div>

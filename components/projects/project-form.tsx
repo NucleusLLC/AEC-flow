@@ -117,7 +117,7 @@ export function ProjectForm({
         <input type="hidden" name="currency" defaultValue={initial?.currency ?? getSystemCurrency()} />
       ) : null}
 
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
+      <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
         <h3 className="mb-4 text-sm font-semibold text-fg">Project details</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">

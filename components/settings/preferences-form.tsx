@@ -5,7 +5,16 @@ import { Check, AlertTriangle, Loader2, Lock } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { savePreferencesAction } from "@/app/(app)/settings/actions";
 import { BACKGROUND_INTERVALS } from "@/lib/dashboard/backgrounds";
+import { CARD_OPACITY_LEVELS } from "@/lib/dashboard/glass";
 import type { Preferences } from "@/lib/data/settings";
+
+/** Both Appearance dropdowns store a plain number, so they share one field
+ *  component. Mapped at module scope rather than on every render. */
+const INTERVAL_OPTIONS = BACKGROUND_INTERVALS.map((i) => ({ value: i.seconds, label: i.label }));
+/** The stored value is the DARK-theme percentage; its light counterpart rides
+ *  along in the same table so the two themes can never collapse to one number.
+ *  See lib/dashboard/glass.ts for the ladder and the contrast measurements. */
+const CARD_OPACITY_OPTIONS = CARD_OPACITY_LEVELS.map((l) => ({ value: l.dark, label: l.label }));
 
 const inputCls =
   "mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60";
@@ -57,7 +66,7 @@ function SelectField({
   label, hint, value, options, onChange, disabled,
 }: {
   label: string; hint?: string; value: number;
-  options: ReadonlyArray<{ seconds: number; label: string }>;
+  options: ReadonlyArray<{ value: number; label: string }>;
   onChange: (v: number) => void; disabled?: boolean;
 }) {
   return (
@@ -73,7 +82,7 @@ function SelectField({
         className="h-9 shrink-0 rounded-lg border border-border bg-surface px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
       >
         {options.map((o) => (
-          <option key={o.seconds} value={o.seconds}>{o.label}</option>
+          <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
     </label>
@@ -164,9 +173,11 @@ export function PreferencesForm({
         <CardHeader title="Appearance" subtitle="How the app looks for you." />
         <CardBody className="divide-y divide-border py-0">
           <ToggleField label="Dashboard background" hint="Show a full-bleed architectural photo behind the dashboard; its cards turn translucent over it and the photo rotates on its own." checked={prefs.dashboardBackground} onChange={(v) => set("dashboardBackground", v)} disabled={disabled} />
-          {/* Greyed out with the background off — a rotation speed for something
-              that is not running is a control that lies. */}
-          <SelectField label="Change background every" hint="How long each photo is held before it cross-fades to the next." value={prefs.dashboardBackgroundIntervalSeconds} options={BACKGROUND_INTERVALS} onChange={(v) => set("dashboardBackgroundIntervalSeconds", v)} disabled={disabled || !prefs.dashboardBackground} />
+          {/* Both greyed out with the background off — a rotation speed, or a
+              transparency, for something that is not running is a control that
+              lies. */}
+          <SelectField label="Change background every" hint="How long each photo is held before it cross-fades to the next." value={prefs.dashboardBackgroundIntervalSeconds} options={INTERVAL_OPTIONS} onChange={(v) => set("dashboardBackgroundIntervalSeconds", v)} disabled={disabled || !prefs.dashboardBackground} />
+          <SelectField label="Card transparency" hint="How much of the photo shows through the cards. Every step stays legible — the range is bounded at both ends on purpose." value={prefs.dashboardCardOpacityPercent} options={CARD_OPACITY_OPTIONS} onChange={(v) => set("dashboardCardOpacityPercent", v)} disabled={disabled || !prefs.dashboardBackground} />
         </CardBody>
       </Card>
 

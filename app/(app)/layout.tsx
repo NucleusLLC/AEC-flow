@@ -66,13 +66,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // active the sidebar has no /dashboard link at all, so a feature wired only to
   // that route is invisible to anyone but a Complete-AEC user. Off (the default)
   // means `children` is returned untouched — no wrapper, no attribute, no rotation.
-  const { dashboardBackground, dashboardBackgroundIntervalSeconds } = await getUserPreferences(
-    session?.user?.id,
-  );
+  const { dashboardBackground, dashboardBackgroundIntervalSeconds, dashboardCardOpacityPercent } =
+    await getUserPreferences(session?.user?.id);
   const content = dashboardBackground ? (
     <AppBackdrop
       initialIndex={pickDashboardBackgroundIndex(session?.user?.id)}
       intervalSeconds={dashboardBackgroundIntervalSeconds}
+      cardOpacityPercent={dashboardCardOpacityPercent}
     >
       {children}
     </AppBackdrop>

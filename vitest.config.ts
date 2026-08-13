@@ -38,6 +38,10 @@ export default defineConfig({
       "lib/drawings/storage-key.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
+      // Card transparency ladder + the validation that stands between the
+      // free-form preferences blob and a CSS custom property. Named file, same
+      // reason as every entry above.
+      "lib/dashboard/glass.test.ts",
       // Password policy + the password-management role gate: named file, same
       // reason as those above. Pure module — no Prisma, no session, no bcrypt.
       "lib/password-policy.test.ts",

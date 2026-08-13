@@ -63,7 +63,7 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="card-surface overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wide text-muted">

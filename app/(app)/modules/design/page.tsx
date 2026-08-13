@@ -29,7 +29,7 @@ export default async function DesignModuleDashboard() {
               <Link
                 key={d}
                 href={`/design/${DISCIPLINE_SLUG[d]}`}
-                className="group rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand/40"
+                className="card-surface group rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand/40"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-fg">{DISCIPLINE_LABEL[d]}</span>

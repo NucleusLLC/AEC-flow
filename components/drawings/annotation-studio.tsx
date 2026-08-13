@@ -186,7 +186,7 @@ export function AnnotationStudio() {
       </div>
 
       {/* Canvas / paper preview */}
-      <div className="ann-print overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-2/30 p-4">
+      <div className="card-surface ann-print overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-2/30 p-4">
         <div className="ann-sheet relative mx-auto bg-white shadow-lg" style={{ width: `min(100%, ${pw * 3.2}px)`, aspectRatio: `${pw} / ${ph}` }}>
           <svg
             ref={svgRef}

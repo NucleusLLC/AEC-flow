@@ -119,7 +119,7 @@ export function CostBudget({ projectId, budget, currency }: { projectId: string;
           { label: "Paid to date", value: formatCurrency(totals.paid, currency) },
           { label: "Remaining", value: formatCurrency(totals.remaining, currency) },
         ].map((t) => (
-          <div key={t.label} className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
+          <div key={t.label} className="card-surface rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
             <div className="text-[11px] uppercase tracking-wide text-muted">{t.label}</div>
             <div className="mt-1 text-base font-semibold text-fg">{t.value}</div>
           </div>

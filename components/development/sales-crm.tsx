@@ -54,7 +54,7 @@ export function SalesCrm({ projectId, leads, lots, reservations: r0, salesContra
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
         {tiles.map((t) => (
-          <div key={t.label} className="rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5">
+          <div key={t.label} className="card-surface rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5">
             <div className="text-[11px] uppercase tracking-wide text-muted">{t.label}</div>
             <div className="mt-0.5 text-sm font-semibold text-fg">{t.value}</div>
           </div>

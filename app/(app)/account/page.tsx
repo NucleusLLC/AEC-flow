@@ -48,7 +48,7 @@ export default async function AccountPage() {
       {account ? (
         <AccountForm account={account} />
       ) : (
-        <div className="flex flex-col items-start gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-6">
+        <div className="card-surface flex flex-col items-start gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-6">
           <p className="text-sm text-muted">Sign in to manage your account.</p>
           <Link
             href="/login?callbackUrl=/account"

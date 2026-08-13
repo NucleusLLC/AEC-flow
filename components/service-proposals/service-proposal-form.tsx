@@ -1311,7 +1311,7 @@ export function ServiceProposalForm({
 
       {/* Live summary rail */}
       <div className="lg:sticky lg:top-4 lg:self-start">
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="card-surface rounded-xl border border-border bg-surface p-4">
           <h3 className="text-sm font-semibold text-fg">Live summary</h3>
           <dl className="mt-3 space-y-1.5 text-sm">
             <Row k="Base fee" v={money(calc.totals.baseFeeTotal)} />
