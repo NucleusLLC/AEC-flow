@@ -52,7 +52,7 @@ export function CashFlowPlanner({ projectId, months: initial, currency }: { proj
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {metrics.map((m) => (
-          <div key={m.label} className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
+          <div key={m.label} className="card-surface rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
             <div className="text-[11px] uppercase tracking-wide text-muted">{m.label}</div>
             <div className="mt-1 text-base font-semibold text-fg">{m.value}</div>
             {m.hint ? <div className="text-[11px] text-faint">{m.hint}</div> : null}

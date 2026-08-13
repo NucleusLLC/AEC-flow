@@ -70,6 +70,11 @@ export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
               key={col.id}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => drop(col.id)}
+              // Deliberately NOT `card-surface`: the glass treatment sets
+              // `border-color` on all four sides from an unlayered rule, which
+              // would erase `col.accent` — the coloured top edge is the status
+              // code, not decoration. A 30% tint is a wash over the photo, not
+              // an opaque slab, so leaving it out costs little.
               className={cn("flex min-h-[200px] flex-col rounded-[var(--radius-card)] border border-t-2 border-border bg-surface-2/30 p-3", col.accent)}
             >
               <div className="mb-2 flex items-center justify-between px-1">

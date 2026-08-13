@@ -175,10 +175,42 @@ body,
  * turns every card on this one page to glass without threading a prop through a
  * dozen call sites; the `.card-surface` hook on the Card root is styleless.
  *
- * ONE LEVEL OF BLUR. `backdrop-filter` compounds when blurred surfaces nest, so
- * it is applied at the card root and nowhere inside it. The only other blurred
- * element on the page is the Shuffle chip, which is a sibling of the cards, not
- * a descendant, and shares these knobs.
+ * WHAT IS GLASS AND WHAT IS NOT — the rule, so the next person does not have to
+ * re-derive it from the screenshots:
+ *
+ *   GLASS: a panel that IS the page's content — a card, a stat tile, a register
+ *     table shell, a form section, a chat pane. It becomes glass by carrying
+ *     `.card-surface`, either because it is a shared <Card> or because it is a
+ *     page-level panel that cannot faithfully be one (a <Link>, an <li>, a
+ *     bordered table wrapper, a differently-padded tile).
+ *
+ *   ONE EXCEPTION, and it is about colour, not category: a panel whose border
+ *     CARRIES INFORMATION stays out. `border-color: var(--glass-edge)` below is
+ *     a single shorthand over all four sides, so it would erase a coloured
+ *     status edge — which is why the task-board columns are left alone.
+ *
+ *   NOT GLASS: form controls (inputs, selects, textareas, dropzones, toolbars
+ *     of controls), dropdown menus, popovers, modal dialogs, the sidebar and
+ *     the topbar, and coloured status/alert banners. An input you cannot read
+ *     is worse than an inconsistent one; a floating menu with a photograph
+ *     showing through it is unreadable over anything busy; and a red error
+ *     banner washed to 50% stops being red.
+ *
+ *   NOT GLASS EITHER: anything already inside a glass surface. A panel nested
+ *     in a card is a sub-division of that card, not a second sheet over the
+ *     photo — see the ONE LEVEL OF BLUR note below.
+ *
+ * Nothing here selects on a utility class. A rule like
+ * `[data-dashboard-bg="on"] .bg-surface` would be one line instead of ~35 opt-in
+ * hooks, and it would also catch every input, every menu and every nested inset
+ * in the app. Glass stays opt-in, per element.
+ *
+ * ONE LEVEL OF BLUR. `backdrop-filter` compounds when blurred surfaces nest: two
+ * stacked glass panels blur the photo twice, which looks muddy and costs twice.
+ * It is applied at the glass surface's root and nowhere inside it, and the
+ * nesting guard at the bottom of this block enforces that structurally rather
+ * than by convention. The only other blurred element is the Shuffle chip, a
+ * sibling of the cards rather than a descendant, which shares these knobs.
  *
  * The corner radius stays on the app's own `--radius-card` (14px) rather than
  * the 16px of the reference this treatment came from — a card is a card.
@@ -215,10 +247,19 @@ body,
   --glass-scrim-top: 69%;
   --glass-scrim-mid: 58%;
   --glass-scrim-bottom: 46%;
-  /* 42%, not the 50% of dark theme: white washes out faster than black, and at
-   * 50% the card reads as a milky slab with the photo gone from behind it. */
   --glass-surface-color: #ffffff;
-  --glass-surface: 42%;
+  /* ---- The two ends of the transparency preference ----
+   * 42%, not the 50% of dark theme: white washes out faster than black, and at
+   * 50% the card reads as a milky slab with the photo gone from behind it. Both
+   * numbers live on :root (not one per theme block) because the backdrop
+   * wrapper overrides them TOGETHER from the user's preference — it is rendered
+   * on the server and cannot know which theme the browser will be in, so it has
+   * to supply both and let the rules below pick. Defaults here = today's look.
+   * The ladder of allowed pairs, and the measurements behind its ends, are in
+   * lib/dashboard/glass.ts. */
+  --glass-surface-light: 42%;
+  --glass-surface-dark: 50%;
+  --glass-surface: var(--glass-surface-light);
   --glass-blur: 16px;
   --glass-saturate: 1.2;
   /* Hairline that catches the light — a dark edge on a light UI, never white. */
@@ -243,7 +284,7 @@ body,
   --glass-scrim-mid: 29.7%;
   --glass-scrim-bottom: 20.7%;
   --glass-surface-color: #15161c;
-  --glass-surface: 50%;
+  --glass-surface: var(--glass-surface-dark);
   --glass-edge: rgb(255 255 255 / 0.12);
   --glass-shadow: 0 24px 60px -24px #000;
   --glass-text-shadow: 0 1px 5px rgb(0 0 0 / 0.75);
@@ -256,6 +297,19 @@ body,
   --c-faint: var(--c-faint-on-photo);
   /* Inherited, so it reaches the greeting and any heading on the photo… */
   text-shadow: var(--glass-text-shadow);
+  /* Re-pick `--glass-surface` from the pair the wrapper carries. The :root/.dark
+   * declarations above already resolved on <html>, where the user's inline
+   * overrides do not exist — those are set on THIS element. So the choice has to
+   * be made again here, on the element that actually has them. At the default
+   * preference these resolve to the same 42%/50% as before. */
+  --glass-surface: var(--glass-surface-light);
+}
+
+/* `.dark` is on <html>, an ancestor of the wrapper — so this is both correctly
+ * scoped and more specific than the rule above, which is what makes the
+ * light/dark split survive a preference that is chosen on the server. */
+.dark [data-dashboard-bg="on"] {
+  --glass-surface: var(--glass-surface-dark);
 }
 
 /* …and is cancelled inside the cards, where there is no photo to fight. */
@@ -299,4 +353,27 @@ body,
 /* Row hovers inside a glass card would otherwise flash an opaque plate. */
 [data-dashboard-bg="on"] .card-surface .hover\:bg-surface-2:hover {
   background-color: color-mix(in srgb, var(--c-surface-2) 45%, transparent);
+}
+
+/*
+ * NESTING GUARD — the structural half of "one level of blur".
+ *
+ * Nothing stops someone putting a <Card> inside a <Card>, or dropping the
+ * `.card-surface` hook on a panel that later gets moved inside one. When that
+ * happens `backdrop-filter` compounds: the inner surface blurs a backdrop that
+ * is already blurred, so the photo turns to mud and the compositor pays for two
+ * passes. Rather than rely on everyone remembering, a nested glass surface is
+ * demoted here: it keeps a hairline and a faint inset tint — which is what a
+ * sub-division of a card should look like anyway — and drops the filter and the
+ * lift shadow, both of which only make sense against the photograph.
+ *
+ * The tint matches the row-hover above so nested panels and hovered rows read as
+ * the same depth. No depth beyond the second is special-cased: this rule catches
+ * every level below the first, because each of them is inside `.card-surface`.
+ */
+[data-dashboard-bg="on"] .card-surface .card-surface {
+  background-color: color-mix(in srgb, var(--c-surface-2) 45%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
 }

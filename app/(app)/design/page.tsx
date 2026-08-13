@@ -53,7 +53,7 @@ export default async function DesignPage({
                 <Link
                   key={d}
                   href={`/design/${DISCIPLINE_SLUG[d]}`}
-                  className="group rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand"
+                  className="card-surface group rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-fg">{DISCIPLINE_LABEL[d]}</span>
@@ -86,7 +86,7 @@ function Tile({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="card-surface rounded-xl border border-border bg-surface p-4">
       <div className="flex items-center gap-2 text-xs font-medium text-muted">
         <Icon className="h-4 w-4" /> {label}
       </div>

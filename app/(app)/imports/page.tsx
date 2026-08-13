@@ -15,7 +15,7 @@ export default function ImportsPage() {
 
       <ClientImport />
 
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 text-sm text-muted">
+      <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5 text-sm text-muted">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-faint">Columns</h3>
         <ul className="space-y-1">
           <li><code className="text-fg">name</code> — required.</li>

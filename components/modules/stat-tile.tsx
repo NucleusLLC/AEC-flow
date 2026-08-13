@@ -15,7 +15,7 @@ export function StatTile({
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   const inner = (
-    <div className="h-full rounded-xl border border-border bg-surface p-4 transition-colors group-hover:border-brand/40">
+    <div className="card-surface h-full rounded-xl border border-border bg-surface p-4 transition-colors group-hover:border-brand/40">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-medium text-muted">
           {Icon ? <Icon className="h-4 w-4" /> : null}

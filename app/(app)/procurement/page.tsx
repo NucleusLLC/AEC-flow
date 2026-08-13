@@ -71,7 +71,7 @@ function Tile({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="card-surface rounded-xl border border-border bg-surface p-4">
       <div className="flex items-center gap-2 text-xs font-medium text-muted">
         <Icon className="h-4 w-4" /> {label}
       </div>

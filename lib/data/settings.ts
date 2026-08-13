@@ -11,6 +11,7 @@
  */
 
 import { DEFAULT_BACKGROUND_INTERVAL_SECONDS } from "@/lib/dashboard/backgrounds";
+import { DEFAULT_CARD_OPACITY_PERCENT } from "@/lib/dashboard/glass";
 
 export type UserRole = "ADMIN" | "DIRECTOR" | "MANAGER" | "STAFF" | "VIEWER";
 export type Department = "DESIGN" | "ENGINEERING" | "MANAGEMENT" | "ADMIN" | "FINANCE";
@@ -68,6 +69,9 @@ export type Preferences = {
   weeklyDigest: boolean;
   dashboardBackground: boolean;
   dashboardBackgroundIntervalSeconds: number;
+  /** How opaque the glass cards are, as the DARK-theme percentage; light theme
+   *  is derived from it so the two never collapse. See lib/dashboard/glass.ts. */
+  dashboardCardOpacityPercent: number;
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {
@@ -142,6 +146,9 @@ export const PREFERENCES: Preferences = {
   // back to this, so every existing user keeps today's plain dashboard.
   dashboardBackground: false,
   dashboardBackgroundIntervalSeconds: DEFAULT_BACKGROUND_INTERVAL_SECONDS,
+  // The pair already hard-coded in globals.css, so an existing user whose blob
+  // predates this key merges onto exactly the look they have today.
+  dashboardCardOpacityPercent: DEFAULT_CARD_OPACITY_PERCENT,
 };
 
 export async function getPracticeProfile(): Promise<PracticeProfile> {

@@ -187,7 +187,7 @@ export default async function ServiceProposalDetailPage({
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-border bg-surface p-4">
+          <div className="card-surface rounded-xl border border-border bg-surface p-4">
             <h3 className="text-sm font-semibold text-fg">Totals</h3>
             <dl className="mt-3 space-y-1.5 text-sm">
               <Row k="Base fee" v={money(calc.totals.baseFeeTotal)} />
@@ -210,14 +210,14 @@ export default async function ServiceProposalDetailPage({
           </div>
 
           {p.validUntil ? (
-            <div className="rounded-xl border border-border bg-surface p-4 text-sm">
+            <div className="card-surface rounded-xl border border-border bg-surface p-4 text-sm">
               <div className="text-xs text-muted">Valid until</div>
               <div className="mt-0.5 font-medium text-fg">{p.validUntil}</div>
             </div>
           ) : null}
 
           {versions.length > 0 ? (
-            <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="card-surface rounded-xl border border-border bg-surface p-4">
               <h3 className="text-sm font-semibold text-fg">Issued versions</h3>
               <ul className="mt-2 space-y-2 text-sm">
                 {versions.map((v) => (
@@ -238,7 +238,7 @@ export default async function ServiceProposalDetailPage({
           ) : null}
 
           {history.length > 0 ? (
-            <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="card-surface rounded-xl border border-border bg-surface p-4">
               <h3 className="text-sm font-semibold text-fg">Status history</h3>
               <ul className="mt-2 space-y-2 text-sm">
                 {history.map((h) => (

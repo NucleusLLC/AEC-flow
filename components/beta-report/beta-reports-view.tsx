@@ -108,7 +108,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-surface py-16 text-center">
+        <div className="card-surface rounded-[var(--radius-card)] border border-dashed border-border bg-surface py-16 text-center">
           <p className="text-sm font-medium text-fg">No reports here yet</p>
           <p className="mt-1 text-xs text-muted">
             Beta testers can send Bug/Wish feedback from the “Feedback” button in any screen.
@@ -119,7 +119,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
           {filtered.map((r) => (
             <li
               key={r.id}
-              className="rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+              className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
             >
               <div className="flex items-start gap-3">
                 <span

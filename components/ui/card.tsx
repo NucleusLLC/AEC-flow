@@ -13,6 +13,13 @@ export function Card({
         // `card-surface` carries no styling of its own — it is a hook so a page
         // can restyle every card it owns (the dashboard's glass background) from
         // one scoped rule instead of threading a prop through every call site.
+        //
+        // It is also the OPT-IN for that glass, and the handful of page-level
+        // panels that cannot faithfully be a <Card> (a <Link> tile, an <li>, a
+        // bordered table wrapper) carry the class directly for that reason. Two
+        // rules travel with it: never on a control, a menu or a dialog, and
+        // never on something already inside a glass surface. The reasoning is in
+        // the "WHAT IS GLASS AND WHAT IS NOT" note in app/globals.css.
         "card-surface rounded-[var(--radius-card)] border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className,
       )}

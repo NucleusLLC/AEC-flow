@@ -103,7 +103,7 @@ export function UnitCalculator({ projectId, unitTypes, currency }: { projectId: 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
+      <div className="card-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3">
         <div className="text-sm">
           <span className="text-muted">Total profit across all unit types: </span>
           <span className="font-semibold text-emerald-700">{formatCurrency(grandProfit, currency)}</span>

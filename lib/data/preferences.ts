@@ -12,6 +12,7 @@
  */
 import { prisma } from "@/lib/db";
 import { coerceBackgroundIntervalSeconds } from "@/lib/dashboard/backgrounds";
+import { coerceCardOpacityPercent } from "@/lib/dashboard/glass";
 import { PREFERENCES, type Preferences } from "./settings";
 
 export async function getUserPreferences(userId?: string | null): Promise<Preferences> {
@@ -27,6 +28,9 @@ export async function getUserPreferences(userId?: string | null): Promise<Prefer
   merged.dashboardBackgroundIntervalSeconds = coerceBackgroundIntervalSeconds(
     merged.dashboardBackgroundIntervalSeconds,
   );
+  // Same reason, one step worse: this one ends up inside a CSS custom property,
+  // so an unrecognised value must never survive the read.
+  merged.dashboardCardOpacityPercent = coerceCardOpacityPercent(merged.dashboardCardOpacityPercent);
   return merged;
 }
 

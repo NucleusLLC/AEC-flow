@@ -98,7 +98,7 @@ export function ChatView({ data }: { data: ChatData }) {
   }
 
   return (
-    <div className="flex h-[calc(100vh-11rem)] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
+    <div className="card-surface flex h-[calc(100vh-11rem)] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
       {/* Sidebar: channels */}
       <aside className="flex w-64 shrink-0 flex-col border-r border-border">
         <div className="border-b border-border p-3">
