@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Shuffle } from "lucide-react";
 import { useT } from "@/components/i18n/language-provider";
 import {
-  DASHBOARD_BACKGROUNDS,
+  type DashboardBackground,
   coerceBackgroundIntervalSeconds,
-  nextBackgroundIndex,
 } from "@/lib/dashboard/backgrounds";
+import {
+  type BackgroundSection,
+  nextBackground,
+  sectionForPath,
+  startBackground,
+} from "@/lib/dashboard/sections";
 import { cardOpacityVars } from "@/lib/dashboard/glass";
 import { cn } from "@/lib/utils";
 
@@ -20,69 +26,169 @@ const WARM_MS = 2_000;
 type Slot = 0 | 1;
 
 type State = {
-  /** Manifest index held by each of the two layers. */
-  slots: [number, number];
+  /** Section the URL currently asks for. Where we are heading. */
+  section: BackgroundSection;
+  /** Section the VISIBLE photo belongs to. Catches up when a fade completes. */
+  shownSection: BackgroundSection;
+  /** Server-picked index, reused as the deterministic opener of every set. */
+  seed: number;
+  /** The photo held by each of the two layers. */
+  slots: [DashboardBackground | null, DashboardBackground | null];
   /** The layer currently on top. */
   active: Slot;
   /** Whether each layer is faded in. */
   shown: [boolean, boolean];
   /** True from an advance until the fade has finished. */
   fading: boolean;
-  /** Manifest indices whose file failed to load — never shown again. */
-  dead: number[];
+  /** The standby layer is holding a NEW section's photo, waiting for it to load. */
+  armed: boolean;
+  /** Ids whose file failed to load — never shown again. */
+  dead: string[];
   /** True once the first advance happened; drops the LCP priority hint. */
   moved: boolean;
-  /** Every image failed: give up and let the dashboard render plain. */
+  /** Every image failed: give up and let the app render plain. */
   blank: boolean;
 };
 
-type Action = { type: "advance" } | { type: "rearm" } | { type: "fail"; slot: Slot };
+type Action =
+  | { type: "advance" }
+  | { type: "rearm" }
+  | { type: "section"; section: BackgroundSection }
+  | { type: "loaded"; slot: Slot }
+  | { type: "fail"; slot: Slot };
 
-function init(initialIndex: number): State {
+function init({ section, seed }: { section: BackgroundSection; seed: number }): State {
+  const first = startBackground(section, [], seed);
+  const second = first ? nextBackground(section, first.id, []) : null;
   return {
-    slots: [initialIndex, nextBackgroundIndex(initialIndex) ?? initialIndex],
+    section,
+    shownSection: section,
+    seed,
+    slots: [first, second],
     active: 0,
     shown: [true, false],
     fading: false,
+    armed: false,
     dead: [],
     moved: false,
-    blank: false,
+    blank: first === null,
+  };
+}
+
+/** Flip to the standby layer. Shared by the timer, Shuffle and a section swap. */
+function crossFade(state: State): State {
+  const other = (1 - state.active) as Slot;
+  if (state.blank || state.fading || !state.slots[other]) return state;
+  const shown: [boolean, boolean] = [...state.shown];
+  shown[other] = true;
+  return {
+    ...state,
+    active: other,
+    shown,
+    fading: true,
+    moved: true,
+    armed: false,
+    // A swap into a freshly-armed section is the moment the visible photo stops
+    // belonging to the old one.
+    shownSection: state.armed ? state.section : state.shownSection,
   };
 }
 
 /**
- * Two fixed layers, never more. The standby layer already holds the next photo
- * (mounted at opacity 0, so the browser has fetched it), which is what makes an
- * advance a pure opacity change rather than a src swap on a visible element —
- * no flash, no remount, no layout shift. The outgoing layer deliberately stays
- * at opacity 1 underneath while the incoming one fades in over it; fading both
- * at once would wash the canvas through at the midpoint.
+ * Two fixed layers, never more — thirteen sections are thirteen manifests, not
+ * thirteen preloads. The standby layer already holds the next photo (mounted at
+ * opacity 0, so the browser has fetched it), which is what makes an advance a
+ * pure opacity change rather than a src swap on a visible element — no flash,
+ * no remount of the layers themselves, no layout shift. The outgoing layer
+ * deliberately stays at opacity 1 underneath while the incoming one fades in
+ * over it; fading both at once would wash the canvas through at the midpoint.
+ *
+ * Every branch that changes nothing returns `state` by identity. The section
+ * effect below re-dispatches until the state settles, and a fresh object with
+ * identical fields would re-render forever.
  */
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "advance": {
-      if (state.blank || state.fading) return state;
-      const other = (1 - state.active) as Slot;
-      const shown: [boolean, boolean] = [...state.shown];
-      shown[other] = true;
-      return { ...state, active: other, shown, fading: true, moved: true };
+    case "advance":
+      return crossFade(state);
+
+    case "loaded": {
+      // A section switch waits for its photo to arrive before fading, so the
+      // fade is never to a half-fetched layer.
+      if (!state.armed || action.slot === state.active) return state;
+      return crossFade(state);
     }
+
+    case "section": {
+      const { section } = action;
+      const standby = (1 - state.active) as Slot;
+      const activeId = state.slots[state.active]?.id ?? null;
+
+      if (section === state.shownSection) {
+        // Already showing the right section. If a now-stale target is parked on
+        // the standby layer (user went A → B → A before B loaded), put the
+        // ordinary next photo back so the rotation stays inside this section.
+        if (!state.armed) return state.section === section ? state : { ...state, section };
+        const next = nextBackground(section, activeId, state.dead);
+        const slots: [DashboardBackground | null, DashboardBackground | null] = [...state.slots];
+        const shown: [boolean, boolean] = [...state.shown];
+        slots[standby] = next;
+        shown[standby] = false;
+        return { ...state, section, armed: false, slots, shown };
+      }
+
+      // Mid-fade the standby layer is the OUTGOING photo, still at opacity 1
+      // underneath. Re-pointing it now would change the picture being faded
+      // away from. Record the destination; the effect re-fires when the fade
+      // ends and arms it then.
+      if (state.blank || state.fading) {
+        return state.section === section ? state : { ...state, section };
+      }
+
+      const target = startBackground(section, state.dead, state.seed);
+      if (!target || target.id === activeId) {
+        return state.section === section ? state : { ...state, section };
+      }
+      // Already waiting on exactly this photo — re-arming would re-render for
+      // nothing (the effect re-fires once after every arm).
+      if (state.armed && state.section === section && state.slots[standby]?.id === target.id) {
+        return state;
+      }
+      const slots: [DashboardBackground | null, DashboardBackground | null] = [...state.slots];
+      const shown: [boolean, boolean] = [...state.shown];
+      slots[standby] = target;
+      shown[standby] = false;
+      return { ...state, section, armed: true, slots, shown };
+    }
+
     case "rearm": {
       const standby = (1 - state.active) as Slot;
-      const next = nextBackgroundIndex(state.slots[state.active], state.dead);
+      // The URL moved on during the fade: leave the standby layer alone, the
+      // section effect is about to arm it with the real destination.
+      if (state.section !== state.shownSection) return { ...state, fading: false };
+      const next = nextBackground(state.shownSection, state.slots[state.active]?.id ?? null, state.dead);
       if (next === null) return { ...state, fading: false };
-      const slots: [number, number] = [...state.slots];
+      const slots: [DashboardBackground | null, DashboardBackground | null] = [...state.slots];
       const shown: [boolean, boolean] = [...state.shown];
       slots[standby] = next;
       shown[standby] = false;
       return { ...state, slots, shown, fading: false };
     }
+
     case "fail": {
       const bad = state.slots[action.slot];
-      const dead = state.dead.includes(bad) ? state.dead : [...state.dead, bad];
-      const replacement = nextBackgroundIndex(bad, dead);
+      if (!bad) return state;
+      const dead = state.dead.includes(bad.id) ? state.dead : [...state.dead, bad.id];
+      // Which set the replacement comes from depends on what that layer was
+      // showing: the armed standby is already in the new section.
+      const from =
+        state.armed && action.slot !== state.active ? state.section : state.shownSection;
+      // `nextBackground` falls through to the generic set once a section is
+      // exhausted, so an unfilled `public/backgrounds/<section>/` folder costs
+      // four 404s and then quietly shows the dashboard photos.
+      const replacement = nextBackground(from, bad.id, dead);
       if (replacement === null) return { ...state, dead, blank: true };
-      const slots: [number, number] = [...state.slots];
+      const slots: [DashboardBackground | null, DashboardBackground | null] = [...state.slots];
       slots[action.slot] = replacement;
       return { ...state, slots, dead };
     }
@@ -100,13 +206,23 @@ function reducer(state: State, action: Action): State {
  * the preference keys keep their original `dashboard*` names deliberately —
  * renaming them would orphan the values already saved in users' preference blobs.
  *
+ * THE PHOTO FOLLOWS THE SECTION
+ * -----------------------------
+ * `usePathname()` resolves the section here rather than in the layout because a
+ * server layout has no pathname. The hook runs during the server render of this
+ * client component too, so the first paint already carries the right set and
+ * there is nothing for hydration to disagree about. Navigating cross-section
+ * arms the standby layer and cross-fades into it on load — the same two layers,
+ * never remounted, so a click does not flash. Navigating WITHIN a section
+ * touches nothing at all: the effect keys on the section, not the path, so
+ * clicking through five pages of Estimates is inert.
+ *
  * Rendered only when the user's `dashboardBackground` preference is on, so with
  * it off the app emits exactly the markup it always did.
  *
  * `initialIndex` is chosen on the server and hydrated from this prop — the
- * rotation and the Shuffle button are the only sources of change, and both run
- * after mount, so there is nothing here for the server and client to disagree
- * about.
+ * rotation, the Shuffle button and navigation are the only sources of change,
+ * and none of them runs during the first render, so the two sides agree.
  */
 export function AppBackdrop({
   initialIndex,
@@ -121,7 +237,13 @@ export function AppBackdrop({
   children: React.ReactNode;
 }) {
   const t = useT();
-  const [state, dispatch] = useReducer(reducer, initialIndex, init);
+  const pathname = usePathname();
+  const section = useMemo(() => sectionForPath(pathname), [pathname]);
+  const [state, dispatch] = useReducer(
+    reducer,
+    { section, seed: initialIndex },
+    init,
+  );
   const [warm, setWarm] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -147,6 +269,18 @@ export function AppBackdrop({
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
+  // Follow the URL. Fires on a real section change only — `section` is a
+  // thirteen-value key, so page-to-page clicks inside one section produce no
+  // dispatch, no arm and no timer restart. There is no queue: a user clicking
+  // through five sections while a fade is in flight ends on the last one they
+  // asked for, not on a backlog of five fades. Re-runs while the state settles
+  // (fade ending, a stale arm being cleared); every settled path returns the
+  // same state object, which is what stops it looping.
+  useEffect(() => {
+    if (section === state.section && section === state.shownSection) return;
+    dispatch({ type: "section", section });
+  }, [section, state.section, state.shownSection, state.fading, state.armed]);
+
   // When the visible photo last changed. Declared before the timer effect so it
   // is already up to date when that one re-runs.
   const shownSince = useRef(0);
@@ -159,8 +293,9 @@ export function AppBackdrop({
   // sleep either drifts or wakes up owing a burst of ticks. Because the delay is
   // recomputed from `shownSince` every time this effect re-runs — including when
   // the tab comes back — a sleep longer than the hold costs exactly one advance.
-  // Keyed on `active`, so a manual Shuffle restarts the hold rather than racing
-  // it; the cleanup covers unmount and tab-hidden.
+  // Keyed on `active`, so a manual Shuffle (or a section swap, which is just as
+  // much a change of picture) restarts the hold rather than racing it; the
+  // cleanup covers unmount and tab-hidden.
   useEffect(() => {
     if (reduced || paused || state.blank) return;
     const holdMs = coerceBackgroundIntervalSeconds(intervalSeconds) * 1000;
@@ -184,9 +319,10 @@ export function AppBackdrop({
       {on ? (
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden print:hidden">
           {([0, 1] as const).map((slot) => {
-            // The standby layer stays unmounted until after first paint.
-            if (slot === 1 && !warm && !state.moved) return null;
-            const bg = DASHBOARD_BACKGROUNDS[state.slots[slot]];
+            // The standby layer stays unmounted until after first paint —
+            // unless it is holding a section switch, which has to load to fade.
+            if (slot === 1 && !warm && !state.moved && !state.armed) return null;
+            const bg = state.slots[slot];
             if (!bg) return null;
             return (
               <Image
@@ -198,6 +334,7 @@ export function AppBackdrop({
                 fill
                 sizes="100vw"
                 priority={slot === 0 && !state.moved}
+                onLoad={() => dispatch({ type: "loaded", slot })}
                 onError={() => dispatch({ type: "fail", slot })}
                 className={cn(
                   // `dashboard-bg-photo` carries the per-theme tone compression
@@ -233,7 +370,7 @@ export function AppBackdrop({
               // it, so a keyboard user would lose their place for a second. The
               // reducer already ignores an advance while one is in flight.
               onClick={() => dispatch({ type: "advance" })}
-              title={DASHBOARD_BACKGROUNDS[state.slots[state.active]]?.label}
+              title={state.slots[state.active]?.label}
               // `dashboard-bg-chip` pulls the same glass knobs as the cards, so
               // the two never drift apart when the values are tuned.
               className="dashboard-bg-chip inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-muted transition-colors hover:text-fg"
