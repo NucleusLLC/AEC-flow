@@ -38,6 +38,9 @@ export default defineConfig({
       "lib/drawings/storage-key.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
+      // Section-aware backgrounds — the route→section resolver and the
+      // per-section manifests. Named file, same reason as those above.
+      "lib/dashboard/sections.test.ts",
       // Card transparency ladder + the validation that stands between the
       // free-form preferences blob and a CSS custom property. Named file, same
       // reason as every entry above.
