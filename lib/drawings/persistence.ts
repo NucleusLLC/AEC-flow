@@ -97,6 +97,23 @@ export type ExistingSheet = {
 };
 
 /**
+ * What the SERVER made of an object already in storage — the title-block
+ * reading. Returned by `analyseUpload` below; the shape mirrors
+ * `lib/data/drawing-intake.ts`'s `DrawingAnalysis` because that is what crosses
+ * the server-action boundary.
+ */
+export type UploadAnalysis = {
+  proposed: DrawingMetadataDraft;
+  /** True only when title-block text was really read and used. This is what the
+   *  audit's `inputs.titleBlockText` records, so it may not mean "we tried". */
+  usedTitleBlockText: boolean;
+  /** `false` for a scan; `null` when nothing was opened (CAD, or a read that failed). */
+  hasTextLayer: boolean | null;
+  /** One line for the user saying where the values came from. */
+  note: string;
+};
+
+/**
  * Implement this against Prisma + Supabase Storage once the schema is free.
  * Every method is async and every method may reject; callers must handle it.
  */
@@ -109,6 +126,28 @@ export interface DrawingIntakeRepository {
     mimeType: string;
     sizeBytes: number;
   }): Promise<UploadTicket>;
+
+  /**
+   * Read a staged object and re-propose its metadata.
+   *
+   * Called between the upload and the confirmation, never instead of either.
+   * It exists because a title block beats a filename at every field and the
+   * bytes are already in the store — the browser must not have to send them
+   * again for a server-side parser to see them.
+   *
+   * May reject. The caller is expected to carry on with the filename proposal
+   * when it does: a worse proposal is not a reason to fail an upload.
+   */
+  analyseUpload(input: {
+    projectId: string;
+    storageKey: string;
+    filename: string;
+    fileType: FileType;
+  }): Promise<UploadAnalysis>;
+
+  /** Delete a staged object for an upload that was abandoned before confirming.
+   *  Best-effort: a failure here leaks an object, it does not break anything. */
+  discardUpload(projectId: string, storageKey: string): Promise<void>;
 
   /** Create the drawing row. Returns the new id. */
   registerDrawing(input: RegisterDrawingInput): Promise<{ id: string }>;
@@ -138,6 +177,12 @@ export class DrawingPersistenceNotConfiguredError extends Error {
  */
 export const notConfiguredRepository: DrawingIntakeRepository = {
   async createUploadTicket() {
+    throw new DrawingPersistenceNotConfiguredError();
+  },
+  async analyseUpload() {
+    throw new DrawingPersistenceNotConfiguredError();
+  },
+  async discardUpload() {
     throw new DrawingPersistenceNotConfiguredError();
   },
   async registerDrawing() {

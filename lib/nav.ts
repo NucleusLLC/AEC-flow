@@ -28,6 +28,7 @@ import {
   PencilRuler,
   Sofa,
   FileSignature,
+  UploadCloud,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,10 +46,36 @@ export type NavSection = {
 };
 
 /**
+ * The drawings bin, defined ONCE.
+ *
+ * Two navigations reach these routes — this list (the full/Complete-AEC
+ * sidebar) and `lib/modules.ts` (the per-module sidebars, which import these
+ * constants). They were a copied literal away from disagreeing about a label,
+ * and a "Drawings" that means one thing in Module 1 and another in Module 4 is
+ * how a shipped feature comes to look missing.
+ *
+ * `/drawings` is the register; `/drawings/intake` is the drop zone that reads
+ * the sheet number and title off a PDF's title block.
+ */
+export const DRAWINGS_REGISTER_ITEM: NavItem = {
+  label: "Drawings",
+  href: "/drawings",
+  icon: FileStack,
+};
+export const DRAWINGS_INTAKE_ITEM: NavItem = {
+  label: "Add Drawings",
+  href: "/drawings/intake",
+  icon: UploadCloud,
+};
+
+/** Section title used wherever the drawings bin appears. */
+export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
+
+/**
  * BETA launch scope (AEC Flow). Active modules: Clients, Meeting Minutes,
- * Estimates, Schedule, Proposals, Construction Administration (which houses
- * Drawings and Documents) — plus Dashboard and Settings. Everything else is
- * `disabled` (grayed out) until it is production-ready.
+ * Estimates, Schedule, Proposals, Construction Administration, Drawings —
+ * plus Dashboard and Settings. Everything else is `disabled` (grayed out)
+ * until it is production-ready.
  */
 export const navSections: NavSection[] = [
   {
@@ -90,8 +117,16 @@ export const navSections: NavSection[] = [
       { label: "Construction Admin", href: "/construction-admin", icon: HardHat },
       { label: "Procurement", href: "/procurement", icon: ShoppingCart },
       { label: "Material Selection", href: "/materials", icon: Boxes },
-      // Drawings & Documents are still placeholder (no persistence) — grayed until wired.
-      { label: "Drawings", href: "/drawings", icon: FileStack },
+    ],
+  },
+  {
+    // Its own section now, not a tail on Construction Administration. The
+    // register and the intake are both live — a drawing uploaded here is stored,
+    // read and downloadable. The Documents hub is still a placeholder.
+    title: DRAWINGS_AND_DOCUMENTS,
+    items: [
+      DRAWINGS_REGISTER_ITEM,
+      DRAWINGS_INTAKE_ITEM,
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
     ],
   },

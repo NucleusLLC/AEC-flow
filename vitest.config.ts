@@ -36,6 +36,10 @@ export default defineConfig({
       "lib/drawings/extraction.test.ts",
       "lib/drawings/intake.test.ts",
       "lib/drawings/storage-key.test.ts",
+      // Re-proposal: what happens to a half-filled intake form when the
+      // server's title-block reading lands after the filename's. Named file,
+      // same reason as those above.
+      "lib/drawings/proposal.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
       // Section-aware backgrounds — the route→section resolver and the

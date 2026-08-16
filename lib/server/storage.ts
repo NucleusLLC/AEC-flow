@@ -193,6 +193,38 @@ export async function statObject(
   };
 }
 
+/**
+ * Read one object's bytes back, or null when it does not exist.
+ *
+ * SERVER-SIDE ONLY, and deliberately not exposed to the browser in any form:
+ * the point of this function is that title-block extraction can read a PDF the
+ * browser already uploaded WITHOUT the browser sending the bytes a second time.
+ *
+ * `maxBytes` is a guard, not a policy: a serverless function has to hold the
+ * whole buffer in memory to parse it, and a 50 MB issue set is not worth an
+ * out-of-memory kill for the sake of six strings. Over the limit returns null
+ * and the caller falls back to the filename, which is a worse proposal but a
+ * working upload.
+ */
+export async function downloadObject(
+  key: string,
+  maxBytes = Number.POSITIVE_INFINITY,
+): Promise<Uint8Array | null> {
+  const config = requireConfig();
+  const response = await fetch(
+    `${config.url}/storage/v1/object/authenticated/${config.bucket}/${encodeKey(key)}`,
+    { headers: authHeaders(config), cache: "no-store" },
+  );
+  if (response.status === 404 || response.status === 400) return null;
+  if (!response.ok) await failure(response, "Reading the object");
+
+  const declared = Number(response.headers.get("content-length") ?? Number.NaN);
+  if (Number.isFinite(declared) && declared > maxBytes) return null;
+
+  const buffer = new Uint8Array(await response.arrayBuffer());
+  return buffer.byteLength > maxBytes ? null : buffer;
+}
+
 /** Delete one object. Used to clean up after a failed registration. */
 export async function deleteObject(key: string): Promise<void> {
   const config = requireConfig();

@@ -76,13 +76,75 @@ function cleanValue(raw: string): string {
     .trim();
 }
 
-/** Does this line look like another label rather than a value? */
+/**
+ * Headings a title block carries that we do NOT extract.
+ *
+ * They exist here for one job: recognising that a piece of text is a heading,
+ * not a value. A multi-column block flattens to a row of headings above a row
+ * of values (`DRAWING TITLE  SCALE` / `Second Floor Plan  1:100`), so without
+ * this list `SCALE` gets read as the drawing title — a wrong value at high
+ * confidence, which is the failure mode the whole confirm-don't-autoaccept rule
+ * exists to avoid. Adding a heading here can only ever make the parser MORE
+ * cautious; it can never make it invent a value.
+ */
+const OTHER_LABEL_RES: readonly RegExp[] = [
+  /SCALE\b\.?/,
+  /(?:DRAWN|CHECKED|APPROVED|DESIGNED|REVIEWED|ISSUED)\s*(?:BY)?\b\.?/,
+  /STATUS\b\.?/,
+  /CLIENT\b\.?/,
+  /DISCIPLINE\b\.?/,
+  /PHASE\b\.?/,
+  /(?:PAPER|SHEET)?\s*SIZE\b\.?/,
+  /(?:FILE|CAD)\s*(?:NAME|REF(?:ERENCE)?)?\b\.?/,
+  /NORTH\b\.?/,
+  /NOTES?\b\.?/,
+  /LOCATION\b\.?/,
+  /ADDRESS\b\.?/,
+];
+
+/**
+ * Does this text look like a heading rather than a value?
+ *
+ * ONE heading, consuming the whole string — deliberately not a run of them.
+ * Recognising `SHEET NUMBER REVISION DATE` as a row of three headings and
+ * reaching for the line below was tried and made things worse: in a three-column
+ * block the values do not necessarily land on the very next clustered line, so
+ * "the line below the headings" fetched a date and filed it as a sheet number.
+ * Refusing to answer leaves the blind scan to find `A-204` on its own merits at
+ * a lower, honest confidence, which is the better failure.
+ */
 function looksLikeLabel(v: string): boolean {
   const u = v.toUpperCase();
-  return LABEL_RULES.some((r) => {
-    const m = new RegExp(`^${r.label.source}`).exec(u);
+  const isHeading = (source: string) => {
+    const m = new RegExp(`^${source}`).exec(u);
     return m !== null && cleanValue(u.slice(m[0].length)) === "";
-  });
+  };
+  return LABEL_RULES.some((r) => isHeading(r.label.source)) || OTHER_LABEL_RES.some((r) => isHeading(r.source));
+}
+
+/**
+ * Strip a trailing token that belongs to the NEXT COLUMN, not to this value.
+ *
+ * Reading order is reconstructed by clustering baselines, so two side-by-side
+ * boxes on the same row of the title block arrive as one line: the project name
+ * with the project number stuck on the end, the drawing title with the scale
+ * stuck on the end. Both trailing tokens are recognisable and neither is ever
+ * part of a name — a project is not called "Marina Heights Tower ZA-2026-121".
+ *
+ * Deliberately narrow: it only removes a token it can positively identify, and
+ * only when enough text survives to still be a name.
+ */
+function stripTrailingColumn(value: string): string {
+  let out = value;
+  // A scale ratio: `1:100`, `1 : 50`, `1/100`.
+  out = out.replace(/[\s,;|]*\b\d{1,4}\s*[:/]\s*\d{1,4}\s*$/, "");
+  // A project number the extractor recognises in its own right.
+  const trailingCode = /[\s,;|(-]*\b([A-Z]{1,4}[-/]\d{2,4}[-/]\d{1,4}[A-Z]?)\)?\s*$/i.exec(out);
+  if (trailingCode && scanProjectNumbers(trailingCode[1], "titleblock-label").length > 0) {
+    out = out.slice(0, trailingCode.index);
+  }
+  const trimmed = cleanValue(out);
+  return trimmed.length >= 3 ? trimmed : value;
 }
 
 const CODE_RE = /^[A-Z0-9][A-Z0-9./\- ]{0,19}$/;
@@ -119,8 +181,15 @@ export function extractFromTitleBlockText(text: string): DrawingMetadataDraft {
 
       let value = cleanValue(line.slice(m[0].length));
       let sameLine = true;
-      if (NULL_VALUES.has(value.toUpperCase())) {
-        // Label alone on its line — the value is very likely the next line.
+      // "Empty" covers two cases that look different and behave identically:
+      // the box is genuinely blank (`-`, `N/A`), or what follows the label on
+      // this line is ANOTHER LABEL. The second is what a multi-column title
+      // block looks like once pdf.js flattens it — a row of headings
+      // (`DRAWING TITLE  SCALE`) above a row of values — and taking `SCALE` as
+      // the drawing title would be a confident, plausible-looking lie of
+      // exactly the kind §7 of the feasibility doc says is worse than a blank.
+      if (NULL_VALUES.has(value.toUpperCase()) || looksLikeLabel(value)) {
+        // The value is very likely on the next line.
         const next = lines[i + 1];
         if (next && !looksLikeLabel(next)) {
           value = cleanValue(next);
@@ -212,12 +281,16 @@ export function extractFromTitleBlockText(text: string): DrawingMetadataDraft {
         }
         case "projectName":
         case "title": {
-          const looksCodeOnly = /^[A-Z0-9\-./ ]+$/.test(value.toUpperCase()) && !/[A-Z]{3}/i.test(value);
-          if (value.length >= 3 && value.length <= MAX_NAME_LEN && !looksCodeOnly) {
+          const name = stripTrailingColumn(value);
+          const looksCodeOnly = /^[A-Z0-9\-./ ]+$/.test(name.toUpperCase()) && !/[A-Z]{3}/i.test(name);
+          if (name.length >= 3 && name.length <= MAX_NAME_LEN && !looksCodeOnly) {
             record(rule.target, {
-              value: titleCaseIfShouty(value),
+              value: titleCaseIfShouty(name),
               confidence: 0.88 - penalty,
-              evidence: ev(rule.id),
+              evidence: ev(
+                rule.id,
+                name === value ? undefined : "Trailing value from the adjacent title-block box removed",
+              ),
             });
           }
           break;

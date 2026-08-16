@@ -15,7 +15,9 @@
  */
 
 import {
+  analyseDrawingAction,
   createUploadTicketAction,
+  discardUploadAction,
   findSheetsAction,
   registerDrawingAction,
 } from "@/app/(app)/drawings/actions";
@@ -23,6 +25,7 @@ import type {
   DrawingIntakeRepository,
   ExistingSheet,
   RegisterDrawingInput,
+  UploadAnalysis,
   UploadTicket,
 } from "@/lib/drawings/persistence";
 import type { FileType } from "@/lib/data/drawings.types";
@@ -32,6 +35,18 @@ export const serverIntakeRepository: DrawingIntakeRepository = {
     const result = await createUploadTicketAction(input);
     if (!result.ok) throw new Error(result.error);
     return result.ticket;
+  },
+
+  async analyseUpload(input): Promise<UploadAnalysis> {
+    const result = await analyseDrawingAction(input);
+    if (!result.ok) throw new Error(result.error);
+    const { draft, usedTitleBlockText, hasTextLayer, note } = result.analysis;
+    return { proposed: draft, usedTitleBlockText, hasTextLayer, note };
+  },
+
+  async discardUpload(projectId: string, storageKey: string): Promise<void> {
+    const result = await discardUploadAction(projectId, storageKey);
+    if (!result.ok) throw new Error(result.error);
   },
 
   async registerDrawing(input: RegisterDrawingInput): Promise<{ id: string }> {

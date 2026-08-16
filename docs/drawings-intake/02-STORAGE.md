@@ -125,15 +125,16 @@ then both numbers; nothing else in the code needs to change.
 
 ## 7. What is deliberately still missing
 
-1. **PDF title-block extraction is not wired.** `unpdf` is not installed, so
-   intake reads the filename only — exactly as before. That is step 2 in the
-   feasibility doc and it belongs on top of this, not beside it.
-2. **Production environment variables are not set.** `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DRAWINGS_BUCKET` and
-   `DRAWINGS_MAX_UPLOAD_BYTES` are in local `.env` and documented in
-   `.env.example`. Until they are in the Vercel project, the deployed intake
-   page renders "file storage is not connected" and refuses uploads rather than
-   failing at the click.
+1. ~~**PDF title-block extraction is not wired.**~~ **DONE 2026-08-16** — `unpdf`
+   is installed and the server reads the sheet's own title block. See
+   `03-TITLE-BLOCK.md`.
+2. ~~**Production environment variables are not set.**~~ **DONE 2026-08-12** —
+   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DRAWINGS_BUCKET` and
+   `DRAWINGS_MAX_UPLOAD_BYTES` are all set in the Vercel production project
+   (encrypted), so uploads are live. **This line previously said they were
+   missing and stayed wrong for four days; it was read as current and repeated
+   in a later report.** A stale "not done" is more expensive than no note at
+   all — if you finish something listed here, strike it the same day.
 3. **`/projects/[id]/drawings` is still a placeholder panel** that links to the
    global register. It could now show that project's sheets; nothing blocks it.
 4. **No `Attachment` row is written.** Drawings are their own table; folding
