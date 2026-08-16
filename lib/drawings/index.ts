@@ -70,6 +70,13 @@ export {
 } from "./upload-policy";
 export { LOSSY_DISCIPLINES, toDataDiscipline } from "./mapping";
 export {
+  applyProposal,
+  proposedValue,
+  type ApplyProposalInput,
+  type ApplyProposalResult,
+  type ProposalValues,
+} from "./proposal";
+export {
   buildStorageKey,
   isKeyForProject,
   projectDrawingPrefix,
@@ -95,6 +102,7 @@ export {
   unavailablePdfTextReader,
   type PdfDocumentText,
   type PdfReadOptions,
+  type PdfSourceTextItem,
   type PdfTextReader,
   type PdfTextSourceModule,
 } from "./pdf-text";

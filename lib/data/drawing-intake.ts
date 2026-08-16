@@ -31,6 +31,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { validateUpload } from "@/lib/drawings/upload-policy";
 import { buildStorageKey, isKeyForProject } from "@/lib/drawings/storage-key";
+import { extractDrawingMetadata } from "@/lib/drawings";
+import type { DrawingMetadataDraft } from "@/lib/drawings/types";
+import { PDF_PARSE_MAX_BYTES, readTitleBlock } from "@/lib/server/pdf-title-block";
 import type {
   ConfirmedDrawingMetadata,
   DrawingExtractionAudit,
@@ -42,6 +45,7 @@ import {
   createSignedDownload,
   createSignedUpload,
   deleteObject,
+  downloadObject,
   isStorageConfigured,
   maxUploadBytes,
   statObject,
@@ -66,9 +70,12 @@ export class DrawingIntakeError extends Error {
 async function requireProject(projectId: string): Promise<{ id: string }> {
   const id = String(projectId ?? "").trim();
   if (!id) throw new DrawingIntakeError("Choose a project before uploading.");
-  // Tenant-scoped by the Prisma extension: another company's project reads back
-  // as null here, so this doubles as the ownership check.
-  const project = await prisma.project.findUnique({ where: { id }, select: { id: true } });
+  // findFirst, NOT findUnique. The tenant extension injects `companyId` into a
+  // findFirst `where`; for findUnique it can only inspect the ROW that comes
+  // back, which means a narrow `select` that omits `companyId` makes the guard
+  // compare `undefined` to the company id and reject everything. findFirst puts
+  // the scope in the query, so the check works whatever is selected.
+  const project = await prisma.project.findFirst({ where: { id }, select: { id: true } });
   if (!project) throw new DrawingIntakeError("That project does not exist, or is not yours.");
   return project;
 }
@@ -167,6 +174,140 @@ export async function createUploadTicket(input: {
     expiresAt: signed.expiresAt,
     headers: { "content-type": input.mimeType || "application/octet-stream" },
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * Reading the sheet itself
+ * ------------------------------------------------------------------ */
+
+/**
+ * What the server made of an object that is already in storage.
+ *
+ * `draft` is always present — worst case it is the filename-only proposal the
+ * browser could have produced by itself, which is exactly the point: a failed
+ * read degrades the proposal, it never fails the upload.
+ */
+export type DrawingAnalysis = {
+  draft: DrawingMetadataDraft;
+  /** True when title-block text was actually found and fed to the extractor.
+   *  This is what `DrawingExtractionAudit.inputs.titleBlockText` records, so it
+   *  must mean "text was read", not "we tried". */
+  usedTitleBlockText: boolean;
+  /** `true`/`false` for a PDF that was opened; `null` when nothing was opened
+   *  (a DWG, an unreadable file, a deployment with no reader). */
+  hasTextLayer: boolean | null;
+  /** One line for the user, explaining where the values came from. */
+  note: string;
+};
+
+/**
+ * Read an already-uploaded object and re-propose its metadata.
+ *
+ * WHY THE BYTES ARE READ BACK FROM STORAGE. They are already there — the
+ * browser PUT them straight to the bucket with a signed URL. Asking it to send
+ * them a second time so a serverless function could parse them would double the
+ * transfer and put a 50 MB body through a function that has a 4.5 MB limit.
+ *
+ * TENANCY. Three checks, in order: the project must be ours (`requireProject`),
+ * the key must look like one this server issued for that project
+ * (`isKeyForProject`), and only then is the object read. A key is a capability;
+ * one that did not come from us is an attempt to read someone else's sheet.
+ */
+export async function analyseUploadedDrawing(input: {
+  projectId: string;
+  storageKey: string;
+  filename: string;
+  fileType: FileType;
+}): Promise<DrawingAnalysis> {
+  requireStorage();
+  const project = await requireProject(input.projectId);
+
+  const storageKey = String(input.storageKey ?? "").trim();
+  if (!isKeyForProject(storageKey, project.id)) {
+    throw new DrawingIntakeError("That file reference is not valid for this project.");
+  }
+
+  const filename = String(input.filename ?? "");
+  const fallback = (note: string, hasTextLayer: boolean | null = null): DrawingAnalysis => ({
+    draft: extractDrawingMetadata({ filename }),
+    usedTitleBlockText: false,
+    hasTextLayer,
+    note,
+  });
+
+  // DWG, DXF and RVT are closed binary formats with no JavaScript parser worth
+  // depending on — see the feasibility doc §5. The filename is genuinely all
+  // there is, and saying so is better than implying the file was read.
+  if (input.fileType !== "PDF") {
+    return fallback("Filename only — a CAD file's contents cannot be read here.");
+  }
+
+  const bytes = await downloadObject(storageKey, PDF_PARSE_MAX_BYTES);
+  if (!bytes) {
+    return fallback("The file could not be read back for scanning, so only the filename was used.");
+  }
+
+  const read = await readTitleBlock(bytes);
+  if (!read.ok) {
+    return fallback(`The PDF could not be parsed (${read.reason}) — only the filename was used.`);
+  }
+
+  const titleBlockText = read.titleBlockText.trim();
+  const draft = extractDrawingMetadata({
+    filename,
+    titleBlockText: titleBlockText || undefined,
+    pdfHadTextLayer: read.hasTextLayer,
+  });
+
+  if (!read.hasTextLayer) {
+    // Not an error. `extractDrawingMetadata` has already put the OCR warning at
+    // the top of `draft.warnings`; this line is the short version next to the file.
+    return {
+      draft,
+      usedTitleBlockText: false,
+      hasTextLayer: false,
+      note: "No text layer — this is a scan. Only the filename could be read.",
+    };
+  }
+
+  if (!titleBlockText) {
+    return {
+      draft,
+      usedTitleBlockText: false,
+      hasTextLayer: true,
+      note: "The PDF has text, but nothing was found in the title-block region.",
+    };
+  }
+
+  return {
+    draft,
+    usedTitleBlockText: true,
+    hasTextLayer: true,
+    note: read.usedWholePage
+      ? "Read from the whole page — no title block was found in the usual corners."
+      : "Read from the title block on page 1.",
+  };
+}
+
+/**
+ * Delete an object that was staged for an upload the user then abandoned.
+ *
+ * Guarded twice: the key must belong to one of the caller's projects, and no
+ * drawing row may reference it. The second check is the important one — without
+ * it this is an endpoint for deleting any registered sheet's file by its key.
+ */
+export async function discardUpload(projectId: string, storageKey: string): Promise<void> {
+  requireStorage();
+  const project = await requireProject(projectId);
+  const key = String(storageKey ?? "").trim();
+  if (!isKeyForProject(key, project.id)) {
+    throw new DrawingIntakeError("That file reference is not valid for this project.");
+  }
+  const registered = await prisma.drawing.findFirst({ where: { storageKey: key }, select: { id: true } });
+  if (registered) {
+    throw new DrawingIntakeError("That file is already registered as a drawing and was not deleted.");
+  }
+  await deleteObject(key);
 }
 
 export type RegisterDrawingArgs = {
@@ -282,7 +423,11 @@ export async function findSheets(projectId: string, sheetNumber: string): Promis
  */
 export async function getDrawingFileUrl(id: string): Promise<string | null> {
   if (!isStorageConfigured()) return null;
-  const row = await prisma.drawing.findUnique({
+  // findFirst so the tenant extension can put `companyId` in the WHERE clause —
+  // see requireProject above for why findUnique + a narrow select cannot scope.
+  // This is the whole ownership check for handing out a capability to read a
+  // client-confidential file, so it has to actually run.
+  const row = await prisma.drawing.findFirst({
     where: { id: String(id ?? "") },
     select: { storageKey: true },
   });

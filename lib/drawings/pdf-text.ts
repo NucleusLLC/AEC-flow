@@ -90,23 +90,45 @@ export const unavailablePdfTextReader: PdfTextReader = {
  * structurally so the module does not have to be installed for this file to
  * type-check. `pdfjs-dist` satisfies the same shape via `getDocument().promise`.
  */
+/**
+ * One positioned string as pdf.js reports it.
+ *
+ * Every member is optional because this describes a FOREIGN type structurally —
+ * see `PdfTextSourceModule` — and the adapter must survive a producer that omits
+ * any of them.
+ */
+export type PdfSourceTextItem = {
+  str?: string;
+  /** pdf.js text matrix: [a, b, c, d, e, f] where e = x and f = y. */
+  transform?: number[];
+  width?: number;
+  height?: number;
+};
+
+/**
+ * `getTextContent().items` is NOT a homogeneous list. pdf.js interleaves
+ * `TextItem` (a positioned string) with `TextMarkedContent` (a structure marker
+ * carrying `{ type, id }` and no text at all), so the array is typed as
+ * `unknown[]` here and narrowed by `asTextItem` below. Declaring it as the text
+ * shape instead is what makes `unpdf`'s real types fail to satisfy this
+ * interface — a marker has no property in common with a text item.
+ */
 export type PdfTextSourceModule = {
   getDocumentProxy(data: Uint8Array): Promise<{
     numPages: number;
     getPage(pageNumber: number): Promise<{
       getViewport(params: { scale: number }): { width: number; height: number };
-      getTextContent(): Promise<{
-        items: Array<{
-          str?: string;
-          /** pdf.js text matrix: [a, b, c, d, e, f] where e = x and f = y. */
-          transform?: number[];
-          width?: number;
-          height?: number;
-        }>;
-      }>;
+      getTextContent(): Promise<{ items: readonly unknown[] }>;
     }>;
   }>;
 };
+
+/** A text item, or null for a structure marker / anything else. */
+function asTextItem(raw: unknown): PdfSourceTextItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const candidate = raw as PdfSourceTextItem;
+  return typeof candidate.str === "string" ? candidate : null;
+}
 
 /**
  * Build a reader from a lazily loaded module. Pass `() => import("unpdf")` at a
@@ -128,8 +150,10 @@ export function createUnpdfReader(load: () => Promise<PdfTextSourceModule>): Pdf
         const viewport = page.getViewport({ scale: 1 });
         const content = await page.getTextContent();
         const items: PdfTextItem[] = [];
-        for (const raw of content.items ?? []) {
-          const text = typeof raw.str === "string" ? raw.str : "";
+        for (const entry of content.items ?? []) {
+          const raw = asTextItem(entry);
+          if (!raw) continue; // a structure marker, not text
+          const text = raw.str ?? "";
           if (!text.trim()) continue;
           const t = Array.isArray(raw.transform) ? raw.transform : [];
           items.push({

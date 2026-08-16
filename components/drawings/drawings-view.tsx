@@ -22,6 +22,18 @@ function formatSize(kb: number): string {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
 }
 
+/**
+ * A row's preview descriptor.
+ *
+ * The file half is attached ONLY when the row actually has bytes (`hasFile`).
+ * Rows without one keep the representative preview they have always had — a
+ * placeholder is honest about being a placeholder; a placeholder standing in
+ * for a file we are holding is not.
+ *
+ * `getUrl` is a closure, not a URL. Minting happens when the preview opens, via
+ * the same server action the download button uses, which re-checks that the
+ * drawing belongs to the caller's company before signing anything.
+ */
 function toPreview(d: Drawing): PreviewDoc {
   return {
     name: `${d.code} — ${d.title}`,
@@ -33,6 +45,14 @@ function toPreview(d: Drawing): PreviewDoc {
       { label: "Rev", value: d.revision },
       { label: "Status", value: DRAWING_STATUS_LABEL[d.status] },
     ],
+    file: d.hasFile
+      ? {
+          // Only a PDF can be rendered by the browser. DWG/RVT get an honest
+          // "download it" panel instead of a drawn imitation of a CAD viewport.
+          inline: d.fileType === "PDF",
+          getUrl: () => drawingFileUrlAction(d.id),
+        }
+      : undefined,
   };
 }
 

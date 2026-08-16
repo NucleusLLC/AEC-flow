@@ -14,6 +14,25 @@ import {
 } from "lucide-react";
 import { firmName } from "@/lib/firm-identity";
 
+/**
+ * A REAL file behind a preview.
+ *
+ * `getUrl` mints the URL when the preview opens and not before. It is a
+ * function, not a string, on purpose: these files live in a private bucket and
+ * the only link to them is a short-lived signed URL. A URL held on a row, or
+ * embedded in a list of rows the browser already has, is a copy of the drawing
+ * handed out with no further checks — and it outlives the session that got it.
+ * So: one call, on open, per document.
+ *
+ * `inline` says whether a BROWSER can render the bytes. PDFs yes; DWG, DXF and
+ * RVT no, and the honest answer there is a download button, not a drawing of a
+ * CAD viewport with the user's own file name written on it.
+ */
+export type PreviewFile = {
+  getUrl: () => Promise<{ ok: true; url: string } | { ok: false; error: string }>;
+  inline: boolean;
+};
+
 /** Minimal shape any module can build to get a quick preview. */
 export type PreviewDoc = {
   name: string;
@@ -21,6 +40,13 @@ export type PreviewDoc = {
   sizeLabel?: string;
   meta?: { label: string; value: string }[];
   pages?: number;
+  /**
+   * Present only when there are bytes in storage. Omit it and the component
+   * behaves exactly as it always has — the faux renderers below, which are what
+   * the documents hub and the other callers still want for rows that have no
+   * file yet.
+   */
+  file?: PreviewFile;
 };
 
 type Style = "paper" | "slides" | "sheet" | "cad" | "image";
@@ -44,10 +70,17 @@ const STYLE_ICON: Record<Style, typeof FileText> = {
 
 const DEFAULT_PAGES: Record<Style, number> = { paper: 4, slides: 6, sheet: 1, cad: 1, image: 1 };
 
+type FileState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; url: string }
+  | { status: "error"; error: string };
+
 export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onClose: () => void }) {
   const style: Style = doc ? styleFor(doc.fileType) : "paper";
   const pages = doc?.pages ?? DEFAULT_PAGES[style];
   const [page, setPage] = useState(1);
+  const [fileState, setFileState] = useState<FileState>({ status: "idle" });
 
   // Reset to the first page when a new document opens (state-during-render
   // pattern — avoids setState-in-effect).
@@ -55,7 +88,41 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
   if (doc !== trackedDoc) {
     setTrackedDoc(doc);
     setPage(1);
+    // A signed URL belongs to exactly one document and expires; carrying one
+    // across a change of document would at best render the wrong file. Set
+    // during render, not in the effect below: the effect only ever writes state
+    // from its async callbacks, which is what keeps it out of a cascading render.
+    setFileState(doc?.file?.inline ? { status: "loading" } : { status: "idle" });
   }
+
+  /**
+   * Mint the signed URL on open. Not on mount, not on hover, not on the list
+   * that produced the row — a link to a private drawing should not exist until
+   * someone asks to look at it.
+   */
+  const inlineFile = doc?.file?.inline ? doc.file : null;
+  useEffect(() => {
+    if (!inlineFile) return;
+    let live = true;
+    inlineFile
+      .getUrl()
+      .then((result) => {
+        if (!live) return;
+        setFileState(
+          result.ok ? { status: "ready", url: result.url } : { status: "error", error: result.error },
+        );
+      })
+      .catch((err: unknown) => {
+        if (!live) return;
+        setFileState({
+          status: "error",
+          error: err instanceof Error && err.message ? err.message : "The file could not be opened.",
+        });
+      });
+    return () => {
+      live = false;
+    };
+  }, [inlineFile]);
 
   useEffect(() => {
     if (!doc) return;
@@ -74,7 +141,21 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
 
   if (!doc) return null;
   const Icon = STYLE_ICON[style];
-  const paged = style === "paper" || style === "slides";
+  const file = doc.file ?? null;
+  // A real file takes over the stage completely: the faux renderers are for
+  // rows that have no bytes, and drawing an imitation of a document we are
+  // holding would be worse than useless.
+  const paged = !file && (style === "paper" || style === "slides");
+
+  async function openFile() {
+    if (!file) return;
+    const result = await file.getUrl();
+    if (!result.ok) {
+      setFileState({ status: "error", error: result.error });
+      return;
+    }
+    window.open(result.url, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <div
@@ -100,7 +181,10 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-sm font-medium text-white transition-colors hover:bg-white/20"
+            onClick={file ? openFile : undefined}
+            disabled={!file}
+            title={file ? "Download" : "No file is stored for this document"}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Download</span>
@@ -121,11 +205,17 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
         className="flex flex-1 items-center justify-center overflow-auto p-4 sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
-        {style === "paper" ? <PaperPreview page={page} /> : null}
-        {style === "slides" ? <SlidesPreview page={page} pages={pages} /> : null}
-        {style === "sheet" ? <SheetPreview /> : null}
-        {style === "cad" ? <CadPreview name={doc.name} /> : null}
-        {style === "image" ? <ImagePreview /> : null}
+        {file ? (
+          <RealFileStage doc={doc} file={file} state={fileState} onDownload={openFile} />
+        ) : (
+          <>
+            {style === "paper" ? <PaperPreview page={page} /> : null}
+            {style === "slides" ? <SlidesPreview page={page} pages={pages} /> : null}
+            {style === "sheet" ? <SheetPreview /> : null}
+            {style === "cad" ? <CadPreview name={doc.name} /> : null}
+            {style === "image" ? <ImagePreview /> : null}
+          </>
+        )}
       </div>
 
       {/* Footer / pager */}
@@ -159,11 +249,90 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
           </>
         ) : (
           <span className="text-[11px] text-white/50">
-            Preview is representative — live rendering arrives with stored files.
+            {file?.inline
+              ? "Showing the stored file. The link expires shortly after this preview closes."
+              : file
+                ? "The stored file is intact; only its format cannot be rendered here."
+                : "Preview is representative — live rendering arrives with stored files."}
           </span>
         )}
       </div>
     </div>
+  );
+}
+
+/* ── The real thing ─────────────────────────────────────────── */
+
+/**
+ * The stage when there ARE bytes.
+ *
+ * Two outcomes, and the second one is the point of this component existing:
+ *
+ *   PDF — hand the signed URL to the browser's own PDF viewer in an `<iframe>`.
+ *         No renderer to ship, no worker to host, and it is the same viewer the
+ *         user already trusts for every other PDF they open.
+ *
+ *   DWG / DXF / RVT — say plainly that the browser cannot render it and offer
+ *         the download. The alternative was a hand-drawn "CAD viewport" with
+ *         the file's name in a fake title block, and showing an architect an
+ *         invented drawing labelled with their own sheet number is worse than
+ *         showing them nothing. See docs/drawings-intake/01-FEASIBILITY.md §5
+ *         for why rendering these is not on the table in this stack.
+ */
+function RealFileStage({
+  doc,
+  file,
+  state,
+  onDownload,
+}: {
+  doc: PreviewDoc;
+  file: PreviewFile;
+  state: FileState;
+  onDownload: () => void;
+}) {
+  if (!file.inline) {
+    return (
+      <div className="max-w-md rounded-xl border border-white/15 bg-white/5 p-8 text-center text-white">
+        <PencilRuler className="mx-auto h-10 w-10 text-white/50" aria-hidden="true" />
+        <p className="mt-4 text-sm font-medium">
+          A {doc.fileType.toUpperCase()} file cannot be shown in a browser
+        </p>
+        <p className="mt-1.5 text-xs leading-relaxed text-white/60">
+          The file is stored and intact — there is simply no way to render this format here.
+          Download it and open it in your CAD application.
+        </p>
+        <button
+          type="button"
+          onClick={onDownload}
+          className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/15 px-4 text-sm font-medium text-white transition-colors hover:bg-white/25"
+        >
+          <Download className="h-4 w-4" />
+          Download {doc.fileType.toUpperCase()}
+        </button>
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="max-w-md rounded-xl border border-white/15 bg-white/5 p-8 text-center text-white">
+        <FileText className="mx-auto h-10 w-10 text-white/50" aria-hidden="true" />
+        <p className="mt-4 text-sm font-medium">This file could not be opened</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-white/60">{state.error}</p>
+      </div>
+    );
+  }
+
+  if (state.status !== "ready") {
+    return <p className="text-sm text-white/60">Opening {doc.name}…</p>;
+  }
+
+  return (
+    <iframe
+      src={state.url}
+      title={doc.name}
+      className="h-full min-h-[60vh] w-full rounded-md border-0 bg-white shadow-2xl"
+    />
   );
 }
 

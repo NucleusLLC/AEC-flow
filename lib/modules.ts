@@ -24,7 +24,13 @@ import {
   FileSignature,
   type LucideIcon,
 } from "lucide-react";
-import { navSections, type NavSection } from "@/lib/nav";
+import {
+  DRAWINGS_AND_DOCUMENTS,
+  DRAWINGS_INTAKE_ITEM,
+  DRAWINGS_REGISTER_ITEM,
+  navSections,
+  type NavSection,
+} from "@/lib/nav";
 
 /** The module version domain — distinct from Estimate/Schedule record versions. */
 export const MODULE_VERSION = "Beta V0.015";
@@ -66,6 +72,17 @@ export interface AppModule {
 const DOC_GENERATOR = { label: "Document Generator", href: "/documents/generate", icon: FileOutput };
 const DOC_REGISTER = { label: "Document Register", href: "/documents/register", icon: FolderArchive };
 const DOC_TEMPLATES = { label: "Templates", href: "/documents/templates", icon: FileStack };
+
+/**
+ * The drawings bin — imported from `lib/nav.ts`, never redeclared here.
+ *
+ * A drawing IS the document a design module produces, so it belongs in the same
+ * section as the document tools rather than in a group of its own. A "Documents"
+ * section that held no drawings is precisely why the shipped register looked to
+ * its owner like it did not exist.
+ */
+const DRAWINGS_REGISTER = DRAWINGS_REGISTER_ITEM;
+const DRAWINGS_INTAKE = DRAWINGS_INTAKE_ITEM;
 
 const DASHBOARD_HREF: Record<ModuleKey, string> = {
   design: "/modules/design",
@@ -122,7 +139,10 @@ const MODULE_1: AppModule = {
       ],
     },
     { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }] },
-    { title: "Documents", items: [DOC_GENERATOR, DOC_REGISTER] },
+    {
+      title: DRAWINGS_AND_DOCUMENTS,
+      items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, DOC_GENERATOR, DOC_REGISTER],
+    },
   ],
 };
 
@@ -149,7 +169,10 @@ const MODULE_2: AppModule = {
         { label: "Material Selection", href: "/materials", icon: Boxes },
       ],
     },
-    { title: "Documents", items: [DOC_GENERATOR, DOC_REGISTER] },
+    {
+      title: DRAWINGS_AND_DOCUMENTS,
+      items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, DOC_GENERATOR, DOC_REGISTER],
+    },
   ],
 };
 
