@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
 import type { PunchListItem, PunchPriority } from "@/lib/ca/types";
 
 type ProjectOption = { id: string; name: string };
@@ -31,10 +32,13 @@ type Values = {
   notes: string;
 };
 
-export function PunchForm({ projects }: { projects: ProjectOption[] }) {
+export function PunchForm({ projects: projectProp }: { projects: ProjectOption[] }) {
+  // Grown when a project is created from the picker below; `projects.find` in
+  // the submit handler must read this, not the prop.
+  const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; item?: PunchListItem; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
-  const { register, handleSubmit } = useForm<Values>({
+  const { register, handleSubmit, control } = useForm<Values>({
     defaultValues: { priority: "MEDIUM" } as Values,
   });
 
@@ -80,15 +84,27 @@ export function PunchForm({ projects }: { projects: ProjectOption[] }) {
         <CardHeader title="Punch List Item" />
         <CardBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelCls}>Project *</label>
-              <select className={inputCls} {...register("projectId", { required: true })}>
-                <option value="">Select a project…</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Was a required select over a list that is empty on a fresh
+                install: "Select a project…" with nothing to select and no error
+                text, so the submit button simply did nothing. Now creatable. */}
+            <Controller
+              control={control}
+              name="projectId"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <ProjectSelect
+                  label="Project *"
+                  projects={projects}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  // No projectNumber: these pages only ever mapped id+name out
+                  // of getProjects(), so adding it here would label the new row
+                  // differently from every other row.
+                  onCreated={(p) => setProjects((prev) => [...prev, { id: p.id, name: p.projectName }])}
+                  labelClassName={labelCls}
+                />
+              )}
+            />
             <div>
               <label className={labelCls}>Location</label>
               <input className={inputCls} placeholder="e.g. Level 8 — Unit 0804" {...register("location")} />

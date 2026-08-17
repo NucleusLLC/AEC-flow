@@ -9,12 +9,17 @@
  * up filed against the wrong job when two projects share a numbering habit, and
  * that error is invisible afterwards: the sheet simply is not where anyone
  * looks for it. Choosing once, deliberately, costs one click per batch.
+ *
+ * WHY THE "NO PROJECTS YET" CARD IS GONE. It read "Create a project first, then
+ * come back here to add its drawing set" — which is a dead end with good manners:
+ * the user has a folder of drawings open and is told to leave, find the projects
+ * screen, and find their way back. The picker creates the project instead.
  */
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FolderOpen } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { DrawingIntake } from "./drawing-intake";
 import { serverIntakeRepository } from "./intake-repository";
 
@@ -34,46 +39,28 @@ export function DrawingIntakeWorkspace({
   storageConnected: boolean;
 }) {
   const router = useRouter();
+  const [projectList, setProjectList] = useState(projects);
   const [projectId, setProjectId] = useState(initialProjectId ?? projects[0]?.id ?? "");
-
-  if (projects.length === 0) {
-    return (
-      <Card>
-        <CardHeader title="No projects yet" subtitle="A drawing has to belong to a project." />
-        <CardBody>
-          <p className="text-sm text-muted">
-            Create a project first, then come back here to add its drawing set.
-          </p>
-        </CardBody>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader title="Project" subtitle="Every sheet in this batch is filed against it." />
         <CardBody>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
-              <FolderOpen className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <label htmlFor="intake-project" className="sr-only">
-              Project
-            </label>
-            <select
-              id="intake-project"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="h-9 min-w-[18rem] rounded-lg border border-border bg-surface px-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.projectNumber} — {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ProjectSelect
+            id="intake-project"
+            projects={projectList}
+            value={projectId}
+            onChange={setProjectId}
+            submitLabel="Create project & file drawings to it"
+            onCreated={(p) =>
+              setProjectList((prev) => [
+                ...prev,
+                { id: p.id, projectNumber: p.projectNumber, name: p.projectName },
+              ])
+            }
+            className="max-w-xl"
+          />
 
           {!storageConnected ? (
             <p className="mt-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
@@ -84,11 +71,17 @@ export function DrawingIntakeWorkspace({
         </CardBody>
       </Card>
 
-      <DrawingIntake
-        projectId={projectId}
-        repository={storageConnected ? serverIntakeRepository : undefined}
-        onSaved={() => router.refresh()}
-      />
+      {/* Withheld until a project exists to file against — the drop zone used to
+          be unreachable in that state anyway, and an upload keyed to an empty
+          projectId would be filed nowhere. This is a one-render wait, not a
+          dead end: the picker above is where the project gets created. */}
+      {projectId ? (
+        <DrawingIntake
+          projectId={projectId}
+          repository={storageConnected ? serverIntakeRepository : undefined}
+          onSaved={() => router.refresh()}
+        />
+      ) : null}
     </div>
   );
 }

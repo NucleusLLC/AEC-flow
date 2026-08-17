@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
 import {
   DISCIPLINES,
   DISCIPLINE_LABEL,
@@ -29,7 +30,7 @@ const field =
 const label = "mb-1 block text-xs font-medium text-muted";
 
 export function DeliverableForm({
-  projects,
+  projects: projectProp,
   mode,
   initial,
   defaultDiscipline,
@@ -42,6 +43,8 @@ export function DeliverableForm({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Grown when a project is created from the picker.
+  const [projects, setProjects] = useState(projectProp);
 
   const [number, setNumber] = useState(initial?.number ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -142,15 +145,19 @@ export function DeliverableForm({
               ))}
             </select>
           </div>
-          <div>
-            <label className={label}>Project</label>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={field}>
-              <option value="">— None —</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+          {/* Optional — a deliverable need not belong to a project — so "— None —"
+              stays a real choice. It is still creatable: wanting to file this
+              against a project that does not exist yet is the common case, and
+              leaving is the only thing the old select allowed. */}
+          <ProjectSelect
+            label="Project"
+            projects={projects}
+            value={projectId}
+            onChange={setProjectId}
+            onCreated={(p) => setProjects((prev) => [...prev, { id: p.id, name: p.projectName }])}
+            allowEmpty
+            placeholder="— None —"
+          />
           <div>
             <label className={label}>Issued to</label>
             <input value={issuedTo} onChange={(e) => setIssuedTo(e.target.value)} className={field} placeholder="Contractor / client" />

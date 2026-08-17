@@ -61,7 +61,11 @@ export default async function EditMeetingPage({ params }: PageProps) {
       </div>
       <MeetingForm
         mode="edit"
-        projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        projects={projects.map((p) => ({
+          id: p.id,
+          name: p.name,
+          projectNumber: p.projectNumber,
+        }))}
         users={team.map((u) => ({ name: u.name }))}
         initial={initial}
         meetingId={meeting.id}

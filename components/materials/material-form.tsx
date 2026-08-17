@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { formatCurrency } from "@/lib/format";
 import { materialTotal } from "@/lib/materials/calc";
 import {
@@ -26,7 +27,7 @@ const field =
 const label = "mb-1 block text-xs font-medium text-muted";
 
 export function MaterialForm({
-  projects,
+  projects: projectProp,
   purchaseOrders,
   mode,
   initial,
@@ -39,6 +40,8 @@ export function MaterialForm({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Grown when a project is created from the picker.
+  const [projects, setProjects] = useState(projectProp);
 
   const [category, setCategory] = useState(initial?.category ?? MATERIAL_CATEGORIES[0]);
   const [productName, setProductName] = useState(initial?.productName ?? "");
@@ -148,15 +151,19 @@ export function MaterialForm({
       <Card>
         <CardHeader title="Selection" />
         <CardBody className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className={label}>Project</label>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={field}>
-              <option value="">— None —</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+          {/* Optional — a material selection need not belong to a project — so "— None —"
+              stays a real choice. It is still creatable: wanting to file this
+              against a project that does not exist yet is the common case, and
+              leaving is the only thing the old select allowed. */}
+          <ProjectSelect
+            label="Project"
+            projects={projects}
+            value={projectId}
+            onChange={setProjectId}
+            onCreated={(p) => setProjects((prev) => [...prev, { id: p.id, name: p.projectName }])}
+            allowEmpty
+            placeholder="— None —"
+          />
           <div>
             <label className={label}>Status</label>
             <select value={status} onChange={(e) => setStatus(e.target.value as MaterialSelectionStatus)} className={field}>

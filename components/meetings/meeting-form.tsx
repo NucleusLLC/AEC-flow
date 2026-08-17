@@ -3,9 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { Plus, Trash2, AlertCircle } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
+import { MemberSelect } from "@/components/team/member-select";
 import {
   MEETING_TYPE_LABEL,
   ACTION_STATUS_LABEL,
@@ -72,14 +74,14 @@ function defaults(authorFallback: string): MeetingFormValues {
 
 export function MeetingForm({
   mode,
-  projects,
-  users,
+  projects: projectProp,
+  users: userProp,
   initial,
   meetingId,
   backHref,
 }: {
   mode: "new" | "edit";
-  projects: { id: string; name: string }[];
+  projects: { id: string; name: string; projectNumber?: string }[];
   users: { name: string }[];
   initial?: MeetingFormValues;
   meetingId?: string;
@@ -88,13 +90,18 @@ export function MeetingForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  // Both lists grow when a record is created from its picker. Held here rather
+  // than in the pickers so the author and every action-item assignee see the
+  // same roster — a member added on one row is immediately pickable on the next.
+  const [projects, setProjects] = useState(projectProp);
+  const [users, setUsers] = useState(userProp);
   const {
     register,
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<MeetingFormValues>({
-    defaultValues: initial ?? defaults(users[0]?.name ?? ""),
+    defaultValues: initial ?? defaults(userProp[0]?.name ?? ""),
   });
 
   const actionItems = useFieldArray({ control, name: "actionItems" });
@@ -170,35 +177,53 @@ export function MeetingForm({
                 />
                 {errors.title ? <p className={errCls}>{errors.title.message}</p> : null}
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Project and author were the two fields that could not be
+                  satisfied on a fresh install: "Select a project" was required
+                  with nothing to select, and the author select rendered empty
+                  and blocked submit with no message at all. Both are now
+                  creatable pickers, wired through Controller because the pickers
+                  are controlled while the rest of this form is registered. */}
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelCls}>Project</label>
-                  <select
-                    className={inputCls}
-                    defaultValue=""
-                    {...register("projectId", { required: "Select a project" })}
-                  >
-                    <option value="" disabled>
-                      Select a project…
-                    </option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={control}
+                    name="projectId"
+                    rules={{ required: "Select a project, or add one" }}
+                    render={({ field }) => (
+                      <ProjectSelect
+                        label="Project"
+                        projects={projects}
+                        value={field.value}
+                        onChange={field.onChange}
+                        submitLabel="Create project & minute it"
+                        onCreated={(p) =>
+                          setProjects((prev) => [
+                            ...prev,
+                            { id: p.id, projectNumber: p.projectNumber, name: p.projectName },
+                          ])
+                        }
+                        labelClassName={labelCls}
+                      />
+                    )}
+                  />
                   {errors.projectId ? <p className={errCls}>{errors.projectId.message}</p> : null}
                 </div>
-                <div>
-                  <label className={labelCls}>Author</label>
-                  <select className={inputCls} {...register("author", { required: true })}>
-                    {users.map((u) => (
-                      <option key={u.name} value={u.name}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Controller
+                  control={control}
+                  name="author"
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <MemberSelect
+                      label="Author"
+                      by="name"
+                      members={users.map((u) => ({ id: u.name, name: u.name }))}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onCreated={(m) => setUsers((prev) => [...prev, { name: m.name }])}
+                      labelClassName={labelCls}
+                    />
+                  )}
+                />
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
@@ -302,16 +327,27 @@ export function MeetingForm({
                     placeholder="Description"
                     {...register(`actionItems.${i}.description` as const, { required: true })}
                   />
-                  <select
-                    className={`${inputCls} col-span-6 sm:col-span-3`}
-                    {...register(`actionItems.${i}.assignee` as const)}
-                  >
-                    {users.map((u) => (
-                      <option key={u.name} value={u.name}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
+                  {/* Assignee was never required, so an empty roster silently
+                      posted "" and the server reassigned the action to whoever
+                      was most senior — the wrong person, invisibly. */}
+                  <Controller
+                    control={control}
+                    name={`actionItems.${i}.assignee` as const}
+                    render={({ field }) => (
+                      <MemberSelect
+                        label="Assignee"
+                        by="name"
+                        members={users.map((u) => ({ id: u.name, name: u.name }))}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onCreated={(m) => setUsers((prev) => [...prev, { name: m.name }])}
+                        allowEmpty
+                        placeholder="Unassigned"
+                        className="col-span-6 sm:col-span-3"
+                        labelClassName="sr-only"
+                      />
+                    )}
+                  />
                   <input
                     type="date"
                     className={`${inputCls} col-span-4 sm:col-span-2`}

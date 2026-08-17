@@ -15,6 +15,8 @@ import {
 } from "@/lib/data/projects.types";
 import { saveProject } from "@/app/(app)/projects/actions";
 import { getSystemCurrency } from "@/lib/format";
+import { ClientSelect } from "@/components/clients/client-select";
+import { MemberSelect } from "@/components/team/member-select";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -45,8 +47,10 @@ export type ProjectFormValues = {
 };
 
 export function ProjectForm({
-  clients,
-  managers,
+  // Aliased: the live, growable lists live in state below, and shadowing the
+  // props with them would make it easy to read the stale one by accident.
+  clients: clientNames,
+  managers: managerNames,
   mode = "new",
   initial,
   projectId,
@@ -63,13 +67,23 @@ export function ProjectForm({
   const [submitting, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Client and manager are the two fields that used to fail on an empty roster:
+  // the selects rendered with no options at all, posted "", and the server came
+  // back with `Client not found: ""`. They are now creatable pickers, which have
+  // to be controlled, so these two values come from state rather than FormData.
+  // The rest of the form stays uncontrolled — no reason to churn it.
+  const [clients, setClients] = useState<string[]>(clientNames);
+  const [managers, setManagers] = useState<string[]>(managerNames);
+  const [clientName, setClientName] = useState(initial?.clientName ?? clientNames[0] ?? "");
+  const [manager, setManager] = useState(initial?.manager ?? managerNames[0] ?? "");
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const payload: ProjectWriteInput = {
       name: String(fd.get("name") ?? ""),
-      clientName: String(fd.get("clientName") ?? ""),
-      manager: String(fd.get("manager") ?? ""),
+      clientName,
+      manager,
       status: (fd.get("status") as ProjectStatus) || undefined,
       priority: (fd.get("priority") as Priority) || undefined,
       disciplines: fd.getAll("disciplines").map((d) => String(d) as Discipline),
@@ -127,31 +141,35 @@ export function ProjectForm({
             <input id="name" name="name" required className={inputClass} placeholder="e.g. Marina Heights Tower — Phase 3" defaultValue={initial?.name} />
           </div>
 
-          <div>
-            <label className={labelClass} htmlFor="clientName">
-              Client
-            </label>
-            <select id="clientName" name="clientName" className={inputClass} defaultValue={initial?.clientName ?? clients[0] ?? ""}>
-              {clients.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Both submit display NAMES, which the server resolves — hence
+              `by="name"`. See `resolveClientId` / `resolveManagerId`. */}
+          <ClientSelect
+            id="clientName"
+            label="Client"
+            by="name"
+            clients={clients.map((c) => ({ id: c, name: c }))}
+            value={clientName}
+            onChange={setClientName}
+            onCreated={(c) => setClients((prev) => [...prev, c.name])}
+            labelClassName={labelClass}
+          />
 
-          <div>
-            <label className={labelClass} htmlFor="manager">
-              Project manager
-            </label>
-            <select id="manager" name="manager" className={inputClass} defaultValue={initial?.manager ?? managers[0] ?? ""}>
-              {managers.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          <MemberSelect
+            id="manager"
+            label="Project manager"
+            by="name"
+            members={managers.map((m) => ({ id: m, name: m }))}
+            value={manager}
+            onChange={setManager}
+            onCreated={(m) => setManagers((prev) => [...prev, m.name])}
+            // This list is filtered to MANAGER/DIRECTOR by the server page, so a
+            // member added here must be a MANAGER to show up in it again.
+            defaultRole="MANAGER"
+            allowEmpty
+            placeholder="Most senior user"
+            hint="Left unset, the most senior user is assigned."
+            labelClassName={labelClass}
+          />
 
           <div>
             <label className={labelClass} htmlFor="status">

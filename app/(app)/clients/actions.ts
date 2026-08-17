@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, updateClient } from "@/lib/data/clients";
+import { createClient, updateClient, getClients } from "@/lib/data/clients";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { ClientWriteInput } from "@/lib/data/clients.types";
 
@@ -42,4 +42,20 @@ export async function saveClient(
     const error = e instanceof Error ? e.message : "Failed to save client.";
     return { ok: false, error };
   }
+}
+
+/**
+ * Id + name of every client, for pickers that must offer client creation but
+ * whose host cannot hand them the list.
+ *
+ * WHY AN ACTION AND NOT A PROP. `ProjectSelect` has to nest a client picker
+ * inside its "add a project" form, and its hosts include the Schedule and
+ * Estimates panels, which are protected files — adding a required prop there is
+ * not available to us. Reading through an action keeps the fetch server-side,
+ * company-scoped by the same `getClients()` every page uses, and costs nothing
+ * until a user actually opens a create form.
+ */
+export async function listClientOptions(): Promise<{ id: string; name: string }[]> {
+  const clients = await getClients();
+  return clients.map((c) => ({ id: c.id, name: c.name }));
 }

@@ -3,9 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
 import { Plus, Trash2, AlertCircle, ChevronUp, ChevronDown, Eye } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
+import { ClientSelect } from "@/components/clients/client-select";
+import { MemberSelect } from "@/components/team/member-select";
 import { SectionHeader } from "@/components/proposals/ui";
 import { ProposalPreviewModal } from "@/components/proposals/proposal-preview";
 import {
@@ -42,7 +44,6 @@ export type ProposalFormValues = {
   milestones: MilestoneForm[];
 };
 
-const OWNERS = ["Layla Hassan", "Omar Farouk", "Sara Khan", "Ahmed Nabil"];
 /** Other codes offered alongside the System Currency, which always leads the list. */
 const OTHER_CURRENCIES = ["AED", "USD", "EUR", "GBP"];
 
@@ -51,11 +52,11 @@ const inputCls =
 const labelCls = "mb-1 block text-xs font-medium text-muted";
 const errCls = "mt-1 text-xs text-red-600";
 
-function defaults(): ProposalFormValues {
+function defaults(ownerFallback: string): ProposalFormValues {
   return {
     title: "",
     clientId: "",
-    owner: OWNERS[0],
+    owner: ownerFallback,
     status: "DRAFT",
     currency: getSystemCurrency(),
     validUntil: "",
@@ -70,13 +71,20 @@ function defaults(): ProposalFormValues {
 
 export function ProposalForm({
   mode,
-  clients,
+  clients: clientProp,
+  owners: ownerProp = [],
   proposalRef,
   initial,
   backHref,
 }: {
   mode: "new" | "edit";
   clients: { id: string; name: string }[];
+  /**
+   * Real team members, by name — `resolveOwnerId` matches on `User.name`.
+   * Optional with an empty default so existing call sites keep compiling; every
+   * one of them passes it.
+   */
+  owners?: { name: string }[];
   proposalRef: string;
   initial?: ProposalFormValues;
   backHref: string;
@@ -85,13 +93,18 @@ export function ProposalForm({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [preview, setPreview] = useState<ProposalRecord | null>(null);
+  // Both lists grow when a record is created from its picker.
+  const [clients, setClients] = useState(clientProp);
+  const [owners, setOwners] = useState(ownerProp);
   const {
     register,
     control,
     handleSubmit,
     getValues,
     formState: { errors },
-  } = useForm<ProposalFormValues>({ defaultValues: initial ?? defaults() });
+  } = useForm<ProposalFormValues>({
+    defaultValues: initial ?? defaults(ownerProp[0]?.name ?? ""),
+  });
 
   // Assemble a full record from the current form state so the live preview
   // renders exactly the document the client will receive.
@@ -230,31 +243,48 @@ export function ProposalForm({
                 />
                 {errors.title ? <p className={errCls}>{errors.title.message}</p> : null}
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Client was a hard stop: "Select a client" was required with an
+                  empty list and no way out. Owner was worse than a dead end — it
+                  offered four hard-coded demo names that almost never exist in
+                  the tenant, so `resolveOwnerId` silently reassigned the
+                  proposal to whoever was most senior. Both now list real records
+                  and can create one. Wired through Controller because the
+                  pickers are controlled and this form is otherwise registered. */}
+              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelCls}>Client</label>
-                  <select className={inputCls} defaultValue="" {...register("clientId", { required: "Select a client" })}>
-                    <option value="" disabled>
-                      Select a client…
-                    </option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={control}
+                    name="clientId"
+                    rules={{ required: "Select a client, or add one" }}
+                    render={({ field }) => (
+                      <ClientSelect
+                        label="Client"
+                        clients={clients}
+                        value={field.value}
+                        onChange={field.onChange}
+                        onCreated={(c) => setClients((prev) => [...prev, c])}
+                        labelClassName={labelCls}
+                      />
+                    )}
+                  />
                   {errors.clientId ? <p className={errCls}>{errors.clientId.message}</p> : null}
                 </div>
-                <div>
-                  <label className={labelCls}>Owner</label>
-                  <select className={inputCls} {...register("owner", { required: true })}>
-                    {OWNERS.map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Controller
+                  control={control}
+                  name="owner"
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <MemberSelect
+                      label="Owner"
+                      by="name"
+                      members={owners.map((o) => ({ id: o.name, name: o.name }))}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onCreated={(m) => setOwners((prev) => [...prev, { name: m.name }])}
+                      labelClassName={labelCls}
+                    />
+                  )}
+                />
               </div>
               <div>
                 <label className={labelCls}>Scope summary</label>
