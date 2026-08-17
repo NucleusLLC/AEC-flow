@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { changeOrderBreakdown, revisedContractValue } from "@/lib/ca/calc";
 import { CHANGE_ORDER_STATUS_LABEL } from "@/lib/ca/labels";
 import type { ChangeOrder, ChangeOrderStatus } from "@/lib/ca/types";
@@ -57,7 +58,7 @@ function MoneyLine({ label, value, currency, strong }: { label: string; value: n
 }
 
 export function ChangeOrderForm({
-  projects,
+  projects: projectProp,
   mode,
   initial,
   changeOrderId,
@@ -68,6 +69,9 @@ export function ChangeOrderForm({
   changeOrderId?: string;
 }) {
   const router = useRouter();
+  // Grown when a project is created from the picker below; `projects.find` in
+  // the submit handler must read this, not the prop.
+  const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; co?: ChangeOrder; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -184,24 +188,32 @@ export function ChangeOrderForm({
             <CardHeader title="Change Order" subtitle="Scope, reason and parties" />
             <CardBody className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Project *</label>
-                  <select
-                    className={inputCls}
-                    {...register("projectId", { required: true })}
-                    onChange={(e) => {
-                      const p = projects.find((x) => x.id === e.target.value);
-                      if (p) setValue("originalContractValue", p.value);
-                    }}
-                  >
-                    <option value="">Select a project…</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Was a required select over a list that is empty on a fresh
+                    install, with no error text — the submit button simply did
+                    nothing. Now creatable. Selecting a project still seeds the
+                    original contract value; a project created here has none
+                    yet, so that stays at whatever the user typed. */}
+                <Controller
+                  control={control}
+                  name="projectId"
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <ProjectSelect
+                      label="Project *"
+                      projects={projects}
+                      value={field.value ?? ""}
+                      onChange={(next) => {
+                        field.onChange(next);
+                        const p = projects.find((x) => x.id === next);
+                        if (p) setValue("originalContractValue", p.value);
+                      }}
+                      onCreated={(p) =>
+                        setProjects((prev) => [...prev, { id: p.id, name: p.projectName, value: 0 }])
+                      }
+                      labelClassName={labelCls}
+                    />
+                  )}
+                />
                 <div>
                   <label className={labelCls}>Requested by</label>
                   <input className={inputCls} {...register("requestedBy")} />

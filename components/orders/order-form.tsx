@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/orders.types";
 import { saveOrder } from "@/app/(app)/orders/actions";
 import { getSystemCurrency } from "@/lib/format";
+import { ClientSelect } from "@/components/clients/client-select";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -38,7 +39,8 @@ export type OrderFormValues = {
 };
 
 export function OrderForm({
-  clients,
+  // Aliased — the growable list lives in state, see `clients` below.
+  clients: clientNames,
   mode = "new",
   initial,
 }: {
@@ -49,6 +51,11 @@ export function OrderForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // The client select used to render with no options on an empty roster, post
+  // clientName: "", and only then fail with the server's `Unknown client: ` —
+  // after the user had filled in the whole order. Now creatable, so controlled.
+  const [clients, setClients] = useState<string[]>(clientNames);
+  const [clientName, setClientName] = useState(initial?.clientName ?? clientNames[0] ?? "");
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -57,7 +64,7 @@ export function OrderForm({
       // In edit mode, carry the unique business key so updateOrder can locate the row.
       orderNumber: mode === "edit" ? (initial?.orderNumber ?? null) : null,
       title: String(fd.get("title") ?? ""),
-      clientName: String(fd.get("clientName") ?? ""),
+      clientName,
       serviceType: (fd.get("serviceType") as string) || null,
       fee: Number(fd.get("fee")) || 0,
       status: ((fd.get("status") as OrderStatus) || "DRAFT"),
@@ -109,18 +116,17 @@ export function OrderForm({
             </label>
             <input id="title" name="title" required className={inputClass} placeholder="e.g. Marina Heights Tower — Phase 3" defaultValue={initial?.title ?? ""} />
           </div>
-          <div>
-            <label className={labelClass} htmlFor="clientName">
-              Client
-            </label>
-            <select id="clientName" name="clientName" className={inputClass} defaultValue={initial?.clientName ?? clients[0] ?? ""}>
-              {clients.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* `saveOrder` resolves the client by NAME, hence `by="name"`. */}
+          <ClientSelect
+            id="clientName"
+            label="Client"
+            by="name"
+            clients={clients.map((c) => ({ id: c, name: c }))}
+            value={clientName}
+            onChange={setClientName}
+            onCreated={(c) => setClients((prev) => [...prev, c.name])}
+            labelClassName={labelClass}
+          />
           <div>
             <label className={labelClass} htmlFor="serviceType">
               Service type

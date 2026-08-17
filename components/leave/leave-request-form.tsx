@@ -11,6 +11,7 @@ import {
   type LeaveWriteInput,
 } from "@/lib/data/leave.types";
 import { saveLeaveRequest } from "@/app/(app)/leave/actions";
+import { MemberSelect } from "@/components/team/member-select";
 
 export type LeaveFormInitial = {
   id: string;
@@ -44,7 +45,8 @@ function workingDaysBetween(start: string, end: string): number {
 }
 
 export function LeaveRequestForm({
-  members,
+  // Aliased — the growable list lives in state, see `members` below.
+  members: memberNames,
   mode = "new",
   initial,
 }: {
@@ -58,13 +60,18 @@ export function LeaveRequestForm({
   const [start, setStart] = useState(initial?.startDate ?? "");
   const [end, setEnd] = useState(initial?.endDate ?? "");
   const days = workingDaysBetween(start, end);
+  // The member select used to render with no options on an empty roster and post
+  // userName: "", which only failed once the server rejected it. It is now a
+  // creatable picker, so it has to be controlled.
+  const [members, setMembers] = useState<string[]>(memberNames);
+  const [userName, setUserName] = useState(initial?.userName ?? memberNames[0] ?? "");
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const payload: LeaveWriteInput = {
       ...(mode === "edit" && initial ? { id: initial.id } : {}),
-      userName: String(fd.get("userName") ?? ""),
+      userName,
       type: (fd.get("type") as LeaveType) ?? "ANNUAL",
       status: mode === "edit" && initial ? initial.status : "PENDING",
       startDate: start,
@@ -103,23 +110,17 @@ export function LeaveRequestForm({
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
         <h3 className="mb-4 text-sm font-semibold text-fg">Leave request</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelClass} htmlFor="userName">
-              Team member
-            </label>
-            <select
-              id="userName"
-              name="userName"
-              className={inputClass}
-              defaultValue={initial?.userName ?? members[0] ?? ""}
-            >
-              {members.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Leave is filed against a member's display NAME, hence `by="name"`. */}
+          <MemberSelect
+            id="userName"
+            label="Team member"
+            by="name"
+            members={members.map((m) => ({ id: m, name: m }))}
+            value={userName}
+            onChange={setUserName}
+            onCreated={(m) => setMembers((prev) => [...prev, m.name])}
+            labelClassName={labelClass}
+          />
 
           <div>
             <label className={labelClass} htmlFor="type">

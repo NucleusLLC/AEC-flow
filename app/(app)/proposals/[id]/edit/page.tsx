@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { ProposalForm, type ProposalFormValues } from "@/components/proposals/proposal-form";
 import { getProposal } from "@/lib/data/proposals";
 import { getClients } from "@/lib/data/clients";
+import { getTeam } from "@/lib/data/team";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -16,7 +17,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function EditProposalPage({ params }: PageProps) {
   const { id } = await params;
-  const [proposal, clients] = await Promise.all([getProposal(id), getClients()]);
+  const [proposal, clients, team] = await Promise.all([
+    getProposal(id),
+    getClients(),
+    getTeam(),
+  ]);
   if (!proposal) notFound();
 
   const initial: ProposalFormValues = {
@@ -63,6 +68,7 @@ export default async function EditProposalPage({ params }: PageProps) {
       <ProposalForm
         mode="edit"
         clients={clients.map((c) => ({ id: c.id, name: c.name }))}
+        owners={team.map((u) => ({ name: u.name }))}
         proposalRef={proposal.refNumber}
         initial={initial}
         backHref={backHref}

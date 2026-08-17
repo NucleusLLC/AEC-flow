@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useForm, useFieldArray, type UseFormRegister } from "react-hook-form";
+import { useForm, useFieldArray, Controller, type UseFormRegister } from "react-hook-form";
 import { Check, AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
 import type { CaReport, CaReportType } from "@/lib/ca/types";
 
@@ -59,12 +60,15 @@ function TextField({
 }
 
 export function ReportForm({
-  projects,
+  projects: projectProp,
   defaultType = "WEEKLY",
 }: {
   projects: ProjectOption[];
   defaultType?: CaReportType;
 }) {
+  // Grown when a project is created from the picker below; `projects.find` in
+  // the submit handler must read this, not the prop.
+  const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; report?: CaReport; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const { register, handleSubmit, control } = useForm<Values>({
@@ -123,15 +127,24 @@ export function ReportForm({
         <CardHeader title="Report Header" />
         <CardBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelCls}>Project *</label>
-              <select className={inputCls} {...register("projectId", { required: true })}>
-                <option value="">Select a project…</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Was a required select over a list that is empty on a fresh
+                install, with no error text — the submit button simply did
+                nothing. Now creatable. */}
+            <Controller
+              control={control}
+              name="projectId"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <ProjectSelect
+                  label="Project *"
+                  projects={projects}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onCreated={(p) => setProjects((prev) => [...prev, { id: p.id, name: p.projectName }])}
+                  labelClassName={labelCls}
+                />
+              )}
+            />
             <div>
               <label className={labelCls}>Report type</label>
               <select className={inputCls} {...register("reportType")}>

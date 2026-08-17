@@ -9,7 +9,11 @@ export const metadata: Metadata = { title: "New Minutes · AEC-flow" };
 
 export default async function NewMeetingPage() {
   const [projects, team] = await Promise.all([getProjects(), getTeam()]);
-  const projectOptions = projects.map((p) => ({ id: p.id, name: p.name }));
+  const projectOptions = projects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    projectNumber: p.projectNumber,
+  }));
   const users = team.map((u) => ({ name: u.name }));
 
   return (

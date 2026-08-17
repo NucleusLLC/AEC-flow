@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { ProposalForm } from "@/components/proposals/proposal-form";
 import { getProposals } from "@/lib/data/proposals";
 import { getClients } from "@/lib/data/clients";
+import { getTeam } from "@/lib/data/team";
 
 export const metadata: Metadata = { title: "New Proposal · AEC-flow" };
 
@@ -28,9 +29,16 @@ function nextRef(refs: string[]): string {
 }
 
 export default async function NewProposalPage() {
-  const [proposals, clients] = await Promise.all([getProposals(), getClients()]);
+  const [proposals, clients, team] = await Promise.all([
+    getProposals(),
+    getClients(),
+    getTeam(),
+  ]);
   const ref = nextRef(proposals.map((p) => p.refNumber));
   const clientOptions = clients.map((c) => ({ id: c.id, name: c.name }));
+  // Real team members: the form used to offer four hard-coded demo names, and
+  // resolveOwnerId quietly ignored whichever one was picked.
+  const owners = team.map((u) => ({ name: u.name }));
 
   return (
     <div className="w-full space-y-6">
@@ -48,7 +56,13 @@ export default async function NewProposalPage() {
           <span className="font-mono text-fg">{ref}</span>.
         </p>
       </div>
-      <ProposalForm mode="new" clients={clientOptions} proposalRef={ref} backHref="/proposals" />
+      <ProposalForm
+        mode="new"
+        clients={clientOptions}
+        owners={owners}
+        proposalRef={ref}
+        backHref="/proposals"
+      />
     </div>
   );
 }
