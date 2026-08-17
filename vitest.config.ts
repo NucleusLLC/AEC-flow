@@ -52,6 +52,12 @@ export default defineConfig({
       // Password policy + the password-management role gate: named file, same
       // reason as those above. Pure module — no Prisma, no session, no bcrypt.
       "lib/password-policy.test.ts",
+      // The findUnique tenant-scope tripwire: a static scan of lib/ and app/ for a
+      // tenant-model findUnique whose `select` omits companyId (which makes the
+      // extension's row-guard reject every row for every signed-in user). Named
+      // file, same reason as those above — it reads source off disk, so it needs
+      // no database and belongs in this pure-unit suite.
+      "lib/tenant-scope-findunique.test.ts",
     ],
     environment: "node",
   },

@@ -120,7 +120,13 @@ export async function saveSchedule(input: SaveScheduleInput): Promise<{ id: stri
     ...(input.config !== undefined ? { config: input.config as Prisma.InputJsonValue } : {}),
   };
   const saved = await prisma.$transaction(async (tx) => {
-    const existing = await tx.projectSchedule.findUnique({
+    // findFirst, NOT findUnique. Behaviour-preserving fix, not a redesign: the
+    // tenant extension's findUnique guard reads `companyId` off the returned row,
+    // and a `select` of just `id` leaves it undefined — so for a signed-in user
+    // this read came back null, the upsert took the CREATE branch below, and the
+    // save died on projectId's unique index. findFirst puts the company scope in
+    // the WHERE instead; `projectId` is unique, so it is the same single row.
+    const existing = await tx.projectSchedule.findFirst({
       where: { projectId: input.projectId },
       select: { id: true },
     });

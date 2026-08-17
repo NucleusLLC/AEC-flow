@@ -89,6 +89,11 @@ export async function getProjectDrawings(projectId: string): Promise<Drawing[]> 
 
 /** One row, or null when it does not exist or belongs to another company. */
 export async function getDrawing(id: string): Promise<Drawing | null> {
-  const row = await prisma.drawing.findUnique({ where: { id }, select: SELECT });
+  // findFirst, NOT findUnique. The tenant extension injects `companyId` into a
+  // findFirst WHERE; for findUnique it can only inspect the ROW that comes back,
+  // and SELECT above omits `companyId` — so the guard would compare `undefined`
+  // to the company id and return null for every signed-in user. `id` is still
+  // unique, so this returns the same single row.
+  const row = await prisma.drawing.findFirst({ where: { id }, select: SELECT });
   return row ? toDrawing(row) : null;
 }

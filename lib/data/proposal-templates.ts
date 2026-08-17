@@ -73,7 +73,12 @@ export async function updateTemplate(id: string, input: TemplateInput): Promise<
 }
 
 export async function duplicateTemplate(id: string): Promise<ProposalTemplate> {
-  const src = await prisma.proposalTemplate.findUnique({
+  // findFirst, NOT findUnique. The tenant extension's findUnique guard reads
+  // `companyId` off the returned row; this narrow `select` leaves it undefined, so
+  // for a signed-in user the guard rejected every row and "Duplicate" always failed
+  // with "Template not found." findFirst puts the company scope in the WHERE, and
+  // `id` is unique, so it is the same single row.
+  const src = await prisma.proposalTemplate.findFirst({
     where: { id },
     select: { name: true, discipline: true, content: true },
   });

@@ -166,7 +166,12 @@ async function resolveClientId(input: CostEstimate): Promise<string | null> {
 
   for (const pid of [input.projectId, input.id]) {
     if (!pid) continue;
-    const project = await prisma.project.findUnique({ where: { id: pid }, select: { clientId: true } });
+    // findFirst, NOT findUnique. Behaviour-preserving fix: the tenant extension's
+    // findUnique guard reads `companyId` off the returned row, which a `select` of
+    // just `clientId` leaves undefined — so for a signed-in user this always read
+    // null and the estimate→client link never healed. findFirst puts the company
+    // scope in the WHERE; `id` is unique, so it is the same single row.
+    const project = await prisma.project.findFirst({ where: { id: pid }, select: { clientId: true } });
     if (project?.clientId) return project.clientId;
   }
 
@@ -197,7 +202,13 @@ async function resolveClientId(input: CostEstimate): Promise<string | null> {
  */
 async function assertUnlocked(id: string | undefined): Promise<void> {
   if (!id) return;
-  const row = await prisma.costEstimate.findUnique({ where: { id }, select: { locked: true } });
+  // findFirst, NOT findUnique. Behaviour-preserving fix, and the highest-stakes one
+  // in this file: the tenant extension's findUnique guard reads `companyId` off the
+  // returned row, which a `select` of just `locked` leaves undefined — so for a
+  // signed-in user this read came back null, `row?.locked` was falsy, and the lock
+  // gate below never fired. findFirst puts the company scope in the WHERE; `id` is
+  // unique, so it is the same single row.
+  const row = await prisma.costEstimate.findFirst({ where: { id }, select: { locked: true } });
   if (row?.locked) throw new Error("This version is locked. Unlock it before making changes.");
 }
 
