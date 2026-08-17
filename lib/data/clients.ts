@@ -150,7 +150,12 @@ export async function updateClient(input: ClientWriteInput): Promise<{ id: strin
   const id = input.id;
   if (!id) throw new Error("updateClient requires an id.");
   await prisma.$transaction(async (tx) => {
-    const existing = await tx.client.findUnique({ where: { id }, select: { id: true } });
+    // findFirst, NOT findUnique — the tenant extension applies inside a
+    // $transaction too, and its findUnique guard reads `companyId` off the
+    // returned row. A `select` of just `id` leaves that undefined, so the guard
+    // rejected every row and this threw "not found" for every signed-in user.
+    // findFirst puts the company scope in the WHERE; `id` is still unique.
+    const existing = await tx.client.findFirst({ where: { id }, select: { id: true } });
     if (!existing) throw new Error(`Client ${id} not found.`);
     await tx.clientAddress.deleteMany({ where: { clientId: id, isPrimary: true } });
     await tx.client.update({

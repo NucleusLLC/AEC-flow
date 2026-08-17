@@ -29,6 +29,10 @@ export const authOptions: NextAuthOptions = {
         const password = credentials?.password;
         if (!email || !password) return null;
 
+        // DELIBERATELY UNSCOPED, and must stay that way. This runs BEFORE any
+        // session exists — it is what establishes which company the caller belongs
+        // to. `User` is not in TENANT_MODELS, so the tenant extension does not
+        // touch this call; adding a company filter here would break sign-in.
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;
         if (user.status === "INACTIVE") return null;

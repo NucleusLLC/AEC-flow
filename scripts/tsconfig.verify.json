@@ -1,0 +1,21 @@
+{
+  // ts-node/tsx config for scripts/verify-tenant-scope.ts.
+  //
+  // Identical to scripts/tsconfig.json except that "next-auth" is mapped to a shim
+  // (the same technique the inherited config already uses for "server-only"), so the
+  // script can run WITH a company on the session and therefore exercise the tenant
+  // extension's findUnique row-guard. See scripts/next-auth-session-shim.ts.
+  //
+  // Every other verify script keeps using scripts/tsconfig.json and stays unscoped.
+  //
+  // `paths` REPLACES rather than merges, so all three entries are restated. They are
+  // relative to the baseUrl inherited from the repo-root tsconfig.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"],
+      "server-only": ["./scripts/server-only-shim.ts"],
+      "next-auth": ["./scripts/next-auth-session-shim.ts"]
+    }
+  }
+}
