@@ -212,6 +212,12 @@ body,
  * than by convention. The only other blurred element is the Shuffle chip, a
  * sibling of the cards rather than a descendant, which shares these knobs.
  *
+ * AND IT IS NEVER ON THE CARD ITSELF. `backdrop-filter` creates a stacking
+ * context, which turned every card into a trap that an open dropdown could not
+ * escape. The blur is painted on `.card-surface::before` instead; the card
+ * carries only tint, hairline and shadow. The full reasoning, and the list of
+ * properties that would silently re-create the trap, is on that rule below.
+ *
  * The corner radius stays on the app's own `--radius-card` (14px) rather than
  * the 16px of the reference this treatment came from — a card is a card.
  */
@@ -337,17 +343,106 @@ body,
   );
 }
 
-[data-dashboard-bg="on"] .card-surface,
-.dashboard-bg-chip {
+/*
+ * THE BLUR NEVER TOUCHES THE CARD — read this before moving it back.
+ *
+ * `backdrop-filter` creates a STACKING CONTEXT on whatever carries it. When it
+ * was on `.card-surface` itself, every card became one, and an absolutely
+ * positioned dropdown inside a card could no longer compete with the rest of
+ * the page: its z-index was sealed inside its own card, and any later sibling
+ * card — also a stacking context — simply painted over it. The Estimates
+ * toolbar is a <Card>, so its Print Control panel opened *behind* the cost grid
+ * and read as a dead button. A stacking context cannot be escaped from the
+ * inside: no z-index on the panel, and none on the card, can lift a descendant
+ * past a context created above it. That was tried and reverted (b8639f7).
+ *
+ * So the card keeps its tint, its hairline and its lift shadow — those are
+ * plain paint and create nothing — and the ONE property that creates a context
+ * moves to a `::before` that has no descendants for a context to trap.
+ *
+ * WHY `z-index: -1` AND WHY THE CARD IS ONLY `position: relative`
+ * --------------------------------------------------------------
+ * The pseudo has to paint UNDER the card's own text without every child in the
+ * app needing a z-index of its own. In paint order a positioned pseudo at
+ * `z-index: 0` would land ABOVE the in-flow content of its parent — the glass
+ * would cover the card's text. `-1` puts it in the negative layer, below the
+ * card's background, its border and everything inside it, which is exactly
+ * where a backdrop belongs.
+ *
+ * `-1` is only safe because the card must NOT become a stacking context — so
+ * the pseudo joins the negative layer of the nearest ancestor that is one, i.e.
+ * the root. That works here because every ancestor between a card and the root
+ * is transparent: `body`'s colour is propagated to the canvas (painted below
+ * even the negative layer), the shell's flex wrappers and `<main>` carry no
+ * background, and the photo itself is a `fixed … -z-10` layer — further back
+ * than the pseudo, which is what keeps the blur sampling the photograph. If a
+ * page ever wraps its cards in an OPAQUE container the glass will hide behind
+ * it — but that container would already be hiding the photograph, so the
+ * feature would be visibly wrong before this rule was.
+ *
+ * `position: relative` is required to make the card the containing block for
+ * the pseudo, and it costs nothing: `backdrop-filter` ALREADY made every glass
+ * card the containing block for its absolutely positioned descendants, so with
+ * the preference on that behaviour is unchanged. `position: fixed` descendants
+ * genuinely change — they go back to being sized by the viewport instead of by
+ * the card, which is what they do with the preference off, and what the
+ * click-catchers and modals rendered inside cards always intended.
+ *
+ * Do not add `isolation: isolate`, `contain`, `filter`, `transform`,
+ * `will-change` or `opacity < 1` to `.card-surface`. Every one of them
+ * re-creates the trap this rule exists to remove.
+ */
+[data-dashboard-bg="on"] .card-surface {
+  position: relative;
   background-color: color-mix(in srgb, var(--glass-surface-color) var(--glass-surface), transparent);
   border-color: var(--glass-edge);
-  /* ONE level only — see the note above. */
+  box-shadow: var(--glass-shadow);
+}
+
+[data-dashboard-bg="on"] .card-surface::before {
+  content: "";
+  position: absolute;
+  /* The card's padding box, not its border box. `inset: -1px` would cover the
+   * hairline too, but an absolutely positioned box that overhangs the right or
+   * bottom edge adds scrollable overflow — which would put a permanent 1px
+   * scrollbar on every `overflow-x-auto` table shell that carries this hook
+   * (`overflow-x: auto` forces the other axis to `auto` as well). A 1px ring of
+   * unblurred photo under a 10–12% alpha hairline is the cheaper of the two;
+   * measured worst case is ~34/255 on a single pixel column, and only where a
+   * hard edge in the photograph lands exactly on the card's border.
+   *
+   * KNOWN LIMIT, the other half of the same trade: on a `.card-surface` that is
+   * ITSELF a scroll container (the four `overflow-x-auto` table shells, and the
+   * annotation studio's `overflow-auto` pane), an absolutely positioned box is
+   * part of the scrolled content, so the blur pans with it — scroll such a card
+   * sideways and its far end is tinted but not blurred. It cannot be pinned
+   * from here: `position: sticky` needs an in-flow box, and any box wide enough
+   * to cover the scroll width is a box wide enough to extend it. The tint, the
+   * hairline and the shadow all stay on the card, so nothing structural moves.
+   * If this ever matters more than the blur does, drop the pseudo on those
+   * elements rather than trying to pin it. */
+  inset: 0;
+  /* Below the card's own background, its border and all of its content. */
+  z-index: -1;
+  /* Follow the card's corners — cards here run 14px (`--radius-card`) and 12px
+   * (`rounded-xl`), and a square glass plate behind a rounded card is obvious. */
+  border-radius: inherit;
+  /* Belt and braces: a pseudo-element's hits are attributed to its originating
+   * element anyway, and the card's own box already covers it. */
+  pointer-events: none;
+  /* ONE level only — see the note above, and the nesting guard below. */
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 
-[data-dashboard-bg="on"] .card-surface {
-  box-shadow: var(--glass-shadow);
+/* The Shuffle chip is a leaf button — nothing is positioned inside it, so there
+ * is nothing for a stacking context to trap and the filter can stay on the
+ * element. It still pulls the same knobs, so the two never drift apart. */
+.dashboard-bg-chip {
+  background-color: color-mix(in srgb, var(--glass-surface-color) var(--glass-surface), transparent);
+  border-color: var(--glass-edge);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 
 /* Row hovers inside a glass card would otherwise flash an opaque plate. */
@@ -370,12 +465,21 @@ body,
  * The tint matches the row-hover above so nested panels and hovered rows read as
  * the same depth. No depth beyond the second is special-cased: this rule catches
  * every level below the first, because each of them is inside `.card-surface`.
+ *
+ * The filter now lives on `::before`, so the guard has to remove the pseudo
+ * rather than the property. `content: none` stops the box being generated at
+ * all — cheaper than a transparent one, and it also takes the nested card back
+ * out of the root's negative layer. The nested card keeps `position: relative`
+ * from the rule above, which is harmless and matches what it had while the
+ * filter was still on it.
  */
 [data-dashboard-bg="on"] .card-surface .card-surface {
   background-color: color-mix(in srgb, var(--c-surface-2) 45%, transparent);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
   box-shadow: none;
+}
+
+[data-dashboard-bg="on"] .card-surface .card-surface::before {
+  content: none;
 }
 
 /*
@@ -413,52 +517,30 @@ body,
 
   [data-dashboard-bg="on"] .card-surface {
     background-color: transparent;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
     box-shadow: none;
+  }
+
+  /* The blur lives here now, so this is where it has to be switched off. */
+  [data-dashboard-bg="on"] .card-surface::before {
+    content: none;
   }
 }
 
 /*
- * A card that holds an open popover has to outrank the cards below it.
+ * THERE IS NO POPOVER RULE HERE ANY MORE, AND THAT IS THE POINT.
  *
- * `backdrop-filter` creates a STACKING CONTEXT. Once the glass is on, every
- * `.card-surface` becomes one, so an absolutely-positioned dropdown inside a
- * card no longer competes with the rest of the page — its z-index is trapped
- * inside its own card, and any later sibling card (also a stacking context)
- * simply paints over it. The Estimates toolbar is a `<Card>`, so its Print
- * Control panel opened and was immediately buried by the grid beneath it: the
- * dropdown appeared to do nothing at all.
+ * Two interim rules used to live at the bottom of this file: one dropped
+ * `backdrop-filter` from EVERY glass card while `:has([aria-expanded="true"])`
+ * or `:has(details[open])` matched anywhere on the page, and one lifted the
+ * host card to `z-index: 40`. They worked, at two costs — every card in the
+ * viewport visibly lost its blur for as long as any menu was open, and a
+ * popover whose trigger does not advertise `aria-expanded` was not covered at
+ * all (only 12 triggers in the app set it, and nothing uses <details>).
  *
- * Lifting the containing card into the positioned layer while a control inside
- * it is expanded restores the old behaviour. Cheap, reversible, and it fixes
- * every popover in a glass card at once rather than one component at a time —
- * which matters because some of those components are protected.
- *
- * The real fix is for the glass not to create the trap: paint it on a
- * pseudo-element so the card itself never carries a backdrop-filter. That is a
- * bigger change to every card in the app and wants its own verification.
+ * Both are deleted. With the filter on `::before`, no card is a stacking
+ * context, so an absolutely positioned panel inside one competes in the root
+ * stacking context exactly as it did before the photo background existed: the
+ * Estimates Print Control panel's own `z-50` now outranks the `est-card` grid
+ * below it on its own, with no `:has()` involved and nothing to advertise.
+ * One mechanism, not two.
  */
-[data-dashboard-bg="on"]:has([aria-expanded="true"]) .card-surface,
-[data-dashboard-bg="on"]:has(details[open]) .card-surface {
-  /* Kill the TRAP, not the symptom. A stacking context cannot be escaped from
-   * the inside: no z-index on the panel, and no z-index on the card holding it,
-   * can lift it past a context created further up the tree. Dropping the filter
-   * removes the context altogether, so the panel's own z-50 competes with the
-   * page again exactly as it did before the glass existed.
-   *
-   * Applied to EVERY glass card while a popover is open, deliberately: the trap
-   * that buried the Estimates dropdown was not the card containing it. Cards
-   * keep their translucent background and border throughout — only the blur
-   * pauses, for as long as a menu is open. */
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-/* And lift the host card above later siblings, which is what z-50 used to buy
- * before every card became a stacking context of its own. */
-[data-dashboard-bg="on"] .card-surface:has([aria-expanded="true"]),
-[data-dashboard-bg="on"] .card-surface:has(details[open]) {
-  position: relative;
-  z-index: 40;
-}
