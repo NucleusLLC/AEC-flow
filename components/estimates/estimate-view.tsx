@@ -898,6 +898,20 @@ ${!preview ? `@media print {
                 className={`inline-flex h-7 items-center gap-2 rounded-md border px-2.5 text-xs font-medium transition-colors ${pcOpen ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-muted hover:bg-surface-2"}`}
               >
                 <Printer className="h-3.5 w-3.5" /> Print Control
+                {/* The active print template, shown WITHOUT opening the panel.
+                  * Which template is in force changes what the printed sheet
+                  * contains, so it belongs where it can be read at a glance —
+                  * finding out by opening a dropdown is a question the toolbar
+                  * should already have answered. "Custom" = settings that match
+                  * no saved template. */}
+                <span
+                  title={activePrintTemplate ? `Print template: ${activePrintTemplate}` : "Print settings not saved as a template"}
+                  className={`max-w-[10rem] truncate rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    activePrintTemplate ? "bg-brand/10 text-brand" : "bg-surface-2 text-faint"
+                  }`}
+                >
+                  {activePrintTemplate || "Custom"}
+                </span>
               </button>
               {pcOpen && (
                 <>
@@ -1853,6 +1867,13 @@ ${!preview ? `@media print {
             </button>
             <span className="text-[11px] text-muted">
               {paper} · {orient} · {pageWmm} × {pageHmm} mm
+              {/* Same fact, repeated in the preview toolbar: the Print Control
+                * button is not on screen here, and this is exactly where someone
+                * is about to commit the sheet to paper. */}
+              {" · "}
+              <span className={activePrintTemplate ? "font-semibold text-brand" : "text-faint"}>
+                {activePrintTemplate || "Custom"}
+              </span>
             </span>
             <button type="button" onClick={() => window.print()} className={`ml-auto ${brandBtn}`}>
               <FileDown className="h-4 w-4" /> Save as PDF
