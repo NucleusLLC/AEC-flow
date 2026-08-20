@@ -418,3 +418,29 @@ body,
     box-shadow: none;
   }
 }
+
+/*
+ * A card that holds an open popover has to outrank the cards below it.
+ *
+ * `backdrop-filter` creates a STACKING CONTEXT. Once the glass is on, every
+ * `.card-surface` becomes one, so an absolutely-positioned dropdown inside a
+ * card no longer competes with the rest of the page — its z-index is trapped
+ * inside its own card, and any later sibling card (also a stacking context)
+ * simply paints over it. The Estimates toolbar is a `<Card>`, so its Print
+ * Control panel opened and was immediately buried by the grid beneath it: the
+ * dropdown appeared to do nothing at all.
+ *
+ * Lifting the containing card into the positioned layer while a control inside
+ * it is expanded restores the old behaviour. Cheap, reversible, and it fixes
+ * every popover in a glass card at once rather than one component at a time —
+ * which matters because some of those components are protected.
+ *
+ * The real fix is for the glass not to create the trap: paint it on a
+ * pseudo-element so the card itself never carries a backdrop-filter. That is a
+ * bigger change to every card in the app and wants its own verification.
+ */
+[data-dashboard-bg="on"] .card-surface:has([aria-expanded="true"]),
+[data-dashboard-bg="on"] .card-surface:has(details[open]) {
+  position: relative;
+  z-index: 30;
+}
