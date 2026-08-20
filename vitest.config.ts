@@ -58,6 +58,11 @@ export default defineConfig({
       // file, same reason as those above — it reads source off disk, so it needs
       // no database and belongs in this pure-unit suite.
       "lib/tenant-scope-findunique.test.ts",
+      // The honest-progress arithmetic behind <ProgressLoader />: stage weighting,
+      // the cap that stops the bar reaching 100% before the work is done, and the
+      // elapsed-time smoother. Named file, same reason as every entry above —
+      // pure module, no React, no Prisma, no DOM.
+      "lib/ui/progress-loader.test.ts",
     ],
     environment: "node",
   },

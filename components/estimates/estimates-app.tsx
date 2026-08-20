@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useState, useTransition, useEffect, useRef } from "react";
+import { ArrowLeft } from "lucide-react";
 import type { CostEstimate, EstimateProject } from "@/lib/data/estimates";
 import type { PriceItem } from "@/lib/data/price-lists.types";
 import type { NormSetTask, EstimateTemplate } from "@/lib/data/estimate-presets";
@@ -10,6 +10,11 @@ import type { WikiArticle } from "@/lib/data/estimating-wiki";
 import { getSystemCurrency } from "@/lib/format";
 import type { FooterSettings } from "@/lib/server/practice-config";
 import { loadEstimateAction } from "@/app/(app)/estimates/actions";
+/* LOADING UI ONLY (approved 2026-08-20). Replaces the indeterminate spinner that
+ * "looked stuck". Nothing below reads, writes, saves or reshapes an estimate —
+ * the signal is a write-only progress record the loader polls. */
+import { ProgressLoader, createLoadSignal, advanceLoadSignal, type LoadSignal } from "@/components/ui/progress-loader";
+import { OPEN_ESTIMATE_STAGES } from "@/lib/ui/progress-loader";
 import { ProjectListView } from "./project-list-view";
 import { EstimateWorkspace } from "./estimate-workspace";
 
@@ -19,15 +24,26 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
   const [selected, setSelected] = useState<EstimateProject | null>(null);
   // The selected estimate's OWN persisted sheet (loaded by id), not the base seed.
   const [working, setWorking] = useState<CostEstimate | null>(null);
-  const [loading, startLoad] = useTransition();
+  const [, startLoad] = useTransition();
   /* A load that came back empty for an estimate that EXISTS. Kept separate from
    * `working` so the sheet is never mounted on invented data — see below. */
   const [loadFailed, setLoadFailed] = useState<EstimateProject | null>(null);
+  /* DISPLAY ONLY. What the load has actually got done so far, for the progress
+   * bar. A ref and not state on purpose: an update made after an `await` inside
+   * a transition is batched with the final one, so a "fetch finished" state
+   * change would never be rendered. Nothing reads this except <ProgressLoader />.
+   *
+   * Seeded with epoch 0 rather than the clock: this initial value is never
+   * displayed (the loader only renders once `selected` is set, and `openProject`
+   * replaces the signal before that), and reading a clock during render is
+   * impure. `openProject` puts the real timestamp in. */
+  const progress = useRef<LoadSignal>(createLoadSignal(0));
 
   const openProject = (p: EstimateProject) => {
     setSelected(p);
     setWorking(null);
     setLoadFailed(null);
+    progress.current = createLoadSignal();
     /* Is this a NEW estimate (a project with no sheet yet) or an EXISTING one?
      * It decides what a null load MEANS, and getting that wrong destroys data. */
     const isNew = (startProjects ?? []).some((sp) => sp.id === p.id);
@@ -47,6 +63,14 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
         setLoadFailed(p);
         return;
       }
+
+      /* DISPLAY ONLY — stage 1 (the server round trip) is genuinely finished at
+       * this line, which is why the bar is allowed to cross into stage 2 here
+       * and nowhere else. The counts are read off the payload we already have;
+       * nothing is fetched, changed or saved. */
+      const sections = est?.categories.length ?? 0;
+      const lines = est?.categories.reduce((n, c) => n + c.items.length, 0) ?? 0;
+      advanceLoadSignal(progress.current, 1, est ? `${sections} sections · ${lines} lines` : "new sheet");
 
       setWorking(
         est ?? {
@@ -138,9 +162,11 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
           </button>
         </div>
       ) : (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-surface py-16 text-sm text-muted">
-          <Loader2 className="h-4 w-4 animate-spin" /> {loading ? "Loading estimate…" : "Preparing…"}
-        </div>
+        /* Same branch as before — this is still only reached when there is no
+         * sheet and no failure, so the guard above keeps its precedence. Only
+         * the contents changed: a determinate bar driven by the two stages the
+         * load really has, instead of a spinner that looked stuck. */
+        <ProgressLoader signal={progress.current} stages={OPEN_ESTIMATE_STAGES} title="Loading estimate" />
       )}
     </div>
   );

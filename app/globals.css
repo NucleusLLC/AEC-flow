@@ -544,3 +544,28 @@ body,
  * below it on its own, with no `:has()` involved and nothing to advertise.
  * One mechanism, not two.
  */
+
+/*
+ * PROGRESS LOADER SHEEN — decoration for <ProgressLoader />, and nothing else.
+ *
+ * The bar itself is driven by real load stages (lib/ui/progress-loader.ts); this
+ * is only a highlight travelling across the filled portion so a long stage still
+ * reads as alive. It carries no information, so `prefers-reduced-motion` removes
+ * it outright rather than slowing it down — the percentage, the stage label and
+ * the elapsed-seconds counter all keep working without it.
+ */
+@keyframes progress-sheen {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.progress-sheen {
+  animation: progress-sheen 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-sheen {
+    animation: none;
+    opacity: 0;
+  }
+}
