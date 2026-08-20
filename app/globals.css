@@ -377,3 +377,44 @@ body,
   backdrop-filter: none;
   box-shadow: none;
 }
+
+/*
+ * A document is a sheet of paper, not a photograph.
+ *
+ * `[data-dashboard-bg="on"]` sets an inherited `text-shadow` so headings and
+ * body copy stay legible ON the photo. That inherits into everything which is
+ * not inside a `.card-surface` — including any print document previewed INSIDE
+ * the app shell. The Estimates preview does exactly that (`EstimatePrintDoc`
+ * renders in `estimate-view`, not on a `/print/*` route), so its text picked up
+ * a drop shadow on screen and then printed with one.
+ *
+ * Scoped to the document surfaces rather than switched off globally, so the
+ * page around the preview keeps the treatment the user asked for. No
+ * `!important` and no Estimates file touched: these selectors simply out-specify
+ * or out-order the ones above.
+ */
+[data-dashboard-bg="on"] .epd-root,
+[data-dashboard-bg="on"] .epd-root *,
+[data-dashboard-bg="on"] .aec-doc,
+[data-dashboard-bg="on"] .aec-doc * {
+  text-shadow: none;
+}
+
+/*
+ * On paper the photo is hidden, so every part of the treatment is not merely
+ * pointless but harmful: a shadow behind text, a tinted card, and a
+ * backdrop-filter the printer cannot render anyway.
+ */
+@media print {
+  [data-dashboard-bg="on"],
+  [data-dashboard-bg="on"] * {
+    text-shadow: none;
+  }
+
+  [data-dashboard-bg="on"] .card-surface {
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+}
