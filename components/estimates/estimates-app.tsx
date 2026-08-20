@@ -20,14 +20,34 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
   // The selected estimate's OWN persisted sheet (loaded by id), not the base seed.
   const [working, setWorking] = useState<CostEstimate | null>(null);
   const [loading, startLoad] = useTransition();
+  /* A load that came back empty for an estimate that EXISTS. Kept separate from
+   * `working` so the sheet is never mounted on invented data — see below. */
+  const [loadFailed, setLoadFailed] = useState<EstimateProject | null>(null);
 
   const openProject = (p: EstimateProject) => {
     setSelected(p);
     setWorking(null);
+    setLoadFailed(null);
+    /* Is this a NEW estimate (a project with no sheet yet) or an EXISTING one?
+     * It decides what a null load MEANS, and getting that wrong destroys data. */
+    const isNew = (startProjects ?? []).some((sp) => sp.id === p.id);
     startLoad(async () => {
       const est = await loadEstimateAction(p.id);
-      // Defensive fallback (id should always resolve): an EMPTY sheet with the
-      // project header — never the base estimate's lines, which would corrupt this id.
+
+      /* THE RULE: never invent a sheet for an estimate that exists.
+       *
+       * This used to fall through to a blank sheet whenever the load returned
+       * null, on the assumption that "the id should always resolve". When that
+       * assumption broke, the editor mounted on an empty sheet and its 2.5-second
+       * autosave wrote the emptiness back — silently replacing a real BOQ with
+       * one placeholder line. An estimate was hollowed out that way twice on
+       * 2026-08-20. A failed load is an error to be shown, not a blank page to be
+       * filled in and saved. */
+      if (!est && !isNew) {
+        setLoadFailed(p);
+        return;
+      }
+
       setWorking(
         est ?? {
           ...baseEstimate,
@@ -99,6 +119,24 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
       </div>
       {working ? (
         <EstimateWorkspace key={working.id} estimate={working} priceBook={priceBook} normSet={normSet} generalConditions={generalConditions} templates={templates} wiki={wiki} logoDataUrl={logoDataUrl} footer={footer} />
+      ) : loadFailed ? (
+        /* Deliberately offers Retry and nothing else. No editable sheet is
+         * mounted, so there is nothing for the autosave to overwrite the stored
+         * estimate with. The data is intact on the server; only this load failed. */
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-amber-300 bg-amber-50 py-16 text-center">
+          <p className="text-sm font-medium text-amber-900">This estimate could not be loaded.</p>
+          <p className="max-w-md text-xs text-amber-800">
+            Your saved figures are safe — nothing has been changed. The editor stays closed on purpose,
+            so an incomplete load cannot overwrite them. Try again, and tell your administrator if it persists.
+          </p>
+          <button
+            type="button"
+            onClick={() => openProject(loadFailed)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
+          >
+            Try again
+          </button>
+        </div>
       ) : (
         <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-surface py-16 text-sm text-muted">
           <Loader2 className="h-4 w-4 animate-spin" /> {loading ? "Loading estimate…" : "Preparing…"}
