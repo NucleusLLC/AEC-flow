@@ -439,8 +439,26 @@ body,
  * pseudo-element so the card itself never carries a backdrop-filter. That is a
  * bigger change to every card in the app and wants its own verification.
  */
+[data-dashboard-bg="on"]:has([aria-expanded="true"]) .card-surface,
+[data-dashboard-bg="on"]:has(details[open]) .card-surface {
+  /* Kill the TRAP, not the symptom. A stacking context cannot be escaped from
+   * the inside: no z-index on the panel, and no z-index on the card holding it,
+   * can lift it past a context created further up the tree. Dropping the filter
+   * removes the context altogether, so the panel's own z-50 competes with the
+   * page again exactly as it did before the glass existed.
+   *
+   * Applied to EVERY glass card while a popover is open, deliberately: the trap
+   * that buried the Estimates dropdown was not the card containing it. Cards
+   * keep their translucent background and border throughout — only the blur
+   * pauses, for as long as a menu is open. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* And lift the host card above later siblings, which is what z-50 used to buy
+ * before every card became a stacking context of its own. */
 [data-dashboard-bg="on"] .card-surface:has([aria-expanded="true"]),
 [data-dashboard-bg="on"] .card-surface:has(details[open]) {
   position: relative;
-  z-index: 30;
+  z-index: 40;
 }
