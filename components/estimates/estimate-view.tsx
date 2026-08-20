@@ -1946,6 +1946,45 @@ ${!preview ? `@media print {
 }
 
 /**
+ * Auto-grow measurement, BATCHED across every field that needs it.
+ *
+ * Measuring one textarea means writing (`height: auto`) and then reading
+ * (`scrollHeight`), and a write followed by a read forces the browser to redo layout
+ * synchronously, there and then. For a single field that is free. But every line item
+ * on the sheet owns one, and they all measure in the same commit — so the writes and
+ * reads interleave and the page is laid out from scratch once PER LINE ITEM. On a
+ * 113-line estimate that is 113 full-document reflows back to back, which is roughly
+ * half of the multi-second freeze when the print preview closes and the whole grid
+ * mounts again.
+ *
+ * So a field registers instead of measuring. One flush then does every write, every
+ * read, and every write again — two reflows for the whole sheet instead of N. It runs
+ * as a microtask, which still lands before the browser paints, so no field is ever
+ * shown at the wrong height. Behaviour is identical; only the reflow count changes.
+ */
+const growQueue = new Set<HTMLTextAreaElement>();
+let growScheduled = false;
+
+function flushGrow() {
+  growScheduled = false;
+  const els = [...growQueue].filter((el) => el.isConnected);
+  growQueue.clear();
+  if (!els.length) return;
+  // Writes first — one style invalidation for the batch, no read in between.
+  for (const el of els) el.style.height = "auto";
+  // Then all reads. The first forces layout once; the rest are already valid.
+  const heights = els.map((el) => el.scrollHeight);
+  for (let i = 0; i < els.length; i++) els[i].style.height = `${heights[i]}px`;
+}
+
+function scheduleGrow(el: HTMLTextAreaElement) {
+  growQueue.add(el);
+  if (growScheduled) return;
+  growScheduled = true;
+  queueMicrotask(flushGrow);
+}
+
+/**
  * The line-item description field. A single-line <input> physically clipped long
  * descriptions — this is a textarea that WRAPS and auto-grows to fit its content, so the
  * whole task is always visible (and it prints in full). Height is measured off the
@@ -1962,8 +2001,10 @@ function TaskField({
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    scheduleGrow(el);
+    // A field unmounted before the flush must not be measured (or resurrected) —
+    // drop it from the batch.
+    return () => { growQueue.delete(el); };
   }, [value]);
   return (
     <textarea
