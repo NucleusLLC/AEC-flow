@@ -53,6 +53,11 @@ export interface LayoutContext {
   printableWidth: number;
   /** Optional visual-debug toggle, consumed by the renderer overlay. */
   showPageBreakDebug?: boolean;
+  /**
+   * Optional real-font text measurer (canvas) from the renderer. Without it the
+   * engine falls back to an average character width, which is only a guess.
+   */
+  measureText?: TextMeasurer;
 }
 
 export type BlockType =
@@ -169,17 +174,78 @@ export function calculatePrintableArea(pageSettings: PageSettings): {
   };
 }
 
-/** (3) Estimate how many lines a string wraps into inside a column. */
+/**
+ * Measures the rendered width (px) of a string at a font size. Supplied by the
+ * renderer (canvas, real font metrics) so wrapping is computed from the font that
+ * actually prints instead of an average character width.
+ */
+export type TextMeasurer = (text: string, fontSize: number) => number;
+
+/** Fallback metric when no measurer is available (SSR / tests): mean glyph width in em. */
+const AVERAGE_CHAR_WIDTH_EM = 0.5;
+
+/**
+ * Wrapping is computed against a marginally narrow column. A row one line too tall
+ * costs a few px of white space; a row one line too short prints its text on top of
+ * the row below, because blocks are placed at their measured Y.
+ */
+const WRAP_SAFETY = 0.98;
+
+/** Break opportunities: after a space, and (as CSS does) after a hyphen or a slash. */
+function wrapTokens(text: string): string[] {
+  const tokens: string[] = [];
+  let current = "";
+  for (const ch of text) {
+    current += ch;
+    if (ch === " " || ch === "-" || ch === "/") {
+      tokens.push(current);
+      current = "";
+    }
+  }
+  if (current) tokens.push(current);
+  return tokens;
+}
+
+/**
+ * (3) How many lines a string wraps into inside a column.
+ *
+ * Text wraps at WORD boundaries, so counting characters and dividing by an average
+ * character width systematically UNDER-counts: every break wastes the tail of a line.
+ * A wide column hides the error (a long line absorbs it); a narrow one does not —
+ * which is why descriptions that fit their row in landscape overflowed it in
+ * portrait and printed over the next row.
+ */
 export function estimateWrappedLineCount(
   text: string,
   columnWidth: number,
   fontSize: number,
+  measure?: TextMeasurer,
 ): number {
-  const value = text ?? "";
-  const averageCharacterWidth = fontSize * 0.5;
-  const charactersPerLine = Math.max(1, Math.floor(columnWidth / averageCharacterWidth));
-  const lineCount = Math.ceil(value.length / charactersPerLine);
-  return Math.max(1, lineCount);
+  const value = (text ?? "").trim();
+  if (!value) return 1;
+  const width = Math.max(1, columnWidth * WRAP_SAFETY);
+  const widthOf = measure
+    ? (s: string) => measure(s, fontSize)
+    : (s: string) => s.length * fontSize * AVERAGE_CHAR_WIDTH_EM;
+
+  let lines = 1;
+  let line = "";
+  for (const token of wrapTokens(value)) {
+    // A token wider than the whole column can't be broken (overflow-wrap: normal) —
+    // it stays on its own line and is clipped horizontally, exactly as it renders.
+    if (!line) {
+      line = token;
+      continue;
+    }
+    // Trailing spaces hang past the edge in CSS, so they don't force a break.
+    if (widthOf((line + token).replace(/\s+$/, "")) <= width) {
+      line += token;
+      continue;
+    }
+    lines++;
+    line = token;
+  }
+  return lines;
 }
 
 /** (4) Height a wrapped string occupies in a column. */
@@ -187,9 +253,10 @@ export function calculateTextHeight(
   text: string,
   columnWidth: number,
   profile: TextSizeProfile,
+  measure?: TextMeasurer,
 ): number {
   return (
-    estimateWrappedLineCount(text, columnWidth, profile.fontSize) * profile.lineHeight +
+    estimateWrappedLineCount(text, columnWidth, profile.fontSize, measure) * profile.lineHeight +
     profile.verticalPadding
   );
 }
@@ -292,18 +359,24 @@ export function measureItemRow(
   context: LayoutContext,
   columnWidths: ColumnWidths,
 ): MeasuredBlock {
-  const { profile } = context;
+  const { profile, measureText } = context;
   const descriptionHeight = calculateTextHeight(
     row.description,
     columnWidths.description,
     profile,
+    measureText,
   );
   const unitHeight =
     row.unit && columnWidths.unit
-      ? calculateTextHeight(row.unit, columnWidths.unit, profile)
+      ? calculateTextHeight(row.unit, columnWidths.unit, profile, measureText)
       : 0;
   const noteHeight = row.note
-    ? calculateTextHeight(row.note, columnWidths.note ?? columnWidths.description, profile)
+    ? calculateTextHeight(
+        row.note,
+        columnWidths.note ?? columnWidths.description,
+        profile,
+        measureText,
+      )
     : 0;
 
   const height = Math.max(
@@ -423,7 +496,7 @@ export function measureGrandTotalBlock(
   }
   if (summary.notes) {
     const width = columnWidths?.description ?? context.printableWidth;
-    height += calculateTextHeight(summary.notes, width, profile);
+    height += calculateTextHeight(summary.notes, width, profile, context.measureText);
   }
   if (summary.signature) {
     height += profile.totalRowHeight * 2; // name + date / signature lines
@@ -737,7 +810,12 @@ export function simulateReportPages(
     blocks.push({
       id: "report-notes",
       type: "notes",
-      height: calculateTextHeight(reportData.notes, context.printableWidth, profile),
+      height: calculateTextHeight(
+        reportData.notes,
+        context.printableWidth,
+        profile,
+        context.measureText,
+      ),
       keepTogether: true,
       data: { notes: reportData.notes },
     });
