@@ -301,8 +301,7 @@ body,
 [data-dashboard-bg="on"] {
   --c-muted: var(--c-muted-on-photo);
   --c-faint: var(--c-faint-on-photo);
-  /* Inherited, so it reaches the greeting and any heading on the photo… */
-  text-shadow: var(--glass-text-shadow);
+  /* No `text-shadow` here — see THE HALO IS APPLIED, NOT BROADCAST below. */
   /* Re-pick `--glass-surface` from the pair the wrapper carries. The :root/.dark
    * declarations above already resolved on <html>, where the user's inline
    * overrides do not exist — those are set on THIS element. So the choice has to
@@ -318,8 +317,55 @@ body,
   --glass-surface: var(--glass-surface-dark);
 }
 
-/* …and is cancelled inside the cards, where there is no photo to fight. */
-[data-dashboard-bg="on"] .card-surface {
+/*
+ * THE HALO IS APPLIED, NOT BROADCAST.
+ *
+ * The obvious way to write this is one `text-shadow` on the wrapper above: it
+ * inherits, so it reaches the greeting and every page heading sitting on the
+ * photograph for free. That is how it was written, and it was the bug. The
+ * wrapper is an ancestor of EVERY view in the app, so the halo also inherited
+ * into things that are not on the photograph at all. Cards were cancelled
+ * explicitly; document previews were not, and each one had to be discovered
+ * and named after somebody noticed shadowed text on a sheet of paper.
+ *
+ * So the direction is reversed. Nothing inherits a halo. It is applied to the
+ * text that genuinely sits on the photograph — and the app already marks that
+ * text. `text-fg`, `text-muted`, `text-faint` and `text-brand` are the semantic
+ * colour tokens of the app CHROME: the page heading and its sub-line (the same
+ * `text-xl font-semibold text-fg` / `text-sm text-muted` pair, in 92 files), the
+ * dashboard greeting, the stat hints, the Shuffle chip.
+ *
+ * A document sheet carries none of them, and that is not a coincidence which
+ * could quietly stop being true. Those four tokens re-resolve per theme, and a
+ * document is a sheet of paper: it has to look the same in dark mode and print
+ * on white, so it states its own greys (`text-gray-900`, `text-black`) and
+ * always will. Checked across every document component in the repo — proposal,
+ * estimate, meeting, order, letterhead, print-surface, the shared
+ * DocumentPreview, the photo contact sheet, the annotation sheet and both print
+ * shells: zero token classes inside a sheet, every time. (`schedule-print` uses
+ * them only in its `no-print` toolbar, which is the same rule from the other
+ * side.)
+ *
+ * The consequence is the point. A document preview added next month is not
+ * selected by anything here, so it cannot pick up a halo and nobody has to
+ * remember this bug. The failure mode flipped to the safe side too: what goes
+ * wrong now is a NEW page heading that hard-codes a colour instead of using a
+ * token, and it loses a halo rather than a new document gaining one. The
+ * contrast figures on `:root` above are measured WITHOUT crediting the halo, so
+ * that costs legibility nothing.
+ */
+[data-dashboard-bg="on"] :is(.text-fg, .text-muted, .text-faint, .text-brand) {
+  text-shadow: var(--glass-text-shadow);
+}
+
+/* …and never inside a card, where the glass has already done the work. The
+ * descendant half is load-bearing now: the halo is set on the token-carrying
+ * elements themselves rather than inherited from the wrapper, so cancelling it
+ * on the card alone would no longer reach the card's own headings and captions.
+ * Both selectors tie with the rule above at (0,2,0) and win on order — which is
+ * why they have to stay below it. */
+[data-dashboard-bg="on"] .card-surface,
+[data-dashboard-bg="on"] .card-surface * {
   text-shadow: none;
 }
 
@@ -485,24 +531,21 @@ body,
 /*
  * A document is a sheet of paper, not a photograph.
  *
- * `[data-dashboard-bg="on"]` sets an inherited `text-shadow` so headings and
- * body copy stay legible ON the photo. That inherits into everything which is
- * not inside a `.card-surface` — including any print document previewed INSIDE
- * the app shell. The Estimates preview does exactly that (`EstimatePrintDoc`
- * renders in `estimate-view`, not on a `/print/*` route), so its text picked up
- * a drop shadow on screen and then printed with one.
+ * There is no per-document rule here any more, and that is the fix.
  *
- * Scoped to the document surfaces rather than switched off globally, so the
- * page around the preview keeps the treatment the user asked for. No
- * `!important` and no Estimates file touched: these selectors simply out-specify
- * or out-order the ones above.
+ * There used to be one. `[data-dashboard-bg="on"]` set an INHERITED
+ * `text-shadow`, it reached every print document previewed inside the app
+ * shell, and the list of exclusions grew one class at a time as each preview
+ * was noticed by a human: `.epd-root` for the Estimates preview, `.aec-doc`
+ * for the shared print surface. The Fee Proposal preview carried neither, so
+ * it shadowed, and the one after it would have been the fourth entry.
+ *
+ * The halo is no longer broadcast (see THE HALO IS APPLIED, NOT BROADCAST
+ * above), so a document surface is never selected in the first place and there
+ * is nothing left to exclude. Do not re-add a rule naming a document class
+ * here: if a document ever picks up a halo it is because it borrowed one of the
+ * app's colour tokens, and the fix belongs in the document.
  */
-[data-dashboard-bg="on"] .epd-root,
-[data-dashboard-bg="on"] .epd-root *,
-[data-dashboard-bg="on"] .aec-doc,
-[data-dashboard-bg="on"] .aec-doc * {
-  text-shadow: none;
-}
 
 /*
  * On paper the photo is hidden, so every part of the treatment is not merely
