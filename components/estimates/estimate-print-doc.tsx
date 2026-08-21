@@ -36,6 +36,7 @@ import {
   type ColumnWidths,
   type GrandTotalRow,
   type MeasuredBlock,
+  type TextMeasurer,
 } from "@/lib/estimates/pagination-engine";
 
 const MM = 96 / 25.4;
@@ -93,6 +94,43 @@ export interface PrintControl {
 
 /** Subtle, print-friendly band colour for alternating item rows. */
 const ZEBRA_FILL = "#f3f4f6";
+
+/**
+ * Horizontal padding inside every table cell (`.epd-cell`). A description wraps
+ * inside the column width MINUS 2× this, not the column width, so the engine has to
+ * be told the smaller number — otherwise a narrow (portrait) column measures a line
+ * short and the text overflows its row. The stylesheet below is generated from it,
+ * so the two can't drift apart.
+ */
+const CELL_PAD_X = 6;
+
+/**
+ * Real-font text measurement for the pagination engine.
+ *
+ * The engine must know how many lines a description wraps into BEFORE anything is
+ * rendered, because it places every block at a computed Y. An average character width
+ * is close enough in a wide (landscape) column and wrong in a narrow (portrait) one:
+ * the row comes out too short and the description prints on top of the row below. A
+ * canvas measures the font that actually prints, so the row is exactly as tall as the
+ * text that lands in it. Falls back to the engine's estimate where there is no canvas.
+ */
+function makeTextMeasurer(): TextMeasurer | undefined {
+  if (typeof document === "undefined") return undefined;
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return undefined;
+  const family =
+    (document.body && getComputedStyle(document.body).fontFamily) || "sans-serif";
+  const cache = new Map<string, number>();
+  return (text: string, fontSize: number) => {
+    const key = `${fontSize}|${text}`;
+    const hit = cache.get(key);
+    if (hit !== undefined) return hit;
+    ctx.font = `${fontSize}px ${family}`;
+    const width = ctx.measureText(text).width;
+    cache.set(key, width);
+    return width;
+  };
+}
 
 /** Rate columns are decimals (0.35 hrs/u, 12.50 /u) — the cost columns stay whole (nf0). */
 const nfRate = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -262,6 +300,21 @@ function buildColumns(pc: PrintControl, showProgress: boolean, usd: boolean): Co
   return cols.filter(Boolean) as ColDef[];
 }
 
+/** Floor for the flexible Description track, so the column stays legible when every
+ *  optional column is switched on. Unchanged from the original measurement floor —
+ *  the difference is that the renderer now honours it too. */
+const DESC_MIN_TRACK = 80;
+
+/**
+ * Width the flexible Description track resolves to: the room the fixed columns leave,
+ * floored. Used BOTH to measure row heights and to build the grid template, so a
+ * description can never be measured against one width and drawn at another.
+ */
+function descriptionTrack(columns: ColDef[], printableWidth: number): number {
+  const fixed = columns.filter((c) => !c.flexible).reduce((s, c) => s + c.width, 0);
+  return Math.max(DESC_MIN_TRACK, printableWidth - fixed);
+}
+
 /** Money formatter for the print doc — dual-currency ($ left of the system unit) when USD is on. */
 function makeMoney(currency: string, nf0: (n: number) => string, usd?: boolean, rate?: number) {
   return (n: number) => (usd ? `$ ${nf0(n * (rate ?? 0))} · ${currency} ${nf0(n)}` : `${currency} ${nf0(n)}`);
@@ -277,8 +330,11 @@ function buildReportData(
   // The Total/amount columns print dual-currency ($ left of the system unit) when USD is on.
   const dualMoney = makeMoney(est.currency, nf0, props.usdSecondary, props.usdRate);
 
-  const fixed = columns.filter((c) => !c.flexible).reduce((s, c) => s + c.width, 0);
-  const descriptionWidth = Math.max(80, printableWidth - fixed);
+  // Measure the description against its cell's CONTENT box — the track minus the
+  // cell padding — and against the same track the renderer will draw (see
+  // `descriptionTrack`). Measuring a width the row isn't drawn at is what let a
+  // portrait description wrap onto a line the row had no height for.
+  const descriptionWidth = Math.max(1, descriptionTrack(columns, printableWidth) - CELL_PAD_X * 2);
 
   // Single source of truth for per-line math (see lib/estimates/calc.ts) — the print
   // table, the editor, and the schedule/PayApp all compute through calcItem so the
@@ -619,6 +675,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
       printableHeight,
       printableWidth,
       showPageBreakDebug: debug,
+      measureText: makeTextMeasurer(),
     };
     const columns = buildColumns(pc, showProgress, !!pc && !!props.usdSecondary);
     const { reportData, columnWidths } = buildReportData(props, columns, printableWidth);
@@ -689,7 +746,11 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
     reportData.extraBlocks = buildAppendixBlocks(props, profile);
     const pages = simulateReportPages(reportData, context, columnWidths);
     const gridTemplate = columns
-      .map((c) => (c.flexible ? "minmax(0,1fr)" : `${c.width}px`))
+      .map((c) =>
+        c.flexible
+          ? `minmax(${descriptionTrack(columns, printableWidth)}px,1fr)`
+          : `${c.width}px`,
+      )
       .join(" ");
     return { pages, context, columns, gridTemplate, pageSettings, headerTopH, logoH, colHeadRowH, coverMemo };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -716,7 +777,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
         .epd-page + .epd-page { margin-top: 16px; }
         @media print { .epd-page + .epd-page { margin-top: 0; } .epd-page { break-after: page; } .epd-page:last-child { break-after: auto; } }
         .epd-grid { display: grid; align-items: center; }
-        .epd-cell { padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .epd-cell { padding: 0 ${CELL_PAD_X}px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .epd-cell.desc { white-space: normal; }
         .epd-cat { display: flex; align-items: center; gap: 8px; background: #e2e8f0; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 0 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #0f172a; }
         .epd-sub { background: #f1f5f9; font-weight: 700; color: #334155; border-top: 1px solid #cbd5e1; }
