@@ -90,6 +90,11 @@ export function ProposalForm({
   backHref: string;
 }) {
   const [error, setError] = useState<string | null>(null);
+  /* The reference is a SUGGESTION, not a decree. It is derived from the proposals
+   * THIS company can see, so a hidden or externally-issued number collides with it —
+   * exactly what wedged creation on PRO-2026-048 — and a firm may simply have its own
+   * numbering. Editable, defaulting to the suggestion, so neither case is a dead end. */
+  const [refValue, setRefValue] = useState(proposalRef);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const [preview, setPreview] = useState<ProposalRecord | null>(null);
@@ -122,7 +127,7 @@ export function ProposalForm({
     const today = new Date().toISOString().slice(0, 10);
     return {
       id: "preview",
-      refNumber: proposalRef,
+      refNumber: refValue,
       title: v.title,
       clientName: clients.find((c) => c.id === v.clientId)?.name ?? "Client to be selected",
       owner: v.owner,
@@ -176,7 +181,7 @@ export function ProposalForm({
   function onSubmit(values: ProposalFormValues) {
     setError(null);
     const payload: ProposalWriteInput = {
-      ref: proposalRef,
+      ref: refValue,
       title: values.title,
       clientId: values.clientId,
       owner: values.owner,
@@ -232,7 +237,22 @@ export function ProposalForm({
         {/* Main column */}
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <SectionHeader title="Proposal" subtitle={`Reference ${proposalRef}`} />
+            <SectionHeader title="Proposal" subtitle="Reference, title and client" />
+            <div className="mb-4 max-w-xs">
+              <label htmlFor="proposal-ref" className="mb-1 block text-xs font-medium text-muted">
+                Reference number
+              </label>
+              <input
+                id="proposal-ref"
+                value={refValue}
+                onChange={(e) => setRefValue(e.target.value)}
+                placeholder={proposalRef}
+                className="h-9 w-full rounded-lg border border-border bg-surface px-2.5 font-mono text-sm text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
+              />
+              <p className="mt-1 text-[11px] text-faint">
+                Suggested from your existing proposals. Change it to use your own numbering — it must be unique.
+              </p>
+            </div>
             <CardBody className="space-y-4">
               <div>
                 <label className={labelCls}>Title</label>
@@ -335,7 +355,7 @@ export function ProposalForm({
                   <input
                     type="number"
                     min={0}
-                    step={1000}
+                    step="any"
                     className={`${inputCls} col-span-3 sm:col-span-2 text-right`}
                     placeholder="0"
                     {...register(`lineItems.${i}.amount` as const, { valueAsNumber: true })}
