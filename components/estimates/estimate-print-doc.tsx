@@ -315,6 +315,40 @@ function descriptionTrack(columns: ColDef[], printableWidth: number): number {
   return Math.max(DESC_MIN_TRACK, printableWidth - fixed);
 }
 
+/**
+ * Will the chosen columns physically fit the chosen page?
+ *
+ * The fixed columns have hard widths; Description takes what is left, floored at
+ * DESC_MIN_TRACK. When the fixed ones alone exceed the printable width there is no
+ * arrangement that works: before this was surfaced, the sheet printed anyway — the
+ * description track collapsed and rows overlapped, which is the defect fixed in #67.
+ * A sheet that cannot fit should say so BEFORE it is printed, not produce a broken one.
+ *
+ * Exported so the toolbar can warn with the same arithmetic the renderer uses; a second
+ * implementation would drift and the warning would eventually lie.
+ */
+export function printFit(
+  pc: PrintControl,
+  showProgress: boolean,
+  usd: boolean,
+  paper: "A4" | "A3",
+  orient: "landscape" | "portrait",
+  textSize: TextSize,
+): { fits: boolean; required: number; available: number; overflow: number } {
+  const settings = buildPageSettings(paper, orient, textSize);
+  const { printableWidth } = calculatePrintableArea(settings);
+  const fixed = buildColumns(pc, showProgress, usd)
+    .filter((c) => !c.flexible)
+    .reduce((sum, c) => sum + c.width, 0);
+  const required = fixed + DESC_MIN_TRACK;
+  return {
+    fits: required <= printableWidth,
+    required: Math.round(required),
+    available: Math.round(printableWidth),
+    overflow: Math.max(0, Math.round(required - printableWidth)),
+  };
+}
+
 /** Money formatter for the print doc — dual-currency ($ left of the system unit) when USD is on. */
 function makeMoney(currency: string, nf0: (n: number) => string, usd?: boolean, rate?: number) {
   return (n: number) => (usd ? `$ ${nf0(n * (rate ?? 0))} · ${currency} ${nf0(n)}` : `${currency} ${nf0(n)}`);

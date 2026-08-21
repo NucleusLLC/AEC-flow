@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect, Fragment } from "react";
-import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug } from "lucide-react";
-import { EstimatePrintDoc, type PrintControl } from "./estimate-print-doc";
+import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug, TriangleAlert } from "lucide-react";
+import { EstimatePrintDoc, printFit, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
 import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
 import { CostSummaryCharts } from "./cost-summary-charts";
@@ -613,6 +613,10 @@ ${!preview ? `@media print {
     { label: "Grand Total", value: dualMoney(grandTotal), emphasize: true },
   ];
   const printControl: PrintControl = pc;
+  /* Do the chosen columns physically fit the chosen page? Same arithmetic the
+   * renderer uses (imported, not reimplemented — a second copy would drift and the
+   * warning would eventually lie). Screen-only; the toolbar carries `no-print`. */
+  const printFitCheck = printFit(pc, showProgress, !!usdSecondary, paper, orient, printSize);
   // Cost-breakdown chart segments (cover page) — only non-zero components.
   // `amount` carries the (optionally dual-currency) money string; Profit & Risk / BBO
   // use `pctOverride` so their label reads the markup rate (matching the summary),
@@ -1865,6 +1869,34 @@ ${!preview ? `@media print {
             >
               <Bug className="h-3.5 w-3.5" /> Debug
             </button>
+            {/* Do the chosen columns physically fit this page? The fixed columns have
+              * hard widths and Description takes what is left, so a wide toggle set on a
+              * narrow page has no valid arrangement. It used to print anyway, with the
+              * description track collapsed and rows overlapping. Say so here, before the
+              * sheet is committed to paper, and offer the two settings that resolve it.
+              * Screen only — `no-print` on the toolbar keeps it off the page. */}
+            {!printFitCheck.fits ? (
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900">
+                <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                These columns need {printFitCheck.required}px and {paper} {orient} gives {printFitCheck.available}px — over by {printFitCheck.overflow}px.
+                <button
+                  type="button"
+                  onClick={() => setOrient(orient === "portrait" ? "landscape" : "portrait")}
+                  className="rounded border border-amber-300 bg-white px-1.5 py-0.5 font-semibold hover:bg-amber-100"
+                >
+                  Use {orient === "portrait" ? "landscape" : "portrait"}
+                </button>
+                {paper === "A4" ? (
+                  <button
+                    type="button"
+                    onClick={() => setPaper("A3")}
+                    className="rounded border border-amber-300 bg-white px-1.5 py-0.5 font-semibold hover:bg-amber-100"
+                  >
+                    Use A3
+                  </button>
+                ) : null}
+              </span>
+            ) : null}
             <span className="text-[11px] text-muted">
               {paper} · {orient} · {pageWmm} × {pageHmm} mm
               {/* Same fact, repeated in the preview toolbar: the Print Control
