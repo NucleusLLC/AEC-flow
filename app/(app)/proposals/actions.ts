@@ -35,6 +35,17 @@ export async function saveProposal(
     }
     return { ok: true, ref };
   } catch (e) {
+    /* A duplicate reference is the one failure a user can actually fix, so say so in
+     * their words instead of handing them a Prisma stack trace. It happens for a
+     * reason they cannot see: the suggested number is derived from the proposals
+     * THIS company can read, so a row belonging to no company — or to another one —
+     * collides invisibly. The reference field is editable precisely for this. */
+    if (typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002") {
+      return {
+        ok: false,
+        error: `Reference "${input.ref}" is already in use. Change the reference number and try again.`,
+      };
+    }
     const error = e instanceof Error ? e.message : "Failed to save proposal.";
     return { ok: false, error };
   }
