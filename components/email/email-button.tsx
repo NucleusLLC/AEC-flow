@@ -6,9 +6,18 @@ import { firmName } from "@/lib/firm-identity";
 
 /**
  * Reusable "Email …" button + compose dialog. Drop into any module to email an
- * artifact (estimate, form, drawing, report, schedule…). Placeholder send —
- * logs the payload; real delivery goes live with the email service (Resend) +
- * database. The UI/shape stays the same when it's wired.
+ * artifact (estimate, form, drawing, report, schedule…).
+ *
+ * HOW IT SENDS, AND WHY THIS WAY. It hands the message to the user's own mail
+ * client via `mailto:`. It used to `console.log` the payload and then show a green
+ * tick reading "Queued" — so a schedule was reported as sent to a client and never
+ * left the building. A button that cannot deliver must not claim it did; that is
+ * worse than one that plainly does nothing.
+ *
+ * Server-side delivery is not wired: RESEND_API_KEY is empty in production, and
+ * the documents are produced by the browser's print dialog, so there is no file on
+ * the server to attach. Until both are solved, the honest maximum is to compose
+ * the message accurately and tell the user to attach the PDF they saved.
  */
 export function EmailButton({
   subject,
@@ -78,10 +87,17 @@ function EmailDialog({
 
   const valid = /\S+@\S+\.\S+/.test(to);
   const send = () => {
-    console.log("[email:send]", { to, cc, subject: subj, message: msg, attachment });
+    /* Hand off to the user's mail client. `mailto:` cannot carry an attachment —
+     * no browser API can — so the body names the file and the panel says so. */
+    const params = new URLSearchParams();
+    if (cc.trim()) params.set("cc", cc.trim());
+    params.set("subject", subj);
+    params.set("body", `${msg}
+
+---
+Please attach: ${attachment}`);
+    window.location.href = `mailto:${encodeURIComponent(to.trim())}?${params.toString().replace(/\+/g, "%20")}`;
     setSent(true);
-    const t = setTimeout(onClose, 1400);
-    return () => clearTimeout(t);
   };
 
   return (
@@ -95,8 +111,11 @@ function EmailDialog({
         {sent ? (
           <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Check className="h-6 w-6" /></span>
-            <div className="text-sm font-semibold text-fg">Queued to {to}</div>
-            <div className="text-xs text-muted">Delivery goes live with the email service — the message and attachment are captured.</div>
+            <div className="text-sm font-semibold text-fg">Opened in your email app</div>
+            <div className="text-xs text-muted">
+              The message to {to} is drafted and waiting there. <span className="font-medium text-fg">Attach {attachment}</span> —
+              save it first with Save as PDF — then send it yourself. AEC-flow does not send it for you yet.
+            </div>
           </div>
         ) : (
           <>
@@ -114,7 +133,11 @@ function EmailDialog({
                 <textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={5} className={`${inp} resize-y`} />
               </Row>
               <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
-                <Paperclip className="h-3.5 w-3.5 text-faint" /> <span className="font-medium text-fg">{attachment}</span>
+                <Paperclip className="h-3.5 w-3.5 text-faint" />
+                <span>
+                  <span className="font-medium text-fg">{attachment}</span> — attach this yourself in your email app; it cannot be
+                  attached automatically.
+                </span>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
