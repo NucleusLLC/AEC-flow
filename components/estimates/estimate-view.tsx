@@ -993,7 +993,7 @@ ${!preview ? `@media print {
                               </div>
                             </div>
                           ) : (
-                            <label className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed border-border px-2 py-3 text-center hover:bg-surface-2">
+                            <label className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed border-border bg-surface-2/60 px-2 py-3 text-center transition-colors hover:bg-surface-2">
                               <ImagePlus className="h-4 w-4 text-faint" />
                               <span className="text-[11px] font-medium text-muted">Upload image / rendering</span>
                               <span className="text-[10px] text-faint">Optional — the page still prints the project facts</span>
