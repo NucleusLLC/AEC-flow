@@ -202,7 +202,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
                       <Eye className="h-3.5 w-3.5" />
                       Preview
                     </button>
-                    <EmailButton variant="icon" subject={d.name} attachment={`${d.name}.${d.fileType.toLowerCase()}`} />
+                    <EmailButton variant="icon" subject={d.name} attachment={`${d.name}.${d.fileType.toLowerCase()}`} relatedType="document" relatedId={d.id} />
                     <button
                       type="button"
                       aria-label="Download"

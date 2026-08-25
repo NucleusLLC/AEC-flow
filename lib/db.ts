@@ -23,6 +23,10 @@ const TENANT_MODELS = new Set<string>([
   "NormSetTask", "Vendor", "GeneralConditionItem", "EstimateTemplate",
   "WikiArticle", "Task", "ActivityLog", "GeneratedDocument", "PurchaseOrder",
   "MaterialSelection", "DesignDeliverable", "Drawing",
+  // Outbound email log. A row holds a client's address and the body of a message
+  // written to them, so omitting it here would let one practice read another's
+  // correspondence. Asserted by lib/proposals/tenant-scope.test.ts.
+  "EmailLog",
   // Service Proposal module (Module 1). Every model here is company-owned; leaving any one
   // out is a cross-tenant data leak. A test in lib/proposals asserts this list matches the
   // schema's @@map'd service-proposal tables.

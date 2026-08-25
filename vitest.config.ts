@@ -63,6 +63,17 @@ export default defineConfig({
       // elapsed-time smoother. Named file, same reason as every entry above —
       // pure module, no React, no Prisma, no DOM.
       "lib/ui/progress-loader.test.ts",
+      // Outbound document email. Four named files, same reason as every entry
+      // above. None of them touches the network or the database: the two
+      // lib/email modules are pure, and the other two mock their I/O at the
+      // module edge — `@/lib/server/email` (the Resend wrapper) and `@/lib/db`
+      // respectively. That matters more than usual here: RESEND_API_KEY is
+      // empty in production, so a real send cannot be exercised anywhere, and
+      // the database these would otherwise reach IS production.
+      "lib/email/recipients.test.ts",
+      "lib/email/compose.test.ts",
+      "lib/server/document-email.test.ts",
+      "lib/data/email-log.test.ts",
     ],
     environment: "node",
   },

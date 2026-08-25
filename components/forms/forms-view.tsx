@@ -94,7 +94,7 @@ export function FormsView({ forms }: { forms: FormItem[] }) {
                     <button type="button" onClick={() => setPreview(toPreview(f))} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-muted hover:text-fg">
                       <Eye className="h-3.5 w-3.5" /> Preview
                     </button>
-                    <EmailButton variant="icon" subject={`${f.code} — ${f.name}`} attachment={`${f.code} ${f.name}.${f.fileType.toLowerCase()}`} />
+                    <EmailButton variant="icon" subject={`${f.code} — ${f.name}`} attachment={`${f.code} ${f.name}.${f.fileType.toLowerCase()}`} relatedType="form" relatedId={f.code} />
                     <button type="button" aria-label="Download" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted hover:text-fg">
                       <Download className="h-4 w-4" />
                     </button>

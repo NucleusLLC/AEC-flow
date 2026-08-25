@@ -232,7 +232,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                         <Eye className="h-3.5 w-3.5" />
                         Preview
                       </button>
-                      <EmailButton variant="icon" subject={`${d.code} ${d.title} — ${d.projectNumber}`} attachment={`${d.code} ${d.title}.${d.fileType.toLowerCase()}`} />
+                      <EmailButton variant="icon" subject={`${d.code} ${d.title} — ${d.projectNumber}`} attachment={`${d.code} ${d.title}.${d.fileType.toLowerCase()}`} relatedType="drawing" relatedId={d.id} />
                       <button
                         type="button"
                         aria-label={`Download ${d.code}`}

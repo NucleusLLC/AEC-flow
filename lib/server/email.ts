@@ -6,15 +6,25 @@
  * return a soft `{ ok: false }` — callers fall back to sharing the link by hand.
  *
  * Env:
- *   RESEND_API_KEY  — required to actually send.
+ *   RESEND_API_KEY  — required to actually send. UNSET **OR EMPTY** means every
+ *                     send returns `{ ok: false }` without contacting anyone;
+ *                     production currently holds the variable with an empty
+ *                     value, which lands here.
  *   EMAIL_FROM      — verified sender, e.g. `AEC-Flow <noreply@aec-flow.com>`.
  *                     Defaults to Resend's sandbox sender (only delivers to the
  *                     Resend account owner) until the domain is verified.
+ *
+ * The `from` address is taken from the environment and NEVER from a caller: it
+ * has to match a domain verified on the Resend account, and letting a request
+ * choose it would be an open relay for the practice's own identity.
  */
 import "server-only";
 import { Resend } from "resend";
 
-const FROM = process.env.EMAIL_FROM ?? "AEC-Flow <onboarding@resend.dev>";
+// `.trim() ||` rather than `??`: a variable that exists but is empty (exactly
+// how RESEND_API_KEY is configured in production today) must fall back, not
+// become an empty From header the provider rejects.
+const FROM = process.env.EMAIL_FROM?.trim() || "AEC-Flow <onboarding@resend.dev>";
 
 let client: Resend | null = null;
 function getClient(): Resend | null {
@@ -28,6 +38,8 @@ export type SendResult = { ok: true; id: string | null } | { ok: false; error: s
 
 export async function sendEmail(opts: {
   to: string;
+  /** Copied recipients. Validate them before they get here — see lib/email/recipients.ts. */
+  cc?: string[];
   subject: string;
   html: string;
   text?: string;
@@ -35,9 +47,13 @@ export async function sendEmail(opts: {
   const resend = getClient();
   if (!resend) return { ok: false, error: "Email is not configured (RESEND_API_KEY missing)." };
   try {
+    const cc = opts.cc?.filter((a) => a.trim().length > 0);
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: opts.to,
+      // Omitted entirely when empty: an empty `cc` array is a header the
+      // provider need not see, and some clients render one.
+      ...(cc && cc.length > 0 ? { cc } : {}),
       subject: opts.subject,
       html: opts.html,
       text: opts.text ?? stripHtml(opts.html),

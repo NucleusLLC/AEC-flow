@@ -29,6 +29,7 @@ import {
   Sofa,
   FileSignature,
   UploadCloud,
+  Mail,
   type LucideIcon,
 } from "lucide-react";
 
@@ -141,6 +142,11 @@ export const navSections: NavSection[] = [
   {
     items: [
       { label: "Activity", href: "/activity", icon: Activity, disabled: true },
+      // The record of every outbound send, successes AND failures. It is in the
+      // sidebar rather than tucked inside Settings because the question it
+      // answers ("did that actually go out?") is asked by whoever pressed Send,
+      // not by an administrator.
+      { label: "Sent Email", href: "/email", icon: Mail },
       { label: "Reports", href: "/reports", icon: BarChart3 },
       { label: "Imports", href: "/imports", icon: Upload, disabled: true },
       { label: "Exports", href: "/exports", icon: Download, disabled: true },
