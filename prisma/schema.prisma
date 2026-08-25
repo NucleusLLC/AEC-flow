@@ -2461,3 +2461,76 @@ model Drawing {
   @@index([discipline])
   @@map("drawings")
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// OUTBOUND EMAIL LOG
+//
+// Every attempt to send a document email, successful or not. The order of those
+// two words matters: the incident this table was added for is a schedule that
+// was "emailed" to a client and to the owner and arrived nowhere, with nothing
+// anywhere in the system to say so. A log of successes only would have recorded
+// that same event as silence, which is indistinguishable from never having
+// pressed the button.
+//
+// So a FAILED row is the load-bearing case. It carries the provider's own error
+// text, and it is written on the invalid-recipient and not-configured paths too,
+// where no provider call happens at all.
+//
+// The body is stored. It is the sender's own words to their own client, held so
+// a failed send can be read back and re-sent without retyping, and so "what did
+// we actually tell them" has an answer. There is no attachment to store: these
+// documents are rendered by the browser's print dialog and never exist server-side.
+// ───────────────────────────────────────────────────────────────────────────
+
+enum EmailStatus {
+  /// The provider accepted the message and returned an id. Nothing else earns this.
+  SENT
+  /// Refused before sending (validation, no API key) or rejected by the provider.
+  FAILED
+}
+
+model EmailLog {
+  /// Company-owned: this model IS in TENANT_MODELS (lib/db.ts). Nullable to match
+  /// the rest of the schema's tenant columns and to let unscoped scripts insert.
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// Who sent it, resolved from the DATABASE row of the signed-in user — never
+  /// from anything the browser supplied. Name and email are snapshotted rather
+  /// than joined so the record still reads correctly after the user is renamed
+  /// or deactivated.
+  senderId    String?
+  senderName  String
+  senderEmail String
+
+  /// The recipient as it was actually handed to the provider (or, on a validation
+  /// failure, the raw text that was refused — truncated).
+  to      String
+  /// Copied recipients, already validated and de-duplicated. Empty when none.
+  cc      String[]
+  subject String
+  body    String
+
+  /// What the email was about: `("schedule", "<projectId>")`, `("estimate", "<id>")`,
+  /// `("document", "<file name>")`. Free text on purpose — every module in the app
+  /// can email something, and an enum here would need editing for each one.
+  relatedType  String?
+  relatedId    String?
+  /// The document named in the message, e.g. "Villa Verde — Schedule.pdf".
+  documentName String?
+
+  /// The provider's id for the accepted message. Present iff status is SENT — it
+  /// is the confirmation, and the UI does not claim a send without one.
+  providerMessageId String?
+  status            EmailStatus
+  /// Why it failed, in the provider's or the validator's own words. Null when SENT.
+  error             String?
+
+  createdAt DateTime @default(now())
+
+  /// The per-entity "Sent" history the compose dialog reads.
+  @@index([companyId, relatedType, relatedId])
+  @@index([companyId, createdAt])
+  @@index([companyId])
+  @@map("email_logs")
+}
