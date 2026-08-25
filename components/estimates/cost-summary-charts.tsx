@@ -39,7 +39,7 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 function Empty({ label }: { label: string }) {
   return (
-    <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-border text-xs text-faint">
+    <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-border bg-surface-2/60 text-xs text-faint">
       {label}
     </div>
   );
