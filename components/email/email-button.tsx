@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Mail, X, Paperclip, Send, Check, AlertTriangle, Loader2, History } from "lucide-react";
+import { Mail, X, Paperclip, Send, Check, AlertTriangle, Loader2, History, ExternalLink, Copy } from "lucide-react";
 import { firmName } from "@/lib/firm-identity";
 import { NOT_ATTACHED } from "@/lib/email/compose";
 import { sendDocumentEmailAction, listEmailHistoryAction, type EmailHistory } from "@/app/(app)/email/actions";
@@ -131,6 +131,7 @@ function EmailDialog({
   const [msg, setMsg] = useState(
     defaultBody ?? `Dear recipient,\n\nPlease find attached ${attachment}.\n\nKind regards,\n${firmName()}`,
   );
+  const [copied, setCopied] = useState(false);
   const [phase, setPhase] = useState<Phase>("compose");
   /** The confirmed send. Set ONLY from a server result with `ok: true`. */
   const [confirmed, setConfirmed] = useState<Extract<SendDocumentEmailResult, { ok: true }> | null>(null);
@@ -215,6 +216,37 @@ function EmailDialog({
     window.location.href = `mailto:${encodeURIComponent(to.trim())}?${params.toString().replace(/\+/g, "%20")}`;
   };
 
+  /* MORE ESCAPE HATCHES. `mailto:` only works when a DESKTOP mail client is
+   * registered. On a machine whose mail lives in a browser tab, clicking it appears
+   * to do nothing at all — which is exactly how this looked to the owner. Gmail and
+   * Outlook on the web take the same composed message through a compose URL, and
+   * copying works anywhere. Same text in every case; only the destination differs. */
+  const composedBody = () => msg + "\n\n---\nPlease attach: " + attachment;
+
+  const openInGmail = () => {
+    const g = new URLSearchParams({ view: "cm", fs: "1", to: to.trim(), su: subj, body: composedBody() });
+    if (cc.trim()) g.set("cc", cc.trim());
+    window.open("https://mail.google.com/mail/?" + g.toString(), "_blank", "noopener,noreferrer");
+  };
+
+  const openInOutlook = () => {
+    const o = new URLSearchParams({ to: to.trim(), subject: subj, body: composedBody() });
+    if (cc.trim()) o.set("cc", cc.trim());
+    window.open("https://outlook.office.com/mail/deeplink/compose?" + o.toString(), "_blank", "noopener,noreferrer");
+  };
+
+  const copyMessage = async () => {
+    const header = "To: " + to + (cc.trim() ? "\nCc: " + cc : "") + "\nSubject: " + subj;
+    try {
+      await navigator.clipboard.writeText(header + "\n\n" + composedBody());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* Clipboard blocked (permissions, insecure context). The text is still on
+       * screen in the fields above, so this is a convenience and not the only route. */
+    }
+  };
+
   const busy = phase === "sending";
 
   return (
@@ -262,8 +294,8 @@ function EmailDialog({
                     <div className="font-semibold">Not sent.</div>
                     <div className="mt-0.5">{failure}</div>
                     <div className="mt-1 text-rose-700">
-                      Your message is still here — nothing was lost. Fix the problem and send again, or open it in
-                      your own email app below. The attempt has been recorded in the email log either way.
+                      Your message is still here — nothing was lost. Fix the problem and send again, or use one of
+                      the mailbox buttons below. The attempt has been recorded in the email log either way.
                     </div>
                   </div>
                 </div>
@@ -294,6 +326,33 @@ function EmailDialog({
                 </span>
               </div>
 
+              {/* SEND IT YOURSELF. Server-side delivery needs a configured provider;
+                * until then — and afterwards, whenever it fails — these four routes
+                * carry the SAME composed text into whatever the sender actually uses.
+                * `mailto:` alone was not enough: on a machine with no desktop mail
+                * client registered it silently does nothing, which is exactly what the
+                * owner saw. Gmail and Outlook cover the web mailboxes; Copy covers
+                * every other one. */}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2/50 px-3 py-2">
+                <span className="text-xs font-medium text-muted">Or send it from your own mailbox:</span>
+                <button type="button" onClick={openInGmail} className={hatch} title="Opens a Gmail compose window with this message already filled in.">
+                  <ExternalLink className="h-3.5 w-3.5" /> Gmail
+                </button>
+                <button type="button" onClick={openInOutlook} className={hatch} title="Opens an Outlook on the web compose window with this message already filled in.">
+                  <ExternalLink className="h-3.5 w-3.5" /> Outlook
+                </button>
+                <button type="button" onClick={openInMailClient} className={hatch} title="Hands the message to a desktop mail client. Does nothing if none is installed.">
+                  <Mail className="h-3.5 w-3.5" /> Mail app
+                </button>
+                <button type="button" onClick={copyMessage} className={hatch} title="Copies the recipients, subject and message so you can paste them anywhere.">
+                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                <span className="w-full text-[11px] leading-snug text-faint">
+                  Attach {attachment} yourself — print it to PDF from its Print/Preview screen first.
+                </span>
+              </div>
+
               <EmailHistoryPanel
                 history={history}
                 open={showHistory}
@@ -303,16 +362,6 @@ function EmailDialog({
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
-              {failure ? (
-                <button
-                  type="button"
-                  onClick={openInMailClient}
-                  className="mr-auto inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted hover:text-fg"
-                  title="Hands the composed message to a desktop mail client. Does nothing if you use webmail with no mail app installed."
-                >
-                  <Mail className="h-4 w-4" /> Open in my email app instead
-                </button>
-              ) : null}
               <button type="button" onClick={onClose} disabled={busy} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted hover:text-fg disabled:opacity-40">Cancel</button>
               <button type="button" onClick={send} disabled={!valid || busy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-40">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -394,6 +443,9 @@ function EmailHistoryPanel({
 }
 
 const inp = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none focus:ring-1 focus:ring-brand/30 disabled:opacity-60";
+
+const hatch =
+  "inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-xs font-medium text-muted transition-colors hover:text-fg";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
