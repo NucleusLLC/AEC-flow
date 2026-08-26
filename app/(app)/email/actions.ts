@@ -16,6 +16,8 @@
  * environment. Adding any of them to this type would be the bug.
  */
 
+import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 import {
   sendDocumentEmail,
   type SendDocumentEmailResult,
@@ -56,6 +58,9 @@ export type EmailHistory = {
   entries: EmailLogEntry[];
   /** True when these are the whole company's sends rather than one document's. */
   companyWide: boolean;
+  /** Set when a company-wide read was refused: the caller is not an administrator.
+   *  Distinguishes "you may not see this" from "there is nothing to see". */
+  denied?: boolean;
 };
 
 /**
@@ -74,6 +79,23 @@ export async function listEmailHistoryAction(opts?: {
   limit?: number;
 }): Promise<EmailHistory> {
   const scoped = Boolean(opts?.relatedType && opts?.relatedId);
+  /* A COMPANY-WIDE read is administrators only — it exposes the practice's whole
+   * correspondence, bodies included. A DOCUMENT-SCOPED read stays open to any
+   * signed-in user: it answers "did the thing I just sent actually go?", which is
+   * the question this module exists for, and it is limited to one document.
+   *
+   * Enforced here rather than only on the page, because a server action is a public
+   * endpoint — anything reachable from the browser can call it directly. */
+  if (!scoped) {
+    try {
+      const actor = await requireActor();
+      if (!canManagePasswords(actor.role, actor.isFounder)) {
+        return { entries: [], companyWide: true, denied: true };
+      }
+    } catch {
+      return { entries: [], companyWide: true, denied: true };
+    }
+  }
   try {
     const entries = await listEmailLog({
       relatedType: opts?.relatedType ?? null,
