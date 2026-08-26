@@ -12,7 +12,12 @@
     "verify:calc": "ts-node --project scripts/tsconfig.json -r tsconfig-paths/register scripts/verify-calc.ts",
     "golden": "ts-node --project scripts/tsconfig.json -r tsconfig-paths/register scripts/golden-master.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mail:status": "node scripts/email-setup.mjs status",
+    "mail:add": "node scripts/email-setup.mjs add",
+    "mail:dns": "node scripts/email-setup.mjs dns",
+    "mail:verify": "node scripts/email-setup.mjs verify",
+    "mail:test": "node scripts/email-setup.mjs test"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"commonjs\",\"moduleResolution\":\"node\"} -r tsconfig-paths/register prisma/seed.ts"

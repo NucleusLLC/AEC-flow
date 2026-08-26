@@ -28,8 +28,14 @@ const FROM = process.env.EMAIL_FROM?.trim() || "AEC-Flow <onboarding@resend.dev>
 
 let client: Resend | null = null;
 function getClient(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
+  const key = process.env.RESEND_API_KEY?.trim();
+  // A key that is present but is not a key is worse than no key at all: it turns
+  // "email is not configured" into the provider's "API key is invalid", which
+  // reads as an outage and sends whoever is debugging it to the wrong place. The
+  // repo's own .env ships the literal string `placeholder`, and real Resend keys
+  // are all `re_`-prefixed, so this costs one comparison and removes a whole
+  // class of misleading incident.
+  if (!key || !key.startsWith("re_")) return null;
   if (!client) client = new Resend(key);
   return client;
 }
