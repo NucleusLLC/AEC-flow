@@ -1,5 +1,7 @@
-import { Mail } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { listEmailLog } from "@/lib/data/email-log";
+import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 
 export const metadata = { title: "Sent Email · AEC-flow" };
 
@@ -18,6 +20,41 @@ export const metadata = { title: "Sent Email · AEC-flow" };
  * scope cannot be forgotten here.
  */
 export default async function EmailLogPage() {
+  /* ADMINISTRATORS ONLY. This page shows the practice's correspondence, message
+   * bodies included, so it is not for every seat. Enforced HERE and in the action
+   * behind it, not by hiding the sidebar link: a hidden link is a suggestion, and
+   * the route is guessable. ADMIN, DIRECTOR or the founder — the same set that
+   * administers members, and the owner's own account is a DIRECTOR, so a gate on
+   * ADMIN alone would lock him out of his own audit trail. */
+  let allowed = false;
+  try {
+    const actor = await requireActor();
+    allowed = canManagePasswords(actor.role, actor.isFounder);
+  } catch {
+    allowed = false;
+  }
+
+  if (!allowed) {
+    return (
+      <div className="w-full space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold text-fg">Sent Email</h2>
+          <p className="text-sm text-muted">The practice's email record.</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface py-16 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-2 text-faint">
+            <Lock className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <p className="text-sm font-medium text-fg">Administrators only</p>
+          <p className="max-w-md text-xs text-muted">
+            This record includes the contents of messages sent on the practice's behalf. Ask an administrator or
+            director if you need to check whether something was delivered.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const entries = await listEmailLog({ limit: 100 });
 
   return (
