@@ -23,7 +23,10 @@
  * secret that reaches a terminal reaches that terminal's scrollback, and this
  * script's whole job is to be run while someone is watching the screen.
  */
-import "dotenv/config";
+// Env comes from `node --env-file-if-exists=.env` in the npm scripts, NOT from
+// dotenv: `dotenv` is in neither dependencies nor devDependencies and resolves
+// today only because Prisma happens to hoist it. Any dependency change would
+// have broken all five mail:* scripts with ERR_MODULE_NOT_FOUND.
 
 const DOMAIN = (process.env.EMAIL_DOMAIN || "aec-flow.com").trim();
 const KEY = (process.env.RESEND_API_KEY || "").trim();
@@ -67,9 +70,17 @@ async function cloudflare(path, init = {}) {
   return { status: res.status, body };
 }
 
+class Fatal extends Error {}
+
+/**
+ * `process.exit()` here tore the process down with Node's undici keep-alive
+ * socket still open, which on Windows prints
+ * `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` after otherwise
+ * correct output - noise that reads as a crash to whoever runs it. Throw
+ * instead and let the dispatcher set the exit code on a drained event loop.
+ */
 function die(msg) {
-  console.error(`\n  ✗ ${msg}\n`);
-  process.exit(1);
+  throw new Fatal(msg);
 }
 
 function requireKey() {
@@ -95,16 +106,49 @@ function printRecords(records) {
   }
 }
 
+/** Returned instead of a domain when the key is valid but scoped to sending. */
+const RESTRICTED = Symbol("restricted_api_key");
+
+/**
+ * A "Sending access" key can send email perfectly and cannot read /domains —
+ * Resend answers `restricted_api_key`. Treating that as a dead key made `status`
+ * exit(1) on a key that works, which is the same species of misdiagnosis this
+ * script exists to end. `add`/`dns`/`verify` genuinely need full access, so they
+ * still die; `status` reports and carries on.
+ */
 async function findDomain() {
   const { status, body } = await resend("/domains");
+  if (body?.name === "restricted_api_key" || status === 403) return RESTRICTED;
+  // A well-formed key the provider does not recognise. keyState() can only see
+  // shape, so this is the first place the difference is knowable - say which of
+  // the two it is, or the operator re-reads "present" and looks elsewhere.
+  if (status === 400 || status === 401) {
+    die(
+      `RESEND_API_KEY is present but the provider rejects it (HTTP ${status}: ${body.message || "no message"}). ` +
+        "Create a fresh key at resend.com/api-keys and replace it in .env.",
+    );
+  }
   if (status !== 200) die(`Resend refused the key list request (HTTP ${status}): ${body.message || "no message"}`);
   return (body.data || []).find((d) => d.name === DOMAIN) || null;
+}
+
+/** For the commands that cannot proceed on a sending-only key. */
+async function findDomainOrDie() {
+  const d = await findDomain();
+  if (d === RESTRICTED) {
+    die("This key has Sending access only, so it cannot read or change domains. Use a full-access key for this step.");
+  }
+  return d;
 }
 
 async function cmdStatus() {
   console.log(`\n  Domain            ${DOMAIN}`);
   console.log(`  RESEND_API_KEY    ${keyState()}`);
-  console.log(`  EMAIL_FROM        ${process.env.EMAIL_FROM?.trim() || "unset (falls back to Resend's sandbox sender)"}`);
+  const fromEnv = process.env.EMAIL_FROM?.trim();
+  console.log(`  EMAIL_FROM        ${fromEnv || "UNSET — nothing can send until this is set"}`);
+  if (fromEnv && !fromEnv.includes(`@${DOMAIN}`)) {
+    console.log(`                    not an address on ${DOMAIN}; the provider refuses it once the domain is verified`);
+  }
   console.log(`  CLOUDFLARE token  ${CF ? "present" : "absent (the `dns` step will not run)"}`);
 
   if (keyState() !== "present") {
@@ -112,6 +156,13 @@ async function cmdStatus() {
     return;
   }
   const d = await findDomain();
+  if (d === RESTRICTED) {
+    console.log(`
+  Key is valid, Sending access only: it can send, but cannot read domains.`);
+    console.log(`  Domain checks (add / dns / verify) need a full-access key.
+`);
+    return;
+  }
   if (!d) {
     console.log(`\n  ${DOMAIN} is NOT registered on this Resend account. Next: \`add\`.\n`);
     return;
@@ -126,7 +177,7 @@ async function cmdStatus() {
 
 async function cmdAdd() {
   requireKey();
-  const existing = await findDomain();
+  const existing = await findDomainOrDie();
   if (existing) {
     console.log(`\n  ${DOMAIN} is already registered (${existing.id}, status=${existing.status}).`);
     const { body } = await resend(`/domains/${existing.id}`);
@@ -148,7 +199,7 @@ async function cmdDns() {
   requireKey();
   if (!CF) die("CLOUDFLARE_API_TOKEN is not set. It needs Zone:DNS:Edit on the aec-flow.com zone.");
 
-  const d = await findDomain();
+  const d = await findDomainOrDie();
   if (!d) die(`${DOMAIN} is not registered on Resend yet — run \`add\` first.`);
   const { body: detail } = await resend(`/domains/${d.id}`);
   const records = detail.records || [];
@@ -159,12 +210,34 @@ async function cmdDns() {
   if (!zone) die(`Cloudflare has no zone called ${DOMAIN} (or the token cannot see it).`);
   console.log(`\n  Cloudflare zone ${zone.id}`);
 
-  const existingRes = await cloudflare(`/zones/${zone.id}/dns_records?per_page=200`);
-  const existing = existingRes.body?.result || [];
+  // Read every page, and treat a failed read as fatal. `?.result || []` silently
+  // yielded [] on any error; every match then missed and every record was POSTed
+  // — producing exactly the duplicate-TXT-at-one-name this function exists to
+  // avoid, on the run least able to cope with it.
+  const existing = [];
+  for (let page = 1; ; page++) {
+    const res = await cloudflare(`/zones/${zone.id}/dns_records?per_page=100&page=${page}`);
+    if (res.status >= 300 || res.body?.success === false) {
+      die(`Cloudflare refused to list the zone records: ${res.body?.errors?.[0]?.message || "HTTP " + res.status}`);
+    }
+    const batch = res.body?.result || [];
+    existing.push(...batch);
+    const info = res.body?.result_info;
+    if (!info || !info.total_pages || page >= info.total_pages || batch.length === 0) break;
+  }
 
   for (const r of records) {
-    // Resend gives host-relative names for some records and absolute for others.
-    const name = r.name.endsWith(DOMAIN) ? r.name : `${r.name}.${DOMAIN}`;
+    // Resend gives host-relative names for some records and absolute for others,
+    // and "" or "@" for an apex record. A bare endsWith() turned "" into
+    // ".aec-flow.com" (which Cloudflare rejects) and would accept the unrelated
+    // "notaec-flow.com" as already absolute.
+    const raw = (r.name ?? "").trim();
+    const name =
+      !raw || raw === "@"
+        ? DOMAIN
+        : raw === DOMAIN || raw.endsWith(`.${DOMAIN}`)
+          ? raw
+          : `${raw}.${DOMAIN}`;
     const payload = {
       type: r.type,
       name,
@@ -176,6 +249,17 @@ async function cmdDns() {
     // Update in place rather than add: a second TXT at the same name is not an
     // error to Cloudflare and is an unverifiable domain to Resend.
     const match = existing.find((e) => e.type === r.type && e.name === name);
+    if (match && match.content === payload.content && (match.priority ?? null) === (payload.priority ?? null)) {
+      console.log(`  = ${r.type} ${name} (already correct)`);
+      continue;
+    }
+    // A destructive write to live DNS, parameterised by EMAIL_DOMAIN. Say what
+    // is being replaced before replacing it.
+    if (match) {
+      console.log(`  ~ ${r.type} ${name}`);
+      console.log(`      was  ${match.content}`);
+      console.log(`      now  ${payload.content}`);
+    }
     const { status, body } = match
       ? await cloudflare(`/zones/${zone.id}/dns_records/${match.id}`, { method: "PUT", body: JSON.stringify(payload) })
       : await cloudflare(`/zones/${zone.id}/dns_records`, { method: "POST", body: JSON.stringify(payload) });
@@ -191,16 +275,29 @@ async function cmdDns() {
 
 async function cmdVerify() {
   requireKey();
-  const d = await findDomain();
+  const d = await findDomainOrDie();
   if (!d) die(`${DOMAIN} is not registered on Resend — run \`add\` first.`);
   const { status, body } = await resend(`/domains/${d.id}/verify`, { method: "POST" });
   if (status >= 300) die(`Verification request failed (HTTP ${status}): ${body.message || "no message"}`);
 
-  const { body: after } = await resend(`/domains/${d.id}`);
-  console.log(`\n  ${DOMAIN} status=${after.status}`);
-  if (after.status !== "verified") {
+  // Verification is asynchronous. Reading the status in the same breath as
+  // requesting it returns `pending` almost every time, so this reported
+  // "records not satisfied" and exited 2 on DNS that was in fact correct.
+  let after = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const res = await resend(`/domains/${d.id}`);
+    after = res.body;
+    if (after?.status === "verified" || after?.status === "failure") break;
+    if (attempt < 5) {
+      console.log(`  status=${after?.status ?? "unknown"} - waiting 10s (${attempt}/5)`);
+      await new Promise((r) => setTimeout(r, 10_000));
+    }
+  }
+  console.log(`
+  ${DOMAIN} status=${after?.status}`);
+  if (after?.status !== "verified") {
     console.log("  Records not satisfied yet. Which ones:");
-    printRecords((after.records || []).filter((r) => r.status !== "verified"));
+    printRecords((after?.records || []).filter((r) => r.status !== "verified"));
     console.log("\n  DNS can take up to an hour. Re-run `verify`.\n");
     process.exitCode = 2;
     return;
@@ -238,6 +335,7 @@ async function cmdTest(to) {
 }
 
 const [cmd, arg] = process.argv.slice(2);
+try {
 switch (cmd) {
   case "status": await cmdStatus(); break;
   case "add": await cmdAdd(); break;
@@ -252,4 +350,12 @@ switch (cmd) {
   node scripts/email-setup.mjs verify          ask Resend to re-check them
   node scripts/email-setup.mjs test <address>  send one real email
 `);
+}
+} catch (e) {
+  if (e instanceof Fatal) {
+    console.error(`\n  x ${e.message}\n`);
+    process.exitCode = 1;
+  } else {
+    throw e;
+  }
 }

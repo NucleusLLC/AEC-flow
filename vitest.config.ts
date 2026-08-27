@@ -72,6 +72,11 @@ export default defineConfig({
       // the database these would otherwise reach IS production.
       "lib/email/recipients.test.ts",
       "lib/email/compose.test.ts",
+      // The transport itself: what counts as sent, and which environment states
+      // refuse to send at all. Named file, same reason as every entry above --
+      // it mocks `resend` at the SDK constructor and `server-only` (which Next
+      // supplies and Vitest cannot resolve), so it reaches no network.
+      "lib/server/email.test.ts",
       "lib/server/document-email.test.ts",
       "lib/data/email-log.test.ts",
     ],

@@ -13,11 +13,11 @@
     "golden": "ts-node --project scripts/tsconfig.json -r tsconfig-paths/register scripts/golden-master.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "mail:status": "node scripts/email-setup.mjs status",
-    "mail:add": "node scripts/email-setup.mjs add",
-    "mail:dns": "node scripts/email-setup.mjs dns",
-    "mail:verify": "node scripts/email-setup.mjs verify",
-    "mail:test": "node scripts/email-setup.mjs test"
+    "mail:status": "node --env-file-if-exists=.env scripts/email-setup.mjs status",
+    "mail:add": "node --env-file-if-exists=.env scripts/email-setup.mjs add",
+    "mail:dns": "node --env-file-if-exists=.env scripts/email-setup.mjs dns",
+    "mail:verify": "node --env-file-if-exists=.env scripts/email-setup.mjs verify",
+    "mail:test": "node --env-file-if-exists=.env scripts/email-setup.mjs test"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"commonjs\",\"moduleResolution\":\"node\"} -r tsconfig-paths/register prisma/seed.ts"

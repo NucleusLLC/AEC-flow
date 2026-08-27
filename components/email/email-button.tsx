@@ -129,13 +129,17 @@ function EmailDialog({
   const [cc, setCc] = useState("");
   const [subj, setSubj] = useState(subject);
   const [msg, setMsg] = useState(
-    defaultBody ?? `Dear recipient,\n\nPlease find attached ${attachment}.\n\nKind regards,\n${firmName()}`,
+    defaultBody ?? `Dear recipient,\n\nI am writing to you about ${attachment}.\n\nKind regards,\n${firmName()}`,
   );
   const [copied, setCopied] = useState(false);
   const [phase, setPhase] = useState<Phase>("compose");
   /** The confirmed send. Set ONLY from a server result with `ok: true`. */
   const [confirmed, setConfirmed] = useState<Extract<SendDocumentEmailResult, { ok: true }> | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  /** Whether the failed attempt actually made it into the email log. Null means
+   *  it did not — not signed in, or the log write itself failed — and the panel
+   *  must not promise a record that does not exist. */
+  const [failureLogId, setFailureLogId] = useState<string | null>(null);
   const [history, setHistory] = useState<EmailHistory | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -172,6 +176,7 @@ function EmailDialog({
   const send = async () => {
     setPhase("sending");
     setFailure(null);
+    setFailureLogId(null);
     let res: SendDocumentEmailResult;
     try {
       res = await sendDocumentEmailAction({
@@ -192,6 +197,7 @@ function EmailDialog({
           ? `The send could not be completed: ${e.message}`
           : "The send could not be completed — the server did not answer.",
       );
+      setFailureLogId(null);
       setPhase("compose");
       loadHistory();
       return;
@@ -202,6 +208,7 @@ function EmailDialog({
     } else {
       // Everything the user typed stays exactly where it is.
       setFailure(res.error);
+      setFailureLogId(res.logId);
       setPhase("compose");
     }
     loadHistory();
@@ -295,7 +302,10 @@ function EmailDialog({
                     <div className="mt-0.5">{failure}</div>
                     <div className="mt-1 text-rose-700">
                       Your message is still here — nothing was lost. Fix the problem and send again, or use one of
-                      the mailbox buttons below. The attempt has been recorded in the email log either way.
+                      the mailbox buttons below.{" "}
+                      {failureLogId
+                        ? "The attempt has been recorded in the email log."
+                        : "This attempt is NOT in the email log — there will be no trace of it once you close this."}
                     </div>
                   </div>
                 </div>

@@ -11,8 +11,12 @@
  *                     production currently holds the variable with an empty
  *                     value, which lands here.
  *   EMAIL_FROM      — verified sender, e.g. `AEC-Flow <noreply@aec-flow.com>`.
- *                     Defaults to Resend's sandbox sender (only delivers to the
- *                     Resend account owner) until the domain is verified.
+ *                     REQUIRED. Unset means every send returns `{ ok: false }`
+ *                     without contacting anyone — see resolveFrom() for why
+ *                     falling back to the sandbox sender was worse than that.
+ *   EMAIL_ALLOW_SANDBOX — set to "1" to permit Resend's sandbox sender when
+ *                     EMAIL_FROM is unset. Local development only: the sandbox
+ *                     sender delivers to the Resend account owner and nobody else.
  *
  * The `from` address is taken from the environment and NEVER from a caller: it
  * has to match a domain verified on the Resend account, and letting a request
@@ -21,26 +25,52 @@
 import "server-only";
 import { Resend } from "resend";
 
+/**
+ * Resend's sandbox sender delivers for real — but ONLY to the Resend account
+ * owner. Falling back to it meant a test send to the owner came back green with
+ * a genuine provider id while every send to an actual client 403'd: behaviour
+ * that changes by recipient, which is the worst possible thing to debug. So an
+ * unset EMAIL_FROM is now a refusal. Set EMAIL_ALLOW_SANDBOX=1 to opt back into
+ * the sandbox sender for local work, where that trade is worth making.
+ */
+const SANDBOX_FROM = "AEC-Flow <onboarding@resend.dev>";
+
 // `.trim() ||` rather than `??`: a variable that exists but is empty (exactly
-// how RESEND_API_KEY is configured in production today) must fall back, not
-// become an empty From header the provider rejects.
-const FROM = process.env.EMAIL_FROM?.trim() || "AEC-Flow <onboarding@resend.dev>";
+// how RESEND_API_KEY is configured in production today) must be treated as
+// absent, not become an empty From header the provider rejects.
+function resolveFrom(): string | null {
+  const from = process.env.EMAIL_FROM?.trim();
+  if (from) return from;
+  if (process.env.EMAIL_ALLOW_SANDBOX?.trim() === "1") return SANDBOX_FROM;
+  return null;
+}
 
 let client: Resend | null = null;
 function getClient(): Resend | null {
   const key = process.env.RESEND_API_KEY?.trim();
-  // A key that is present but is not a key is worse than no key at all: it turns
-  // "email is not configured" into the provider's "API key is invalid", which
-  // reads as an outage and sends whoever is debugging it to the wrong place. The
-  // repo's own .env ships the literal string `placeholder`, and real Resend keys
-  // are all `re_`-prefixed, so this costs one comparison and removes a whole
-  // class of misleading incident.
+  // A key that is present but is not shaped like a key is worse than no key at
+  // all: it turns "email is not configured" into the provider's "API key is
+  // invalid", which reads as an outage and sends whoever is debugging it to the
+  // wrong place. Real Resend keys are all `re_`-prefixed, so this costs one
+  // comparison and removes a whole class of misleading incident.
+  //
+  // It is a SHAPE check, not a validity check. A well-formed key that the
+  // provider rejects still gets through to Resend and comes back as
+  // `invalid_api_key` — which is why that code is classified downstream.
   if (!key || !key.startsWith("re_")) return null;
   if (!client) client = new Resend(key);
   return client;
 }
 
-export type SendResult = { ok: true; id: string | null } | { ok: false; error: string };
+/**
+ * `ok: true` carries a non-null id BY CONSTRUCTION. The provider accepting a
+ * request and returning no message id is not a send, and the one previous time
+ * that distinction lived in a caller instead of here, the other caller didn't
+ * make it and reported an unsent invitation as delivered.
+ */
+export type SendResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string; code: string | null };
 
 export async function sendEmail(opts: {
   to: string;
@@ -51,11 +81,21 @@ export async function sendEmail(opts: {
   text?: string;
 }): Promise<SendResult> {
   const resend = getClient();
-  if (!resend) return { ok: false, error: "Email is not configured (RESEND_API_KEY missing)." };
+  if (!resend) {
+    return { ok: false, error: "Email is not configured (RESEND_API_KEY missing).", code: "missing_api_key" };
+  }
+  const from = resolveFrom();
+  if (!from) {
+    return {
+      ok: false,
+      error: "EMAIL_FROM is not set, so nothing was sent.",
+      code: "missing_from_address",
+    };
+  }
   try {
     const cc = opts.cc?.filter((a) => a.trim().length > 0);
     const { data, error } = await resend.emails.send({
-      from: FROM,
+      from,
       to: opts.to,
       // Omitted entirely when empty: an empty `cc` array is a header the
       // provider need not see, and some clients render one.
@@ -64,10 +104,25 @@ export async function sendEmail(opts: {
       html: opts.html,
       text: opts.text ?? stripHtml(opts.html),
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, id: data?.id ?? null };
+    // `error.name` is Resend's stable machine-readable code (invalid_api_key,
+    // invalid_from_address, daily_quota_exceeded, ...). Carry it: classifying a
+    // failure by substring-matching English prose put `invalid_from_address`
+    // — a broken sender — into the "bad recipient address" bucket.
+    if (error) return { ok: false, error: error.message, code: error.name ?? null };
+    if (!data?.id) {
+      return {
+        ok: false,
+        error: "The provider accepted the request but returned no message id, so the send is unconfirmed.",
+        code: "unconfirmed",
+      };
+    }
+    return { ok: true, id: data.id };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Failed to send email." };
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to send email.",
+      code: null,
+    };
   }
 }
 
