@@ -12,15 +12,25 @@ import { addDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getCurrentCompanyId, getCurrentCompany } from "@/lib/server/tenant";
 import { sendInviteEmail } from "@/lib/server/email";
+import { recordEmailAttempt } from "@/lib/data/email-log";
+import { requireActor } from "@/lib/server/actor";
 import type { UserRole } from "@prisma/client";
 
 const INVITE_TTL_DAYS = 14;
 
 /** Absolute base URL for links in emails (env — the request origin isn't
- *  reliable in a server action). Falls back to the production host. */
+ *  reliable in a server action). Falls back to the production host.
+ *
+ *  `.trim() ||` rather than `??`: `??` only falls through on undefined, and this
+ *  deployment already holds one variable present-but-EMPTY. An empty base here
+ *  does not throw — it emits a relative `/invite/<token>`, which is a dead link
+ *  in the recipient's mail client and invisible to the sender, whose own
+ *  copy-link is built from window.location.origin instead. */
 function appBaseUrl(): string {
   const base =
-    process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://aec-flow.com";
+    (process.env.NEXTAUTH_URL ?? "").trim() ||
+    (process.env.NEXT_PUBLIC_APP_URL ?? "").trim() ||
+    "https://aec-flow.com";
   return base.replace(/\/+$/, "");
 }
 
@@ -88,24 +98,69 @@ export async function createInvitation(emailRaw: string, role: UserRole, invited
   const token = randomBytes(24).toString("hex");
   const expiresAt = addDays(new Date(), INVITE_TTL_DAYS);
 
+  let invitationId: string;
   if (existingInvite) {
     await prisma.invitation.update({ where: { id: existingInvite.id }, data: { role, token, expiresAt } });
+    invitationId = existingInvite.id;
   } else {
-    await prisma.invitation.create({
+    const created = await prisma.invitation.create({
       data: { companyId, email, role, token, status: "PENDING", invitedByName: invitedByName ?? null, expiresAt },
+      select: { id: true },
     });
+    invitationId = created.id;
   }
 
   // Notify the invitee. The invite is valid regardless of whether the email
   // sends — the owner can always fall back to sharing the link by hand.
   const company = await getCurrentCompany();
+  const acceptUrl = `${appBaseUrl()}/invite/${token}`;
+  const subject = `You're invited to join ${company?.name ?? "your team"} on AEC-Flow`;
   const send = await sendInviteEmail({
     to: email,
     companyName: company?.name ?? "your team",
     invitedByName,
     role,
-    acceptUrl: `${appBaseUrl()}/invite/${token}`,
+    acceptUrl,
     expiresAt,
+  });
+
+  // Record it, exactly as a document email is recorded. The Correspondence page
+  // promises "every message AEC-flow has attempted to send for this practice";
+  // an invitation that left no row made that promise false, and left the owner
+  // with no trace at all once the toast was dismissed.
+  //
+  // `requireActor` is the same server-side identity the document path uses. It
+  // throws for a session this code should never be reached without; a failure
+  // here degrades the record, never the invitation.
+  let actor: { id: string | null; name: string; email: string } = {
+    id: null,
+    name: invitedByName?.trim() || "AEC-Flow",
+    email: "",
+  };
+  try {
+    const a = await requireActor();
+    actor = { id: a.id, name: a.name, email: a.email };
+  } catch {
+    // keep the fallback above
+  }
+  await recordEmailAttempt({
+    senderId: actor.id,
+    senderName: actor.name,
+    senderEmail: actor.email,
+    to: email,
+    cc: [],
+    subject,
+    // Neither the token nor the accept URL is stored. That link is a live
+    // credential — anyone who can read it can join the company as the invitee —
+    // and the correspondence record is a different, wider audience than the one
+    // person the email was addressed to.
+    body: `Team invitation as ${role}. The accept link is in the email only; it is not recorded here.`,
+    relatedType: "invitation",
+    relatedId: invitationId,
+    documentName: null,
+    providerMessageId: send.ok ? send.id : null,
+    status: send.ok ? "SENT" : "FAILED",
+    error: send.ok ? null : send.error,
   });
 
   return send.ok

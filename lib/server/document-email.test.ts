@@ -121,7 +121,16 @@ describe("success is never claimed without confirmation", () => {
   it("refuses to call an id-less acceptance a send", async () => {
     // Resend returning no id means we cannot prove anything. The old code's
     // instinct here was to show a tick anyway.
-    mocks.sendEmail.mockResolvedValue({ ok: true, id: null });
+    //
+    // That judgement now lives in the transport, which collapses an id-less
+    // acceptance into `ok: false` with code `unconfirmed` — so BOTH callers get
+    // it, not just this one. What is tested here is that this module still
+    // reports it as unconfirmed rather than burying it in `provider_error`.
+    mocks.sendEmail.mockResolvedValue({
+      ok: false,
+      error: "The provider accepted the request but returned no message id, so the send is unconfirmed.",
+      code: "unconfirmed",
+    });
     const res = await sendDocumentEmail(INPUT);
     expect(res.ok).toBe(false);
     expect(res.ok === false && res.reason).toBe("unconfirmed");
@@ -288,7 +297,26 @@ describe("classify", () => {
     expect(classify("The aec-flow.com domain is not verified.")).toBe("domain_not_verified");
     expect(classify("You must verify a domain before sending.")).toBe("domain_not_verified");
     expect(classify("Invalid `to` field.")).toBe("invalid_recipient");
+    // The prose match must not claim a sentence merely CONTAINING "to".
+    expect(classify("Invalid custom storage option.")).toBe("provider_error");
     expect(classify("teapot")).toBe("provider_error");
     expect(classify("")).toBe("provider_error");
+  });
+
+  it("prefers the provider's code over its prose", () => {
+    // `invalid_from_address` reads as an invalid EMAIL address and used to be
+    // classified as a bad RECIPIENT — pointing the user at the person they were
+    // writing to, when the fault was the server's own sender.
+    expect(classify("Invalid `from` field.", "invalid_from_address")).toBe("sender_not_configured");
+    expect(classify("nothing recognisable", "missing_from_address")).toBe("sender_not_configured");
+    expect(classify("nothing recognisable", "invalid_api_key")).toBe("not_configured");
+    expect(classify("nothing recognisable", "restricted_api_key")).toBe("not_configured");
+    expect(classify("nothing recognisable", "daily_quota_exceeded")).toBe("quota_exceeded");
+    expect(classify("nothing recognisable", "monthly_quota_exceeded")).toBe("quota_exceeded");
+    expect(classify("nothing recognisable", "rate_limit_exceeded")).toBe("quota_exceeded");
+    expect(classify("nothing recognisable", "unconfirmed")).toBe("unconfirmed");
+    // Codes too broad to trust fall back to the prose.
+    expect(classify("The domain is not verified.", "validation_error")).toBe("domain_not_verified");
+    expect(classify("teapot", null)).toBe("provider_error");
   });
 });
