@@ -1922,7 +1922,7 @@ ${!preview ? `@media print {
               subject={`Estimate — ${est.projectName} (${est.version})`}
               attachment={`${est.projectName} — Estimate ${est.version}.pdf`}
               defaultTo={est.client?.includes("@") ? est.client : ""}
-              defaultBody={`Dear ${est.client?.trim() || "recipient"},\n\nPlease find attached our cost estimate for ${est.projectName}${est.projectNumber ? ` (No. ${est.projectNumber})` : ""}, version ${est.version}.\n\nKind regards,\n${firmName()}`}
+              defaultBody={`Dear ${est.client?.trim() || "recipient"},\n\nI am writing to you about our cost estimate for ${est.projectName}${est.projectNumber ? ` (No. ${est.projectNumber})` : ""}, version ${est.version}.\n\nKind regards,\n${firmName()}`}
             />
             <button type="button" onClick={() => setPreview(false)} className={ghostBtn}>
               <X className="h-4 w-4" /> Close

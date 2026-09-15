@@ -41,8 +41,12 @@ export type EmailFailureReason =
   | "not_signed_in"
   /** The recipient or a cc address is not a valid address. Nothing was sent. */
   | "invalid_recipient"
-  /** RESEND_API_KEY is unset or empty. Nothing was sent. */
+  /** RESEND_API_KEY is unset, empty, or refused by the provider. Nothing was sent. */
   | "not_configured"
+  /** EMAIL_FROM is unset, or the provider refused it as an address. Nothing was sent. */
+  | "sender_not_configured"
+  /** The account's daily or monthly sending allowance is spent. Nothing was sent. */
+  | "quota_exceeded"
   /** The provider refused the `from` domain — EMAIL_FROM is not verified on the account. */
   | "domain_not_verified"
   /** The provider refused for some other reason; `error` carries its words. */
@@ -173,20 +177,15 @@ export async function sendDocumentEmail(
   // 4. The send. `sendEmail` never throws; it returns a soft result.
   const res = await sendEmail({ to: recipient.address, cc: copies.addresses, subject, html, text });
 
+  // 5. Anything that is not an id-bearing acceptance is a failure, including the
+  //    provider accepting the request and returning no id — `sendEmail` collapses
+  //    that case into `ok: false` with code `unconfirmed`, so this one branch is
+  //    now the only seam where "it looked fine" could become a green tick.
   if (!res.ok) {
-    const reason = classify(res.error);
+    const reason = classify(res.error, res.code);
     const error = humanise(reason, res.error);
     const logId = await record(recipient.address, copies.addresses, "FAILED", null, res.error);
     return { ok: false, reason, error, logId };
-  }
-
-  // 5. Accepted — but an acceptance without an id is not a confirmation, and this
-  //    is the exact seam where "it looked fine" used to become a green tick.
-  if (!res.id) {
-    const error =
-      "The email provider accepted the request but returned no message id, so the send could not be confirmed.";
-    const logId = await record(recipient.address, copies.addresses, "FAILED", null, error);
-    return { ok: false, reason: "unconfirmed", error, logId };
   }
 
   const logId = await record(recipient.address, copies.addresses, "SENT", res.id, null);
@@ -199,7 +198,32 @@ export async function sendDocumentEmail(
  * "Failed to send" for all of them is what makes a fixable problem look like an
  * outage. Anything unrecognised keeps the provider's own words.
  */
-export function classify(providerError: string): EmailFailureReason {
+export function classify(providerError: string, code?: string | null): EmailFailureReason {
+  // Resend ships a stable machine-readable code on every error. Prefer it: the
+  // prose below is a fallback for transports that have none, and matching prose
+  // is how `invalid_from_address` — a broken SENDER — used to be reported to the
+  // user as a bad RECIPIENT, and logged against the person being written to.
+  switch ((code ?? "").trim()) {
+    case "missing_api_key":
+    case "invalid_api_key":
+    case "restricted_api_key":
+      return "not_configured";
+    case "missing_from_address":
+    case "invalid_from_address":
+      return "sender_not_configured";
+    case "not_found":
+    case "validation_error":
+      break; // too broad to trust — fall through to the prose match
+    case "daily_quota_exceeded":
+    case "monthly_quota_exceeded":
+    case "rate_limit_exceeded":
+      return "quota_exceeded";
+    case "invalid_to_address":
+      return "invalid_recipient";
+    case "unconfirmed":
+      return "unconfirmed";
+  }
+
   const e = (providerError ?? "").toLowerCase();
   if (e.includes("resend_api_key") || e.includes("not configured") || e.includes("api key is invalid")) {
     return "not_configured";
@@ -207,7 +231,9 @@ export function classify(providerError: string): EmailFailureReason {
   if (e.includes("not verified") || e.includes("domain is not") || e.includes("verify a domain")) {
     return "domain_not_verified";
   }
-  if (e.includes("invalid") && (e.includes("to") || e.includes("recipient") || e.includes("email"))) {
+  // `\bto\b`, not `includes("to")`: the bare substring matches "custom",
+  // "storage", "not" and most of the provider's other sentences.
+  if (e.includes("invalid") && (/\bto\b/.test(e) || e.includes("recipient") || e.includes("email"))) {
     return "invalid_recipient";
   }
   return "provider_error";
@@ -218,6 +244,10 @@ export function humanise(reason: EmailFailureReason, providerError: string): str
   switch (reason) {
     case "not_configured":
       return "Email is not configured on this server, so nothing was sent. An administrator needs to set RESEND_API_KEY.";
+    case "sender_not_configured":
+      return "This server has no verified sending address, so nothing was sent. An administrator needs to set EMAIL_FROM to an address on the verified domain.";
+    case "quota_exceeded":
+      return `The email provider's sending allowance for this account is used up, so nothing was sent. (${providerError})`;
     case "domain_not_verified":
       return `The sending domain is not verified with the email provider, so nothing was sent. (${providerError})`;
     case "invalid_recipient":
