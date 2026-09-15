@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { MemberForm } from "@/components/team/member-form";
+import { requireActor } from "@/lib/server/actor";
+import { canChangeMemberAccess } from "@/lib/team/member-write-policy";
 
 export const metadata = { title: "Add Member · AEC-flow" };
 
-export default function NewMemberPage() {
+export default async function NewMemberPage() {
+  const actor = await requireActor().catch(() => null);
+
   return (
     <div className="w-full space-y-6">
       <Link
@@ -20,7 +24,7 @@ export default function NewMemberPage() {
         <p className="text-sm text-muted">Add a new member to the studio directory.</p>
       </div>
 
-      <MemberForm />
+      <MemberForm canChangeAccess={actor ? canChangeMemberAccess(actor) : false} />
     </div>
   );
 }

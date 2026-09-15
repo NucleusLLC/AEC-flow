@@ -83,6 +83,9 @@ export default defineConfig({
       // same reason as every entry above — pure modules, no Prisma, no requests.
       "lib/account-security/rate-limit-policy.test.ts",
       "lib/account-security/reset-token.test.ts",
+      // Who may change role, status and email on a member record. Named file, same
+      // reason as every entry above — pure module, no Prisma, no session.
+      "lib/team/member-write-policy.test.ts",
     ],
     environment: "node",
   },

@@ -5,16 +5,23 @@ import { TeamView } from "@/components/team/team-view";
 import { TeamInvites } from "@/components/team/team-invites";
 import { getTeam, summarizeTeam } from "@/lib/data/team";
 import { getSeatUsage, listInvitations } from "@/lib/data/invitations";
+import { requireActor } from "@/lib/server/actor";
+import { canChangeMemberAccess } from "@/lib/team/member-write-policy";
 
 export const metadata = { title: "Team · AEC-flow" };
 
 export const dynamic = "force-dynamic";
 
 export default async function TeamPage() {
+  const actor = await requireActor().catch(() => null);
+  const canInvite = actor ? canChangeMemberAccess(actor) : false;
   const [members, seatUsage, invitations] = await Promise.all([
     getTeam(),
     getSeatUsage(),
-    listInvitations(),
+    // Pending invites carry their accept TOKENS. Anyone holding one can finish the
+    // signup as that invitee — at the invited role, ADMIN included — so they are
+    // only ever loaded for member administrators, never merely hidden in the UI.
+    canInvite ? listInvitations() : Promise.resolve([]),
   ]);
   const summary = summarizeTeam(members);
 
@@ -57,7 +64,7 @@ export default async function TeamPage() {
         ))}
       </div>
 
-      <TeamInvites seatUsage={seatUsage} invitations={invitations} />
+      <TeamInvites seatUsage={seatUsage} invitations={invitations} canInvite={canInvite} />
 
       <TeamView members={members} />
     </div>

@@ -12,7 +12,16 @@ type InviteRow = { id: string; email: string; role: string; token: string; creat
 
 const ROLES: UserRole[] = ["STAFF", "MANAGER", "DIRECTOR", "ADMIN", "VIEWER"];
 
-export function TeamInvites({ seatUsage, invitations }: { seatUsage: SeatUsage; invitations: InviteRow[] }) {
+export function TeamInvites({
+  seatUsage,
+  invitations,
+  canInvite,
+}: {
+  seatUsage: SeatUsage;
+  invitations: InviteRow[];
+  /** Display only; the invite actions enforce the member-admin gate themselves. */
+  canInvite: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("STAFF");
@@ -86,7 +95,14 @@ export function TeamInvites({ seatUsage, invitations }: { seatUsage: SeatUsage; 
         </div>
       </div>
 
+      {!canInvite ? (
+        <p className="mt-3 text-xs text-muted">
+          Only an administrator or director can invite people to this company.
+        </p>
+      ) : null}
+
       {/* Invite form */}
+      {canInvite ? (
       <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-2">
         <div className="min-w-[200px] flex-1">
           <label className="mb-1 block text-xs text-muted">Invite by email</label>
@@ -118,7 +134,8 @@ export function TeamInvites({ seatUsage, invitations }: { seatUsage: SeatUsage; 
           {pending ? "Sending…" : "Send invite"}
         </button>
       </form>
-      {full ? (
+      ) : null}
+      {canInvite && full ? (
         <p className="mt-2 text-xs text-amber-600">
           All seats are in use. Raise this company&rsquo;s seat limit (founder Admin) or revoke a pending invite.
         </p>

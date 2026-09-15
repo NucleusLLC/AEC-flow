@@ -1,8 +1,8 @@
 "use server";
 
 /**
- * Beta-tester self-signup. Creates a STAFF user gated behind a shared beta
- * access code, stamps a 12-month free-access window onto the account, and
+ * Beta-tester self-signup. Creates a new company and its owner — a DIRECTOR —
+ * gated behind a beta access code, stamps the free-access window onto the account, and
  * records the report-back agreement. Never throws to the client — returns a
  * tagged result the signup form can act on. The client logs the user in with
  * `signIn` after a successful create (NextAuth credentials sign-in is client-side).
@@ -154,7 +154,12 @@ export async function registerBetaTester(input: {
         name,
         passwordHash,
         companyId: co.id,
-        role: "STAFF",
+        // The person signing up is the owner of the company this call just created,
+        // so they get the owner's role. As STAFF they could not invite a colleague,
+        // manage members or reset a teammate's password in their own firm — every
+        // one of those doors requires ADMIN or DIRECTOR (lib/server/actor.ts).
+        // DIRECTOR rather than ADMIN matches the founder's own practice-owner account.
+        role: "DIRECTOR",
         status: "ACTIVE",
         // Beta-program metadata lives in the preferences JSON blob — no schema
         // change needed. `track & display` for now; not enforced at login yet.

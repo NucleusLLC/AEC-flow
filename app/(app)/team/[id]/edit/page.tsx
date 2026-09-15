@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { MemberForm, type MemberFormValues } from "@/components/team/member-form";
 import { getTeamMember } from "@/lib/data/team";
+import { requireActor } from "@/lib/server/actor";
+import { isFounderEmail } from "@/lib/server/founder";
+import { canChangeMemberAccess } from "@/lib/team/member-write-policy";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -15,8 +18,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function EditMemberPage({ params }: PageProps) {
   const { id } = await params;
-  const member = await getTeamMember(id);
+  const [member, actor] = await Promise.all([getTeamMember(id), requireActor().catch(() => null)]);
   if (!member) notFound();
+
+  // Mirrors checkMemberWrite for display; the save action enforces it.
+  const canChangeAccess =
+    !!actor && canChangeMemberAccess(actor) && (!isFounderEmail(member.email) || actor.isFounder);
 
   const initial: MemberFormValues = {
     id: member.id,
@@ -54,7 +61,7 @@ export default async function EditMemberPage({ params }: PageProps) {
         <p className="text-sm text-muted">Update {member.name}&rsquo;s details in the studio directory.</p>
       </div>
 
-      <MemberForm mode="edit" initial={initial} />
+      <MemberForm mode="edit" initial={initial} canChangeAccess={canChangeAccess} />
     </div>
   );
 }
