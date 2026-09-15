@@ -213,6 +213,43 @@ model Invitation {
   @@map("invitations")
 }
 
+/// A single-use "forgot password" link. NOT tenant-scoped and carries no companyId:
+/// it is requested and redeemed before any session exists, and is found by its
+/// hash alone. Only the sha256 of the token is stored — the token itself exists in
+/// the email and nowhere else, so a read of this table cannot be replayed as a link.
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  /// Set when redeemed, or when a newer request or a successful reset retires it.
+  usedAt      DateTime?
+  requestedIp String?
+  usedIp      String?
+  /// Outcome of handing the link to the email provider: "SENT" or "FAILED". The
+  /// reset email is deliberately NOT written to email_logs — its body is a live
+  /// credential — so this is where a failed send is visible.
+  emailStatus String?
+  emailError  String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Fixed-window counters for the pre-session auth endpoints (sign-in, signup,
+/// password reset, invite acceptance). One row per key, e.g. `login:email:<addr>`.
+/// Written only through the atomic upsert in lib/server/rate-limit.ts.
+model AuthRateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+
+  @@index([windowStart])
+  @@map("auth_rate_limits")
+}
+
 model User {
   id               String      @id @default(cuid())
   email            String      @unique
@@ -240,6 +277,7 @@ model User {
   updatedAt        DateTime    @updatedAt
 
   sessions         Session[]
+  passwordResets   PasswordResetToken[]
   managedProjects  Project[]         @relation("ProjectManager")
   phases           PhaseAssignment[]
   leaveRequests    LeaveRequest[]

@@ -139,6 +139,57 @@ export async function sendInviteEmail(opts: {
   return sendEmail({ to: opts.to, subject, html });
 }
 
+/**
+ * Send a password-reset link. The URL is a live credential for the next hour, so
+ * callers must NOT copy this message into email_logs (see lib/server/password-reset.ts).
+ */
+export async function sendPasswordResetEmail(opts: {
+  to: string;
+  name?: string | null;
+  resetUrl: string;
+  expiresInMinutes: number;
+}): Promise<SendResult> {
+  const greeting = opts.name?.trim() ? `Hi ${escapeHtml(opts.name.trim())},` : "Hi,";
+  const subject = "Reset your AEC-Flow password";
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+            <tr>
+              <td style="background:#0f172a;padding:24px 32px;">
+                <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.01em;">AEC-Flow</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#111827;">${greeting}</p>
+                <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#4b5563;">We received a request to reset the password for your AEC-Flow account. Click below to choose a new one.</p>
+                <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:8px;background:#2563eb;">
+                  <a href="${escapeHtml(opts.resetUrl)}" style="display:inline-block;padding:12px 24px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Reset password</a>
+                </td></tr></table>
+                <p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#6b7280;">Or paste this link into your browser:<br>
+                  <a href="${escapeHtml(opts.resetUrl)}" style="color:#2563eb;word-break:break-all;">${escapeHtml(opts.resetUrl)}</a>
+                </p>
+                <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">This link works once and expires in ${opts.expiresInMinutes} minutes.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px;border-top:1px solid #e5e7eb;">
+                <p style="margin:0;font-size:11px;color:#9ca3af;">If you didn't ask to reset your password, ignore this email — your password stays the same.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+  return sendEmail({ to: opts.to, subject, html });
+}
+
 function renderInviteEmail(opts: {
   companyName: string;
   invitedByName?: string | null;

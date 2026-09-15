@@ -13,6 +13,8 @@ import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { clearRateLimit, hitRateLimit } from "@/lib/server/rate-limit";
+import { RATE_LIMITS, clientIpFrom, tooManyAttemptsMessage } from "@/lib/account-security/rate-limit-policy";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -24,10 +26,29 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const email = credentials?.email?.trim().toLowerCase();
         const password = credentials?.password;
         if (!email || !password) return null;
+
+        // Throttle BEFORE the lookup and the bcrypt compare, per address and per
+        // IP (see lib/account-security/rate-limit-policy.ts). A thrown error is how
+        // NextAuth hands a message back to `signIn(..., { redirect: false })`; the
+        // login form shows it in place of "Incorrect email or password".
+        const reqHeaders = (req?.headers ?? {}) as Record<string, string | string[] | undefined>;
+        const ip = clientIpFrom((name) => {
+          const v = reqHeaders[name];
+          return Array.isArray(v) ? v[0] : v;
+        });
+        for (const [rule, subject] of [
+          [RATE_LIMITS.loginIp, ip],
+          [RATE_LIMITS.loginEmail, email],
+        ] as const) {
+          const verdict = await hitRateLimit(rule, subject);
+          if (!verdict.allowed) {
+            throw new Error(tooManyAttemptsMessage("sign-in attempts", verdict.retryAfterSeconds));
+          }
+        }
 
         // DELIBERATELY UNSCOPED, and must stay that way. This runs BEFORE any
         // session exists — it is what establishes which company the caller belongs
@@ -39,6 +60,10 @@ export const authOptions: NextAuthOptions = {
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
+
+        // A person who gets their password right should not stay one typo away
+        // from a lockout. The per-IP counter is left alone: it guards spraying.
+        await clearRateLimit(RATE_LIMITS.loginEmail, email);
 
         return {
           id: user.id,

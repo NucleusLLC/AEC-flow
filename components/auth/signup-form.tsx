@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { UserPlus, AlertTriangle, Loader2 } from "lucide-react";
 import { registerBetaTester } from "@/app/signup/actions";
+import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -78,8 +79,8 @@ export function SignupForm() {
       </div>
 
       <div>
-        <label className={labelCls} htmlFor="password">Password <span className="text-faint">(min 8 characters)</span></label>
-        <input id="password" type="password" autoComplete="new-password" required minLength={8} value={password}
+        <label className={labelCls} htmlFor="password">Password <span className="text-faint">(min {PASSWORD_MIN_LENGTH} characters)</span></label>
+        <input id="password" type="password" autoComplete="new-password" required minLength={PASSWORD_MIN_LENGTH} value={password}
           onChange={(e) => setPassword(e.target.value)} className={inputCls} placeholder="••••••••" />
       </div>
 

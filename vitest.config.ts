@@ -79,6 +79,10 @@ export default defineConfig({
       "lib/server/email.test.ts",
       "lib/server/document-email.test.ts",
       "lib/data/email-log.test.ts",
+      // Account security: rate-limit rules and reset-token handling. Named files,
+      // same reason as every entry above — pure modules, no Prisma, no requests.
+      "lib/account-security/rate-limit-policy.test.ts",
+      "lib/account-security/reset-token.test.ts",
     ],
     environment: "node",
   },
