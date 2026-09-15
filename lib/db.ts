@@ -35,6 +35,13 @@ const TENANT_MODELS = new Set<string>([
   "ServiceProposalPaymentMilestone", "ServiceProposalReimbursable",
   "ServiceProposalDiscount", "ServiceProposalTax", "ServiceProposalStatusHistory",
   "ServiceProposalVersion", "TaxRate",
+  // Building Permit module (Module 1). The case file and every child record.
+  // A permit file holds a client's property, the authority's letters and the
+  // minutes of meetings about them — leaving any one of these out is a
+  // cross-tenant data leak, and lib/proposals/tenant-scope.test.ts fails the
+  // build if the schema and this list ever disagree.
+  "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
+  "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

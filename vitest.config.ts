@@ -86,6 +86,14 @@ export default defineConfig({
       // Who may change role, status and email on a member record. Named file, same
       // reason as every entry above — pure module, no Prisma, no session.
       "lib/team/member-write-policy.test.ts",
+      // Building Permit module. Three named files, same reason as every entry
+      // above: the register arithmetic and the zod gate are pure, and the enum
+      // tripwire reads prisma/schema.prisma off disk as text rather than
+      // connecting to anything.
+      "lib/building-permits/register.test.ts",
+      "lib/building-permits/schema.test.ts",
+      "lib/building-permits/enums.test.ts",
+      "lib/building-permits/letter-file.test.ts",
     ],
     environment: "node",
   },

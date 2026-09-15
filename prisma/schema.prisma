@@ -278,13 +278,13 @@ model User {
 
   sessions         Session[]
   passwordResets   PasswordResetToken[]
-  managedProjects  Project[]         @relation("ProjectManager")
+  managedProjects  Project[]            @relation("ProjectManager")
   phases           PhaseAssignment[]
   leaveRequests    LeaveRequest[]
   meetingsAsAuthor MeetingMinute[]
   actionItems      ActionItem[]
-  proposals        Proposal[]        @relation("ProposalOwner")
-  followUps        Proposal[]        @relation("FollowUpOwner")
+  proposals        Proposal[]           @relation("ProposalOwner")
+  followUps        Proposal[]           @relation("FollowUpOwner")
   activityLogs     ActivityLog[]
   notifications    Notification[]
 }
@@ -2571,4 +2571,324 @@ model EmailLog {
   @@index([companyId, createdAt])
   @@index([companyId])
   @@map("email_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUILDING PERMIT MODULE (Module 1 — Architecture & Engineering Design)
+//
+// A building permit is a case file that lives for months: an authority request
+// number, a submission date, resubmissions, meetings whose minutes matter later,
+// a concept approval that lands before the real one, and letters from Public
+// Works that start a clock. Every model below is company-owned and MUST appear in
+// TENANT_MODELS (lib/db.ts) — a model left out of that set is a cross-tenant leak,
+// and lib/proposals/tenant-scope.test.ts fails the build if one is missing.
+//
+// Deliberately NOT the Land Development module's PermitTask: that is an
+// entitlement checklist on a development project, a different question with a
+// different owner. See docs/building-permit/SPEC.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum BuildingPermitType {
+  NEW_BUILD
+  RENOVATION
+  EXTENSION
+  DEMOLITION
+  CHANGE_OF_USE
+  FENCE_WALL
+  POOL
+  SIGNAGE
+  TEMPORARY
+  SPLIT_PARCEL
+  OTHER
+}
+
+/// The life of an application, in the order it is usually lived. CONCEPT_APPROVED
+/// and RESUBMITTED are states of their own because both are where a file spends
+/// real time, and a status that cannot express "we are waiting again" is a status
+/// the office stops trusting.
+enum BuildingPermitStatus {
+  DRAFT
+  PREPARING
+  SUBMITTED
+  IN_REVIEW
+  INFO_REQUESTED
+  CONCEPT_APPROVED
+  RESUBMITTED
+  APPROVED
+  APPROVED_WITH_CONDITIONS
+  REJECTED
+  WITHDRAWN
+  ISSUED
+  EXPIRED
+}
+
+enum BuildingPermitSubmissionMethod {
+  COUNTER
+  EMAIL
+  PORTAL
+  COURIER
+  OTHER
+}
+
+enum BuildingPermitCorrespondenceDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum BuildingPermitApprovalStage {
+  CONCEPT
+  ZONING
+  TECHNICAL
+  FIRE
+  HEALTH
+  UTILITIES
+  FINAL
+  OTHER
+}
+
+enum BuildingPermitApprovalStatus {
+  PENDING
+  APPROVED
+  APPROVED_WITH_CONDITIONS
+  REJECTED
+  WITHDRAWN
+}
+
+enum BuildingPermitDocumentCategory {
+  APPLICATION_FORM
+  DRAWING
+  CALCULATION
+  LETTER
+  MINUTES
+  APPROVAL
+  PHOTO
+  RECEIPT
+  OTHER
+}
+
+/// The case file. One row is one permit application for one property.
+model BuildingPermit {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// Our own reference, BP-{year}-{NNN}, sequential within the practice and never
+  /// reused. Distinct from permitNumber, which is the authority's.
+  reference    String
+  /// The Building Permit request number the authority issued. Null until they
+  /// give us one — which is exactly the period the register has to survive.
+  permitNumber String?
+
+  title       String
+  permitType  BuildingPermitType   @default(NEW_BUILD)
+  status      BuildingPermitStatus @default(DRAFT)
+  description String?
+
+  projectId   String?
+  projectName String?
+  clientId    String?
+  clientName  String?
+
+  applicantName String?
+  siteAddress   String?
+  /// Cadastral / "meetbrief" parcel identifier.
+  parcelNumber  String?
+  landRegistry  String?
+
+  /// The permitting body, e.g. DOW / Public Works. Free text: a practice that
+  /// works across jurisdictions files with more than one authority.
+  authority        String?
+  authorityContact String?
+  authorityEmail   String?
+
+  lotAreaM2      Decimal?
+  builtAreaM2    Decimal?
+  estimatedValue Decimal?
+  currency       String   @default("AWG")
+
+  /// The dates the whole module exists to keep straight.
+  submittedAt        DateTime?
+  acknowledgedAt     DateTime?
+  conceptApprovalAt  DateTime?
+  conceptApprovalRef String?
+  decisionAt         DateTime?
+  issuedAt           DateTime?
+  expiresAt          DateTime?
+  targetDecisionAt   DateTime?
+
+  feeAmount Decimal?
+  feePaidAt DateTime?
+
+  responsibleId   String?
+  responsibleName String?
+  notes           String?
+
+  createdById   String?
+  createdByName String?
+  updatedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  submissions    BuildingPermitSubmission[]
+  meetings       BuildingPermitMeeting[]
+  correspondence BuildingPermitCorrespondence[]
+  approvals      BuildingPermitApproval[]
+  documents      BuildingPermitDocument[]
+
+  @@unique([companyId, reference])
+  @@index([companyId, status])
+  @@index([companyId, projectId])
+  @@index([companyId, submittedAt])
+  @@index([companyId, createdAt])
+  @@map("building_permits")
+}
+
+/// One trip to the counter. A resubmission is the normal case, not the exception,
+/// so this is a list and not a pair of columns on the permit.
+model BuildingPermitSubmission {
+  companyId String?
+  id        String  @id @default(cuid())
+  permitId  String
+
+  sequence      Int                            @default(1)
+  submittedAt   DateTime
+  method        BuildingPermitSubmissionMethod @default(COUNTER)
+  receivedBy    String?
+  receiptNumber String?
+  contents      String?
+  notes         String?
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  permit BuildingPermit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, permitId])
+  @@map("building_permit_submissions")
+}
+
+/// Permit-file minutes. Deliberately NOT the app's MeetingMinute: those are client
+/// meetings in Business Development, and a site visit with the plan examiner does
+/// not belong in the client meeting register.
+model BuildingPermitMeeting {
+  companyId String?
+  id        String  @id @default(cuid())
+  permitId  String
+
+  heldAt    DateTime
+  subject   String
+  location  String?
+  attendees String?
+  /// The minutes themselves — the thing someone will need to quote a year later.
+  minutes   String?
+  decisions String?
+  followUp  String?
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  permit BuildingPermit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, permitId])
+  @@map("building_permit_meetings")
+}
+
+/// Letters — the ones from Public Works above all. An INCOMING letter that requires
+/// a response and whose responseDueAt has passed is what the register flags red;
+/// that flag is the reason this module exists.
+model BuildingPermitCorrespondence {
+  companyId String?
+  id        String  @id @default(cuid())
+  permitId  String
+
+  direction  BuildingPermitCorrespondenceDirection @default(INCOMING)
+  letterRef  String?
+  /// Who wrote it (incoming) or who it went to (outgoing).
+  party      String?
+  subject    String
+  letterDate DateTime?
+  receivedAt DateTime?
+  summary    String?
+
+  requiresResponse Boolean   @default(false)
+  responseDueAt    DateTime?
+  respondedAt      DateTime?
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  permit    BuildingPermit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  /// The letter itself, as a PDF. A list, not a column, so a reply with an
+  /// enclosure is one letter and not two.
+  documents BuildingPermitDocument[]
+
+  @@index([companyId, permitId])
+  @@index([companyId, responseDueAt])
+  @@map("building_permit_correspondence")
+}
+
+/// Staged approvals. Concept approval is a first-class event, not a footnote on the
+/// final decision, so it is a row here as well as a date on the permit.
+model BuildingPermitApproval {
+  companyId String?
+  id        String  @id @default(cuid())
+  permitId  String
+
+  stage      BuildingPermitApprovalStage  @default(CONCEPT)
+  status     BuildingPermitApprovalStatus @default(PENDING)
+  decidedAt  DateTime?
+  refNumber  String?
+  validUntil DateTime?
+  conditions String?
+  notes      String?
+
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  permit BuildingPermit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, permitId])
+  @@map("building_permit_approvals")
+}
+
+/// A file on the case. The bytes live in the private Supabase bucket behind
+/// lib/server/storage.ts (storageKey, never a public URL), exactly as the drawing
+/// register stores a sheet. A row with neither storageKey nor externalUrl is a bug —
+/// the data layer refuses to write one.
+model BuildingPermitDocument {
+  companyId String?
+  id        String  @id @default(cuid())
+  permitId  String
+
+  name     String
+  category BuildingPermitDocumentCategory @default(OTHER)
+
+  storageKey  String?
+  externalUrl String?
+  filename    String?
+  mimeType    String?
+  sizeBytes   Int?
+
+  documentDate   DateTime?
+  uploadedByName String?
+  notes          String?
+
+  /// Set when this file is a letter's PDF. Deleting the letter deletes the row;
+  /// the data layer removes the stored object first.
+  correspondenceId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  permit         BuildingPermit                @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  correspondence BuildingPermitCorrespondence? @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, permitId])
+  @@index([companyId, category])
+  @@index([correspondenceId])
+  @@map("building_permit_documents")
 }
