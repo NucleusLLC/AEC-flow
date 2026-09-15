@@ -13,6 +13,9 @@ import { addMonths } from "date-fns";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { seedCompany } from "@/lib/data/company-seed";
+import { validateNewPassword } from "@/lib/password-policy";
+import { hitRateLimit } from "@/lib/server/rate-limit";
+import { RATE_LIMITS, clientIpFrom, tooManyAttemptsMessage } from "@/lib/account-security/rate-limit-policy";
 
 /** Free beta-access length, in months. (Local: a "use server" file may only
  * export async functions, so this stays module-private.) */
@@ -45,11 +48,21 @@ export async function registerBetaTester(input: {
     if (!email || !isValidEmail(email)) {
       return { ok: false, error: "Please enter a valid email address." };
     }
-    if (password.length < 8) {
-      return { ok: false, error: "Password must be at least 8 characters." };
+    // The same policy every other password form enforces (it was 8 here, 10 there).
+    const policy = validateNewPassword(password);
+    if (!policy.ok) {
+      return { ok: false, error: policy.error.replace(/^New password/, "Password") };
     }
     if (!input.agreed) {
       return { ok: false, error: "Please agree to share feedback during the beta." };
+    }
+
+    // Counted only once the form is filled in properly, so a typo round-trip does
+    // not use up the allowance; what it bounds is code guessing and bulk creation.
+    const reqHeaders = await headers();
+    const perIp = await hitRateLimit(RATE_LIMITS.signupIp, clientIpFrom((n) => reqHeaders.get(n)));
+    if (!perIp.allowed) {
+      return { ok: false, error: tooManyAttemptsMessage("sign-up attempts", perIp.retryAfterSeconds) };
     }
     // ── Beta code resolution ────────────────────────────────────────────────
     // Two paths during the transition to per-tester codes:

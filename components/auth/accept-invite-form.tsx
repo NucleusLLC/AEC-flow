@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { acceptInviteAction } from "@/app/invite/[token]/actions";
+import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 
 export function AcceptInviteForm({ token, email }: { token: string; email: string }) {
   const [name, setName] = useState("");
@@ -50,7 +51,7 @@ export function AcceptInviteForm({ token, email }: { token: string; email: strin
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
           className={field}
         />
       </div>

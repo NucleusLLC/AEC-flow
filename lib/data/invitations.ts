@@ -12,6 +12,7 @@ import { addDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getCurrentCompanyId, getCurrentCompany } from "@/lib/server/tenant";
 import { sendInviteEmail } from "@/lib/server/email";
+import { validateNewPassword } from "@/lib/password-policy";
 import type { UserRole } from "@prisma/client";
 
 const INVITE_TTL_DAYS = 14;
@@ -139,7 +140,8 @@ export async function acceptInvitation(token: string, name: string, password: st
   if (!inv || inv.status !== "PENDING") return { ok: false, error: "This invite is no longer valid." };
   if (inv.expiresAt && inv.expiresAt.getTime() < Date.now()) return { ok: false, error: "This invite has expired." };
   if (!name.trim()) return { ok: false, error: "Enter your name." };
-  if (password.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
+  const policy = validateNewPassword(password);
+  if (!policy.ok) return { ok: false, error: policy.error.replace(/^New password/, "Password") };
 
   // Seat re-check at acceptance (the limit may have changed since the invite).
   const [company, used] = await Promise.all([
