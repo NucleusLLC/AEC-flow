@@ -74,6 +74,9 @@ export default defineConfig({
       "lib/email/compose.test.ts",
       "lib/server/document-email.test.ts",
       "lib/data/email-log.test.ts",
+      // Who may change role, status and email on a member record. Named file, same
+      // reason as every entry above — pure module, no Prisma, no session.
+      "lib/team/member-write-policy.test.ts",
     ],
     environment: "node",
   },

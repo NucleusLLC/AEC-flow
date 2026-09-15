@@ -33,7 +33,9 @@ import {
 } from "@/lib/data/proposal-templates";
 import { setMemberRole, setMemberStatus, createTeamMember } from "@/lib/data/team";
 import { setMemberPassword } from "@/lib/server/password";
-import { requireMemberAdmin } from "@/lib/server/actor";
+import { requireMemberAdmin, type Actor } from "@/lib/server/actor";
+import { getMemberAccessSnapshot } from "@/lib/server/member-access";
+import { checkMemberWrite } from "@/lib/team/member-write-policy";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { Preferences, PracticeProfile, ProposalTemplate } from "@/lib/data/settings";
 import type { UserRole, UserStatus, Department } from "@/lib/data/team.types";
@@ -233,12 +235,29 @@ export async function setDefaultTemplateAction(id: string): Promise<ActionResult
 /* Members & roles                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The admin gate above says the actor may administer members; this adds the two
+ * things it cannot know without the target's row: that the member is in the
+ * actor's company, and that the founder's access is changed only by the founder.
+ */
+async function guardMemberAccessChange(
+  actor: Actor,
+  id: string,
+  change: { role?: UserRole; status?: UserStatus },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const target = await getMemberAccessSnapshot(actor.companyId, id);
+  if (!target) return { ok: false, error: "That member is not in your company." };
+  return checkMemberWrite(actor, target, change);
+}
+
 export async function setMemberRoleAction(id: string, role: UserRole): Promise<ActionResult> {
   try {
     // Was `requireUser()` — i.e. "is anyone signed in". That let any account,
     // a VIEWER included, promote itself to ADMIN, which made every other
     // administrative gate (including password reset) reachable in two steps.
-    await requireMemberAdmin();
+    const actor = await requireMemberAdmin();
+    const guard = await guardMemberAccessChange(actor, id, { role });
+    if (!guard.ok) return guard;
     await setMemberRole(id, role);
     revalidatePath("/settings");
     return { ok: true };
@@ -250,7 +269,9 @@ export async function setMemberRoleAction(id: string, role: UserRole): Promise<A
 export async function setMemberStatusAction(id: string, status: UserStatus): Promise<ActionResult> {
   try {
     // Deactivating a colleague is an administrative act; same gate as the rest.
-    await requireMemberAdmin();
+    const actor = await requireMemberAdmin();
+    const guard = await guardMemberAccessChange(actor, id, { status });
+    if (!guard.ok) return guard;
     await setMemberStatus(id, status);
     revalidatePath("/settings");
     return { ok: true };

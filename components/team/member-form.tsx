@@ -15,6 +15,7 @@ import {
   type TeamMemberWriteInput,
 } from "@/lib/data/team.types";
 import { saveTeamMember } from "@/app/(app)/team/actions";
+import { MEMBER_ADMIN_ROLES } from "@/lib/team/member-write-policy";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -52,10 +53,21 @@ export type MemberFormValues = {
 export function MemberForm({
   mode = "new",
   initial,
+  canChangeAccess = false,
 }: {
   mode?: "new" | "edit";
   initial?: MemberFormValues;
+  /**
+   * May the viewer change this member's role and email (on new: add them at an
+   * administrative role)? Display only — `saveTeamMember` enforces the same rule
+   * from the database, see lib/team/member-write-policy.ts.
+   */
+  canChangeAccess?: boolean;
 }) {
+  const accessLocked = mode === "edit" && !canChangeAccess;
+  const roleOptions = canChangeAccess
+    ? ROLES
+    : ROLES.filter((r) => !(MEMBER_ADMIN_ROLES as readonly string[]).includes(r) || r === initial?.role);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +141,17 @@ export function MemberForm({
             <label className={labelClass} htmlFor="email">
               Email *
             </label>
-            <input id="email" name="email" type="email" required className={inputClass} placeholder="name@zenarch.net" defaultValue={initial?.email ?? ""} />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              readOnly={accessLocked}
+              title={accessLocked ? "Only an administrator or director can change a member's email." : undefined}
+              className={`${inputClass}${accessLocked ? " cursor-not-allowed opacity-70" : ""}`}
+              placeholder="name@zenarch.net"
+              defaultValue={initial?.email ?? ""}
+            />
           </div>
           <div>
             <label className={labelClass} htmlFor="phone">
@@ -147,8 +169,17 @@ export function MemberForm({
             <label className={labelClass} htmlFor="role">
               Role
             </label>
-            <select id="role" name="role" className={inputClass} defaultValue={initial?.role ?? "STAFF"}>
-              {ROLES.map((r) => (
+            {/* A disabled select is left out of FormData, so a locked role travels in a hidden input. */}
+            {accessLocked ? <input type="hidden" name="role" value={initial?.role ?? "STAFF"} /> : null}
+            <select
+              id="role"
+              name={accessLocked ? undefined : "role"}
+              disabled={accessLocked}
+              title={accessLocked ? "Only an administrator or director can change a member's role." : undefined}
+              className={`${inputClass}${accessLocked ? " cursor-not-allowed opacity-70" : ""}`}
+              defaultValue={initial?.role ?? "STAFF"}
+            >
+              {roleOptions.map((r) => (
                 <option key={r} value={r}>
                   {ROLE_LABEL[r]}
                 </option>
