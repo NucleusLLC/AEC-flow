@@ -2981,4 +2981,181 @@ model GeneralDocument {
   @@index([companyId, clientId])
   @@index([companyId, issueDate])
   @@map("general_documents")
+// FINANCE — INVOICES AND PAYMENTS
+//
+// The practice's own receivables: what it billed, what came in, what is still
+// owed. An invoice is normally raised from an accepted Service Proposal's
+// payment milestones, but it does not depend on one — a practice bills for
+// things it never quoted.
+//
+// EVERYTHING ON AN INVOICE IS A SNAPSHOT. The client's name, the tax name and
+// percentage, the line descriptions and every amount are copied onto the
+// invoice when it is raised and never read back through a join. A proposal that
+// is later revised, a tax rate that changes next year and a client that is
+// renamed must not silently rewrite a document that has already been sent.
+// The proposal is recorded as provenance (serviceProposalId, proposalNumber),
+// not as a source of truth.
+//
+// Every model here is company-owned and MUST appear in TENANT_MODELS (lib/db.ts):
+// a money table left out of that set is a cross-tenant leak, and
+// lib/proposals/tenant-scope.test.ts fails the build if one is missing.
+// See docs/finance/SPEC.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Where an invoice is in its life. Derived from the payments recorded against
+/// it — never set by hand except for the two ends, DRAFT and VOID.
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PART_PAID
+  PAID
+  VOID
+}
+
+enum InvoicePaymentMethod {
+  BANK_TRANSFER
+  CASH
+  CHEQUE
+  CARD
+  OTHER
+}
+
+/// One invoice. The aggregate root: lines and payments hang off it.
+model Invoice {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// `INV-{year}-{NNN}`, sequential within the practice and never reused — the
+  /// number the client quotes back, so it outlives the row it was issued from.
+  number String
+  status InvoiceStatus @default(DRAFT)
+
+  /// Copied from the proposal, or the practice's currency for an ad-hoc invoice.
+  /// Per-record currency always wins over the system setting — see docs/CURRENCY.md:
+  /// an invoice raised in USD keeps printing USD forever.
+  currency String @default("AWG")
+
+  /// Who it is billed to, snapshotted. `clientId` is provenance only.
+  clientId       String?
+  clientName     String
+  contactName    String?
+  contactEmail   String?
+  billingAddress String?
+
+  projectId   String?
+  projectName String?
+
+  /// The proposal this was raised from, for provenance and for the
+  /// "already invoiced" check — never read for amounts.
+  serviceProposalId String?
+  proposalNumber    String?
+
+  title String?
+  /// Free text above the lines: what this invoice covers, in the client's terms.
+  intro String?
+
+  issueDate DateTime?
+  dueDate   DateTime?
+  /// Net days the invoice was issued on, kept so a re-issue can recompute a due
+  /// date without guessing the practice's current terms.
+  termsDays Int?
+
+  /// The tax that applied WHEN THIS WAS RAISED. Snapshotted from the proposal's
+  /// tax rows or the firm's TaxRate table; never joined to either afterwards.
+  taxName    String?
+  taxPercent Decimal @default(0)
+  taxMode    TaxMode @default(EXCLUSIVE)
+
+  /// Derived from the lines by lib/finance/calc.ts and stored so a sent
+  /// document cannot change under the client's feet.
+  subtotal        Decimal @default(0)
+  taxableSubtotal Decimal @default(0)
+  taxTotal        Decimal @default(0)
+  total           Decimal @default(0)
+
+  notes  String?
+  /// Terms, bank details — what prints under the total.
+  footer String?
+
+  createdById   String?
+  createdByName String?
+  updatedById   String?
+  issuedByName  String?
+  /// Why it was voided. An invoice is never deleted once issued: it is the
+  /// record of what the practice asked a client to pay.
+  voidReason    String?
+  voidedAt      DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete, and only ever for a DRAFT (the data layer enforces that).
+  deletedAt DateTime?
+
+  lines    InvoiceLine[]
+  payments InvoicePayment[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, clientId])
+  @@index([companyId, projectId])
+  @@index([companyId, issueDate])
+  @@index([companyId, serviceProposalId])
+  @@map("invoices")
+}
+
+/// One billable line. `amount` is authoritative; quantity and unit rate are the
+/// arithmetic that produced it, kept for the reader, not recomputed at render.
+model InvoiceLine {
+  companyId String?
+  id        String  @id @default(cuid())
+  invoiceId String
+
+  description   String
+  /// The proposal payment milestone this line bills, when it came from one.
+  /// This is what stops the same milestone being billed twice.
+  milestoneId   String?
+  milestoneName String?
+
+  quantity Decimal?
+  unitRate Decimal?
+  amount   Decimal  @default(0)
+  taxable  Boolean  @default(true)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, invoiceId])
+  @@index([companyId, milestoneId])
+  @@map("invoice_lines")
+}
+
+/// Money actually received. The invoice's status and outstanding balance are
+/// computed from these rows, so "paid" is never a flag somebody set by hand.
+model InvoicePayment {
+  companyId String?
+  id        String  @id @default(cuid())
+  invoiceId String
+
+  paidAt    DateTime
+  amount    Decimal              @default(0)
+  method    InvoicePaymentMethod @default(BANK_TRANSFER)
+  /// The bank reference or receipt number — the thing a reconciliation needs.
+  reference String?
+  notes     String?
+
+  recordedById   String?
+  recordedByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, invoiceId])
+  @@index([companyId, paidAt])
+  @@map("invoice_payments")
 }
