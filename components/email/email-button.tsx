@@ -50,6 +50,7 @@ export function EmailButton({
   relatedType,
   relatedId,
   linkPath,
+  notice,
 }: {
   subject: string;
   attachment: string;
@@ -58,6 +59,13 @@ export function EmailButton({
   variant?: "button" | "ghost" | "icon";
   label?: string;
   className?: string;
+  /**
+   * Something the caller knows about the To line it prefilled and the sender does
+   * not — most usefully, who could NOT be addressed. Shown above the fields, not
+   * folded into the message: a warning that goes out to the recipients is not a
+   * warning to the sender.
+   */
+  notice?: string;
   /**
    * What this email is about — `"schedule"`, `"estimate"`, `"drawing"` … Used to
    * group the Sent history. Optional: a caller that passes neither of these gets
@@ -97,6 +105,7 @@ export function EmailButton({
           relatedType={relatedType}
           relatedId={relatedId}
           linkPath={linkPath}
+          notice={notice}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -114,6 +123,7 @@ function EmailDialog({
   relatedType,
   relatedId,
   linkPath,
+  notice,
   onClose,
 }: {
   subject: string;
@@ -123,6 +133,7 @@ function EmailDialog({
   relatedType?: string;
   relatedId?: string;
   linkPath?: string;
+  notice?: string;
   onClose: () => void;
 }) {
   const [to, setTo] = useState(defaultTo);
@@ -308,6 +319,13 @@ function EmailDialog({
                         : "This attempt is NOT in the email log — there will be no trace of it once you close this."}
                     </div>
                   </div>
+                </div>
+              ) : null}
+
+              {notice ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>{notice}</div>
                 </div>
               ) : null}
 
