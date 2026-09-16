@@ -214,6 +214,11 @@ function scan(): Offence[] {
  * ------------------------------------------------------------------ */
 
 describe("findUnique tenant-scope guard", () => {
+  // These two walk every source file in the repository. That took well under a
+  // second when this tripwire was written; the repo has since grown several
+  // modules, and under the full suite's parallel load the default 5s budget
+  // started timing out — a red test that says nothing about the rule it guards.
+  // The scan is I/O, so it gets an I/O-sized timeout rather than a narrower walk.
   it("finds no tenant-model findUnique whose select omits companyId", () => {
     const offences = scan().filter((o) => !ALLOWED.has(`${o.file}:${o.delegate}`));
     const report = offences
@@ -225,7 +230,7 @@ describe("findUnique tenant-scope guard", () => {
       )
       .join("");
     expect(offences.map((o) => `${o.file}:${o.line}`), `\n${offences.length} broken call site(s):${report}\n`).toEqual([]);
-  });
+  }, 30_000);
 
   it("keeps every allow-list entry pointing at a call that still exists", () => {
     // A stale exception is worse than none: it silently blesses whatever moves into that
@@ -233,7 +238,7 @@ describe("findUnique tenant-scope guard", () => {
     const keys = new Set(scan().map((o) => `${o.file}:${o.delegate}`));
     const stale = [...ALLOWED.keys()].filter((k) => !keys.has(k));
     expect(stale, `stale allow-list entries — delete them: ${stale.join(", ")}`).toEqual([]);
-  });
+  }, 30_000);
 
   it("does not scan scripts/, which run unscoped by design", () => {
     // Guards the reasoning, not just the outcome: if someone widens SCAN_DIRS to include
