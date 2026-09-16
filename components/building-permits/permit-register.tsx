@@ -23,6 +23,7 @@ import {
   Search,
 } from "lucide-react";
 import { PermitStatusBadge, ResponseDueBadge } from "@/components/building-permits/badges";
+import { PermitListActions } from "@/components/building-permits/list-actions";
 import {
   bandPermits,
   filterPermits,
@@ -136,6 +137,24 @@ export function PermitRegister({
     setAuthority("");
   };
 
+  /**
+   * The active filters as a query string, handed to the print links so what
+   * prints is what is on screen. Keys match `parsePermitPrintQuery` exactly; a
+   * filter sitting at its neutral value is left out rather than spelled "ALL",
+   * so the string stays readable in a URL bar.
+   */
+  const query = useMemo(() => {
+    const p = new URLSearchParams();
+    if (status !== "ALL") p.set("status", status);
+    if (permitType !== "ALL") p.set("type", permitType);
+    if (authority) p.set("authority", authority);
+    if (q.trim()) p.set("q", q.trim());
+    p.set("band", band);
+    p.set("sort", sort);
+    p.set("dir", dir);
+    return p.toString();
+  }, [status, permitType, authority, q, band, sort, dir]);
+
   const sortProps = { sort, dir, onSort: toggleSort };
 
   return (
@@ -215,6 +234,10 @@ export function PermitRegister({
             <span className="ml-1.5 font-medium text-red-600">· {overdueShown} overdue</span>
           ) : null}
         </span>
+
+        <div className="ml-auto">
+          <PermitListActions query={query} />
+        </div>
       </div>
 
       {shown === 0 ? (

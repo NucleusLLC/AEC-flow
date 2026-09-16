@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { ArrowLeft, Pencil, Printer } from "lucide-react";
 import { PermitStatusBadge, PermitTypeBadge } from "@/components/building-permits/badges";
 import { PermitCaseFile } from "@/components/building-permits/permit-case-file";
 import { PermitDeleteButton } from "@/components/building-permits/permit-delete-button";
 import { getBuildingPermit } from "@/lib/data/building-permits";
-import { militaryDate, ymd } from "@/lib/building-permits/register";
+import { ymd } from "@/lib/building-permits/register";
 
 export const metadata: Metadata = { title: "Building Permit · AEC-flow" };
 
@@ -22,17 +21,6 @@ export default async function BuildingPermitPage({
 
   // The practice's own calendar day, as on the register.
   const today = ymd(new Date());
-
-  const facts: { label: string; value: string; mono?: boolean }[] = [
-    { label: "Authority", value: permit.authority ?? "—" },
-    { label: "Applicant", value: permit.applicantName ?? "—" },
-    { label: "Site address", value: permit.siteAddress ?? "—" },
-    { label: "Parcel", value: permit.parcelNumber ?? "—", mono: true },
-    { label: "Project", value: permit.projectName ?? "—" },
-    { label: "Concept approval", value: militaryDate(permit.conceptApprovalAt), mono: true },
-    { label: "Target decision", value: militaryDate(permit.targetDecisionAt), mono: true },
-    { label: "Expires", value: militaryDate(permit.expiresAt), mono: true },
-  ];
 
   return (
     <div className="w-full max-w-5xl space-y-6">
@@ -59,6 +47,12 @@ export default async function BuildingPermitPage({
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href={`/print/design/building-permits/${permit.id}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <Printer className="h-4 w-4" /> Print
+          </Link>
+          <Link
             href={`/design/building-permits/${permit.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
@@ -70,23 +64,6 @@ export default async function BuildingPermitPage({
 
       <PermitCaseFile initial={permit} today={today} />
 
-      <Card>
-        <CardHeader title="Case file" />
-        <CardBody className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-          {facts.map((f) => (
-            <div key={f.label} className="flex items-baseline justify-between gap-3 border-b border-border/60 pb-2 text-sm">
-              <span className="text-muted">{f.label}</span>
-              <span className={`text-right text-fg ${f.mono ? "font-mono text-xs" : ""}`}>{f.value}</span>
-            </div>
-          ))}
-          {permit.description ? (
-            <p className="whitespace-pre-line text-sm text-fg sm:col-span-2">{permit.description}</p>
-          ) : null}
-          {permit.notes ? (
-            <p className="whitespace-pre-line text-sm text-muted sm:col-span-2">{permit.notes}</p>
-          ) : null}
-        </CardBody>
-      </Card>
     </div>
   );
 }

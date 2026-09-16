@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * The live half of a permit case file: the four numbers, the versions log and
- * the letters.
+ * The live half of a permit case file: the four numbers, the versions log, the
+ * letters, the staged approvals and the meeting minutes.
  *
  * WHY THIS COMPONENT OWNS THE DATA. Everything here changes as the user works,
  * and `router.refresh()` after a write does not reliably repaint this page —
@@ -18,7 +18,9 @@
 
 import { useCallback, useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { PermitApprovals } from "@/components/building-permits/permit-approvals";
 import { PermitCorrespondence } from "@/components/building-permits/permit-correspondence";
+import { PermitMeetings } from "@/components/building-permits/permit-meetings";
 import { PermitVersions } from "@/components/building-permits/permit-versions";
 import { lapsedMonths, militaryDate, permitVersion } from "@/lib/building-permits/register";
 import type { BuildingPermitDTO } from "@/lib/building-permits/types";
@@ -99,8 +101,84 @@ export function PermitCaseFile({
           </CardBody>
         </Card>
       </div>
+      <div id="approvals" className="scroll-mt-6">
+        <Card>
+          <CardHeader
+            title="Approvals"
+            subtitle="Concept first, then the stages the authority signs off one at a time."
+          />
+          <CardBody>
+            <PermitApprovals
+              permitId={permit.id}
+              approvals={permit.approvals}
+              today={today}
+              onChanged={reload}
+            />
+          </CardBody>
+        </Card>
+      </div>
+
+      <div id="meetings" className="scroll-mt-6">
+        <Card>
+          <CardHeader
+            title="Meetings"
+            subtitle="Minutes of meetings about this permit — not the client meeting register."
+          />
+          <CardBody>
+            <PermitMeetings
+              permitId={permit.id}
+              meetings={permit.meetings}
+              today={today}
+              onChanged={reload}
+            />
+          </CardBody>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader title="Case file" />
+        <CardBody className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          {facts(permit).map((f) => (
+            <div
+              key={f.label}
+              className="flex items-baseline justify-between gap-3 border-b border-border/60 pb-2 text-sm"
+            >
+              <span className="text-muted">{f.label}</span>
+              <span className={`text-right text-fg ${f.mono ? "font-mono text-xs" : ""}`}>
+                {f.value}
+              </span>
+            </div>
+          ))}
+          {permit.description ? (
+            <p className="whitespace-pre-line text-sm text-fg sm:col-span-2">{permit.description}</p>
+          ) : null}
+          {permit.notes ? (
+            <p className="whitespace-pre-line text-sm text-muted sm:col-span-2">{permit.notes}</p>
+          ) : null}
+        </CardBody>
+      </Card>
     </div>
   );
+}
+
+/**
+ * The file's own fields. Here rather than on the server page because some of
+ * them are written by the sections above — recording a decided concept approval
+ * fills in the file's concept approval date — and a fact card that only updates
+ * on reload contradicts the table that just changed it.
+ */
+function facts(permit: BuildingPermitDTO): { label: string; value: string; mono?: boolean }[] {
+  return [
+    { label: "Authority", value: permit.authority ?? "—" },
+    { label: "Applicant", value: permit.applicantName ?? "—" },
+    { label: "Site address", value: permit.siteAddress ?? "—" },
+    { label: "Parcel", value: permit.parcelNumber ?? "—", mono: true },
+    { label: "Project", value: permit.projectName ?? "—" },
+    { label: "Concept approval", value: militaryDate(permit.conceptApprovalAt), mono: true },
+    { label: "Concept approval ref.", value: permit.conceptApprovalRef ?? "—", mono: true },
+    { label: "Target decision", value: militaryDate(permit.targetDecisionAt), mono: true },
+    { label: "Expires", value: militaryDate(permit.expiresAt), mono: true },
+  ];
 }
 
 function Stat({
