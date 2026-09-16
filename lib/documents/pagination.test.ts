@@ -107,6 +107,32 @@ describe("computeCuts — page boundaries", () => {
     expect(cuts[0]).toMatchObject({ at: 1000, kind: "flow", blockIndex: 0 });
   });
 
+  it("names no block when the boundary falls inside freely breakable text", () => {
+    // The nearest unbreakable block is most of a page below the boundary — the
+    // shape of a narrative document whose first table comes after the prose. It
+    // does NOT begin the page that starts at 1000, and reporting it as the block
+    // that does is what let the preview open the page gap 800px late and draw the
+    // footer band from there: measured on a minutes document, page one showed
+    // 1797px of content against a 994px page.
+    const cuts = computeCuts({
+      contentHeight: 2600,
+      pageHeight: PAGE,
+      blocks: [block(1800, 40)],
+    });
+    expect(cuts[0]).toMatchObject({ at: 1000, kind: "flow" });
+    expect(cuts[0].blockIndex).toBeUndefined();
+  });
+
+  it("still names a block that begins the page within the start epsilon", () => {
+    // Sub-pixel layout noise must not turn a clean boundary into a text split.
+    const cuts = computeCuts({
+      contentHeight: 2000,
+      pageHeight: PAGE,
+      blocks: [block(1000 + PAGE_START_EPSILON_PX, 100)],
+    });
+    expect(cuts[0]).toMatchObject({ at: 1000, kind: "flow", blockIndex: 0 });
+  });
+
   it("ends the page early at a forced break", () => {
     const cuts = computeCuts({
       contentHeight: 2000,
