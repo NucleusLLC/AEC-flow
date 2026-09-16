@@ -78,6 +78,22 @@ npm run lint     # eslint
 npx tsc --noEmit # typecheck
 ```
 
+## Deploying
+
+The Vercel project (team `aec-flow`) is connected to `NucleusLLC/AEC-flow`, so
+**a merge to `main` deploys to production by itself** and a PR branch gets a
+preview URL. Nothing needs running by hand.
+
+Two things that are NOT part of a deploy, and still have to be done in order:
+
+1. **SQL.** This repo has no `prisma/migrations`; schema changes are reviewed SQL
+   files in `prisma/sql/`, applied with `node scripts/apply-sql.mjs <file>` (or
+   pasted into the Supabase SQL editor) and followed by
+   `node scripts/verify-data-api-lockdown.mjs`. Apply the SQL BEFORE the code
+   that needs it reaches `main`, or the new pages 500 for everyone.
+2. **Environment variables.** Set in the Vercel project; they only take effect on
+   the next deploy.
+
 ## Docs
 - [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md) — morning runbook: Supabase → migrate → swap data layers to Prisma.
 - [`COORDINATION.md`](./COORDINATION.md) — overnight multi-session build log / ownership map.
