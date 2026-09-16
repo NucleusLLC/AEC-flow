@@ -43,6 +43,10 @@ const TENANT_MODELS = new Set<string>([
   // General Documents. A power of attorney names a client and has legal
   // effect; leaving it out of this set would show it to another practice.
   "GeneralDocument",
+  // Finance. Receivables are the most obviously company-private table in the
+  // app: an invoice outside this set would put one practice's billing in front
+  // of another. See docs/finance/SPEC.md.
+  "Invoice", "InvoiceLine", "InvoicePayment",
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);
