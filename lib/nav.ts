@@ -30,6 +30,7 @@ import {
   FileSignature,
   UploadCloud,
   Mail,
+  ScrollText,
   Stamp,
   type LucideIcon,
 } from "lucide-react";
@@ -81,6 +82,18 @@ export const BUILDING_PERMITS_ITEM: NavItem = {
   label: "Building Permits",
   href: "/design/building-permits",
   icon: Stamp,
+};
+
+/**
+ * General Documents, defined ONCE for the same reason as the drawings bin and
+ * the permit register: it appears in this list and in Module 1's sidebar, and a
+ * section called one thing in one module and another elsewhere is a feature its
+ * owner cannot find.
+ */
+export const GENERAL_DOCUMENTS_ITEM: NavItem = {
+  label: "General Documents",
+  href: "/documents/general",
+  icon: ScrollText,
 };
 
 /** Section title used wherever the drawings bin appears. */
@@ -143,6 +156,7 @@ export const navSections: NavSection[] = [
     items: [
       DRAWINGS_REGISTER_ITEM,
       DRAWINGS_INTAKE_ITEM,
+      GENERAL_DOCUMENTS_ITEM,
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
     ],
   },
