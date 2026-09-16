@@ -111,6 +111,9 @@ export default defineConfig({
       // The BBO contained in a proposal price: pure money arithmetic, and the
       // per-milestone split the accounting side adds up every month.
       "lib/proposals/bbo.test.ts",
+      // General Documents. The catalogue and its token renderer are pure data
+      // and pure string work; the tests include a typo tripwire on every template.
+      "lib/general-documents/catalogue.test.ts",
     ],
     environment: "node",
   },
