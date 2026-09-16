@@ -95,6 +95,9 @@ export default defineConfig({
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
       "lib/building-permits/print-filter.test.ts",
+      // General Documents. The catalogue and its token renderer are pure data
+      // and pure string work; the tests include a typo tripwire on every template.
+      "lib/general-documents/catalogue.test.ts",
     ],
     environment: "node",
   },

@@ -2892,3 +2892,91 @@ model BuildingPermitDocument {
   @@index([correspondenceId])
   @@map("building_permit_documents")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERAL DOCUMENTS
+//
+// The letters and instruments a practice writes around a project but outside
+// any one system: a power of attorney to file on a client's behalf, a letter of
+// intent, an NDA, an RFI to an engineer, an RFQ to a supplier, a notice of
+// practical completion, a transmittal.
+//
+// THE ROW STORES THE FINISHED TEXT, NOT A LINK TO A TEMPLATE. `docType` names a
+// catalogue entry (lib/general-documents/catalogue.ts) for provenance and for
+// re-opening the composer, but `body` holds the paragraphs as they were written
+// and `values` holds what was typed. A template improved next year must not
+// silently rewrite a power of attorney that was signed last year.
+//
+// Company-owned, and in TENANT_MODELS (lib/db.ts) — these documents name
+// clients and carry legal effect. See docs/general-documents/SPEC.md.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum GeneralDocumentStatus {
+  DRAFT
+  ISSUED
+  SIGNED
+  SUPERSEDED
+  VOID
+}
+
+model GeneralDocument {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// `GD-{year}-{NNN}`, sequential within the practice and never reused.
+  number  String
+  /// The catalogue key: "poa", "nda_mutual", "rfi"… Kept even if the catalogue
+  /// entry is retired, so the register still says what the document was.
+  docType String
+  status  GeneralDocumentStatus @default(DRAFT)
+
+  title     String
+  /// The practice's own reference for it — an RFI number, a tender reference.
+  reference String?
+  subject   String?
+
+  clientId    String?
+  clientName  String?
+  projectId   String?
+  projectName String?
+
+  /// Who it is addressed to when that is not the client: an authority, a
+  /// supplier, the other side of an NDA.
+  counterpartyName    String?
+  counterpartyAddress String?
+  contactName         String?
+  contactEmail        String?
+
+  issueDate     DateTime?
+  effectiveDate DateTime?
+  expiryDate    DateTime?
+  signedAt      DateTime?
+
+  /// What the composer collected, keyed by the catalogue entry's field keys.
+  values Json?
+  /// The finished paragraphs, in order. Editable while DRAFT.
+  body   String[]
+
+  notes        String?
+  /// Set when this document replaces an earlier one (a revised POA, a reissued
+  /// notice). The earlier document goes to SUPERSEDED and stays readable.
+  supersedesId String?
+  voidReason   String?
+
+  createdById   String?
+  createdByName String?
+  issuedByName  String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete, and only ever for a DRAFT — the data layer enforces that.
+  deletedAt DateTime?
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, docType])
+  @@index([companyId, projectId])
+  @@index([companyId, clientId])
+  @@index([companyId, issueDate])
+  @@map("general_documents")
+}
