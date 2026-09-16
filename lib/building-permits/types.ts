@@ -372,6 +372,8 @@ export type BuildingPermitDocumentDTO = {
   documentDate: string | null;
   uploadedByName: string | null;
   notes: string | null;
+  /** Set when this file is a letter's PDF rather than a loose file on the case. */
+  correspondenceId: string | null;
   createdAt: string;
 };
 

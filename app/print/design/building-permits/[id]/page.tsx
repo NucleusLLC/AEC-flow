@@ -5,6 +5,7 @@ import { getBuildingPermit } from "@/lib/data/building-permits";
 import { lapsedMonths, militaryDate, permitVersion, ymd } from "@/lib/building-permits/register";
 import {
   APPROVAL_STAGE_LABEL,
+  DOCUMENT_CATEGORY_LABEL,
   APPROVAL_STATUS_LABEL,
   CORRESPONDENCE_DIRECTION_LABEL,
   PERMIT_STATUS_LABEL,
@@ -34,6 +35,8 @@ export default async function BuildingPermitFilePrintPage({
   const today = ymd(new Date());
   const version = permitVersion(permit);
   const lapsed = lapsedMonths(permit, today);
+  // A letter's PDF is printed with its letter; these are the loose files.
+  const looseFiles = permit.documents.filter((d) => !d.correspondenceId);
 
   return (
     <CaPrintShell
@@ -178,6 +181,22 @@ export default async function BuildingPermitFilePrintPage({
               ) : null}
             </div>
           ))}
+        </PrintSection>
+      ) : null}
+
+      {looseFiles.length > 0 ? (
+        <PrintSection title="Files on the case">
+          <Table head={["Name", "Category", "Date", "Where it is"]}>
+            {looseFiles.map((d) => (
+              <tr key={d.id} className="border-b border-gray-200 align-top">
+                <Cell>{d.name}</Cell>
+                <Cell>{DOCUMENT_CATEGORY_LABEL[d.category]}</Cell>
+                <Cell mono>{militaryDate(d.documentDate)}</Cell>
+                {/* A file cannot travel on paper: say where it is instead. */}
+                <Cell>{d.storageKey ? (d.filename ?? "In the case file") : (d.externalUrl ?? "—")}</Cell>
+              </tr>
+            ))}
+          </Table>
         </PrintSection>
       ) : null}
 
