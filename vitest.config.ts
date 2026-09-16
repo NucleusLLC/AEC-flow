@@ -105,6 +105,10 @@ export default defineConfig({
       // The BBO contained in a proposal price: pure money arithmetic, and the
       // per-milestone split the accounting side adds up every month.
       "lib/proposals/bbo.test.ts",
+      // Finance. Invoice arithmetic (exact money, ageing, status from payments)
+      // and the enum tripwire — both pure, no Prisma, no requests.
+      "lib/finance/calc.test.ts",
+      "lib/finance/enums.test.ts",
     ],
     environment: "node",
   },
