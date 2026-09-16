@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, LayoutDashboard, Pencil, Printer } from "lucide-react";
 import {
   getServiceProposal,
   getServiceProposalIdentification,
@@ -38,6 +38,20 @@ export default async function ServiceProposalDetailPage({
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
   const locked = isLocked(p.status);
 
+  /**
+   * A proposal the client has accepted is a project that is ON, so this screen
+   * stops being a quote and becomes a way into the work.
+   *
+   * Only those statuses: offering the button on a draft, or on one merely
+   * approved for issue internally, would promise a project that does not exist
+   * yet. It points at the proposal's own project when it has one, and at the
+   * projects list when it does not -- which is the honest answer to "where is
+   * the project?" for a proposal accepted before anyone created one.
+   */
+  const projectIsOn =
+    p.status === "ACCEPTED" || p.status === "PARTIALLY_ACCEPTED" || p.status === "CONVERTED";
+  const projectHref = p.projectId ? `/projects/${p.projectId}` : "/projects";
+
   return (
     <div className="w-full max-w-5xl space-y-6">
       <Link href="/design/service-proposals" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
@@ -61,6 +75,18 @@ export default async function ServiceProposalDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {projectIsOn ? (
+            /* Green and filled, not another outlined button: this is the one
+             * thing to do on an accepted proposal, and it should read that way
+             * from across the room. */
+            <Link
+              href={projectHref}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white shadow-[0_0_0_3px_rgba(16,185,129,0.18)] transition-colors hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+            >
+              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+              Project Dashboard
+            </Link>
+          ) : null}
           {!locked ? (
             <Link href={`/design/service-proposals/${p.id}/edit`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Pencil className="h-4 w-4" /> Edit
