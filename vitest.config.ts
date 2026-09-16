@@ -95,6 +95,10 @@ export default defineConfig({
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
       "lib/building-permits/print-filter.test.ts",
+      // Finance. Invoice arithmetic (exact money, ageing, status from payments)
+      // and the enum tripwire — both pure, no Prisma, no requests.
+      "lib/finance/calc.test.ts",
+      "lib/finance/enums.test.ts",
     ],
     environment: "node",
   },
