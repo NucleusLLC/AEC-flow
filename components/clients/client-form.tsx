@@ -141,7 +141,20 @@ export function ClientForm({
             <label className={labelClass} htmlFor="email">
               Email
             </label>
-            <input id="email" name="email" type="email" className={inputClass} placeholder="projects@client.ae" defaultValue={initial?.email} />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              /* Two addresses are normal here: a married couple, two partners in
+               * a firm. Without `multiple` the browser refuses the second one. */
+              multiple
+              className={inputClass}
+              placeholder="her@example.com, him@example.com"
+              defaultValue={initial?.email}
+            />
+            <p className="mt-1 text-xs text-faint">
+              More than one? Separate them with a comma.
+            </p>
           </div>
           <div>
             <label className={labelClass} htmlFor="phone">

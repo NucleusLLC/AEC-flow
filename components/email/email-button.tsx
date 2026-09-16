@@ -312,7 +312,17 @@ function EmailDialog({
               ) : null}
 
               <Row label="To">
-                <input value={to} onChange={(e) => setTo(e.target.value)} disabled={busy} placeholder="name@client.com" type="email" className={inp} />
+                <input
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  disabled={busy}
+                  placeholder="name@client.com, partner@client.com"
+                  type="email"
+                  /* A contact is often two people. `multiple` is what stops the
+                   * browser refusing the second address before the server sees it. */
+                  multiple
+                  className={inp}
+                />
               </Row>
               <Row label="Cc">
                 <input value={cc} onChange={(e) => setCc(e.target.value)} disabled={busy} placeholder="optional — comma separated" className={inp} />

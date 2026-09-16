@@ -29,6 +29,16 @@ export type AddressListResult = { ok: true; addresses: string[] } | { ok: false;
  * A pasted column from a spreadsheet is the realistic way this field gets 400
  * entries, and that is a mistake worth stopping before it is a mail-out.
  */
+/**
+ * How many people one message may be addressed TO.
+ *
+ * A contact is often two people: a married couple buying a house, two partners
+ * in a firm. One address was the wrong rule. The cap stays small on purpose --
+ * the To line is for the people the message is about, and a longer list is a
+ * mail-out that belongs in Cc.
+ */
+export const MAX_TO = 5;
+
 export const MAX_CC = 20;
 
 /** Longest address we accept. RFC's practical ceiling is 254 octets. */
@@ -71,6 +81,48 @@ export function parseAddress(raw: string, label = "Recipient"): AddressResult {
  * refusal, and the deduplication is visible because the caller is handed the
  * exact list that will be sent and shows it back.
  */
+/**
+ * Validate the To line: one address, or several separated by a comma,
+ * semicolon or newline. At least one is required -- a message addressed to
+ * nobody is the silent non-send this module exists to prevent.
+ *
+ * Addresses come back in the order they were typed, de-duplicated, so the
+ * caller can hand them all to the provider and record exactly what went.
+ */
+export function parseRecipientList(
+  raw: string | null | undefined,
+  label = "Recipient",
+): AddressListResult {
+  const parts = (raw ?? "")
+    .split(/[,;\n]/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (parts.length === 0) return { ok: false, error: `${label} is required.` };
+  if (parts.length > MAX_TO) {
+    return { ok: false, error: `${label} has ${parts.length} addresses; the limit is ${MAX_TO}.` };
+  }
+  const addresses: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const one = parseAddress(part, label);
+    if (!one.ok) return one;
+    const key = one.address.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    addresses.push(one.address);
+  }
+  return { ok: true, addresses };
+}
+
+/**
+ * The address a reply would go to first -- what a screen shows when it has room
+ * for one. Empty string when the field holds nothing usable.
+ */
+export function primaryAddress(raw: string | null | undefined): string {
+  const list = parseRecipientList(raw);
+  return list.ok ? list.addresses[0] : "";
+}
+
 export function parseAddressList(raw: string | null | undefined, label = "Cc"): AddressListResult {
   const parts = (raw ?? "")
     .split(/[,;\n]/)

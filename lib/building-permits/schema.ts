@@ -8,6 +8,7 @@
  * PURE: zod only, no Prisma, no session. Safe to import from a test.
  */
 import { z } from "zod";
+import { parseRecipientList } from "@/lib/email/recipients";
 import {
   APPROVAL_STAGES,
   APPROVAL_STATUSES,
@@ -50,6 +51,26 @@ const optionalMoney = z
   })
   .refine((v) => v === null || v >= 0, "Cannot be negative");
 
+/**
+ * A contact field that takes one address or several, comma separated. It uses
+ * the send path's own parser, so a record can never hold an address that the
+ * email screen would refuse.
+ */
+const emailList = (label: string) =>
+  z
+    .union([z.string(), z.literal(""), z.null()])
+    .optional()
+    .superRefine((v, ctx) => {
+      if (!v) return;
+      const parsed = parseRecipientList(v, label);
+      if (!parsed.ok) ctx.addIssue({ code: "custom", message: parsed.error });
+    })
+    .transform((v) => {
+      if (!v) return null;
+      const parsed = parseRecipientList(v, label);
+      return parsed.ok ? parsed.addresses.join(", ") : v;
+    });
+
 const enumOf = <T extends string>(values: readonly T[], label: string) =>
   z.string().refine((v): v is T => (values as readonly string[]).includes(v), {
     message: `Not a ${label} this app knows`,
@@ -83,10 +104,9 @@ export const buildingPermitInputSchema = z
 
     authority: optionalText(160),
     authorityContact: optionalText(160),
-    authorityEmail: z
-      .union([z.string().trim().email("That is not an email address"), z.literal(""), z.null()])
-      .optional()
-      .transform((v) => (v === "" || v === undefined ? null : (v ?? null))),
+    // An authority often has two officers on a file; the same list rule as
+    // everywhere else, validated by the send path's own parser.
+    authorityEmail: emailList("The authority email"),
 
     lotAreaM2: optionalMoney,
     builtAreaM2: optionalMoney,
