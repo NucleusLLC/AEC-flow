@@ -21,6 +21,7 @@ import {
   attachLetterPdf,
   createBuildingPermit,
   createLetterUploadTicket,
+  getBuildingPermit,
   deleteApproval,
   deleteBuildingPermit,
   deleteCorrespondence,
@@ -49,6 +50,7 @@ import {
 } from "@/lib/building-permits/schema";
 import type {
   BuildingPermitApprovalInput,
+  BuildingPermitDTO,
   BuildingPermitCorrespondenceInput,
   BuildingPermitDocumentInput,
   BuildingPermitInput,
@@ -57,6 +59,28 @@ import type {
 } from "@/lib/building-permits/types";
 
 export type PermitActionResult = { ok: true; id: string } | { ok: false; error: string };
+
+export type PermitSnapshotResult =
+  | { ok: true; permit: BuildingPermitDTO }
+  | { ok: false; error: string };
+
+/**
+ * The case file as it stands right now.
+ *
+ * WHY THIS EXISTS. The case file's own screens used to lean on
+ * `router.refresh()` after a write. On this page that refresh does not reliably
+ * land — a saved letter stayed invisible until the page was reloaded, which
+ * reads as "it did not save" and invites the user to save it twice. So the
+ * client re-reads the file through this action and renders what comes back.
+ */
+export async function permitSnapshotAction(id: string): Promise<PermitSnapshotResult> {
+  try {
+    const permit = await getBuildingPermit(id);
+    return permit ? { ok: true, permit } : { ok: false, error: "That permit could not be found." };
+  } catch (e) {
+    return failure(e, "Could not re-read the permit.");
+  }
+}
 
 const REGISTER = "/design/building-permits";
 

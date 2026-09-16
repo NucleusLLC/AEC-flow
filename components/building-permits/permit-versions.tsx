@@ -9,7 +9,6 @@
  */
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { militaryDate } from "@/lib/building-permits/register";
 import {
@@ -31,12 +30,14 @@ export function PermitVersions({
   permitId,
   submissions,
   today,
+  onChanged,
 }: {
   permitId: string;
   submissions: BuildingPermitSubmissionDTO[];
   today: string;
+  /** Re-read the case file. See the note in permit-case-file.tsx. */
+  onChanged: () => Promise<void>;
 }) {
-  const router = useRouter();
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export function PermitVersions({
       setReceiptNumber("");
       setReceivedBy("");
       setContents("");
-      router.refresh();
+      await onChanged();
     });
   }
 
@@ -79,7 +80,7 @@ export function PermitVersions({
       const res = await deleteSubmissionAction(permitId, id);
       if (!res.ok) setError(res.error);
       setConfirmId(null);
-      router.refresh();
+      await onChanged();
     });
   }
 

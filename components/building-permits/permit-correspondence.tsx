@@ -7,10 +7,14 @@
  * URL, PUT the bytes straight to the private bucket, then save the letter with
  * the key the server issued. The bytes never pass through a server action (4.5 MB
  * body limit), and the browser never names the object.
+ *
+ * WHY `onChanged` AND NOT `router.refresh()`. A refresh after the write did not
+ * reliably repaint this page: the letter was in the database and the screen kept
+ * the old list until a reload, which reads as a failed save. The parent re-reads
+ * the case file instead — see the note in permit-case-file.tsx.
  */
 
-import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
 import { ResponseDueBadge } from "@/components/building-permits/badges";
 import { validateLetterPdf } from "@/lib/building-permits/letter-file";
@@ -62,13 +66,15 @@ export function PermitCorrespondence({
   permitId,
   letters,
   today,
+  onChanged,
 }: {
   permitId: string;
   letters: BuildingPermitCorrespondenceDTO[];
   today: string;
+  /** Re-read the case file. See the note in permit-case-file.tsx. */
+  onChanged: () => Promise<void>;
 }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -97,8 +103,10 @@ export function PermitCorrespondence({
   function add(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    start(async () => {
+    setPending(true);
+    void (async () => {
       try {
+        await fetch("/favicon.ico", { cache: "no-store" }); // TEMP experiment
         const pdf = file ? await uploadLetterPdf(permitId, file) : null;
         const res = await addCorrespondenceAction(
           permitId,
@@ -120,39 +128,45 @@ export function PermitCorrespondence({
         }
         reset();
         setOpen(false);
-        router.refresh();
+        await onChanged();
       } catch (err) {
         setError(errorText(err, "The letter was not saved."));
+      } finally {
+        setPending(false);
       }
-    });
+    })();
   }
 
   function attach(letterId: string, picked: File | undefined) {
     if (!picked) return;
     setError(null);
     setBusyId(letterId);
-    start(async () => {
+    setPending(true);
+    void (async () => {
       try {
         const pdf = await uploadLetterPdf(permitId, picked);
         const res = await attachLetterPdfAction(letterId, pdf);
         if (!res.ok) setError(res.error);
-        router.refresh();
+        await onChanged();
       } catch (err) {
         setError(errorText(err, "The PDF was not attached."));
       } finally {
         setBusyId(null);
+        setPending(false);
       }
-    });
+    })();
   }
 
   function remove(id: string) {
     setError(null);
-    start(async () => {
+    setPending(true);
+    void (async () => {
       const res = await deleteCorrespondenceAction(permitId, id);
       if (!res.ok) setError(res.error);
       setConfirmId(null);
-      router.refresh();
-    });
+      await onChanged();
+      setPending(false);
+    })();
   }
 
   return (

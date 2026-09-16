@@ -4,16 +4,10 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PermitStatusBadge, PermitTypeBadge } from "@/components/building-permits/badges";
-import { PermitCorrespondence } from "@/components/building-permits/permit-correspondence";
+import { PermitCaseFile } from "@/components/building-permits/permit-case-file";
 import { PermitDeleteButton } from "@/components/building-permits/permit-delete-button";
-import { PermitVersions } from "@/components/building-permits/permit-versions";
 import { getBuildingPermit } from "@/lib/data/building-permits";
-import {
-  lapsedMonths,
-  militaryDate,
-  permitVersion,
-  ymd,
-} from "@/lib/building-permits/register";
+import { militaryDate, ymd } from "@/lib/building-permits/register";
 
 export const metadata: Metadata = { title: "Building Permit · AEC-flow" };
 
@@ -28,8 +22,6 @@ export default async function BuildingPermitPage({
 
   // The practice's own calendar day, as on the register.
   const today = ymd(new Date());
-  const version = permitVersion(permit);
-  const lapsed = lapsedMonths(permit, today);
 
   const facts: { label: string; value: string; mono?: boolean }[] = [
     { label: "Authority", value: permit.authority ?? "—" },
@@ -76,33 +68,7 @@ export default async function BuildingPermitPage({
         </div>
       </div>
 
-      {/* The four numbers the register is read for, in the register's order. */}
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Stat label="Version #" value={version ? `V${version.version}` : "—"} />
-        <Stat label="Submittal date" value={militaryDate(permit.submittedAt)} />
-        <Stat
-          label="Lapsed (months)"
-          value={lapsed ? lapsed.months.toFixed(1) : "—"}
-          note={lapsed ? (lapsed.running ? "running" : "final") : undefined}
-        />
-        <Stat label="Permit ready date" value={militaryDate(permit.issuedAt)} tone={permit.issuedAt ? "green" : undefined} />
-      </div>
-
-      <Card>
-        <CardHeader title="Versions" subtitle="V1 is the first submittal; each resubmission is the next version." />
-        <CardBody>
-          <PermitVersions permitId={permit.id} submissions={permit.submissions} today={today} />
-        </CardBody>
-      </Card>
-
-      <div id="correspondence" className="scroll-mt-6">
-        <Card>
-          <CardHeader title="Correspondence" subtitle="Every letter to and from the authority, with its PDF." />
-          <CardBody>
-            <PermitCorrespondence permitId={permit.id} letters={permit.correspondence} today={today} />
-          </CardBody>
-        </Card>
-      </div>
+      <PermitCaseFile initial={permit} today={today} />
 
       <Card>
         <CardHeader title="Case file" />
@@ -122,33 +88,5 @@ export default async function BuildingPermitPage({
         </CardBody>
       </Card>
     </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  note,
-  tone,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-  tone?: "green";
-}) {
-  return (
-    <Card>
-      <CardBody className="py-3">
-        <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
-        <div
-          className={`mt-1 font-mono text-lg font-semibold tabular-nums ${
-            tone === "green" ? "text-green-700 dark:text-green-400" : "text-fg"
-          }`}
-        >
-          {value}
-        </div>
-        {note ? <div className="text-[11px] text-faint">{note}</div> : null}
-      </CardBody>
-    </Card>
   );
 }
