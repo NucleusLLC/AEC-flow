@@ -29,6 +29,7 @@ import {
   DRAWINGS_AND_DOCUMENTS,
   DRAWINGS_INTAKE_ITEM,
   DRAWINGS_REGISTER_ITEM,
+  GENERAL_DOCUMENTS_ITEM,
   navSections,
   type NavSection,
 } from "@/lib/nav";
@@ -143,7 +144,7 @@ const MODULE_1: AppModule = {
     { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }] },
     {
       title: DRAWINGS_AND_DOCUMENTS,
-      items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, DOC_GENERATOR, DOC_REGISTER],
+      items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, GENERAL_DOCUMENTS_ITEM, DOC_GENERATOR, DOC_REGISTER],
     },
   ],
 };
@@ -173,7 +174,7 @@ const MODULE_2: AppModule = {
     },
     {
       title: DRAWINGS_AND_DOCUMENTS,
-      items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, DOC_GENERATOR, DOC_REGISTER],
+      items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, GENERAL_DOCUMENTS_ITEM, DOC_GENERATOR, DOC_REGISTER],
     },
   ],
 };

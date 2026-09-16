@@ -40,6 +40,9 @@ const TENANT_MODELS = new Set<string>([
   // minutes of meetings about them — leaving any one of these out is a
   // cross-tenant data leak, and lib/proposals/tenant-scope.test.ts fails the
   // build if the schema and this list ever disagree.
+  // General Documents. A power of attorney names a client and has legal
+  // effect; leaving it out of this set would show it to another practice.
+  "GeneralDocument",
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);
