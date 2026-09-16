@@ -31,6 +31,7 @@ import {
   UploadCloud,
   Mail,
   ScrollText,
+  ReceiptText,
   Stamp,
   type LucideIcon,
 } from "lucide-react";
@@ -94,6 +95,15 @@ export const GENERAL_DOCUMENTS_ITEM: NavItem = {
   label: "General Documents",
   href: "/documents/general",
   icon: ScrollText,
+ * Invoices, defined ONCE like the drawings bin and the permit register: the
+ * receivables register appears in this list and in Module 1's sidebar, and a
+ * finance section called one thing in one module and another elsewhere is a
+ * feature the person chasing a payment cannot find.
+ */
+export const INVOICES_ITEM: NavItem = {
+  label: "Invoices",
+  href: "/finance/invoices",
+  icon: ReceiptText,
 };
 
 /** Section title used wherever the drawings bin appears. */
@@ -159,6 +169,10 @@ export const navSections: NavSection[] = [
       GENERAL_DOCUMENTS_ITEM,
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
     ],
+  },
+  {
+    title: "Finance",
+    items: [INVOICES_ITEM],
   },
   {
     title: "People",
