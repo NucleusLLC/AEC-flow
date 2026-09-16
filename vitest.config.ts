@@ -94,6 +94,7 @@ export default defineConfig({
       "lib/building-permits/schema.test.ts",
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
+      "lib/building-permits/print-filter.test.ts",
     ],
     environment: "node",
   },

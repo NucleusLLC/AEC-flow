@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Printer } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PermitStatusBadge, PermitTypeBadge } from "@/components/building-permits/badges";
 import { PermitCaseFile } from "@/components/building-permits/permit-case-file";
@@ -58,6 +58,12 @@ export default async function BuildingPermitPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/print/design/building-permits/${permit.id}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <Printer className="h-4 w-4" /> Print
+          </Link>
           <Link
             href={`/design/building-permits/${permit.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
