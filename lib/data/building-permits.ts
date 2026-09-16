@@ -835,6 +835,22 @@ export async function addApproval(
       createdByName: who.name,
     },
   });
+  // A decided concept approval is also a date on the case file: the office
+  // quotes it for months before the permit itself exists. Filled in only while
+  // still blank — a date typed on the file wins over a row added later.
+  if (
+    row.stage === "CONCEPT" &&
+    (row.status === "APPROVED" || row.status === "APPROVED_WITH_CONDITIONS") &&
+    row.decidedAt
+  ) {
+    await prisma.buildingPermit.updateMany({
+      where: { id: permitId, conceptApprovalAt: null },
+      data: {
+        conceptApprovalAt: row.decidedAt,
+        ...(row.refNumber ? { conceptApprovalRef: row.refNumber } : {}),
+      },
+    });
+  }
   return approvalDto(row as ApprovalRow);
 }
 
