@@ -54,9 +54,17 @@ export function Topbar({
         </div>
       ) : null}
 
-      <h1 className="text-base font-semibold text-fg">{t(title)}</h1>
+      {/* A flex item's default min-width is its content, so a long page title
+          ("Building Permits", "Service Proposals") used to push the controls on
+          the right off the edge and give every page 50–90px of sideways scroll
+          on a phone. `min-w-0 truncate` lets the title give way instead, and
+          below `sm` it steps aside altogether — every page already carries its
+          own heading, so nothing is lost but the duplicate. */}
+      <h1 className="hidden min-w-0 truncate text-base font-semibold text-fg sm:block">
+        {t(title)}
+      </h1>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {/* Full-screen toggle (desktop only) — collapses/expands the sidebar. */}
         {onToggleSidebar ? (
           <button
