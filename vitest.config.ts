@@ -26,6 +26,9 @@ export default defineConfig({
     include: [
       "lib/proposals/**/*.test.ts",
       "lib/firm-identity.test.ts",
+      // Emailing a service proposal: the message, and the guard that stops a
+      // draft going to the client. Pure module, no Prisma, no React.
+      "lib/proposals/proposal-email.test.ts",
       "lib/documents/**/*.test.ts",
       // Named file, not a `lib/schedule/**` sweep: the schedule module's other
       // code is protected and untested, and a directory glob here would be the
