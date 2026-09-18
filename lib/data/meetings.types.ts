@@ -6,6 +6,7 @@
  * The Prisma-backed query functions live in lib/data/meetings.ts and re-export
  * everything here via `export * from "./meetings.types"`.
  */
+import type { ResolvedAttendee } from "@/lib/meetings/recipients";
 
 export type MeetingType = "CLIENT" | "INTERNAL" | "SITE" | "AUTHORITY" | "VIRTUAL";
 
@@ -76,6 +77,22 @@ type MeetingDetailExtra = {
 
 /** Full record the detail page consumes = list row + detail extras. */
 export type MeetingRecord = MeetingListItem & MeetingDetailExtra;
+
+/**
+ * Who the minutes can be emailed to, as resolved for one meeting.
+ *
+ * `to` is the prefilled To line; `attendees` carries the per-participant verdict
+ * so the screen can say who has no address, which is the part a sender needs to
+ * see. The matching rules live in lib/meetings/recipients.
+ */
+export type MeetingRecipients = {
+  attendees: ResolvedAttendee[];
+  /** Action-item assignees who were not listed as participants. */
+  assignees: { name: string; email: string }[];
+  to: string[];
+  /** The project's client, named so the UI can explain where an address came from. */
+  clientName: string | null;
+};
 
 export type MeetingsSummary = {
   total: number;
