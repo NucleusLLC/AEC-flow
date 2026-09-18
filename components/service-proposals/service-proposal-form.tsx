@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Info, ChevronUp, ChevronDown } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
 import { computeProposal } from "@/lib/proposals/engine/engine";
@@ -1216,11 +1216,23 @@ export function ServiceProposalForm({
           <CardBody className="space-y-2">
             {scopeRows.length === 0 ? (
               <p className="text-sm text-muted">No scope items yet — add inclusions and exclusions, or use the free-text summary below.</p>
-            ) : scopeRows.map((s) => {
+            ) : scopeRows.map((s, i) => {
               const setS = (patch: Partial<ScopeRow>) => setScopeRows((p) => p.map((x) => x.key === s.key ? { ...x, ...patch } : x));
               const iss = (leaf: string) => issueFor(`scopeItems.${s.key}.${leaf}`);
+              // Swap with the neighbour; array order is the order printed on the document.
+              const move = (dir: -1 | 1) => setScopeRows((p) => {
+                const j = i + dir;
+                if (j < 0 || j >= p.length) return p;
+                const next = [...p];
+                [next[i], next[j]] = [next[j], next[i]];
+                return next;
+              });
               return (
-                <div key={s.key} className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto_32px] sm:items-center">
+                <div key={s.key} className="grid grid-cols-[20px_1fr] gap-2 sm:grid-cols-[20px_1fr_1.4fr_auto_32px] sm:items-center">
+                  <div className="row-span-4 flex flex-col items-center justify-center sm:row-span-1">
+                    <button type="button" onClick={() => move(-1)} disabled={i === 0} className="flex h-4 w-5 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-25 disabled:hover:bg-transparent" aria-label="Move scope item up" title="Move up"><ChevronUp className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => move(1)} disabled={i === scopeRows.length - 1} className="flex h-4 w-5 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-25 disabled:hover:bg-transparent" aria-label="Move scope item down" title="Move down"><ChevronDown className="h-3.5 w-3.5" /></button>
+                  </div>
                   <div>
                     <input value={s.title} onChange={(e) => setS({ title: e.target.value })} className={`${field} ${iss("title") ? fieldInvalid : ""}`} data-invalid={iss("title") ? "true" : undefined} aria-invalid={iss("title") ? true : undefined} placeholder="Site analysis & feasibility" />
                     <FieldError msg={iss("title")} />
