@@ -80,6 +80,13 @@ export async function sendEmail(opts: {
   subject: string;
   html: string;
   text?: string;
+  /**
+   * Files to enclose. Validate them before they get here — see
+   * lib/email/attachments.ts, which decides the type from the extension rather
+   * than from what a browser claimed, and refuses the whole set when one file
+   * is wrong.
+   */
+  attachments?: { filename: string; content: string; contentType: string }[];
 }): Promise<SendResult> {
   const resend = getClient();
   if (!resend) {
@@ -104,6 +111,11 @@ export async function sendEmail(opts: {
       subject: opts.subject,
       html: opts.html,
       text: opts.text ?? stripHtml(opts.html),
+      // Omitted entirely when there are none, for the same reason as `cc`: an
+      // empty array is a structure the provider need not be sent.
+      ...(opts.attachments && opts.attachments.length > 0
+        ? { attachments: opts.attachments }
+        : {}),
     });
     // `error.name` is Resend's stable machine-readable code (invalid_api_key,
     // invalid_from_address, daily_quota_exceeded, ...). Carry it: classifying a

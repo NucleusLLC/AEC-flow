@@ -73,6 +73,7 @@ export default defineConfig({
       // respectively. That matters more than usual here: RESEND_API_KEY is
       // empty in production, so a real send cannot be exercised anywhere, and
       // the database these would otherwise reach IS production.
+      "lib/email/attachments.test.ts",
       "lib/email/recipients.test.ts",
       "lib/email/compose.test.ts",
       // The transport itself: what counts as sent, and which environment states

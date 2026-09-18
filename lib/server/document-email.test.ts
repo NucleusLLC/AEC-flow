@@ -80,6 +80,7 @@ describe("a confirmed send", () => {
       to: "client@example.com",
       recipients: ["client@example.com"],
       cc: [],
+      attachments: [],
       logId: "log_1",
     });
   });
@@ -349,5 +350,59 @@ describe("classify", () => {
     // Codes too broad to trust fall back to the prose.
     expect(classify("The domain is not verified.", "validation_error")).toBe("domain_not_verified");
     expect(classify("teapot", null)).toBe("provider_error");
+  });
+});
+
+describe("attachments", () => {
+  /** A tiny real PDF header, base64 — enough to be a file, small enough to read. */
+  const pdf = Buffer.from("%PDF-1.4 minutes").toString("base64");
+
+  it("hands the file to the provider, and names it back to the caller", async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_with_file" });
+    const res = await sendDocumentEmail({
+      ...INPUT,
+      attachments: [{ filename: "Villa Sabana — Minutes.pdf", content: pdf }],
+    });
+    expect(res).toMatchObject({ ok: true, attachments: ["Villa Sabana — Minutes.pdf"] });
+    expect(mocks.sendEmail.mock.calls[0][0].attachments).toEqual([
+      {
+        filename: "Villa Sabana — Minutes.pdf",
+        content: pdf,
+        contentType: "application/pdf",
+      },
+    ]);
+  });
+
+  it("records what was enclosed, so the log can answer whether the document went", async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_logged" });
+    await sendDocumentEmail({
+      ...INPUT,
+      attachments: [{ filename: "minutes.pdf", content: pdf }],
+    });
+    expect(loggedAttempt().body).toContain("[attached: minutes.pdf");
+    expect(loggedAttempt().status).toBe("SENT");
+  });
+
+  it("refuses a file that is not a document, and sends NOTHING", async () => {
+    const res = await sendDocumentEmail({
+      ...INPUT,
+      attachments: [{ filename: "payload.exe", content: pdf }],
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.reason).toBe("attachment_rejected");
+      expect(res.error).toContain("payload.exe");
+    }
+    // The point: the provider was never called. A refusal that still sends the
+    // message without its attachment is the failure this whole module prevents.
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(loggedAttempt().status).toBe("FAILED");
+  });
+
+  it("omits attachments entirely when none were chosen", async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_plain" });
+    await sendDocumentEmail(INPUT);
+    expect(mocks.sendEmail.mock.calls[0][0].attachments).toEqual([]);
+    expect(loggedAttempt().body).not.toContain("[attached:");
   });
 });

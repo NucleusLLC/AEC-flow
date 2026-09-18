@@ -10,10 +10,19 @@
  * action is a network boundary, not a place to put reasoning.
  *
  * SECURITY. The input type below is the whole of what the browser may influence:
- * recipient, copies, subject, body, the document's name and which entity it
- * relates to. There is deliberately no companyId, no sender name and no `from` —
- * those are resolved from the signed-in user's own database row and the
- * environment. Adding any of them to this type would be the bug.
+ * recipient, copies, subject, body, the document's name, which entity it relates
+ * to, and any files chosen in the file picker. There is deliberately no
+ * companyId, no sender name and no `from` — those are resolved from the
+ * signed-in user's own database row and the environment. Adding any of them to
+ * this type would be the bug.
+ *
+ * Attachments arrive as base64 because this app generates no PDF: the file is
+ * one the sender printed from a Print / Preview screen and chose by hand. Their
+ * type, size and name are decided in lib/email/attachments.ts, from the
+ * extension rather than from anything the browser claimed, and the request body
+ * limit that has to accommodate them is set in next.config.ts — the two move
+ * together, or a file inside the app's own limit is refused by the framework
+ * before a word of it is read.
  */
 
 import { requireActor } from "@/lib/server/actor";
@@ -34,6 +43,7 @@ export type ComposedEmail = {
   relatedType?: string | null;
   relatedId?: string | null;
   linkPath?: string | null;
+  attachments?: { filename: string; content: string; contentType?: string; bytes?: number }[];
 };
 
 export async function sendDocumentEmailAction(
@@ -51,6 +61,7 @@ export async function sendDocumentEmailAction(
     relatedType: input.relatedType,
     relatedId: input.relatedId,
     linkPath: input.linkPath,
+    attachments: input.attachments,
   });
 }
 
