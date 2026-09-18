@@ -26,6 +26,7 @@ import { ServiceProposalActions } from "@/components/service-proposals/proposal-
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { VersionTag } from "@/components/service-proposals/version-tag";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 
 export const metadata: Metadata = { title: "Service Proposal · AEC-flow" };
 
@@ -116,6 +117,22 @@ export default async function ServiceProposalDetailPage({
     approvedForIssue,
     hasContactEmail: Boolean(p.contactEmail?.trim()),
   });
+  /**
+   * The turnover tax contained in the price, stated rather than left implicit.
+   *
+   * The practice quotes tax-inclusive, so the fee a client sees is what they
+   * pay — which leaves the bookkeeping to work out what part of it was never
+   * the practice's. Stating it here, and per milestone below, is what lets the
+   * monthly BBO be added up from the proposals instead of re-derived by hand.
+   */
+  const bbo = resolveBbo({
+    currency: p.currency,
+    grandTotal: calc.totals.grandTotal,
+    taxes: p.input.taxes,
+    taxTotal: calc.totals.taxTotal,
+    taxableSubtotal: calc.totals.taxableSubtotal,
+  });
+  const milestoneBbo = bboPerMilestone(calc.paymentSchedule, bbo.amount, p.currency);
 
   return (
     <div className="w-full max-w-5xl space-y-6">
@@ -226,6 +243,44 @@ export default async function ServiceProposalDetailPage({
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border">
+                    <td className="py-2 font-semibold text-fg" colSpan={2}>Total sub-total</td>
+                    <td className="py-2 text-right font-semibold tabular-nums text-fg">
+                      {money(calc.totals.subtotal)}
+                    </td>
+                  </tr>
+                  {calc.totals.discountTotal > 0 ? (
+                    <tr>
+                      <td className="py-1 text-muted" colSpan={2}>Discount</td>
+                      <td className="py-1 text-right tabular-nums text-muted">
+                        &minus; {money(calc.totals.discountTotal)}
+                      </td>
+                    </tr>
+                  ) : null}
+                  <tr>
+                    <td className="py-1 text-muted" colSpan={2}>
+                      {bbo.name} {bbo.percent}%
+                    </td>
+                    <td className="py-1 text-right tabular-nums text-fg">{money(bbo.amount)}</td>
+                  </tr>
+                  <tr>
+                    {/* The one sentence a client and a bookkeeper both need: the
+                      * price is not about to grow, and this figure is inside it. */}
+                    <td className="pb-1 text-xs text-faint" colSpan={3}>
+                      ({bboNote(bbo)}
+                      {bbo.source === "default"
+                        ? " No tax is set on this proposal, so the practice rate is used."
+                        : ""})
+                    </td>
+                  </tr>
+                  <tr className="border-t border-border">
+                    <td className="py-2 font-semibold text-fg" colSpan={2}>Total fee</td>
+                    <td className="py-2 text-right font-semibold tabular-nums text-fg">
+                      {money(calc.totals.grandTotal)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </CardBody>
           </Card>
@@ -254,15 +309,47 @@ export default async function ServiceProposalDetailPage({
               <CardHeader title="Payment schedule" />
               <CardBody>
                 <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                      <th className="py-2 font-medium">Milestone</th>
+                      <th className="py-2 text-right font-medium">Share</th>
+                      <th className="py-2 text-right font-medium">Amount</th>
+                      <th className="py-2 text-right font-medium">
+                        {bbo.name} incl. ({bbo.percent}%)
+                      </th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {calc.paymentSchedule.map((m) => (
-                      <tr key={m.id} className="border-b border-border/60 last:border-0">
+                      <tr key={m.id} className="border-b border-border/60">
                         <td className="py-2 text-fg">{m.name}</td>
                         <td className="py-2 text-right tabular-nums text-muted">{m.percent}%</td>
                         <td className="py-2 text-right tabular-nums text-fg">{money(m.amount)}</td>
+                        {/* Allocated, not a percentage of each row: the column
+                          * has to add up to the figure in the fee breakdown. */}
+                        <td className="py-2 text-right tabular-nums text-muted">
+                          {money(milestoneBbo[m.id] ?? 0)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-border">
+                      <td className="py-2 font-semibold text-fg" colSpan={2}>Total</td>
+                      <td className="py-2 text-right font-semibold tabular-nums text-fg">
+                        {money(calc.totals.grandTotal)}
+                      </td>
+                      <td className="py-2 text-right font-semibold tabular-nums text-fg">
+                        {money(bbo.amount)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="pb-1 text-xs text-faint" colSpan={4}>
+                        ({bboNote(bbo)}{" "}Each milestone&rsquo;s share becomes payable in the
+                        month it is invoiced.)
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </CardBody>
             </Card>
@@ -309,7 +396,9 @@ export default async function ServiceProposalDetailPage({
               {calc.totals.reimbursablesTotal > 0 ? <Row k="Reimbursables" v={money(calc.totals.reimbursablesTotal)} /> : null}
               <Row k="Subtotal" v={money(calc.totals.subtotal)} />
               {calc.totals.discountTotal > 0 ? <Row k="Discount" v={`− ${money(calc.totals.discountTotal)}`} /> : null}
-              {calc.totals.taxTotal > 0 ? <Row k="Tax" v={money(calc.totals.taxTotal)} /> : null}
+              {/* Named, not "Tax": the sidebar, the fee table and the printed
+                * sheet all state the same figure the same way. */}
+              {bbo.amount > 0 ? <Row k={`${bbo.name} ${bbo.percent}%`} v={money(bbo.amount)} /> : null}
               <div className="mt-1.5 flex justify-between border-t border-border pt-2 text-base font-semibold text-fg">
                 <dt>Grand total</dt>
                 <dd className="tabular-nums">{money(calc.totals.grandTotal)}</dd>

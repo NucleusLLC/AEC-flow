@@ -732,11 +732,18 @@ ${!preview ? `@media print {
           {/* Title only. The Template badge and Print/PDF used to live here too — both are
               already in the workspace bar directly above, and a control shown twice reads
               as two different controls. */}
-          <div className="min-w-0">
+          {/* `flex-1`, not just `min-w-0`: without it this column shrink-to-fits
+              and the field sat at 298px on a 976px card, whatever the window
+              width — so "Vanke Real Estate VBA Building" (302px of text) lost its
+              last letter and every longer name lost more. `max-w-md` was never the
+              binding limit; the column simply never claimed the free space beside
+              the buttons, which are `shrink-0` and take what they need first. */}
+          <div className="min-w-0 flex-1">
             <input
               value={est.projectName}
               onChange={(e) => patchMeta({ projectName: e.target.value })}
-              className="w-full max-w-md rounded-md bg-transparent text-xl font-semibold text-fg outline-none focus:bg-brand/5"
+              title={est.projectName}
+              className="w-full max-w-3xl rounded-md bg-transparent text-xl font-semibold text-fg outline-none focus:bg-brand/5"
               aria-label="Project name"
             />
             <div className="mt-0.5 text-xs text-faint">

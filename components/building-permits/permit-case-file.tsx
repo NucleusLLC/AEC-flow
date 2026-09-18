@@ -2,7 +2,7 @@
 
 /**
  * The live half of a permit case file: the four numbers, the versions log, the
- * letters, the staged approvals and the meeting minutes.
+ * letters, the staged approvals, the meeting minutes and the loose files.
  *
  * WHY THIS COMPONENT OWNS THE DATA. Everything here changes as the user works,
  * and `router.refresh()` after a write does not reliably repaint this page —
@@ -18,8 +18,10 @@
 
 import { useCallback, useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { EmailButton } from "@/components/email/email-button";
 import { PermitApprovals } from "@/components/building-permits/permit-approvals";
 import { PermitCorrespondence } from "@/components/building-permits/permit-correspondence";
+import { PermitDocuments } from "@/components/building-permits/permit-documents";
 import { PermitMeetings } from "@/components/building-permits/permit-meetings";
 import { PermitVersions } from "@/components/building-permits/permit-versions";
 import { lapsedMonths, militaryDate, permitVersion } from "@/lib/building-permits/register";
@@ -65,6 +67,29 @@ export function PermitCaseFile({
           label="Permit ready date"
           value={militaryDate(permit.issuedAt)}
           tone={permit.issuedAt ? "green" : undefined}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {/* The message carries a signed-in link to the printed file, not an
+          * attachment — see the note in components/email/email-button.tsx. */}
+        <EmailButton
+          subject={`Building permit ${permit.permitNumber ?? permit.reference} — ${permit.title}`}
+          attachment={`${permit.permitNumber ?? permit.reference} — Permit file`}
+          label="Email this file"
+          relatedType="building-permit"
+          relatedId={permit.id}
+          linkPath={`/print/design/building-permits/${permit.id}`}
+          defaultBody={[
+            `Building permit ${permit.permitNumber ?? "(number not yet issued)"} — ${permit.title}.`,
+            version ? `Version V${version.version}, submitted ${militaryDate(permit.submittedAt)}.` : null,
+            lapsed
+              ? `${lapsed.months.toFixed(1)} months lapsed${lapsed.running ? " and counting" : ""}.`
+              : null,
+            permit.issuedAt ? `Permit ready ${militaryDate(permit.issuedAt)}.` : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
         />
       </div>
 
@@ -128,6 +153,23 @@ export function PermitCaseFile({
             <PermitMeetings
               permitId={permit.id}
               meetings={permit.meetings}
+              today={today}
+              onChanged={reload}
+            />
+          </CardBody>
+        </Card>
+      </div>
+
+      <div id="documents" className="scroll-mt-6">
+        <Card>
+          <CardHeader
+            title="Files"
+            subtitle="The stamped form, receipts, photos — anything on the case that is not a letter."
+          />
+          <CardBody>
+            <PermitDocuments
+              permitId={permit.id}
+              documents={permit.documents}
               today={today}
               onChanged={reload}
             />

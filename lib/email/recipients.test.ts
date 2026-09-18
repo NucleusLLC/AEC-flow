@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { parseAddress, parseAddressList, MAX_CC, MAX_ADDRESS_LENGTH } from "@/lib/email/recipients";
+import {
+  parseAddress,
+  parseAddressList,
+  parseRecipientList,
+  primaryAddress,
+  MAX_CC,
+  MAX_TO,
+  MAX_ADDRESS_LENGTH,
+} from "@/lib/email/recipients";
 
 /**
  * Recipient validation is the gate that decides whether a send is attempted at
@@ -117,5 +125,51 @@ describe("parseAddressList", () => {
   it("ignores trailing separators rather than reading them as empty recipients", () => {
     expect(parseAddressList("a@b.com,")).toEqual({ ok: true, addresses: ["a@b.com"] });
     expect(parseAddressList(",a@b.com,,")).toEqual({ ok: true, addresses: ["a@b.com"] });
+  });
+});
+
+describe("parseRecipientList", () => {
+  it("takes the two addresses a couple actually has", () => {
+    expect(parseRecipientList("her@example.com, him@example.com")).toEqual({
+      ok: true,
+      addresses: ["her@example.com", "him@example.com"],
+    });
+    expect(parseRecipientList("a@example.com; b@example.com\nc@example.com").ok).toBe(true);
+  });
+
+  it("still insists on at least one - a message to nobody is the silent non-send", () => {
+    expect(parseRecipientList("")).toEqual({ ok: false, error: "Recipient is required." });
+    expect(parseRecipientList("   ,  ; ").ok).toBe(false);
+  });
+
+  it("refuses the whole list when one address is malformed, naming it", () => {
+    const res = parseRecipientList("good@example.com, nope");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("nope");
+  });
+
+  it("collapses a case-different duplicate instead of mailing twice", () => {
+    expect(parseRecipientList("A@example.com, a@example.com")).toEqual({
+      ok: true,
+      addresses: ["A@example.com"],
+    });
+  });
+
+  it("caps the To line, because that list is not a mail-out", () => {
+    const many = Array.from({ length: MAX_TO + 1 }, (_, i) => `p${i}@example.com`).join(", ");
+    const res = parseRecipientList(many);
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain(String(MAX_TO));
+  });
+});
+
+describe("primaryAddress", () => {
+  it("is the address a reply goes to first", () => {
+    expect(primaryAddress("her@example.com, him@example.com")).toBe("her@example.com");
+  });
+
+  it("is empty rather than a guess when the field holds nothing usable", () => {
+    expect(primaryAddress("")).toBe("");
+    expect(primaryAddress("not-an-address")).toBe("");
   });
 });

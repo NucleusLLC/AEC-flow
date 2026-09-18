@@ -5,6 +5,7 @@ import { computeProposal } from "@/lib/proposals/engine/engine";
 import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
 import { STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { formatCurrency } from "@/lib/format";
+import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { CaPrintShell, PrintSection } from "@/components/construction-admin/print-shell";
 import { RichText } from "@/components/print/rich-text";
 import { ProposalIdentificationPrint } from "@/components/service-proposals/proposal-identification";
@@ -31,6 +32,18 @@ export default async function ServiceProposalPrintPage({
   const identification = await getServiceProposalIdentification(p);
   const calc = computeProposal(p.input as ProposalCalcInput);
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
+
+  // The tax contained in the price, named and stated. The client sees that the
+  // price is not about to grow; the bookkeeping sees what is payable, and the
+  // payment schedule below says which month each part of it falls in.
+  const bbo = resolveBbo({
+    currency: p.currency,
+    grandTotal: calc.totals.grandTotal,
+    taxes: p.input.taxes,
+    taxTotal: calc.totals.taxTotal,
+    taxableSubtotal: calc.totals.taxableSubtotal,
+  });
+  const milestoneBbo = bboPerMilestone(calc.paymentSchedule, bbo.amount, p.currency);
 
   const baseComponents = calc.components.filter((c) => c.category === "BASE");
   const selectedOptional = calc.components.filter((c) => c.category === "OPTIONAL" && c.countedInTotal);
@@ -115,13 +128,25 @@ export default async function ServiceProposalPrintPage({
             {calc.totals.discountTotal > 0 ? (
               <tr><td className="py-1 pr-2 text-gray-600">Discount</td><td className="py-1 pl-2 text-right tabular-nums text-gray-700">− {money(calc.totals.discountTotal)}</td></tr>
             ) : null}
-            {calc.totals.taxTotal > 0 ? (
-              <tr><td className="py-1 pr-2 text-gray-600">Tax</td><td className="py-1 pl-2 text-right tabular-nums text-gray-700">{money(calc.totals.taxTotal)}</td></tr>
+            {bbo.amount > 0 ? (
+              <tr>
+                <td className="py-1 pr-2 text-gray-600">
+                  {bbo.name} {bbo.percent}%
+                </td>
+                <td className="py-1 pl-2 text-right tabular-nums text-gray-700">{money(bbo.amount)}</td>
+              </tr>
             ) : null}
             <tr className="border-t border-gray-300">
               <td className="py-1.5 pr-2 font-bold text-gray-900">Grand total</td>
               <td className="py-1.5 pl-2 text-right font-bold tabular-nums text-gray-900">{money(calc.totals.grandTotal)}</td>
             </tr>
+            {bbo.amount > 0 ? (
+              <tr>
+                <td className="pt-1 text-[10px] text-gray-500" colSpan={2}>
+                  ({bboNote(bbo)})
+                </td>
+              </tr>
+            ) : null}
           </tfoot>
         </table>
 
@@ -151,15 +176,48 @@ export default async function ServiceProposalPrintPage({
       {calc.paymentSchedule.length > 0 ? (
         <PrintSection title="Payment schedule">
           <table className="w-full border-collapse text-[11px]">
+            <thead>
+              <tr className="border-b border-gray-300 text-left text-gray-500">
+                <th className="py-1.5 pr-2 font-medium">Instalment</th>
+                <th className="py-1.5 px-2 text-right font-medium">Share</th>
+                <th className="py-1.5 px-2 text-right font-medium">Amount</th>
+                <th className="py-1.5 pl-2 text-right font-medium">
+                  {bbo.name} incl. ({bbo.percent}%)
+                </th>
+              </tr>
+            </thead>
             <tbody>
               {calc.paymentSchedule.map((m) => (
                 <tr key={m.id} className="border-b border-gray-200">
                   <td className="py-1.5 pr-2 text-gray-900">{m.name}</td>
                   <td className="py-1.5 px-2 text-right tabular-nums text-gray-600">{m.percent}%</td>
-                  <td className="py-1.5 pl-2 text-right tabular-nums text-gray-900">{money(m.amount)}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums text-gray-900">{money(m.amount)}</td>
+                  {/* Allocated from the proposal's own BBO figure, so this column
+                    * adds up to the one in the fee table rather than to a
+                    * per-row percentage that rounds differently. */}
+                  <td className="py-1.5 pl-2 text-right tabular-nums text-gray-600">
+                    {money(milestoneBbo[m.id] ?? 0)}
+                  </td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t border-gray-300">
+                <td className="py-1.5 pr-2 font-semibold text-gray-900" colSpan={2}>Total</td>
+                <td className="py-1.5 px-2 text-right font-semibold tabular-nums text-gray-900">
+                  {money(calc.totals.grandTotal)}
+                </td>
+                <td className="py-1.5 pl-2 text-right font-semibold tabular-nums text-gray-900">
+                  {money(bbo.amount)}
+                </td>
+              </tr>
+              <tr>
+                <td className="pt-1 text-[10px] text-gray-500" colSpan={4}>
+                  ({bboNote(bbo)}{" "}Each instalment&rsquo;s share is payable in the month it is
+                  invoiced.)
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </PrintSection>
       ) : null}

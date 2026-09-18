@@ -81,6 +81,29 @@ export const PAGE_START_EPSILON_PX = 4;
 const MAX_PAGES = 200;
 
 /**
+ * The block that begins the page starting at `at` — if one begins there at all.
+ *
+ * It has to START there, within the same epsilon that decides whether a heading
+ * already begins its page. The test used to be `b.top >= at - 1`, which returns
+ * the next unbreakable block wherever it happens to be, and when the boundary
+ * falls inside a long paragraph the next one can be most of a page away. The
+ * caller then opened the page gap in front of THAT block and drew the footer band
+ * from it, so the preview put the foot of the page hundreds of pixels past where
+ * the printer puts it: measured on a minutes document with a 34-row action table,
+ * page one showed 1797px of content against a 994px page, because the first
+ * unbreakable block after the boundary was a table row 811px further down.
+ *
+ * Returning -1 is a real answer, not a failure: the boundary runs through freely
+ * breakable text, and the caller — which is the only part of the stack that can
+ * measure text — has to open the gap at the boundary itself.
+ */
+function blockStartingAt(blocks: readonly PaginationBlock[], at: number, skip = -1): number {
+  return blocks.findIndex(
+    (b, i) => i !== skip && b.top >= at - 1 && b.top <= at + PAGE_START_EPSILON_PX,
+  );
+}
+
+/**
  * Where the browser will end each page.
  *
  * Mirrors the print engine's block-flow rule: fill the page, then pull the
@@ -150,15 +173,15 @@ export function computeCuts(input: {
 
       if (declined) {
         splitBlockIndex = straddler;
-        const starter = blocks.findIndex((b, i) => i !== straddler && b.top >= at - 1);
+        const starter = blockStartingAt(blocks, at, straddler);
         if (starter >= 0) blockIndex = starter;
       } else if (straddler >= 0) {
         at = blocks[straddler].top;
         kind = "atom";
         blockIndex = straddler;
       } else {
-        // The block that will begin the next page, if the boundary lands on one.
-        const starter = blocks.findIndex((b) => b.top >= at - 1);
+        // The block that will begin the next page, if one begins there at all.
+        const starter = blockStartingAt(blocks, at);
         if (starter >= 0) blockIndex = starter;
       }
     }

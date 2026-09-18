@@ -78,9 +78,40 @@ describe("a confirmed send", () => {
       ok: true,
       messageId: "re_abc123",
       to: "client@example.com",
+      recipients: ["client@example.com"],
       cc: [],
       logId: "log_1",
     });
+  });
+
+  it("addresses a couple: two recipients both go to the provider and to the record", async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_couple" });
+    const res = await sendDocumentEmail({ ...INPUT, to: "her@example.com, him@example.com" });
+    expect(res).toMatchObject({
+      ok: true,
+      recipients: ["her@example.com", "him@example.com"],
+      to: "her@example.com, him@example.com",
+    });
+    // The provider is handed the array, not a joined string it would have to split.
+    expect(mocks.sendEmail.mock.calls[0][0].to).toEqual([
+      "her@example.com",
+      "him@example.com",
+    ]);
+    // And the record says what actually went out.
+    expect(loggedAttempt()).toMatchObject({ to: "her@example.com, him@example.com" });
+  });
+
+  it("refuses the whole send when the second address is malformed", async () => {
+    const res = await sendDocumentEmail({ ...INPUT, to: "her@example.com, not-an-address" });
+    expect(res.ok).toBe(false);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    if (!res.ok) expect(res.error).toContain("not-an-address");
+  });
+
+  it("collapses a duplicate rather than mailing someone twice", async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_dupe" });
+    const res = await sendDocumentEmail({ ...INPUT, to: "a@example.com; A@example.com" });
+    expect(res).toMatchObject({ ok: true, recipients: ["a@example.com"] });
   });
 
   it("records it as SENT with the provider id and no error", async () => {

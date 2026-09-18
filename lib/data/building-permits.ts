@@ -19,9 +19,12 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { nextPermitReference } from "@/lib/building-permits/register";
 import {
+  buildDocumentKey,
   buildLetterKey,
+  isDocumentKeyForPermit,
   isLetterKeyForPermit,
   validateLetterPdf,
+  validatePermitFile,
 } from "@/lib/building-permits/letter-file";
 import {
   createSignedDownload,
@@ -242,6 +245,10 @@ function documentDto(r: DocumentRow): BuildingPermitDocumentDTO {
     documentDate: ymd(r.documentDate),
     uploadedByName: r.uploadedByName,
     notes: r.notes,
+    // Set when this file IS a letter's PDF. The documents section lists the
+    // loose files only; showing every letter attachment there as well would
+    // make the correspondence look duplicated.
+    correspondenceId: r.correspondenceId,
     createdAt: r.createdAt.toISOString(),
   };
 }
@@ -880,22 +887,86 @@ export async function deleteApproval(id: string): Promise<void> {
   if (affected.count === 0) throw new PermitNotFoundError();
 }
 
+/**
+ * Sign an upload for a loose file on the case: a stamped application form, a
+ * receipt, a photo of the site notice. The same path as a letter PDF, under a
+ * different prefix and with a wider set of file types — see
+ * lib/building-permits/letter-file.ts.
+ */
+export async function createDocumentUploadTicket(
+  permitId: string,
+  file: { filename: string; mimeType: string; sizeBytes: number },
+): Promise<LetterUploadTicket> {
+  requireStorage();
+  const id = await requirePermit(permitId);
+  const verdict = validatePermitFile({
+    name: file.filename,
+    size: file.sizeBytes,
+    type: file.mimeType,
+  });
+  if (!verdict.ok) throw new PermitLetterFileError(verdict.message);
+  const signed = await createSignedUpload(buildDocumentKey(id, file.filename, randomUUID()));
+  return {
+    uploadUrl: signed.uploadUrl,
+    storageKey: signed.storageKey,
+    headers: { "content-type": file.mimeType || "application/octet-stream" },
+  };
+}
+
+/** Check an uploaded loose file before a row is allowed to point at it. */
+async function confirmDocumentFile(
+  permitId: string,
+  upload: UploadedLetterPdf,
+): Promise<{ storageKey: string; filename: string; sizeBytes: number }> {
+  requireStorage();
+  const storageKey = String(upload?.storageKey ?? "").trim();
+  if (!isDocumentKeyForPermit(storageKey, permitId)) {
+    throw new PermitLetterFileError("That upload does not belong to this permit.");
+  }
+  const object = await statObject(storageKey);
+  if (!object) throw new PermitLetterFileError("The file did not finish uploading. Try again.");
+  const filename = String(upload.filename ?? "").trim().slice(0, 255) || "file";
+  const verdict = validatePermitFile({ name: filename, size: object.sizeBytes, type: "" });
+  if (!verdict.ok) {
+    await deleteObject(storageKey).catch(() => {});
+    throw new PermitLetterFileError(verdict.message);
+  }
+  return { storageKey, filename, sizeBytes: object.sizeBytes };
+}
+
+/** Remove a loose-file upload that never made it onto a row. */
+export async function discardDocumentUpload(permitId: string, storageKey: string): Promise<void> {
+  if (!isStorageConfigured()) return;
+  const id = await requirePermit(permitId);
+  const key = String(storageKey ?? "").trim();
+  if (!isDocumentKeyForPermit(key, id)) return;
+  const recorded = await prisma.buildingPermitDocument.findFirst({
+    where: { storageKey: key },
+    select: { id: true },
+  });
+  if (!recorded) await deleteObject(key).catch(() => {});
+}
+
 export async function addDocument(
   permitId: string,
   input: BuildingPermitDocumentInput,
+  upload?: UploadedLetterPdf | null,
 ): Promise<BuildingPermitDocumentDTO> {
   await requirePermit(permitId);
   const who = await actor();
+  // A storageKey only ever arrives by way of a confirmed upload: the browser
+  // cannot name an object, and a row must not point at one that is not there.
+  const file = upload ? await confirmDocumentFile(permitId, upload) : null;
   const row = await prisma.buildingPermitDocument.create({
     data: {
       permitId,
       name: input.name.trim(),
       category: input.category,
-      storageKey: input.storageKey ?? null,
+      storageKey: file?.storageKey ?? null,
       externalUrl: input.externalUrl ?? null,
-      filename: input.filename ?? null,
+      filename: file?.filename ?? input.filename ?? null,
       mimeType: input.mimeType ?? null,
-      sizeBytes: input.sizeBytes ?? null,
+      sizeBytes: file?.sizeBytes ?? input.sizeBytes ?? null,
       documentDate: toDate(input.documentDate),
       notes: input.notes ?? null,
       uploadedByName: who.name,

@@ -266,6 +266,12 @@ const PRINT_BREAK_CSS = `
 }
 
 @media print {
+  /* The screen gutter for a boundary that falls inside a table is a spacer ROW,
+   * because a table row discards a top margin (see lib/documents/gutter). Print
+   * paginates the table itself, so the spacer there would be a blank band in the
+   * middle of the register. */
+  .aec-doc [data-paged-spacer] { display: none !important; }
+
   /* A table split across pages must carry its header onto the next one. */
   .aec-doc thead { display: table-header-group; }
   .aec-doc tfoot { display: table-footer-group; }

@@ -33,7 +33,7 @@ import { requireActor } from "@/lib/server/actor";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { sendEmail } from "@/lib/server/email";
 import { recordEmailAttempt } from "@/lib/data/email-log";
-import { parseAddress, parseAddressList } from "@/lib/email/recipients";
+import { parseAddressList, parseRecipientList } from "@/lib/email/recipients";
 import { renderDocumentEmail } from "@/lib/email/compose";
 
 export type EmailFailureReason =
@@ -73,6 +73,8 @@ export type SendDocumentEmailResult =
       /** Resend's id. Its presence IS the confirmation — see the module note. */
       messageId: string;
       to: string;
+      /** Every address the message was addressed to. */
+      recipients: string[];
       cc: string[];
       /** Null when the send succeeded but the record could not be written. */
       logId: string | null;
@@ -134,25 +136,31 @@ export async function sendDocumentEmail(
 
   // 2. Recipients. Rejected, not silently dropped — a cc the sender believes went
   //    out and did not is the same failure mode in miniature.
-  const recipient = parseAddress(input.to ?? "", "Recipient");
+  // Several addresses are allowed here: a contact is often two people (a
+  // married couple, two partners). parseRecipientList keeps the order, drops
+  // duplicates and still refuses an empty To line.
+  const recipient = parseRecipientList(input.to ?? "", "Recipient");
   if (!recipient.ok) {
     const logId = await record(truncate(input.to ?? ""), [], "FAILED", null, recipient.error);
     return { ok: false, reason: "invalid_recipient", error: recipient.error, logId };
   }
+  // What the record and the success panel show. The provider is handed the
+  // array itself, so the log reads as what actually went out.
+  const recipientLine = recipient.addresses.join(", ");
   const copies = parseAddressList(input.cc, "Cc");
   if (!copies.ok) {
-    const logId = await record(recipient.address, [], "FAILED", null, copies.error);
+    const logId = await record(recipientLine, [], "FAILED", null, copies.error);
     return { ok: false, reason: "invalid_recipient", error: copies.error, logId };
   }
 
   if (!subject) {
     const error = "A subject is required.";
-    const logId = await record(recipient.address, copies.addresses, "FAILED", null, error);
+    const logId = await record(recipientLine, copies.addresses, "FAILED", null, error);
     return { ok: false, reason: "invalid_recipient", error, logId };
   }
   if (!body) {
     const error = "The message is empty.";
-    const logId = await record(recipient.address, copies.addresses, "FAILED", null, error);
+    const logId = await record(recipientLine, copies.addresses, "FAILED", null, error);
     return { ok: false, reason: "invalid_recipient", error, logId };
   }
 
@@ -175,7 +183,7 @@ export async function sendDocumentEmail(
   });
 
   // 4. The send. `sendEmail` never throws; it returns a soft result.
-  const res = await sendEmail({ to: recipient.address, cc: copies.addresses, subject, html, text });
+  const res = await sendEmail({ to: recipient.addresses, cc: copies.addresses, subject, html, text });
 
   // 5. Anything that is not an id-bearing acceptance is a failure, including the
   //    provider accepting the request and returning no id — `sendEmail` collapses
@@ -184,12 +192,19 @@ export async function sendDocumentEmail(
   if (!res.ok) {
     const reason = classify(res.error, res.code);
     const error = humanise(reason, res.error);
-    const logId = await record(recipient.address, copies.addresses, "FAILED", null, res.error);
+    const logId = await record(recipientLine, copies.addresses, "FAILED", null, res.error);
     return { ok: false, reason, error, logId };
   }
 
-  const logId = await record(recipient.address, copies.addresses, "SENT", res.id, null);
-  return { ok: true, messageId: res.id, to: recipient.address, cc: copies.addresses, logId };
+  const logId = await record(recipientLine, copies.addresses, "SENT", res.id, null);
+  return {
+    ok: true,
+    messageId: res.id,
+    to: recipientLine,
+    recipients: recipient.addresses,
+    cc: copies.addresses,
+    logId,
+  };
 }
 
 /**

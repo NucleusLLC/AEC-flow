@@ -8,6 +8,7 @@ import {
   type PageCut,
 } from "@/lib/documents/pagination";
 import { gutterZones, SHEET_GAP_MM } from "@/lib/documents/preview-geometry";
+import { gutterMode, pageEndAt, spanOf, type GutterMode } from "@/lib/documents/gutter";
 
 /**
  * PagedPreview — makes the on-screen document look like the printed one, and
@@ -80,6 +81,169 @@ function clearGutters(root: HTMLElement): void {
     el.removeAttribute("data-paged-break");
     el.style.removeProperty("--paged-gutter");
   }
+  // A spacer row is a node rather than an attribute, so clearing it means
+  // removing it. Leaving one behind would hand the next pass a table already
+  // carrying a page-worth of blank rows, and every re-measure would add another.
+  for (const el of Array.from(root.querySelectorAll("[data-paged-spacer]"))) {
+    const parent = el.parentNode;
+    el.remove();
+    // A spacer inside text was split out of a text node; normalising the parent
+    // rejoins the halves, so the next pass measures the paragraph it started
+    // with rather than one already cut in two.
+    parent?.normalize();
+  }
+}
+
+/**
+ * The gap for a page boundary that falls inside a table.
+ *
+ * A table row discards a top margin, so the usual mechanism opens nothing (see
+ * lib/documents/gutter). An empty row of the right height does open something,
+ * and it is in flow, so every row below it moves down exactly as the margin was
+ * supposed to move a block. The height goes on an inner div rather than the cell
+ * because a cell's `height` is a minimum that the row may exceed, while a block's
+ * is the height.
+ *
+ * Marked as preview chrome so `collectAtoms` cannot see it as a block to
+ * paginate, and hidden in print, where the browser paginates the table itself and
+ * an extra row would print as a gap in the middle of it.
+ */
+function insertSpacerRow(starter: HTMLElement, gutterPx: number): HTMLElement | null {
+  const row = starter.closest("tr");
+  const parent = row?.parentElement;
+  if (!row || !parent) return null;
+
+  const spacer = document.createElement("tr");
+  spacer.setAttribute("data-paged-spacer", "");
+  spacer.dataset.pagedPreviewChrome = "true";
+  spacer.setAttribute("aria-hidden", "true");
+
+  const cell = document.createElement("td");
+  cell.colSpan = spanOf(Array.from(row.children) as HTMLTableCellElement[]);
+  cell.style.cssText = "padding:0;border:0;";
+  const box = document.createElement("div");
+  box.style.height = `${gutterPx}px`;
+  cell.appendChild(box);
+  spacer.appendChild(cell);
+
+  parent.insertBefore(spacer, row);
+  return spacer;
+}
+
+/**
+ * The text node a page boundary at `y` runs through, and the offset of the first
+ * character that belongs to the next page.
+ *
+ * The offset is the start of the line box that STRADDLES the boundary, because a
+ * line is never split across pages — the printer moves the whole line down, so
+ * the preview must too. It is found by binary search on live layout (a Range's
+ * box, read back after each probe), never estimated from character widths: the
+ * document typeface is configurable and a fallback face measured 14% taller than
+ * the real one in this codebase already.
+ */
+function findTextSplit(
+  root: HTMLElement,
+  hostTop: number,
+  y: number,
+): { node: Text; offset: number } | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node as Text;
+    if (!text.data.trim()) continue;
+    // Chrome is excluded by ANCESTRY: a footer band is marked, the spans inside
+    // it are not, and splitting one would put the page gap inside the furniture.
+    const parent = text.parentElement;
+    if (!parent || parent.closest('[data-paged-preview-chrome="true"]')) continue;
+
+    range.selectNodeContents(text);
+    const rect = range.getBoundingClientRect();
+    const top = rect.top + window.scrollY - hostTop;
+    const bottom = rect.bottom + window.scrollY - hostTop;
+    if (!(top < y && bottom > y)) continue;
+
+    let lo = 1;
+    let hi = text.data.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      range.setStart(text, 0);
+      range.setEnd(text, mid);
+      const probe = range.getBoundingClientRect().bottom + window.scrollY - hostTop;
+      if (probe > y) hi = mid;
+      else lo = mid + 1;
+    }
+    return { node: text, offset: lo };
+  }
+  return null;
+}
+
+/**
+ * The gap for a boundary that falls inside freely breakable text.
+ *
+ * Nothing begins the next page, so there is no block to push: the gap has to be
+ * opened at the boundary. The text node is split at the preceding word boundary
+ * and a block-level spacer goes between the halves, which is the smallest
+ * intervention that reflows the lines below it — the ELEMENT is left whole, so no
+ * paragraph is duplicated and no section header is cloned.
+ *
+ * Declines rather than guesses in two cases the guards exist for: when the split
+ * would land at the very start of the text (moving it empties the page and the
+ * next page overruns identically), and when there is no whitespace to split on.
+ *
+ * Note on React: the split leaves an extra text node in a tree React hydrated.
+ * These print routes render server-side and never update their document body, and
+ * every pass clears its own spacers and rejoins the halves before measuring
+ * again, so React is never handed a tree this pass left split.
+ */
+function insertFlowSpacer(node: Text, offset: number, gutterPx: number): HTMLElement | null {
+  const text = node.data;
+  let cut = Math.min(offset, text.length);
+  while (cut > 0 && !/\s/.test(text[cut - 1])) cut--;
+  if (cut <= 0 || cut >= text.length) return null;
+
+  const tail = node.splitText(cut);
+  const parent = tail.parentNode;
+  if (!parent) return null;
+
+  const spacer = document.createElement("span");
+  spacer.setAttribute("data-paged-spacer", "");
+  spacer.dataset.pagedPreviewChrome = "true";
+  spacer.setAttribute("aria-hidden", "true");
+  spacer.style.cssText = `display:block;height:${gutterPx}px;`;
+  parent.insertBefore(spacer, tail);
+  return spacer;
+}
+
+/** The element whose top the footer band is measured from, and how the gap sits on it. */
+type GutterMarker = { el: HTMLElement; mode: GutterMode };
+
+/**
+ * Opens the gap in front of the block that begins a page, by whichever mechanism
+ * that block can actually hold, and returns the marker to measure the band from.
+ */
+function openGutter(starter: HTMLElement, gutterPx: number): GutterMarker | undefined {
+  const mode = gutterMode(getComputedStyle(starter).display);
+  if (mode === "margin") {
+    starter.setAttribute("data-paged-break", "");
+    starter.style.setProperty("--paged-gutter", `${gutterPx}px`);
+    return { el: starter, mode };
+  }
+  const spacer = insertSpacerRow(starter, gutterPx);
+  return spacer ? { el: spacer, mode } : undefined;
+}
+
+/** The same, for a boundary with no block to push. See `insertFlowSpacer`. */
+function openFlowGutter(
+  root: HTMLElement,
+  hostTop: number,
+  at: number,
+  gutterPx: number,
+): GutterMarker | undefined {
+  const split = findTextSplit(root, hostTop, at);
+  if (!split) return undefined;
+  const spacer = insertFlowSpacer(split.node, split.offset, gutterPx);
+  return spacer ? { el: spacer, mode: "spacer" } : undefined;
 }
 
 /**
@@ -458,20 +622,24 @@ export function PagedPreview({
       // the top margin of the page beginning. Screen-only — in print the same gap
       // IS the @page margins. See the CSS note in PageRules.
       const gutterPx = gutterMm * pxPerMm;
-      const starters = cuts.map(starterOf);
-      for (const starter of starters) {
-        if (!starter) continue;
-        starter.setAttribute("data-paged-break", "");
-        starter.style.setProperty("--paged-gutter", `${gutterPx}px`);
-      }
+      const markers = cuts.map((cut) => {
+        const starter = starterOf(cut);
+        return starter
+          ? openGutter(starter, gutterPx)
+          : openFlowGutter(el, hostTop, cut.at, gutterPx);
+      });
 
       // Positions shifted when the gutters opened, so read them back rather than
       // predicting where everything landed.
       const hostTop2 = el.getBoundingClientRect().top + window.scrollY;
       const bands = cuts.map((cut, i) => {
-        const starter = starters[i];
-        const top = starter
-          ? starter.getBoundingClientRect().top + window.scrollY - hostTop2 - gutterPx
+        const marker = markers[i];
+        const top = marker
+          ? pageEndAt({
+              markerTop: marker.el.getBoundingClientRect().top + window.scrollY - hostTop2,
+              gutterPx,
+              mode: marker.mode,
+            })
           : cut.at;
         return { top, page: i + 1 };
       });
@@ -508,7 +676,11 @@ export function PagedPreview({
   }, [pageContentHeightMm, pageContentWidthMm, gutterMm]);
 
   return (
-    <div ref={hostRef} className="relative">
+    // The printable height is published so a verifier can measure a page against
+    // the page it is supposed to be, rather than against the boundary this
+    // component drew — a check that reads its own answer back always passes.
+    // See scripts/verify-print-overflow.mjs.
+    <div ref={hostRef} className="relative" data-paged-page-height-mm={pageContentHeightMm}>
       {children}
 
       {/* Boundary markers. Absolutely positioned so they add no height and

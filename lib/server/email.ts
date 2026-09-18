@@ -73,7 +73,8 @@ export type SendResult =
   | { ok: false; error: string; code: string | null };
 
 export async function sendEmail(opts: {
-  to: string;
+  /** One address, or several: a contact is often two people. */
+  to: string | string[];
   /** Copied recipients. Validate them before they get here — see lib/email/recipients.ts. */
   cc?: string[];
   subject: string;
@@ -96,7 +97,7 @@ export async function sendEmail(opts: {
     const cc = opts.cc?.filter((a) => a.trim().length > 0);
     const { data, error } = await resend.emails.send({
       from,
-      to: opts.to,
+      to: Array.isArray(opts.to) ? opts.to.filter((a) => a.trim().length > 0) : opts.to,
       // Omitted entirely when empty: an empty `cc` array is a header the
       // provider need not see, and some clients render one.
       ...(cc && cc.length > 0 ? { cc } : {}),

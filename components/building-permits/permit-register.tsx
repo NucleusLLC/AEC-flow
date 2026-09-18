@@ -36,6 +36,10 @@ import {
   type PermitSort,
 } from "@/lib/building-permits/register";
 import {
+  describePermitPrintScope,
+  parsePermitPrintQuery,
+} from "@/lib/building-permits/print-filter";
+import {
   PERMIT_STATUSES,
   PERMIT_STATUS_LABEL,
   PERMIT_TYPES,
@@ -155,6 +159,16 @@ export function PermitRegister({
     return p.toString();
   }, [status, permitType, authority, q, band, sort, dir]);
 
+  /**
+   * The filters in words — "Open files · DOW". Derived from the same query
+   * string the print route parses, through the same pure functions, so the
+   * printed header, the emailed subject and the screen cannot drift apart.
+   */
+  const scope = useMemo(
+    () => describePermitPrintScope(parsePermitPrintQuery(Object.fromEntries(new URLSearchParams(query)))),
+    [query],
+  );
+
   const sortProps = { sort, dir, onSort: toggleSort };
 
   return (
@@ -236,7 +250,7 @@ export function PermitRegister({
         </span>
 
         <div className="ml-auto">
-          <PermitListActions query={query} />
+          <PermitListActions query={query} scope={scope} count={shown} />
         </div>
       </div>
 
