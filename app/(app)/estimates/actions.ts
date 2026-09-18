@@ -1,14 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { saveEstimate, getEstimateById, duplicateEstimate, setEstimateLock } from "@/lib/data/estimates";
+import {
+  saveEstimate,
+  getEstimateById,
+  duplicateEstimate,
+  setEstimateLock,
+  copyTasksToProject,
+  listCopyDestinations,
+} from "@/lib/data/estimates";
 import { savePriceBook } from "@/lib/data/price-lists";
 import { saveNormSet } from "@/lib/data/norm-set";
 import { saveGeneralConditions } from "@/lib/data/general-conditions-db";
 import { saveTemplates } from "@/lib/data/estimate-templates";
 import { saveWikiArticles } from "@/lib/data/estimating-wiki-db";
 import { estimateTotals } from "@/lib/estimates/calc";
-import type { CostEstimate } from "@/lib/data/estimates.types";
+import type { CostEstimate, CopyDestination } from "@/lib/data/estimates.types";
 import type { PriceItem } from "@/lib/data/price-lists.types";
 import type { NormSetTask, EstimateTemplate } from "@/lib/data/estimate-presets";
 import type { GeneralConditionItem } from "@/lib/data/general-conditions";
@@ -57,6 +64,57 @@ export async function duplicateEstimateAction(id: string, version: string): Prom
     return { ok: true, id: res.id };
   } catch (e) {
     return { ok: false, error: (e as Error)?.message ?? "Could not duplicate this estimate." };
+  }
+}
+
+/** The projects a selection of tasks could be copied into. See listCopyDestinations. */
+export async function listCopyDestinationsAction(
+  excludeProjectId: string,
+): Promise<CopyDestination[]> {
+  try {
+    return await listCopyDestinations(excludeProjectId);
+  } catch {
+    // An empty list reads as "nowhere to copy to", which the dialog states. It is
+    // the honest degradation: the alternative is a picker that looks broken.
+    return [];
+  }
+}
+
+/**
+ * Copy chosen coded tasks from this estimate into another project's estimate.
+ *
+ * The browser sends WHICH tasks and two options — never the rows. The source is
+ * read server-side and lib/estimates/copy-lines decides what travels, so a
+ * client cannot post a price into a sheet and have it look typed in.
+ *
+ * Returns the destination's id so the caller can offer to open it, and whether
+ * it had to be created — a project with no estimate yet is a legitimate
+ * destination, and that is the "new project" half of the request.
+ */
+export async function copyTasksToProjectAction(input: {
+  sourceEstimateId: string;
+  targetProjectId: string;
+  selection: { sections: string[]; items: string[] };
+  options: { includeQuantities?: boolean; includePrices?: boolean };
+}): Promise<
+  | {
+      ok: true;
+      estimateId: string;
+      created: boolean;
+      taskCount: number;
+      sectionCount: number;
+      pricesWithheld: boolean;
+    }
+  | { ok: false; error: string }
+> {
+  try {
+    const res = await copyTasksToProject(input);
+    // The estimates list changes too: the destination gains an estimate, or a
+    // bigger one, and its cached amount is recomputed.
+    revalidatePath("/estimates");
+    return { ok: true, ...res };
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message ?? "The tasks could not be copied." };
   }
 }
 
