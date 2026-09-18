@@ -30,6 +30,10 @@ export default defineConfig({
       // draft going to the client. Pure module, no Prisma, no React.
       "lib/proposals/proposal-email.test.ts",
       "lib/documents/**/*.test.ts",
+      // Copying coded tasks between projects' estimates. Named file, same reason
+      // as every entry above: the module is pure, and it decides which fields
+      // travel -- the part of that feature that can silently be wrong.
+      "lib/estimates/copy-lines.test.ts",
       // Named file, not a `lib/schedule/**` sweep: the schedule module's other
       // code is protected and untested, and a directory glob here would be the
       // first step toward re-collecting the node:test suites described above.

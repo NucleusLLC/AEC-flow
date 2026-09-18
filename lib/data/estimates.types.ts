@@ -165,3 +165,19 @@ export type EstimateProject = {
   status: EstimateStatus;
   amount: number; // indicative grand total
 };
+
+/**
+ * A project a selection of coded tasks can be copied into, as the picker needs
+ * to describe it: whether it has an estimate at all, when that estimate is
+ * dated, whether it is frozen, and which currency its prices are in.
+ */
+export type CopyDestination = {
+  id: string;
+  name: string;
+  projectNumber: string;
+  currency: string;
+  /** ISO date of the existing estimate, or null. */
+  estimateDate: string | null;
+  hasEstimate: boolean;
+  locked: boolean;
+};
