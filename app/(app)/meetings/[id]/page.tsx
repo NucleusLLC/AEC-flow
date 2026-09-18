@@ -12,8 +12,16 @@ import {
   ListChecks,
 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
+import { EmailButton } from "@/components/email/email-button";
 import { MeetingTypeBadge, ActionStatusBadge } from "@/components/meetings/badges";
-import { getMeeting } from "@/lib/data/meetings";
+import {
+  getMeeting,
+  getMeetingRecipients,
+  ACTION_STATUS_LABEL,
+  MEETING_TYPE_LABEL,
+} from "@/lib/data/meetings";
+import { minutesEmailBody, minutesSubject, unreachableNotice } from "@/lib/meetings/recipients";
+import { getFirmIdentity } from "@/lib/server/firm";
 import { formatDate } from "@/lib/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -61,6 +69,53 @@ export default async function MeetingDetailPage({ params }: PageProps) {
   const meeting = await getMeeting(id);
   if (!meeting) notFound();
 
+  /**
+   * Emailing the minutes. The addresses are resolved server-side from the team
+   * and the client (lib/data/meetings), because `participants` holds typed names
+   * and a name is not an address.
+   *
+   * The message carries the minutes THEMSELVES rather than a covering note: this
+   * app has no attachments — its documents come out of the browser's print
+   * dialog — so "please find attached" would be untrue, and a link into AEC-flow
+   * is no use to the client or the contractor, who cannot sign in. The link goes
+   * as well, for the colleagues who can.
+   */
+  const recipients = await getMeetingRecipients(meeting.id);
+  const sender = await getFirmIdentity();
+  const emailBody = minutesEmailBody({
+    title: meeting.title,
+    projectName: meeting.projectName,
+    typeLabel: MEETING_TYPE_LABEL[meeting.type],
+    meetingDate: formatDate(meeting.meetingDate),
+    location: meeting.location,
+    author: meeting.author,
+    followUpDate: meeting.followUpDate ? formatDate(meeting.followUpDate) : null,
+    participants: meeting.participants,
+    summary: meeting.summary,
+    discussion: meeting.discussion,
+    decisions: meeting.decisions,
+    actionItems: meeting.actionItems.map((a) => ({
+      description: a.description,
+      assignee: a.assignee,
+      dueDate: a.dueDate ? formatDate(a.dueDate) : null,
+      statusLabel: ACTION_STATUS_LABEL[a.status],
+    })),
+    senderName: sender.name || meeting.author,
+  });
+  // Two things the sender cannot see from the To line: who was at the meeting and
+  // could not be addressed, and who is in it without having been there.
+  const notice =
+    [
+      unreachableNotice(recipients?.attendees ?? []),
+      recipients?.assignees.length
+        ? `Also addressed, as they carry an action item: ${recipients.assignees
+            .map((a) => a.name)
+            .join(", ")}.`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
   return (
     <div className="w-full space-y-5">
       <Link
@@ -91,6 +146,17 @@ export default async function MeetingDetailPage({ params }: PageProps) {
           </Link>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <EmailButton
+            label="Email minutes"
+            subject={minutesSubject({ title: meeting.title, meetingDate: formatDate(meeting.meetingDate) })}
+            attachment={`${meeting.title} — Minutes`}
+            defaultTo={(recipients?.to ?? []).join(", ")}
+            defaultBody={emailBody}
+            notice={notice}
+            relatedType="meeting"
+            relatedId={meeting.id}
+            linkPath={`/print/meetings/${meeting.id}`}
+          />
           <a
             href={`/print/meetings/${meeting.id}`}
             target="_blank"

@@ -15,11 +15,13 @@ export * from "./meetings.types";
 import {
   isOpenAction,
   type MeetingListItem,
+  type MeetingRecipients,
   type MeetingRecord,
   type MeetingWriteInput,
   type ActionStatus,
   type UserActionItem,
 } from "./meetings.types";
+import { prefilledAddresses, resolveAttendees, type Addressable } from "@/lib/meetings/recipients";
 
 /** Render a DateTime column as a "YYYY-MM-DD" date string; null stays null. */
 function ymd(d: Date | null): string | null {
@@ -139,6 +141,74 @@ export async function getMeeting(id: string): Promise<MeetingRecord | null> {
   });
   if (!row) return null;
   return toRecord(row);
+}
+
+/**
+ * Who the minutes can be emailed to.
+ *
+ * `participants` holds typed NAMES, so the addresses have to come from what the
+ * company knows: its own active team members, and the client on the meeting's
+ * project. The matching itself is pure and tested in lib/meetings/recipients —
+ * this function only supplies it with the two lists and reports what it decided.
+ *
+ * TENANCY. `Client` is scoped by the extension in lib/db (it is in
+ * TENANT_MODELS); `User` is NOT, so the company is applied to that query by hand.
+ * Without it, a name typed on one practice's minutes could be matched against
+ * another practice's staff and the minutes addressed to a stranger.
+ */
+export async function getMeetingRecipients(id: string): Promise<MeetingRecipients | null> {
+  const companyId = await getCurrentCompanyId();
+  const row = await prisma.meetingMinute.findFirst({
+    where: { id },
+    include: {
+      project: { include: { client: true } },
+      actionItems: { include: { assignee: true } },
+    },
+  });
+  if (!row) return null;
+
+  const team = await prisma.user.findMany({
+    where: { companyId, status: "ACTIVE" },
+    select: { name: true, email: true },
+  });
+
+  // Team first, client second: `resolveAttendees` keeps the first match, so
+  // someone who is both a colleague and a client contact is reached at work.
+  const people: Addressable[] = [
+    ...team.map((u) => ({ name: u.name, email: u.email, kind: "team" as const })),
+  ];
+  const client = row.project.client;
+  if (client?.email) {
+    people.push({ name: client.name, email: client.email, kind: "client" });
+    // Minutes name the person, not the company, so the contact is worth matching
+    // too — "Gwendoline Rojer" against a client record called "Rojer family".
+    if (client.contactPerson) {
+      people.push({ name: client.contactPerson, email: client.email, kind: "client" });
+    }
+  }
+
+  const attendees = resolveAttendees(row.participants, people);
+
+  /**
+   * Someone carrying an action who was not in the room. They have to do the
+   * thing, so they have to receive the record of being asked — and leaving them
+   * out is how an action item is never seen by the person it belongs to.
+   */
+  const inTo = new Set(attendees.map((a) => a.email?.toLowerCase()).filter(Boolean));
+  const assignees: { name: string; email: string }[] = [];
+  for (const item of row.actionItems) {
+    const email = item.assignee.email;
+    if (!email || inTo.has(email.toLowerCase())) continue;
+    if (assignees.some((a) => a.email.toLowerCase() === email.toLowerCase())) continue;
+    assignees.push({ name: item.assignee.name, email });
+  }
+
+  return {
+    attendees,
+    assignees,
+    to: prefilledAddresses(attendees, assignees.map((a) => a.email)),
+    clientName: client?.name ?? null,
+  };
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
