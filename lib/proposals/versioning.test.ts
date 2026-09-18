@@ -7,6 +7,7 @@ import {
   issuedVersion,
   parseVersion,
   revisionStartVersion,
+  nextRevisionVersion,
   versionDisplay,
 } from "./versioning";
 
@@ -135,5 +136,54 @@ describe("formatVersion", () => {
     for (const label of ["0.1", "1.0", "2.7", "10.11"]) {
       expect(formatVersion(parseVersion(label))).toBe(label);
     }
+  });
+});
+
+describe("nextRevisionVersion", () => {
+  it("starts an issued document's revision at .1", () => {
+    expect(nextRevisionVersion("1.0")).toBe("1.1");
+    expect(nextRevisionVersion("2.0")).toBe("2.1");
+  });
+
+  it("moves one decimal when what is being revised is already in progress", () => {
+    // The reported bug: revising twice left the label where it was, so two
+    // different documents both read 1.1.
+    expect(nextRevisionVersion("1.1")).toBe("1.2");
+    expect(nextRevisionVersion("1.2")).toBe("1.3");
+  });
+
+  it("never moves a draft backwards", () => {
+    // revisionStartVersion("0.3") is "0.1" — earlier than where the document
+    // already was.
+    expect(nextRevisionVersion("0.3")).toBe("0.4");
+    expect(nextRevisionVersion("0.1")).toBe("0.2");
+  });
+
+  it("leaves the major alone: reaching a whole number is what ISSUING does", () => {
+    for (const label of ["1.0", "1.1", "0.3", null]) {
+      expect(parseVersion(nextRevisionVersion(label)).major).toBe(parseVersion(label).major);
+    }
+  });
+
+  it("puts an unlabelled legacy proposal onto the scheme rather than erroring", () => {
+    expect(nextRevisionVersion(null)).toBe("0.1");
+    expect(nextRevisionVersion("")).toBe("0.1");
+    expect(nextRevisionVersion("draft")).toBe("0.1");
+  });
+
+  it("still issues to the next whole number afterwards", () => {
+    expect(issuedVersion(nextRevisionVersion("1.0"))).toBe("2.0");
+    expect(issuedVersion(nextRevisionVersion("1.1"))).toBe("2.0");
+  });
+
+  it("a chain of revisions produces distinct labels", () => {
+    let v = "1.0";
+    const seen = [v];
+    for (let i = 0; i < 4; i++) {
+      v = nextRevisionVersion(v);
+      seen.push(v);
+    }
+    expect(seen).toEqual(["1.0", "1.1", "1.2", "1.3", "1.4"]);
+    expect(new Set(seen).size).toBe(seen.length);
   });
 });

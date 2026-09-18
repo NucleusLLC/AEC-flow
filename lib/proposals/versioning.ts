@@ -66,6 +66,29 @@ export function revisionStartVersion(issuedLabel: string | null | undefined): st
   return formatVersion({ major: v.major, minor: 1 });
 }
 
+/**
+ * The version a NEW REVISION starts on, whatever the document it continues.
+ *
+ * `revisionStartVersion` above answers this only for a document that has been
+ * ISSUED, and it was being used for every source. Revising twice was therefore
+ * a no-op on the label, and revising a draft moved it backwards:
+ *
+ *     issued   1.0  ->  1.1   correct
+ *     draft    1.1  ->  1.1   NO CHANGE — two revisions, one label
+ *     draft    0.3  ->  0.1   BACKWARDS
+ *
+ * Reported as "it adds one Decimal automatically" not happening. So the rule
+ * now depends on what it is revising: an issued whole number starts its
+ * revision at `.1`, and anything already in progress simply moves one decimal,
+ * which is what `bumpDraftVersion` means for a save and means here too.
+ *
+ * The major is never touched — reaching a new whole number is what ISSUING
+ * does, and a revision is a draft until it is issued.
+ */
+export function nextRevisionVersion(label: string | null | undefined): string {
+  return isIssuedVersion(label) ? revisionStartVersion(label) : bumpDraftVersion(label);
+}
+
 /** True when this label is one a client received — a whole number above zero. */
 export function isIssuedVersion(label: string | null | undefined): boolean {
   const v = parseVersion(label);
