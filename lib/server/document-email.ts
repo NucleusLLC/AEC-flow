@@ -34,6 +34,7 @@ import { getFirmIdentity } from "@/lib/server/firm";
 import { sendEmail } from "@/lib/server/email";
 import { recordEmailAttempt } from "@/lib/data/email-log";
 import { parseAddressList, parseRecipientList } from "@/lib/email/recipients";
+import { prepareAttachments, attachmentLogLine, type AttachmentInput } from "@/lib/email/attachments";
 import { renderDocumentEmail } from "@/lib/email/compose";
 
 export type EmailFailureReason =
@@ -41,6 +42,8 @@ export type EmailFailureReason =
   | "not_signed_in"
   /** The recipient or a cc address is not a valid address. Nothing was sent. */
   | "invalid_recipient"
+  /** A chosen file is the wrong type, empty, or too big. Nothing was sent. */
+  | "attachment_rejected"
   /** RESEND_API_KEY is unset, empty, or refused by the provider. Nothing was sent. */
   | "not_configured"
   /** EMAIL_FROM is unset, or the provider refused it as an address. Nothing was sent. */
@@ -65,6 +68,12 @@ export type SendDocumentEmailInput = {
   relatedId?: string | null;
   /** In-app path (must start with "/"), turned into an absolute URL here. */
   linkPath?: string | null;
+  /**
+   * Files chosen in the browser. The document itself is still not generated
+   * server-side — these are files the sender printed and checked, which is why
+   * they are accepted from the client at all. Validated here, never trusted.
+   */
+  attachments?: AttachmentInput[];
 };
 
 export type SendDocumentEmailResult =
@@ -75,6 +84,8 @@ export type SendDocumentEmailResult =
       to: string;
       /** Every address the message was addressed to. */
       recipients: string[];
+      /** Filenames actually enclosed, in the order they were sent. */
+      attachments: string[];
       cc: string[];
       /** Null when the send succeeded but the record could not be written. */
       logId: string | null;
@@ -107,6 +118,13 @@ export async function sendDocumentEmail(
   const subject = (input.subject ?? "").trim();
   const body = (input.body ?? "").trim();
   const documentName = (input.documentName ?? "").trim();
+  /**
+   * What the record shows as the message. It gains a line naming the files that
+   * went with it once they are known — the log's columns are fixed, and a record
+   * that does not say whether a document was enclosed cannot answer the only
+   * question anyone asks it later.
+   */
+  let recordedBody = body;
   const relatedType = clean(input.relatedType);
   const relatedId = clean(input.relatedId);
 
@@ -125,7 +143,7 @@ export async function sendDocumentEmail(
       to,
       cc,
       subject,
-      body,
+      body: recordedBody,
       relatedType,
       relatedId,
       documentName: documentName || null,
@@ -164,6 +182,20 @@ export async function sendDocumentEmail(
     return { ok: false, reason: "invalid_recipient", error, logId };
   }
 
+  // Attachments. Refused as a set and logged as a refusal, like every other
+  // check here: a file the sender believes went and did not is the failure this
+  // module exists to prevent, and an attachment is the most expensive version of
+  // it — the message arrives, reads normally, and encloses nothing.
+  const enclosed = prepareAttachments(input.attachments);
+  if (!enclosed.ok) {
+    const logId = await record(recipientLine, copies.addresses, "FAILED", null, enclosed.error);
+    return { ok: false, reason: "attachment_rejected", error: enclosed.error, logId };
+  }
+  const enclosureLine = attachmentLogLine(enclosed.attachments);
+  if (enclosureLine) recordedBody = `${body}
+
+${enclosureLine}`;
+
   // 3. Identity for the message itself, resolved server-side. `getFirmIdentity`
   //    reads the company's own practice profile; a failure there is cosmetic, so
   //    it degrades to no firm name rather than blocking a send.
@@ -183,7 +215,14 @@ export async function sendDocumentEmail(
   });
 
   // 4. The send. `sendEmail` never throws; it returns a soft result.
-  const res = await sendEmail({ to: recipient.addresses, cc: copies.addresses, subject, html, text });
+  const res = await sendEmail({
+    to: recipient.addresses,
+    cc: copies.addresses,
+    subject,
+    html,
+    text,
+    attachments: enclosed.attachments,
+  });
 
   // 5. Anything that is not an id-bearing acceptance is a failure, including the
   //    provider accepting the request and returning no id — `sendEmail` collapses
@@ -200,6 +239,7 @@ export async function sendDocumentEmail(
   return {
     ok: true,
     messageId: res.id,
+    attachments: enclosed.attachments.map((a) => a.filename),
     to: recipientLine,
     recipients: recipient.addresses,
     cc: copies.addresses,
@@ -267,6 +307,8 @@ export function humanise(reason: EmailFailureReason, providerError: string): str
       return `The sending domain is not verified with the email provider, so nothing was sent. (${providerError})`;
     case "invalid_recipient":
       return providerError || "The recipient address was refused.";
+    case "attachment_rejected":
+      return providerError;
     case "not_signed_in":
       return "You must be signed in to send email.";
     case "unconfirmed":

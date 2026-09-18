@@ -1,9 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Mail, X, Paperclip, Send, Check, AlertTriangle, Loader2, History, ExternalLink, Copy } from "lucide-react";
+import { Mail, X, Paperclip, Send, Check, AlertTriangle, Loader2, History, ExternalLink, Copy, Trash2 } from "lucide-react";
 import { firmName } from "@/lib/firm-identity";
 import { NOT_ATTACHED } from "@/lib/email/compose";
+import {
+  MAX_ATTACHMENTS,
+  MAX_ATTACHMENT_BYTES,
+  formatBytes,
+  extensionOf,
+} from "@/lib/email/attachments";
 import { sendDocumentEmailAction, listEmailHistoryAction, type EmailHistory } from "@/app/(app)/email/actions";
 import type { SendDocumentEmailResult } from "@/lib/server/document-email";
 
@@ -142,6 +148,17 @@ function EmailDialog({
   const [msg, setMsg] = useState(
     defaultBody ?? `Dear recipient,\n\nI am writing to you about ${attachment}.\n\nKind regards,\n${firmName()}`,
   );
+  /**
+   * Files the sender picked. Read in the browser, because the app generates no
+   * PDF: the file is the one they printed from a Print / Preview screen and
+   * looked at. `content` is base64 with the data-URL prefix already off.
+   */
+  const [files, setFiles] = useState<
+    { filename: string; content: string; contentType: string; bytes: number }[]
+  >([]);
+  /** A file refused before it was ever read — wrong type, or too big to send. */
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [reading, setReading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [phase, setPhase] = useState<Phase>("compose");
   /** The confirmed send. Set ONLY from a server result with `ok: true`. */
@@ -184,6 +201,61 @@ function EmailDialog({
   // one runs in a browser the server does not control and proves nothing.
   const valid = /\S+@\S+\.\S+/.test(to.trim());
 
+  /**
+   * Reads the chosen files, refusing what the server would refuse anyway — here,
+   * where the sender is still looking at the dialog, rather than after a send
+   * they believe succeeded. The server validates again regardless: this check
+   * runs in a browser it does not control.
+   */
+  const addFiles = async (chosen: FileList | null) => {
+    if (!chosen || chosen.length === 0) return;
+    setFileError(null);
+    setReading(true);
+    const next = [...files];
+    try {
+      for (const file of Array.from(chosen)) {
+        if (next.length >= MAX_ATTACHMENTS) {
+          setFileError(`Attach at most ${MAX_ATTACHMENTS} files.`);
+          break;
+        }
+        const extension = extensionOf(file.name);
+        if (!["pdf", "png", "jpg", "jpeg"].includes(extension)) {
+          setFileError(
+            `"${file.name}" cannot be attached. Print the document to PDF and attach that.`,
+          );
+          continue;
+        }
+        if (file.size > MAX_ATTACHMENT_BYTES) {
+          setFileError(
+            `"${file.name}" is ${formatBytes(file.size)}. The limit for one file is ${formatBytes(MAX_ATTACHMENT_BYTES)}.`,
+          );
+          continue;
+        }
+        const content = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error ?? new Error("The file could not be read."));
+          reader.onload = () => {
+            const result = String(reader.result ?? "");
+            const comma = result.indexOf(",");
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+          };
+          reader.readAsDataURL(file);
+        });
+        next.push({
+          filename: file.name,
+          content,
+          contentType: file.type || "application/octet-stream",
+          bytes: file.size,
+        });
+      }
+      setFiles(next);
+    } catch (e) {
+      setFileError(e instanceof Error ? e.message : "The file could not be read.");
+    } finally {
+      setReading(false);
+    }
+  };
+
   const send = async () => {
     setPhase("sending");
     setFailure(null);
@@ -199,6 +271,7 @@ function EmailDialog({
         relatedType: relType,
         relatedId: relId,
         linkPath: linkPath ?? null,
+        attachments: files,
       });
     } catch (e) {
       // The action itself failed to complete (network, redeploy mid-flight). We
@@ -289,11 +362,23 @@ function EmailDialog({
             {confirmed.cc.length > 0 ? (
               <div className="text-xs text-muted">Copied to {confirmed.cc.join(", ")}</div>
             ) : null}
+            {confirmed.attachments.length > 0 ? (
+              <div className="text-xs text-muted">
+                Enclosed: <span className="font-medium text-fg">{confirmed.attachments.join(", ")}</span>
+              </div>
+            ) : null}
             <div className="text-xs text-muted">
               The email provider accepted it and returned reference{" "}
               <span className="font-mono text-[11px] text-fg">{confirmed.messageId}</span>.
               <br />
-              <span className="font-medium text-fg">{attachment}</span> was named in the message but not attached.
+              {confirmed.attachments.length > 0 ? (
+                <>The files above went with it.</>
+              ) : (
+                <>
+                  <span className="font-medium text-fg">{attachment}</span> was named in the message
+                  but not attached.
+                </>
+              )}
             </div>
             {confirmed.logId === null ? (
               <div className="mt-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -352,16 +437,86 @@ function EmailDialog({
                 <textarea value={msg} onChange={(e) => setMsg(e.target.value)} disabled={busy} rows={5} className={`${inp} resize-y`} />
               </Row>
 
-              {/* What is and is not in the email, stated where it is being composed. */}
-              <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
-                <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0 text-faint" />
-                <span>
-                  <span className="font-medium text-fg">Sent:</span> your message above, naming{" "}
-                  <span className="font-medium text-fg">{attachment}</span>
-                  {linkPath ? ", plus a link to it in AEC-flow (the recipient must be able to sign in)" : ""}.
-                  <br />
-                  <span className="font-medium text-fg">Not sent:</span> {NOT_ATTACHED}
-                </span>
+              {/* ATTACHMENTS. The app still generates no PDF — so the file is one
+                * the sender printed and checked, which is also why attaching it is
+                * a deliberate act rather than something that happens silently.
+                * The panel says what will actually go, and stops claiming nothing
+                * is enclosed the moment something is. */}
+              <div className="space-y-2 rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
+                <div className="flex items-start gap-2">
+                  <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0 text-faint" />
+                  <span>
+                    <span className="font-medium text-fg">Sent:</span> your message above, naming{" "}
+                    <span className="font-medium text-fg">{attachment}</span>
+                    {linkPath ? ", plus a link to it in AEC-flow (the recipient must be able to sign in)" : ""}
+                    {files.length > 0 ? (
+                      <>
+                        , plus{" "}
+                        <span className="font-medium text-fg">
+                          {files.length === 1 ? "1 attached file" : `${files.length} attached files`}
+                        </span>
+                      </>
+                    ) : null}
+                    .
+                    {files.length === 0 ? (
+                      <>
+                        <br />
+                        <span className="font-medium text-fg">Not sent:</span> {NOT_ATTACHED}
+                      </>
+                    ) : null}
+                  </span>
+                </div>
+
+                {files.length > 0 ? (
+                  <ul className="space-y-1">
+                    {files.map((f, i) => (
+                      <li
+                        key={`${f.filename}-${i}`}
+                        className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1"
+                      >
+                        <Paperclip className="h-3 w-3 shrink-0 text-faint" />
+                        <span className="min-w-0 flex-1 truncate text-fg" title={f.filename}>
+                          {f.filename}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-faint">{formatBytes(f.bytes)}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                          disabled={busy}
+                          aria-label={`Remove ${f.filename}`}
+                          className="shrink-0 text-faint hover:text-rose-600 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                {fileError ? <div className="text-rose-700">{fileError}</div> : null}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className={`${hatch} ${busy || reading ? "opacity-40" : "cursor-pointer"}`}>
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {reading ? "Reading…" : files.length > 0 ? "Attach another" : "Attach a file"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                      disabled={busy || reading}
+                      onChange={(e) => {
+                        void addFiles(e.target.files);
+                        // Cleared so choosing the same file twice still fires.
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <span className="text-[11px] leading-snug text-faint">
+                    PDF or image, up to {formatBytes(MAX_ATTACHMENT_BYTES)} each. Print the document
+                    to PDF from its Print / Preview screen first.
+                  </span>
+                </div>
               </div>
 
               {/* SEND IT YOURSELF. Server-side delivery needs a configured provider;
