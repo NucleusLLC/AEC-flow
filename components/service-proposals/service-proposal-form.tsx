@@ -903,6 +903,10 @@ export function ServiceProposalForm({
               <label className={label}>Contact email</label>
               <input
                 type="email"
+                /* Two people on one proposal is normal; without `multiple` the
+                 * browser refuses the second address before the gate sees it. */
+                multiple
+                placeholder="her@example.com, him@example.com"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
                 className={`${field} ${issueFor("contactEmail") ? fieldInvalid : ""}`}

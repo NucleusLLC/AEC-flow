@@ -18,6 +18,7 @@
  * in the test file.
  */
 import { z } from "zod";
+import { parseRecipientList } from "@/lib/email/recipients";
 
 // ── Primitives ───────────────────────────────────────────────────────────────
 
@@ -251,7 +252,23 @@ export const serviceProposalInputSchema = z.object({
   projectId: optionalText,
   projectName: optionalText,
   contactName: optionalText,
-  contactEmail: z.union([z.literal(""), z.string().email("Enter a valid email")]).optional().nullable(),
+  // A contact is often two people (a married couple, two partners), so this
+  // takes a comma-separated list and validates every address in it. The same
+  // parser the send path uses, so a proposal cannot hold an address that the
+  // email screen would then refuse.
+  contactEmail: z
+    .union([z.literal(""), z.null(), z.string()])
+    .optional()
+    .superRefine((v, ctx) => {
+      if (!v) return;
+      const parsed = parseRecipientList(v, "Contact email");
+      if (!parsed.ok) ctx.addIssue({ code: "custom", message: parsed.error });
+    })
+    .transform((v) => {
+      if (!v) return null;
+      const parsed = parseRecipientList(v, "Contact email");
+      return parsed.ok ? parsed.addresses.join(", ") : v;
+    }),
   contactTitle: optionalText,
   currency: z
     .string()
