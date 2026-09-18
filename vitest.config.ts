@@ -90,6 +90,9 @@ export default defineConfig({
       // above: the register arithmetic and the zod gate are pure, and the enum
       // tripwire reads prisma/schema.prisma off disk as text rather than
       // connecting to anything.
+      // Who the minutes go to, and what the message says. Named file, same
+      // reason as every entry above -- pure module, no Prisma, no React.
+      "lib/meetings/recipients.test.ts",
       "lib/building-permits/register.test.ts",
       "lib/building-permits/schema.test.ts",
       "lib/building-permits/enums.test.ts",
