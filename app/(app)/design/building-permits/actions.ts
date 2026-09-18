@@ -20,7 +20,9 @@ import {
   addSubmission,
   attachLetterPdf,
   createBuildingPermit,
+  createDocumentUploadTicket,
   createLetterUploadTicket,
+  discardDocumentUpload,
   getBuildingPermit,
   deleteApproval,
   deleteBuildingPermit,
@@ -358,14 +360,34 @@ export async function deleteApprovalAction(
 // zod gate's "attach a file or give a link" refusal is what enforces that a
 // document row points at something.
 
+/** Step one of adding a file to the case: a signed URL the browser uploads to. */
+export async function createDocumentUploadTicketAction(
+  permitId: string,
+  file: { filename: string; mimeType: string; sizeBytes: number },
+): Promise<LetterUploadTicketResult> {
+  try {
+    return { ok: true, ticket: await createDocumentUploadTicket(permitId, file) };
+  } catch (e) {
+    return failure(e, "Could not prepare the upload.");
+  }
+}
+
 export async function addDocumentAction(
   permitId: string,
   input: BuildingPermitDocumentInput,
+  upload?: UploadedLetterPdf | null,
 ): Promise<PermitActionResult> {
-  const parsed = parseDocumentInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  // The gate is told the row will carry a file, so its "attach a file or give a
+  // link" refusal still means what it says while `storageKey` stays server-side.
+  const parsed = parseDocumentInput(
+    upload ? { ...input, storageKey: upload.storageKey } : input,
+  );
+  if (!parsed.ok) {
+    if (upload?.storageKey) await discardDocumentUpload(permitId, upload.storageKey).catch(() => {});
+    return { ok: false, error: issuesToMessage(parsed.issues) };
+  }
   try {
-    const row = await addDocument(permitId, parsed.value);
+    const row = await addDocument(permitId, parsed.value, upload ?? null);
     revalidatePermit(permitId);
     return { ok: true, id: row.id };
   } catch (e) {
