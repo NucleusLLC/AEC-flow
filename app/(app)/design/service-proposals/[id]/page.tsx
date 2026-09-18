@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, LayoutDashboard, Pencil, Printer } from "lucide-react";
+import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer } from "lucide-react";
 import {
   getServiceProposal,
   getServiceProposalIdentification,
@@ -10,13 +10,22 @@ import {
 } from "@/lib/data/service-proposals";
 import { computeProposal } from "@/lib/proposals/engine/engine";
 import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
-import { isLocked, STATUS_LABEL } from "@/lib/proposals/engine/status";
+import { isIssued, isLocked, STATUS_LABEL } from "@/lib/proposals/engine/status";
+import {
+  proposalEmailBody,
+  proposalEmailNotice,
+  proposalEmailSubject,
+  proposalRecipient,
+  taxLineLabel,
+} from "@/lib/proposals/proposal-email";
+import { EmailButton } from "@/components/email/email-button";
+import { getFirmIdentity } from "@/lib/server/firm";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { VersionTag } from "@/components/service-proposals/version-tag";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Service Proposal · AEC-flow" };
 
@@ -51,6 +60,62 @@ export default async function ServiceProposalDetailPage({
   const projectIsOn =
     p.status === "ACCEPTED" || p.status === "PARTIALLY_ACCEPTED" || p.status === "CONVERTED";
   const projectHref = p.projectId ? `/projects/${p.projectId}` : "/projects";
+
+  /**
+   * EMAILING THE PROPOSAL.
+   *
+   * "Approved for issue" is the line: before it the document is internal, and the
+   * accident worth engineering against is a draft reaching the client with the
+   * client's own address helpfully pre-typed. The button is still offered — mailing
+   * a draft to a colleague for comment is a real thing people do, and a blocked
+   * button sends them to their own mail client where nothing is logged — but the
+   * address is not filled in and the screen says why.
+   *
+   * The figures below are the ones already on this page, formatted once by `money`
+   * and passed through. lib/proposals/proposal-email does no formatting of its own:
+   * a second opinion about what the client owes is exactly the bug worth avoiding.
+   */
+  const approvedForIssue = p.status === "APPROVED_FOR_ISSUE" || isIssued(p.status);
+  const taxLabel = taxLineLabel(calc.totals);
+  const firm = await getFirmIdentity();
+  const feeLines = [
+    { label: "Base fee", amount: money(calc.totals.baseFeeTotal) },
+    ...(calc.totals.optionalSelectedTotal > 0
+      ? [{ label: "Optional (selected)", amount: money(calc.totals.optionalSelectedTotal) }]
+      : []),
+    ...(calc.totals.reimbursablesTotal > 0
+      ? [{ label: "Reimbursables", amount: money(calc.totals.reimbursablesTotal) }]
+      : []),
+    { label: "Subtotal", amount: money(calc.totals.subtotal) },
+    ...(calc.totals.discountTotal > 0
+      ? [{ label: "Discount", amount: `- ${money(calc.totals.discountTotal)}` }]
+      : []),
+    // The label, not just the number: a tax contained in the price has to say so,
+    // or the column reads as an error. See taxLineLabel.
+    ...(taxLabel ? [{ label: taxLabel, amount: money(calc.totals.taxTotal) }] : []),
+  ];
+  const emailInput = {
+    number: p.number,
+    title: p.title,
+    revision: p.revision,
+    clientName: identification.clientDisplayName || p.clientName,
+    projectName: identification.projectDisplayName || p.projectName,
+    issuedAt: p.issuedAt ? formatDate(p.issuedAt) : null,
+    validUntil: p.validUntil ? formatDate(p.validUntil) : null,
+    lines: feeLines,
+    total: money(calc.totals.grandTotal),
+    milestones: calc.paymentSchedule.map((m) => ({
+      name: m.name,
+      percent: m.percent,
+      amount: money(m.amount),
+    })),
+    senderName: firm.name,
+  };
+  const emailNotice = proposalEmailNotice({
+    statusLabel: STATUS_LABEL[p.status],
+    approvedForIssue,
+    hasContactEmail: Boolean(p.contactEmail?.trim()),
+  });
 
   return (
     <div className="w-full max-w-5xl space-y-6">
@@ -92,11 +157,34 @@ export default async function ServiceProposalDetailPage({
               <Pencil className="h-4 w-4" /> Edit
             </Link>
           ) : null}
+          <EmailButton
+            label="Email proposal"
+            subject={proposalEmailSubject(emailInput)}
+            attachment={`${p.number} — Service Proposal`}
+            defaultTo={proposalRecipient({
+              contactEmail: p.contactEmail,
+              approvedForIssue,
+            })}
+            defaultBody={proposalEmailBody(emailInput)}
+            relatedType="service-proposal"
+            relatedId={p.id}
+            linkPath={`/print/service-proposals/${p.id}`}
+          />
           <Link href={`/print/service-proposals/${p.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted hover:border-brand hover:text-fg">
             <Printer className="h-4 w-4" /> Print / Preview
           </Link>
         </div>
       </div>
+
+      {/* Said on the page, not only inside the compose dialog: the reason the
+        * client's address is missing should be readable BEFORE the dialog is
+        * opened and the sender starts typing one in by hand. */}
+      {emailNotice ? (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{emailNotice}</span>
+        </div>
+      ) : null}
 
       <ServiceProposalActions id={p.id} status={p.status} />
 
