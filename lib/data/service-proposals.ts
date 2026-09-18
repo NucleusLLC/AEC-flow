@@ -20,6 +20,7 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { computeProposal } from "@/lib/proposals/engine/engine";
 import { buildWriteData, nextProposalNumber } from "@/lib/proposals/persist";
+import { resolveBbo } from "@/lib/proposals/bbo";
 import {
   duplicateResetData,
   duplicateTitle,
@@ -99,18 +100,18 @@ const FULL_INCLUDE = {
 
 function toInput(p: FullProposal): ServiceProposalInput {
   return {
-    title: p.title,
-    number: p.number,
+      title: p.title,
+      number: p.number,
     kind: p.kind,
-    status: p.status,
+      status: p.status,
     clientId: p.clientId,
-    clientName: p.clientName,
+      clientName: p.clientName,
     projectId: p.projectId,
-    projectName: p.projectName,
+      projectName: p.projectName,
     contactName: p.contactName,
     contactEmail: p.contactEmail,
     contactTitle: p.contactTitle,
-    currency: p.currency,
+      currency: p.currency,
     languageCode: p.languageCode,
     taxJurisdiction: p.taxJurisdiction,
     costBasis: p.costBasisType
@@ -199,13 +200,13 @@ function toInput(p: FullProposal): ServiceProposalInput {
 
 function toDto(p: FullProposal): ServiceProposalDTO {
   return {
-    id: p.id,
+      id: p.id,
     number: p.number,
     title: p.title,
     kind: p.kind,
     status: p.status,
-    revision: p.revision,
-    versionLabel: p.versionLabel,
+      revision: p.revision,
+      versionLabel: p.versionLabel,
     clientId: p.clientId,
     clientName: p.clientName,
     projectId: p.projectId,
@@ -241,9 +242,20 @@ export async function listServiceProposals(opts?: {
 }): Promise<ServiceProposalListItem[]> {
   const rows = await prisma.serviceProposal.findMany({
     where: { deletedAt: null, ...(opts?.projectId ? { projectId: opts.projectId } : {}) },
+    // The tax rows come along so the contained BBO on each list row is the
+    // proposal's own figure rather than an assumed rate.
+    include: { taxes: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
-  return rows.map((p) => ({
+  return rows.map((p) => {
+    const bbo = resolveBbo({
+      currency: p.currency,
+      grandTotal: num(p.grandTotal),
+      taxes: p.taxes.map((t) => ({ name: t.name, percent: num(t.percent), mode: t.mode })),
+      taxTotal: num(p.taxTotal),
+      taxableSubtotal: num(p.taxableSubtotal),
+    });
+    return {
     id: p.id,
     number: p.number,
     title: p.title,
@@ -253,11 +265,15 @@ export async function listServiceProposals(opts?: {
     clientName: p.clientName,
     projectName: p.projectName,
     currency: p.currency,
-    grandTotal: num(p.grandTotal),
-    feeBasisLabel: p.costBasisType ? COST_BASIS_LABEL[p.costBasisType] : null,
-    createdAt: p.createdAt.toISOString(),
-    validUntil: ymd(p.validUntil),
-  }));
+      grandTotal: num(p.grandTotal),
+      bboAmount: bbo.amount,
+      bboPercent: bbo.percent,
+      bboIncluded: bbo.included,
+      feeBasisLabel: p.costBasisType ? COST_BASIS_LABEL[p.costBasisType] : null,
+      createdAt: p.createdAt.toISOString(),
+      validUntil: ymd(p.validUntil),
+    };
+  });
 }
 
 export async function getServiceProposal(id: string): Promise<ServiceProposalDTO | null> {

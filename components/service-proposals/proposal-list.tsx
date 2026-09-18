@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, FileSignature } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { add, fromMajor, toMajor } from "@/lib/proposals/engine/money";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { VersionTag } from "@/components/service-proposals/version-tag";
 import { STATUS_LABEL, type ServiceProposalStatus } from "@/lib/proposals/engine/status";
@@ -73,6 +74,11 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
               <th className="px-4 py-2.5 font-medium">Basis</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 text-right font-medium">Total fee</th>
+              {/* The turnover tax inside those fees. Here because the question
+                * the accounting side asks of this page is "what BBO is payable",
+                * and answering it from each proposal one at a time is how a
+                * month's figure comes to be wrong. */}
+              <th className="px-4 py-2.5 text-right font-medium">BBO incl.</th>
             </tr>
           </thead>
           <tbody>
@@ -92,14 +98,71 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
                 <td className="px-4 py-2.5 text-right tabular-nums text-fg">
                   {formatCurrency(p.grandTotal, p.currency, { maximumFractionDigits: 2 })}
                 </td>
+                <td
+                  className="px-4 py-2.5 text-right tabular-nums text-muted"
+                  title={`${p.bboPercent}% ${p.bboIncluded ? "included in" : "added to"} the price`}
+                >
+                  {formatCurrency(p.bboAmount, p.currency, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
               </tr>
             ))}
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">No proposals match your filters.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-muted">No proposals match your filters.</td></tr>
             ) : null}
           </tbody>
+          {filtered.length > 0 ? (
+            <tfoot>
+              {/* One row per currency: a total across currencies is a number
+                * with no meaning, and this one is read to pay a tax bill. */}
+              {bboByCurrency(filtered).map((t) => (
+                <tr key={t.currency} className="border-t-2 border-border bg-surface-2/40">
+                  <td className="px-4 py-2.5 font-medium text-fg" colSpan={5}>
+                    {t.count} {t.count === 1 ? "proposal" : "proposals"} in {t.currency}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-fg">
+                    {formatCurrency(t.fees, t.currency, { maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-fg">
+                    {formatCurrency(t.bbo, t.currency, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tfoot>
+          ) : null}
         </table>
       </div>
+
+      <p className="text-xs text-faint">
+        BBO shown is the turnover tax contained in each fee — the prices include it. The totals row
+        is what those proposals carry in tax, per currency; a proposal becomes payable as its
+        instalments are invoiced.
+      </p>
     </div>
   );
+}
+
+/**
+ * The fees and the contained BBO, grouped by currency and summed to the cent.
+ *
+ * Exact money, because this row is read to pay a tax bill: see
+ * lib/proposals/bbo.ts and the engine's money primitive underneath it.
+ */
+function bboByCurrency(
+  rows: { currency: string; grandTotal: number; bboAmount: number }[],
+): { currency: string; count: number; fees: number; bbo: number }[] {
+  const by = new Map<string, { currency: string; count: number; fees: number; bbo: number }>();
+  for (const r of rows) {
+    const entry = by.get(r.currency) ?? { currency: r.currency, count: 0, fees: 0, bbo: 0 };
+    entry.count += 1;
+    entry.fees = toMajor(add(fromMajor(entry.fees, r.currency), fromMajor(r.grandTotal, r.currency)));
+    entry.bbo = toMajor(add(fromMajor(entry.bbo, r.currency), fromMajor(r.bboAmount, r.currency)));
+    by.set(r.currency, entry);
+  }
+  return [...by.values()].sort((a, b) => a.currency.localeCompare(b.currency));
 }

@@ -66,6 +66,15 @@ export interface ServiceProposalListItem {
   projectName: string | null;
   currency: string;
   grandTotal: number;
+  /**
+   * The turnover tax contained in `grandTotal`, from this proposal's own tax
+   * rows (or the practice rate when it has none — see lib/proposals/bbo.ts).
+   * Carried on the list row so a month of proposals can be totalled without
+   * re-running the fee engine for each one.
+   */
+  bboAmount: number;
+  bboPercent: number;
+  bboIncluded: boolean;
   feeBasisLabel: string | null;
   createdAt: string;
   validUntil: string | null;
