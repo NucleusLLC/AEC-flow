@@ -35,6 +35,7 @@ export default async function EditProjectPage({ params }: PageProps) {
 
   const initial: ProjectFormValues = {
     name: project.name,
+    projectNumber: project.projectNumber,
     clientName: project.clientName,
     manager: project.manager,
     status: project.status,

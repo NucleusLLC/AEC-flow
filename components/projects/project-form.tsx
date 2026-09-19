@@ -33,6 +33,7 @@ const PRIORITIES = Object.keys(PRIORITY_LABEL) as Priority[];
  */
 export type ProjectFormValues = {
   name: string;
+  projectNumber: string;
   clientName: string;
   manager: string;
   status: ProjectStatus;
@@ -82,6 +83,7 @@ export function ProjectForm({
     const fd = new FormData(e.currentTarget);
     const payload: ProjectWriteInput = {
       name: String(fd.get("name") ?? ""),
+      projectNumber: (fd.get("projectNumber") as string) || null,
       clientName,
       manager,
       status: (fd.get("status") as ProjectStatus) || undefined,
@@ -139,6 +141,26 @@ export function ProjectForm({
               Project name *
             </label>
             <input id="name" name="name" required className={inputClass} placeholder="e.g. Marina Heights Tower — Phase 3" defaultValue={initial?.name} />
+          </div>
+
+          <div>
+            <label className={labelClass} htmlFor="projectNumber">
+              Project number
+            </label>
+            <input
+              id="projectNumber"
+              name="projectNumber"
+              className={`${inputClass} font-mono`}
+              placeholder={mode === "edit" ? "" : "Automatic (ZA-YYYY-NNN)"}
+              defaultValue={initial?.projectNumber}
+              required={mode === "edit"}
+              maxLength={40}
+            />
+            <p className="mt-1 text-[11px] text-faint">
+              {mode === "edit"
+                ? "Type your own, e.g. 2026A-019. Must be unique."
+                : "Leave blank for the next automatic number, or type your own, e.g. 2026A-019."}
+            </p>
           </div>
 
           {/* Both submit display NAMES, which the server resolves — hence
