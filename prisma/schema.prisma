@@ -3013,6 +3013,9 @@ model GeneralDocument {
   @@index([companyId, clientId])
   @@index([companyId, issueDate])
   @@map("general_documents")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FINANCE — INVOICES AND PAYMENTS
 //
 // The practice's own receivables: what it billed, what came in, what is still
