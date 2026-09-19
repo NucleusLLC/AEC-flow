@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Mail,
   Phone,
+  Smartphone,
   Globe,
   MapPin,
   Hash,
@@ -290,6 +291,13 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 </InfoRow>
               ) : null}
               {client.phone ? <InfoRow icon={Phone}>{client.phone}</InfoRow> : null}
+              {client.mobile ? (
+                <InfoRow icon={Smartphone}>
+                  <a href={`tel:${client.mobile.replace(/[^\d+]/g, "")}`} className="hover:text-brand hover:underline">
+                    {client.mobile}
+                  </a>
+                </InfoRow>
+              ) : null}
               {client.website ? (
                 <InfoRow icon={Globe}>
                   <a

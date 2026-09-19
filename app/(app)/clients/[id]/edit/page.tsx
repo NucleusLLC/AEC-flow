@@ -26,6 +26,7 @@ export default async function EditClientPage({ params }: PageProps) {
     contactPerson: client.contactPerson ?? "",
     email: client.email ?? "",
     phone: client.phone ?? "",
+    mobile: client.mobile ?? "",
     website: client.website ?? "",
     taxNumber: client.taxNumber ?? "",
     type: client.type,

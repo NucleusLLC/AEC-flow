@@ -31,6 +31,7 @@ export type ClientFormValues = {
   contactPerson: string;
   email: string;
   phone: string;
+  mobile: string;
   website: string;
   taxNumber: string;
   type: ClientType;
@@ -67,6 +68,7 @@ export function ClientForm({
       contactPerson: (fd.get("contactPerson") as string) || null,
       email: (fd.get("email") as string) || null,
       phone: (fd.get("phone") as string) || null,
+      mobile: (fd.get("mobile") as string) || null,
       website: (fd.get("website") as string) || null,
       taxNumber: (fd.get("taxNumber") as string) || null,
       type: (fd.get("type") as ClientType) || "PRIVATE",
@@ -161,6 +163,12 @@ export function ClientForm({
               Phone
             </label>
             <input id="phone" name="phone" className={inputClass} placeholder="+971 4 000 0000" defaultValue={initial?.phone} />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="mobile">
+              Cell phone
+            </label>
+            <input id="mobile" name="mobile" type="tel" autoComplete="tel" className={inputClass} placeholder="+297 560 0000" defaultValue={initial?.mobile} />
           </div>
           <div>
             <label className={labelClass} htmlFor="website">

@@ -72,6 +72,7 @@ export function ClientSelect({
             contactPerson: null,
             email: draft.email || null,
             phone: null,
+            mobile: null,
             website: null,
             taxNumber: null,
             type: "PRIVATE",
