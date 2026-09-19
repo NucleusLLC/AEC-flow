@@ -257,6 +257,7 @@ export function ServiceProposalForm({
   const [newClientName, setNewClientName] = useState("");
   const [newClientCompany, setNewClientCompany] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
+  const [newClientMobile, setNewClientMobile] = useState("");
   const [newClientError, setNewClientError] = useState<string | null>(null);
   const [clientPending, startClient] = useTransition();
 
@@ -269,6 +270,7 @@ export function ServiceProposalForm({
     setNewClientName("");
     setNewClientCompany("");
     setNewClientEmail("");
+    setNewClientMobile("");
     setNewClientError(null);
   }
 
@@ -378,7 +380,7 @@ export function ServiceProposalForm({
       contactPerson: null,
       email: newClientEmail.trim() || null,
       phone: null,
-      mobile: null,
+      mobile: newClientMobile.trim() || null,
       website: null,
       taxNumber: null,
       type: "PRIVATE",
@@ -797,6 +799,16 @@ export function ServiceProposalForm({
                     className={field}
                     placeholder="Email"
                     aria-label="New client email"
+                  />
+                  <input
+                    type="tel"
+                    autoComplete="tel"
+                    value={newClientMobile}
+                    onChange={(e) => setNewClientMobile(e.target.value)}
+                    onKeyDown={onNewClientKeyDown}
+                    className={field}
+                    placeholder="Cell phone"
+                    aria-label="New client cell phone"
                   />
                   {newClientError ? (
                     <div className="flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-700 dark:text-rose-400">
