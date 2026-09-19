@@ -95,6 +95,9 @@ export const GENERAL_DOCUMENTS_ITEM: NavItem = {
   label: "General Documents",
   href: "/documents/general",
   icon: ScrollText,
+};
+
+/**
  * Invoices, defined ONCE like the drawings bin and the permit register: the
  * receivables register appears in this list and in Module 1's sidebar, and a
  * finance section called one thing in one module and another elsewhere is a
