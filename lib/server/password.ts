@@ -91,7 +91,7 @@ export async function changeOwnPassword(
   // actor's own) but costs nothing and keeps every write in this file to one shape.
   await prisma.user.update({
     where: { id: actor.id, companyId: actor.companyId },
-    data: { passwordHash },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
   });
 
   return { id: actor.id, name: actor.name, email: actor.email };
@@ -138,7 +138,7 @@ export async function setMemberPassword(
   const passwordHash = await bcrypt.hash(newPassword as string, BCRYPT_COST);
   await prisma.user.update({
     where: { id: target.id, companyId: actor.companyId },
-    data: { passwordHash },
+    data: { passwordHash, sessionVersion: { increment: 1 } },
   });
 
   return target;
