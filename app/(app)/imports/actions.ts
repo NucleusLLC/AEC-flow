@@ -40,6 +40,7 @@ function toClientInput(row: Record<string, string>): ClientWriteInput | { error:
     contactPerson: pick(row, "contactPerson", "contact", "contact person") || null,
     email: pick(row, "email") || null,
     phone: pick(row, "phone", "tel") || null,
+    mobile: pick(row, "mobile", "cell", "cell phone", "cellphone") || null,
     website: pick(row, "website", "url") || null,
     taxNumber: pick(row, "taxNumber", "trn", "tax") || null,
     type,

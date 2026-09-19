@@ -45,6 +45,7 @@ export type ClientContact = {
   role: string;
   email?: string;
   phone?: string;
+  mobile?: string;
   isPrimary?: boolean;
 };
 
@@ -91,6 +92,7 @@ export type ClientRecord = {
   contactPerson: string | null;
   email: string | null;
   phone: string | null;
+  mobile: string | null;
   website: string | null;
   taxNumber: string | null;
   type: ClientType;
@@ -115,6 +117,7 @@ export type ClientListItem = {
   contactPerson: string | null;
   email: string | null;
   phone: string | null;
+  mobile: string | null;
   type: ClientType;
   status: ClientStatus;
   location: string;
@@ -173,6 +176,7 @@ export type ClientWriteInput = {
   contactPerson: string | null;
   email: string | null;
   phone: string | null;
+  mobile: string | null;
   website: string | null;
   taxNumber: string | null;
   type: ClientType;

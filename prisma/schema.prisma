@@ -306,6 +306,8 @@ model Client {
   contactPerson String?
   email         String?
   phone         String?
+  /// Cell phone for reaching the client directly (prisma/sql/0017_client_mobile.sql).
+  mobile        String?
   website       String?
   taxNumber     String?
   type          ClientType   @default(PRIVATE)

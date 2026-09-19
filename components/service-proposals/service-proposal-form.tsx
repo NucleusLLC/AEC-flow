@@ -378,6 +378,7 @@ export function ServiceProposalForm({
       contactPerson: null,
       email: newClientEmail.trim() || null,
       phone: null,
+      mobile: null,
       website: null,
       taxNumber: null,
       type: "PRIVATE",
