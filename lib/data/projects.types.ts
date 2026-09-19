@@ -130,6 +130,12 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
  */
 export type ProjectWriteInput = {
   name: string;
+  /**
+   * Optional manual project number (e.g. `2026A-019`, to match the proposal it
+   * came from). Blank or absent: the next automatic `ZA-YYYY-NNN` on create,
+   * and "leave it as it is" on update.
+   */
+  projectNumber?: string | null;
   /** Client display name — resolved to clientId via Client.name. */
   clientName: string;
   /** Manager display name — resolved to managerId via User.name. */
