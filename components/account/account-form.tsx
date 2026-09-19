@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSession } from "next-auth/react";
 import { Check, AlertTriangle, Loader2 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { updateProfileAction, changePasswordAction } from "@/app/(app)/account/actions";
@@ -43,6 +44,10 @@ export function AccountForm({ account }: { account: AccountProfile }) {
   const [pwSaved, setPwSaved] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
 
+  // Changing the password bumps sessionVersion, which signs out every session —
+  // including this one — unless this token adopts the new version right away.
+  const { update: refreshSession } = useSession();
+
   function changePw() {
     setPwSaved(false); setPwError(null);
     // Mirror of lib/password-policy for instant feedback. The same rules are
@@ -51,7 +56,10 @@ export function AccountForm({ account }: { account: AccountProfile }) {
     if (!check.ok) { setPwError(check.error); return; }
     pwStart(async () => {
       const res = await changePasswordAction(current, next);
-      if (res.ok) { setPwSaved(true); setCurrent(""); setNext(""); setConfirm(""); }
+      if (res.ok) {
+        await refreshSession();
+        setPwSaved(true); setCurrent(""); setNext(""); setConfirm("");
+      }
       else setPwError(res.error);
     });
   }

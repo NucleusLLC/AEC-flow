@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { clearRateLimit, hitRateLimit } from "@/lib/server/rate-limit";
 import { RATE_LIMITS, clientIpFrom, tooManyAttemptsMessage } from "@/lib/account-security/rate-limit-policy";
+import { SESSION_RECHECK_SECONDS, tokenStillValid } from "@/lib/account-security/session-version";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -72,6 +73,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           companyId: user.companyId ?? null,
           image: user.avatarUrl ?? undefined,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -105,20 +107,43 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.companyId = user.companyId ?? null;
-      } else if (token.id && token.companyId === undefined) {
-        // Token issued before multi-tenancy — backfill companyId so existing
-        // sessions don't scope to nothing after Phase 2 goes live.
-        const u = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: { companyId: true },
-        });
-        token.companyId = u?.companyId ?? null;
+        token.sv = user.sessionVersion ?? 0;
+        token.svCheckedAt = Math.floor(Date.now() / 1000);
+        return token;
       }
+      if (!token.id) return token;
+
+      // SESSION REVOCATION. A JWT cannot be deleted, so a password change or
+      // reset bumps User.sessionVersion and every token still carrying the old
+      // value is refused here. Checked at most once a minute per token (one
+      // indexed read), so revocation lands within SESSION_RECHECK_SECONDS.
+      // `trigger === "update"` forces a check and ADOPTS the current version:
+      // that is how the browser that just changed its own password stays signed
+      // in (account-form calls `update()`), while every other session drops.
+      const now = Math.floor(Date.now() / 1000);
+      const due = trigger === "update" || token.companyId === undefined ||
+        !token.svCheckedAt || now - token.svCheckedAt >= SESSION_RECHECK_SECONDS;
+      if (!due) return token;
+
+      const u = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: { companyId: true, status: true, sessionVersion: true },
+      });
+      if (trigger === "update" && u && u.status !== "INACTIVE") token.sv = u.sessionVersion;
+      if (!tokenStillValid(token.sv, u)) {
+        // An empty token has no id: proxy.ts sends it to /login and every
+        // server-side session lookup sees no user.
+        return {} as typeof token;
+      }
+      // Token issued before multi-tenancy — backfill companyId so existing
+      // sessions don't scope to nothing after Phase 2 goes live.
+      token.companyId = u!.companyId ?? null;
+      token.svCheckedAt = now;
       return token;
     },
     async session({ session, token }) {
