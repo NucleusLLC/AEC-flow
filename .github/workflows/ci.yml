@@ -1,0 +1,37 @@
+# Type check and unit tests on every pull request and every push to main.
+#
+# Vercel already builds each PR (the "Vercel" check), so this job does what that
+# build does not: `tsc` over the whole repo, including files no route imports,
+# and the vitest suite. Neither touches a database; the URLs below are dummies
+# that only satisfy prisma.config.ts, and any test that tried to connect with
+# them would fail rather than reach production.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:1/ci
+      DIRECT_URL: postgresql://ci:ci@127.0.0.1:1/ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Type check
+        run: npx tsc --noEmit -p .
+      - name: Unit tests
+        run: npx vitest run
