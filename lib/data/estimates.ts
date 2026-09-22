@@ -9,13 +9,17 @@
  * screen + PDF + the stored `amount`).
  */
 import type { Prisma, EstimateStatus as DbEstimateStatus } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
+import { copyLines, type Selection } from "@/lib/estimates/copy-lines";
+import { estimateTotals } from "@/lib/estimates/calc";
 import type {
   CostEstimate,
   EstimateProject,
   EstimateStatus,
   CalculationMethod,
   AssemblyComponent,
+  CopyDestination,
 } from "./estimates.types";
 
 export * from "./estimates.types";
@@ -287,6 +291,226 @@ export async function duplicateEstimate(id: string, version: string): Promise<{ 
     },
     { timeout: 30000, maxWait: 10000 },
   );
+}
+
+/**
+ * Copy chosen coded tasks from one estimate into ANOTHER PROJECT's estimate.
+ *
+ * The selection arrives as ids, not as rows: the source estimate is read here,
+ * and `copyLines` decides which fields travel (lib/estimates/copy-lines.ts). A
+ * client that sent the rows themselves could send any price it liked into
+ * someone else's sheet, and the sheet it landed in would look hand-typed.
+ *
+ * APPENDS. The destination keeps everything it already has and the copied
+ * sections arrive after it, which is what `SectionCopy`'s paste has always done
+ * and what "copy to another project" means to the person pressing the button.
+ * Replacing a sheet is `Load template…`, a different control with its own
+ * confirmation.
+ *
+ * WHAT IT REFUSES. A locked destination, through the same `assertUnlocked` gate
+ * every other write passes; a destination that is the source; and an empty
+ * selection. Each throws with a sentence, because the caller shows it.
+ *
+ * WHAT IT PROTECTS.
+ *   - `budget` on the destination is never written. That column holds the
+ *     schedule, the payment terms, the take-off rows and the FX in ONE json
+ *     blob, and any writer that passes a partial object deletes the keys it
+ *     omitted. This function has no business in it.
+ *   - `amount` IS rewritten, from the destination's own lines after the append,
+ *     because it is a denormalised cache the estimates list reads. Left alone it
+ *     shows the pre-copy figure.
+ *   - `locked` is never touched, here or anywhere but `setEstimateLock`.
+ */
+/**
+ * The projects a selection of tasks could be copied INTO, with what the picker
+ * needs to describe each one honestly.
+ *
+ * Every project in the practice is offered, not only those that already have an
+ * estimate: a project with none is the "new project" half of the request, and
+ * the copy creates its sheet. The source project is excluded — copying a task
+ * onto itself is the one destination that is never meant.
+ *
+ * An estimate's id IS its project's id (see the note on copyTasksToProject), so
+ * the two lists are joined on that rather than on `projectId`, which holds a
+ * cuid on some rows and a project NUMBER on others.
+ */
+export async function listCopyDestinations(
+  excludeProjectId: string,
+): Promise<CopyDestination[]> {
+  const [projects, estimates] = await Promise.all([
+    prisma.project.findMany({
+      select: { id: true, name: true, projectNumber: true, currency: true },
+      orderBy: { projectNumber: "asc" },
+    }),
+    prisma.costEstimate.findMany({ select: { id: true, date: true, locked: true, currency: true } }),
+  ]);
+  const byId = new Map(estimates.map((e) => [e.id, e]));
+
+  return projects
+    .filter((p) => p.id !== excludeProjectId)
+    .map((p) => {
+      const est = byId.get(p.id);
+      return {
+        id: p.id,
+        name: p.name,
+        projectNumber: p.projectNumber,
+        // The estimate's own currency wins when it has one: that is the currency
+        // the prices in it are actually denominated in.
+        currency: est?.currency ?? p.currency,
+        estimateDate: est?.date ? est.date.toISOString().slice(0, 10) : null,
+        hasEstimate: Boolean(est),
+        locked: est?.locked ?? false,
+      };
+    });
+}
+
+export async function copyTasksToProject(input: {
+  sourceEstimateId: string;
+  /** The destination PROJECT's id. An estimate's own id IS its project's id. */
+  targetProjectId: string;
+  selection: Selection;
+  options: { includeQuantities?: boolean; includePrices?: boolean };
+}): Promise<{
+  estimateId: string;
+  created: boolean;
+  taskCount: number;
+  sectionCount: number;
+  pricesWithheld: boolean;
+}> {
+  if (input.sourceEstimateId === input.targetProjectId) {
+    throw new Error("That is the project this estimate belongs to. Choose a different one.");
+  }
+
+  const source = await getEstimateById(input.sourceEstimateId);
+  if (!source) throw new Error("The estimate being copied from could not be read.");
+
+  // findFirst, not findUnique: see the note on assertUnlocked. A narrow select
+  // through the tenant extension's findUnique guard returns null for a row that
+  // exists, and this one decides whether to CREATE a second estimate.
+  const existing = await prisma.costEstimate.findFirst({
+    where: { id: input.targetProjectId },
+    select: { id: true, currency: true, locked: true },
+  });
+  if (existing?.locked) {
+    throw new Error("The destination estimate is locked. Unlock it before copying into it.");
+  }
+
+  // The destination project, for the header of an estimate that does not exist
+  // yet. Read through Prisma's own scope — Project is a tenant model — so a
+  // project in another practice cannot be a destination.
+  const project = await prisma.project.findFirst({
+    where: { id: input.targetProjectId },
+    select: { id: true, name: true, projectNumber: true, currency: true, clientId: true, siteAddress: true },
+  });
+  if (!project) throw new Error("That project could not be found.");
+
+  const targetCurrency = existing?.currency ?? project.currency ?? source.currency;
+  const copied = copyLines(
+    source.categories,
+    input.selection,
+    {
+      includeQuantities: input.options.includeQuantities,
+      includePrices: input.options.includePrices,
+      sourceCurrency: source.currency,
+      targetCurrency,
+    },
+    (kind) => (kind === "section" ? `sec-${randomUUID()}` : `item-${randomUUID()}`),
+  );
+  if (copied.taskCount === 0) throw new Error("Nothing was selected to copy.");
+
+  const estimateId = await prisma.$transaction(
+    async (tx) => {
+      let id = existing?.id;
+      if (!id) {
+        /**
+         * A project with no estimate yet. WHO it is for comes from the PROJECT —
+         * its own client, number, name and address — and never from the source,
+         * or copying tasks would quietly re-address another client's sheet.
+         *
+         * The three RATES do come from the source, and must: they are the
+         * practice's own commercial settings, not the client's. Every column in
+         * this table defaults to 0 (see the schema), so a sheet created without
+         * them holds a labour rate of zero — and a labour norm is hours, priced
+         * by the destination's rate. Measured: without this the two copied tasks
+         * arrived with 0.8 and 2.5 hours per unit and a labour cost of nothing,
+         * which is a sheet that looks finished and is empty.
+         *
+         * `gfa` is deliberately NOT carried. Built-up area describes a building.
+         */
+        const created = await tx.costEstimate.create({
+          data: {
+            id: project.id,
+            projectId: project.id,
+            projectNumber: project.projectNumber,
+            projectName: project.name,
+            clientId: project.clientId,
+            location: project.siteAddress ?? null,
+            currency: targetCurrency,
+            avgLaborRate: source.avgLaborRate,
+            profitPct: source.profitPct,
+            bboPct: source.bboPct,
+            status: "DRAFT",
+            locked: false,
+            amount: 0,
+          },
+          select: { id: true },
+        });
+        id = created.id;
+      }
+
+      const existingSections = await tx.estimateCategory.count({ where: { estimateId: id } });
+      for (const [ci, category] of copied.categories.entries()) {
+        await tx.estimateCategory.create({
+          data: {
+            estimateId: id,
+            name: category.name,
+            code: category.code ?? null,
+            // After what is already there: this appends, and sortOrder is what
+            // "after" means on a sheet read top to bottom.
+            sortOrder: existingSections + ci,
+            items: {
+              create: category.items.map((it, ii) => ({
+                task: it.task,
+                qty: it.qty,
+                unit: it.unit,
+                laborNorm: it.laborNorm,
+                materialUnitCost: it.materialUnitCost,
+                equipmentUnitCost: it.equipmentUnitCost,
+                subcontractUnitCost: it.subcontractUnitCost,
+                poc: it.poc,
+                code: it.code ?? null,
+                calculationMethod: it.calculationMethod ?? null,
+                laborRatePerUnit: it.laborRatePerUnit ?? null,
+                assembly: it.assembly ? (it.assembly as unknown as Prisma.InputJsonValue) : undefined,
+                sortOrder: ii,
+              })),
+            },
+          },
+        });
+      }
+      return id;
+    },
+    { timeout: 30000, maxWait: 10000 },
+  );
+
+  // The list reads `amount`, so it is recomputed from what the destination now
+  // holds — after the transaction, from the saved rows, rather than from an
+  // arithmetic guess about what was added.
+  const saved = await getEstimateById(estimateId);
+  if (saved) {
+    await prisma.costEstimate.update({
+      where: { id: estimateId },
+      data: { amount: estimateTotals(saved).grandTotal },
+    });
+  }
+
+  return {
+    estimateId,
+    created: !existing,
+    taskCount: copied.taskCount,
+    sectionCount: copied.categories.length,
+    pricesWithheld: copied.pricesWithheld,
+  };
 }
 
 export async function saveEstimate(input: CostEstimate, amount: number): Promise<{ id: string }> {

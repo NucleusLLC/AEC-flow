@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect, Fragment } from "react";
-import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug, TriangleAlert } from "lucide-react";
+import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug, TriangleAlert, Copy } from "lucide-react";
 import { EstimatePrintDoc, printFit, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
 import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { EmailButton } from "@/components/email/email-button";
 import { firmName } from "@/lib/firm-identity";
 import { SectionCopy } from "./section-copy";
+import { CopyTasksDialog } from "./copy-tasks-dialog";
 import {
   ESTIMATE_UNITS,
   type CostEstimate,
@@ -289,6 +290,80 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
 
   const rate = est.avgLaborRate;
   const colCount = 14 + (showProgress ? 2 : 0); // category-header colSpan; +2 when Progress is on
+
+  /* ─── SELECTION, for copying tasks to another project ───────────────────
+   * Two sets rather than a flag per row: the sheet is re-created wholesale on
+   * every edit (patchItem spreads new objects), so a selection stored ON the
+   * rows would be lost by the next keystroke. Ids survive that; objects do not.
+   *
+   * A section id in `selSections` means the WHOLE section — every task in it,
+   * including ones added after the tick. That is what ticking a section means to
+   * the person doing it, and it keeps the two sets from disagreeing: a section
+   * ticked wholesale drops its individual item ticks. */
+  const [selSections, setSelSections] = useState<Set<string>>(new Set());
+  const [selItems, setSelItems] = useState<Set<string>>(new Set());
+  const [copyOpen, setCopyOpen] = useState(false);
+
+  const sectionState = (cat: EstimateCategory): "all" | "some" | "none" => {
+    if (selSections.has(cat.id)) return "all";
+    const ticked = cat.items.filter((it) => selItems.has(it.id)).length;
+    if (ticked === 0) return "none";
+    return ticked === cat.items.length && cat.items.length > 0 ? "all" : "some";
+  };
+
+  const toggleSection = (cat: EstimateCategory) => {
+    const state = sectionState(cat);
+    setSelSections((prev) => {
+      const next = new Set(prev);
+      if (state === "all") next.delete(cat.id);
+      else next.add(cat.id);
+      return next;
+    });
+    // Either way the individual ticks inside it stop mattering: selected whole,
+    // or cleared. Leaving them behind is how a "deselected" section keeps
+    // copying two of its rows.
+    setSelItems((prev) => {
+      const next = new Set(prev);
+      for (const it of cat.items) next.delete(it.id);
+      return next;
+    });
+  };
+
+  const toggleItem = (cat: EstimateCategory, itemId: string) => {
+    // Un-ticking one task out of a wholesale section means "all but this one",
+    // so the section tick is expanded into its items first.
+    if (selSections.has(cat.id)) {
+      setSelSections((prev) => {
+        const next = new Set(prev);
+        next.delete(cat.id);
+        return next;
+      });
+      setSelItems((prev) => {
+        const next = new Set(prev);
+        for (const it of cat.items) if (it.id !== itemId) next.add(it.id);
+        return next;
+      });
+      return;
+    }
+    setSelItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelSections(new Set());
+    setSelItems(new Set());
+  };
+
+  /** Tasks actually selected — a ticked section counts every row inside it. */
+  const selectedTaskCount = est.categories.reduce(
+    (n, cat) =>
+      n + (selSections.has(cat.id) ? cat.items.length : cat.items.filter((it) => selItems.has(it.id)).length),
+    0,
+  );
   const clientCols = 6 + (showProgress ? 1 : 0); // Client Version columns: Code·Task + 4 groups + Item Total [+ Progress]
   // Fixed-layout column widths (sum ≈ 100%) so the sheet always fits the screen — no horizontal scroll.
   // Progress ON squeezes columns; OFF relaxes them. Order matches the <colgroup> below.
@@ -727,6 +802,17 @@ ${!preview ? `@media print {
           <span className="font-semibold text-fg">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · Ver {est.version} · {est.date}
         </div>
       )}
+      {copyOpen ? (
+        <CopyTasksDialog
+          sourceEstimateId={est.id}
+          sourceCurrency={est.currency}
+          categories={est.categories}
+          selection={{ sections: [...selSections], items: [...selItems] }}
+          onClose={() => setCopyOpen(false)}
+          onCopied={() => clearSelection()}
+        />
+      ) : null}
+
       {/* Header / meta — editing controls; hidden in preview & print (preview shows the centered line above). */}
       {!preview && (
       <Card className="est-card no-print p-5">
@@ -758,6 +844,33 @@ ${!preview ? `@media print {
               competing with it for attention. */}
           <div className="flex shrink-0 items-center gap-2">
             {saveError ? <span className="self-center text-xs text-red-600" title={saveError}>Save failed</span> : null}
+            {/* COPY2ANOTHER/NEW PROJECT. Always present, so the checkmarks beside
+                each task have a visible purpose, and disabled with the reason
+                until something is ticked — a control that appears only once you
+                have guessed the gesture teaches nobody. */}
+            {selectedTaskCount > 0 ? (
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="no-print self-center text-xs font-medium text-muted underline decoration-dotted hover:text-fg"
+                title="Clear the selection"
+              >
+                {selectedTaskCount} selected · clear
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setCopyOpen(true)}
+              disabled={selectedTaskCount === 0}
+              title={
+                selectedTaskCount === 0
+                  ? "Tick the tasks or sections you want to copy, then press this."
+                  : `Copy ${selectedTaskCount} selected ${selectedTaskCount === 1 ? "task" : "tasks"} to another project`
+              }
+              className={`${ghostBtn} no-print disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              <Copy className="h-4 w-4" /> Copy to project
+            </button>
             <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? "Saving…" : "Save"}</button>
             <div className="relative">
               <button
@@ -1239,6 +1352,20 @@ ${!preview ? `@media print {
                   <tr className="est-cat-head bg-surface-2">
                     <td colSpan={colCount} className="border-y border-border px-3 py-0.5">
                       <div className="flex items-center gap-2">
+                        {/* Select the whole section for a copy. Indeterminate when only
+                            some of its tasks are ticked, so the header tells the truth
+                            about what is selected below it. */}
+                        <input
+                          type="checkbox"
+                          className="no-print h-3.5 w-3.5 shrink-0 accent-brand"
+                          checked={sectionState(cat) === "all"}
+                          ref={(el) => {
+                            if (el) el.indeterminate = sectionState(cat) === "some";
+                          }}
+                          onChange={() => toggleSection(cat)}
+                          aria-label={`Select section ${cat.name} for copying`}
+                          title="Select this whole section to copy to another project"
+                        />
                         {/* Collapse — folds the section down to its header + subtotal, so a
                             long sheet can be read as a list of sections. View-only: it does
                             not touch the data or what prints (Print Control owns that). */}
@@ -1332,6 +1459,15 @@ ${!preview ? `@media print {
                       <tr className="border-t border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-brand/5">
                         <td className="sticky left-0 z-10 border-r border-border bg-surface px-2 py-0.5">
                           <div className="flex items-start gap-1">
+                            {/* Left of the row, as asked: tick a task to copy it. */}
+                            <input
+                              type="checkbox"
+                              className="no-print mt-[3px] h-3.5 w-3.5 shrink-0 accent-brand"
+                              checked={selSections.has(cat.id) || selItems.has(it.id)}
+                              onChange={() => toggleItem(cat, it.id)}
+                              aria-label={`Select task ${it.task || "untitled"} for copying`}
+                              title="Select this task to copy to another project"
+                            />
                             <span className="no-print flex items-center pt-px text-faint">
                               <button type="button" onClick={() => moveItem(cat.id, it.id, -1)} aria-label="Move row up" className="flex h-4 w-3.5 items-center justify-center hover:text-brand">
                                 <ChevronUp className="h-3 w-3" />
