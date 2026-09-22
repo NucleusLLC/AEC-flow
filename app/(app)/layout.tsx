@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { needsVerification } from "@/lib/account-security/verification-token";
+import { VerifyEmailBanner } from "@/components/account/verify-email-banner";
 import { cookies, headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -79,6 +82,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ) : (
     children
   );
+  // Who still has to confirm their address. One small query, and only when there
+  // is a session to ask about.
+  const me = session?.user?.id
+    ? await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { email: true, emailVerifiedAt: true, status: true },
+      })
+    : null;
+  const unverifiedEmail = me && needsVerification(me) ? me.email : null;
+
   // Seed the System Currency for server-rendered formatting this request…
   setSystemCurrency(systemCurrency);
   // Active module persisted client-side; drives the sidebar nav on first paint.
@@ -92,6 +105,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <FirmIdentityInit name={firm.name} location={firm.location} logo={firm.logo} />
       {/* Shell owns the collapsible "full screen" sidebar state (sidebar + topbar). */}
       <AppShell notifications={notifications} version={appVersionLabel()} isFounder={isFounder} initialModule={initialModule}>
+        {/* Asks the signed-in user to confirm their address, and stops rendering
+         * the moment they have. Every account that existed before verification
+         * shipped was backfilled as confirmed, so this is only ever seen by
+         * someone who signed up after it. */}
+        {unverifiedEmail ? <VerifyEmailBanner email={unverifiedEmail} /> : null}
         {content}
       </AppShell>
       {/* Global ⌘K / Ctrl+K command palette (renders null until opened). */}

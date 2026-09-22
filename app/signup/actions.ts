@@ -16,6 +16,7 @@ import { seedCompany } from "@/lib/data/company-seed";
 import { validateNewPassword } from "@/lib/password-policy";
 import { hitRateLimit } from "@/lib/server/rate-limit";
 import { RATE_LIMITS, clientIpFrom, tooManyAttemptsMessage } from "@/lib/account-security/rate-limit-policy";
+import { issueEmailVerification } from "@/lib/server/email-verification";
 
 /** Free beta-access length, in months. (Local: a "use server" file may only
  * export async functions, so this stays module-private.) */
@@ -148,7 +149,8 @@ export async function registerBetaTester(input: {
       select: { id: true },
     });
 
-    await prisma.user.create({
+    const created = await prisma.user.create({
+      select: { id: true },
       data: {
         email,
         name,
@@ -179,6 +181,12 @@ export async function registerBetaTester(input: {
         },
       },
     });
+
+    // Ask the new owner to confirm the address they just typed. Fire-and-forget by
+    // design: the account exists and the signup must succeed even if the mail
+    // provider is having a bad morning — the banner and its resend button are the
+    // second chance. `issueEmailVerification` never throws.
+    void issueEmailVerification(created.id, signupIp);
 
     // Link the claimed code back to the tenant it created (audit trail: code -> company -> user).
     if (claimedCodeId) {
