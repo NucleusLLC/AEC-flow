@@ -6,6 +6,9 @@ import { authOptions } from "@/lib/auth";
 import { updateProfile, type ProfileInput } from "@/lib/data/account";
 import { changeOwnPassword } from "@/lib/server/password";
 import { logActivity } from "@/lib/data/activity";
+import { headers } from "next/headers";
+import { issueEmailVerification } from "@/lib/server/email-verification";
+import { clientIpFrom } from "@/lib/account-security/rate-limit-policy";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -54,4 +57,21 @@ export async function changePasswordAction(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not change password." };
   }
+}
+
+/**
+ * Send another "confirm your address" email to the signed-in user.
+ *
+ * Always reports success. There is nothing to hide from this caller — they are
+ * signed in as the account in question — but there is also nothing useful to say:
+ * "already verified", "rate limited" and "sent" all mean the same thing to the
+ * person pressing the button, which is *stop pressing it and go and look*.
+ */
+export async function resendVerificationAction(): Promise<ActionResult> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+  const h = await headers();
+  const ip = clientIpFrom((name) => h.get(name) ?? undefined);
+  await issueEmailVerification(userId, ip);
+  return { ok: true };
 }
