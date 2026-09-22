@@ -281,6 +281,12 @@ model User {
 
   sessions         Session[]
   passwordResets   PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+  /// When this address was confirmed by opening an emailed link. Null = never.
+  /// Every account that existed before verification shipped was backfilled to its
+  /// creation time (prisma/sql/0019_email_verification.sql) — nobody was asked to
+  /// re-prove an address they have been using for months.
+  emailVerifiedAt  DateTime?
   managedProjects  Project[]            @relation("ProjectManager")
   phases           PhaseAssignment[]
   leaveRequests    LeaveRequest[]
@@ -2896,4 +2902,27 @@ model BuildingPermitDocument {
   @@index([companyId, category])
   @@index([correspondenceId])
   @@map("building_permit_documents")
+}
+
+/// A single-use link proving somebody can receive mail at the address they signed
+/// up with. Deliberately a separate table from PasswordResetToken: one store means
+/// one bug away from a verification link resetting a password.
+model EmailVerificationToken {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  /// Set when redeemed, or when a newer request retires this one.
+  usedAt      DateTime?
+  requestedIp String?
+  usedIp      String?
+  /// Outcome of handing the email to the provider: "SENT" or "FAILED".
+  emailStatus String?
+  emailError  String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }

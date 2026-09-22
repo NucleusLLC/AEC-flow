@@ -203,6 +203,58 @@ export async function sendPasswordResetEmail(opts: {
   return sendEmail({ to: opts.to, subject, html });
 }
 
+/**
+ * Send a "confirm your email address" link. The URL is a live credential for the
+ * next week, so callers must NOT copy this message into email_logs
+ * (see lib/server/email-verification.ts).
+ */
+export async function sendVerificationEmail(opts: {
+  to: string;
+  name?: string | null;
+  verifyUrl: string;
+  expiresInHours: number;
+}): Promise<SendResult> {
+  const greeting = opts.name?.trim() ? `Hi ${escapeHtml(opts.name.trim())},` : "Hi,";
+  const days = Math.round(opts.expiresInHours / 24);
+  const window = days >= 1 ? `${days} day${days === 1 ? "" : "s"}` : `${opts.expiresInHours} hours`;
+  const subject = "Confirm your email address";
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+            <tr>
+              <td style="background:#0f172a;padding:24px 32px;">
+                <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.01em;">AEC-Flow</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#111827;">${greeting}</p>
+                <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#4b5563;">
+                  Confirm this address so we can send you password resets and invitations.
+                  It also means a colleague cannot lock you out with a typo.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:8px;background:#2563eb;">
+                  <a href="${opts.verifyUrl}" style="display:inline-block;padding:12px 24px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Confirm my email</a>
+                </td></tr></table>
+                <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#6b7280;">
+                  This link works for ${escapeHtml(window)} and only once. If you did not create an
+                  AEC-Flow account, ignore this message — nothing was set up in your name.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+  return sendEmail({ to: opts.to, subject, html });
+}
+
 function renderInviteEmail(opts: {
   companyName: string;
   invitedByName?: string | null;
