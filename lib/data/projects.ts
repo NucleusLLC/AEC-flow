@@ -198,6 +198,28 @@ async function resolveManagerId(name: string): Promise<string> {
   return fallback.id;
 }
 
+/**
+ * A manually typed project number, trimmed. Letters, digits and `-_./ ` only —
+ * it is printed on documents and used in file names. Blank → null (automatic).
+ */
+export function cleanProjectNumber(raw: string | null | undefined): string | null {
+  const v = (raw ?? "").trim().replace(/\s+/g, " ");
+  if (!v) return null;
+  if (v.length > 40) throw new Error("Project number is too long (40 characters at most).");
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ._/-]*$/.test(v)) {
+    throw new Error("Project number may only use letters, digits, spaces and - _ . /");
+  }
+  return v;
+}
+
+/** Prisma's unique-violation on `projectNumber`, as a sentence a user can act on. */
+function duplicateNumber(e: unknown, n: string): never {
+  if (e && typeof e === "object" && (e as { code?: string }).code === "P2002") {
+    throw new Error(`Project number ${n} is already in use. Choose another.`);
+  }
+  throw e;
+}
+
 /** Next sequential project number, pattern ZA-YYYY-NNN (global max + 1, padded 3). */
 async function nextProjectNumber(year = 2026): Promise<string> {
   const rows = await prisma.project.findMany({ select: { projectNumber: true } });
@@ -212,10 +234,11 @@ async function nextProjectNumber(year = 2026): Promise<string> {
 export async function createProject(input: ProjectInput): Promise<{ id: string; projectNumber: string }> {
   if (!input.name?.trim()) throw new Error("name is required");
 
+  const manual = cleanProjectNumber(input.projectNumber);
   const [clientId, managerId, projectNumber] = await Promise.all([
     resolveClientId(input.clientName),
     resolveManagerId(input.manager),
-    nextProjectNumber(),
+    manual ?? nextProjectNumber(),
   ]);
 
   const p = await prisma.project.create({
@@ -243,13 +266,14 @@ export async function createProject(input: ProjectInput): Promise<{ id: string; 
         })),
       },
     },
-  });
+  }).catch((e) => duplicateNumber(e, projectNumber));
 
   return { id: p.id, projectNumber: p.projectNumber };
 }
 
 /** Update scalar fields only — phases are not rewritten here. */
 export async function updateProject(id: string, input: ProjectInput): Promise<{ id: string }> {
+  const manual = cleanProjectNumber(input.projectNumber);
   const [clientId, managerId] = await Promise.all([
     resolveClientId(input.clientName),
     resolveManagerId(input.manager),
@@ -258,6 +282,9 @@ export async function updateProject(id: string, input: ProjectInput): Promise<{ 
   const p = await prisma.project.update({
     where: { id },
     data: {
+      // Renaming the number is safe for links: estimates and schedules find
+      // their project by id. Their stored copy of the number is a label only.
+      ...(manual ? { projectNumber: manual } : {}),
       name: input.name,
       clientId,
       managerId,
@@ -271,7 +298,7 @@ export async function updateProject(id: string, input: ProjectInput): Promise<{ 
       contractValue: input.value ?? null,
       currency: input.currency ?? getSystemCurrency(),
     },
-  });
+  }).catch((e) => duplicateNumber(e, manual ?? ""));
 
   return { id: p.id };
 }

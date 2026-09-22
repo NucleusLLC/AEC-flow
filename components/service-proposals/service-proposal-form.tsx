@@ -296,6 +296,7 @@ export function ServiceProposalForm({
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectAddress, setNewProjectAddress] = useState("");
+  const [newProjectNumber, setNewProjectNumber] = useState("");
   const [newProjectError, setNewProjectError] = useState<string | null>(null);
   const [projectPending, startProject] = useTransition();
 
@@ -307,6 +308,7 @@ export function ServiceProposalForm({
   function resetNewProject() {
     setNewProjectName("");
     setNewProjectAddress("");
+    setNewProjectNumber("");
     setNewProjectError(null);
   }
 
@@ -352,6 +354,7 @@ export function ServiceProposalForm({
         clientName: client.name,
         manager: "",
         siteAddress: newProjectAddress.trim() || null,
+        projectNumber: newProjectNumber.trim() || null,
         currency,
       });
       if (!res.ok) {
@@ -868,11 +871,20 @@ export function ServiceProposalForm({
                     placeholder="Site address"
                     aria-label="New project site address"
                   />
+                  <input
+                    value={newProjectNumber}
+                    onChange={(e) => setNewProjectNumber(e.target.value)}
+                    onKeyDown={onNewProjectKeyDown}
+                    className={`${field} font-mono`}
+                    placeholder="Project number — blank for automatic, or e.g. 2026A-019"
+                    aria-label="New project number"
+                    maxLength={40}
+                  />
                   {/* A project must belong to a client, so say which one it will
                    * be filed under rather than letting the server reject it. */}
                   <p className="text-[11px] text-faint">
                     {clientOptions.find((c) => c.id === clientId)
-                      ? `Filed under ${clientOptions.find((c) => c.id === clientId)!.name}. Number and standard phases are assigned automatically.`
+                      ? `Filed under ${clientOptions.find((c) => c.id === clientId)!.name}. Standard phases are added automatically; so is the number, unless you type one.`
                       : "Choose a client above first — a project must belong to one."}
                   </p>
                   {newProjectError ? (
