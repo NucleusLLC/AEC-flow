@@ -40,6 +40,13 @@ const TENANT_MODELS = new Set<string>([
   // minutes of meetings about them — leaving any one of these out is a
   // cross-tenant data leak, and lib/proposals/tenant-scope.test.ts fails the
   // build if the schema and this list ever disagree.
+  // General Documents. A power of attorney names a client and has legal
+  // effect; leaving it out of this set would show it to another practice.
+  "GeneralDocument",
+  // Finance. Receivables are the most obviously company-private table in the
+  // app: an invoice outside this set would put one practice's billing in front
+  // of another. See docs/finance/SPEC.md.
+  "Invoice", "InvoiceLine", "InvoicePayment",
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);
