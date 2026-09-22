@@ -32,7 +32,7 @@ import {
   INITIAL_VERSION,
   bumpDraftVersion,
   issuedVersion,
-  revisionStartVersion,
+  nextRevisionVersion,
 } from "@/lib/proposals/versioning";
 import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { COST_BASIS_LABEL } from "@/lib/proposals/engine/types";
@@ -702,8 +702,11 @@ export async function reviseServiceProposal(id: string): Promise<ServiceProposal
         number,
         status: "DRAFT",
         revision: src.revision + 1,
-        // Carries on from the issued major: 1.0 issued → this drafts at 1.1 → issues as 2.0.
-        versionLabel: revisionStartVersion(src.versionLabel),
+        // One decimal on from whatever is being revised: an issued 1.0 drafts at
+        // 1.1 and issues as 2.0; a draft already at 1.1 drafts at 1.2. It used
+        // to call revisionStartVersion for every source, which pinned the label
+        // at .1 — so revising twice produced two documents both reading 1.1.
+        versionLabel: nextRevisionVersion(src.versionLabel),
         createdById: who.id,
         createdByName: who.name,
         updatedById: who.id,

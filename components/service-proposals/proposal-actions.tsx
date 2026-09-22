@@ -26,6 +26,10 @@ export function ServiceProposalActions({
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * A status change: stay here and re-render, because the thing that changed IS
+   * this page.
+   */
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
     start(async () => {
@@ -39,6 +43,30 @@ export function ServiceProposalActions({
   }
 
   /**
+   * An action that produces a NEW document: open it.
+   *
+   * `run` above only refreshes, which is right for a transition and was wrong
+   * for "New revision" — the revision was created, the original was stamped
+   * SUPERSEDED, and the screen stayed on the original. Reported as the button
+   * not creating a revision at all, which is exactly what it looked like.
+   */
+  function runAndOpen(
+    fn: () => Promise<{ ok: boolean; id?: string; error?: string }>,
+    whenFailed: string,
+  ) {
+    setError(null);
+    start(async () => {
+      const res = await fn();
+      if (!res.ok || !res.id) {
+        setError(res.error ?? whenFailed);
+        return;
+      }
+      router.push(`/design/service-proposals/${res.id}/edit`);
+      router.refresh();
+    });
+  }
+
+  /**
    * Duplicate, then open the copy's edit form.
    *
    * The copy already has the next free number, so landing on the editor is what makes the
@@ -46,16 +74,7 @@ export function ServiceProposalActions({
    * rather than re-typing the proposal.
    */
   function duplicate() {
-    setError(null);
-    start(async () => {
-      const res = await duplicateServiceProposalAction(id);
-      if (!res.ok) {
-        setError(res.error ?? "Could not duplicate this proposal.");
-        return;
-      }
-      router.push(`/design/service-proposals/${res.id}/edit`);
-      router.refresh();
-    });
+    runAndOpen(() => duplicateServiceProposalAction(id), "Could not duplicate this proposal.");
   }
 
   const canReview = canTransition(status, "INTERNAL_REVIEW");
@@ -106,8 +125,13 @@ export function ServiceProposalActions({
         type="button"
         disabled={pending}
         className={btn}
-        title="Continue this offer as the next revision, superseding the issued one"
-        onClick={() => run(() => reviseServiceProposalAction(id))}
+        title="Continue this offer as the next revision, superseding the issued one, and open it"
+        onClick={() =>
+          runAndOpen(
+            () => reviseServiceProposalAction(id),
+            "Could not start a new revision of this proposal.",
+          )
+        }
       >
         <CopyPlus className="h-4 w-4" /> New revision
       </button>
