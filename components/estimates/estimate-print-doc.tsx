@@ -52,6 +52,13 @@ export interface PrintControl {
   zebra: boolean;
   /** Show the section total (bold) + % share on the shaded category header row. */
   rowSubtotal: boolean;
+  /**
+   * The per-LINE Total column. On by default, and turned off by Client mode: a client
+   * sheet shows what the work is and what each SECTION costs, never what each line
+   * inside it costs. Optional so a print template saved before this existed still
+   * loads with the column on.
+   */
+  itemTotal?: boolean;
   /** Show the company logo at the top-right of every page. */
   logo: boolean;
   /** Append the Time-Schedule Coupler page. */
@@ -292,8 +299,10 @@ function buildColumns(pc: PrintControl, showProgress: boolean, usd: boolean): Co
     !!pc.subUnit && { key: "subUnit", label: "Subc. /u", width: 66, align: "right" },
     pc.subcontractor && { key: "sub", label: "Subcont.", width: 82, align: "right" },
     // The Total column goes dual-currency ("$ … · AWG …") when USD is on, so it needs
-    // room for both figures.
-    { key: "total", label: "Total", width: usd ? 148 : 92, align: "right" },
+    // room for both figures. `!== false` rather than a plain truth test: a print
+    // template saved before this flag existed has no value for it, and the column has
+    // always been part of the standard sheet.
+    pc.itemTotal !== false && { key: "total", label: "Total", width: usd ? 148 : 92, align: "right" },
     showProgress && { key: "poc", label: "POC%", width: 50, align: "right" },
     showProgress && { key: "prog", label: "Prog.", width: 78, align: "right" },
   ];

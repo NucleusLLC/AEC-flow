@@ -173,6 +173,8 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
     generalConditions: false, // GC detail page is opt-in: only previewed/printed when selected
     zebra: true,
     rowSubtotal: true,
+    // Per-LINE Total. Off in Client mode — see the Client switch.
+    itemTotal: true,
     logo: true,
     timeline: false,
     phaseDisbursement: false,
@@ -300,8 +302,8 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   // Print Control column-group tags, positionally aligned with COLW / the <colgroup> below.
   // Order: Code·Task, Qty, Unit, Norm, TotalHrs, LaborCost, Mat-U, Mat-T, Eq-U, Eq-T, Sub-U, Sub-T, ItemTotal, [POC, ProgAmt,] action.
   const colClass = showProgress
-    ? ["", "pc-qtyunit", "pc-qtyunit", "pc-labor", "pc-labor", "pc-labor", "pc-material", "pc-material", "pc-equipment", "pc-equipment", "pc-subcontractor", "pc-subcontractor", "", "", "", "no-print"]
-    : ["", "pc-qtyunit", "pc-qtyunit", "pc-labor", "pc-labor", "pc-labor", "pc-material", "pc-material", "pc-equipment", "pc-equipment", "pc-subcontractor", "pc-subcontractor", "", "no-print"];
+    ? ["", "pc-qtyunit", "pc-qtyunit", "pc-labor", "pc-labor", "pc-labor", "pc-material", "pc-material", "pc-equipment", "pc-equipment", "pc-subcontractor", "pc-subcontractor", "pc-itemtotal", "", "", "no-print"]
+    : ["", "pc-qtyunit", "pc-qtyunit", "pc-labor", "pc-labor", "pc-labor", "pc-material", "pc-material", "pc-equipment", "pc-equipment", "pc-subcontractor", "pc-subcontractor", "pc-itemtotal", "no-print"];
 
   // Cost Database derived (free sources only).
   const costSources = COST_SOURCES.filter((s) => !s.licenseRequired);
@@ -341,6 +343,7 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
     !pc.equipment && hideGroup("pc-equipment"),
     !pc.subcontractor && hideGroup("pc-subcontractor"),
     !pc.qtyUnit && hideGroup("pc-qtyunit"),
+    pc.itemTotal === false && hideGroup("pc-itemtotal"),
   ].filter(Boolean).join("\n");
   // Page numbering margin boxes are only emitted when Page# is on.
   const pageNumBoxes = pc.pageNum
@@ -897,6 +900,11 @@ ${!preview ? `@media print {
               setPc((p) => ({
                 ...p,
                 labor: !nv, material: !nv, equipment: !nv, subcontractor: !nv, qtyUnit: !nv,
+                // The per-line Total has to go with them. The on-screen client table
+                // blanks every line amount and shows section subtotals only; leaving
+                // this on printed each line's cost anyway, so the PDF the client
+                // received showed exactly what the screen had promised to hide.
+                itemTotal: !nv,
                 ...(nv ? { laborNorm: false, laborHrs: false, materialUnit: false, equipmentUnit: false, subUnit: false } : {}),
               }));
             }} label="Client" tone="brand" />
@@ -1015,6 +1023,7 @@ ${!preview ? `@media print {
                     <div className="mb-1 text-[11px] font-medium text-muted">Include in print</div>
                     <div className="space-y-0.5">
                       <PcRow label="Qty & Unit" on={pc.qtyUnit} onToggle={() => setPc((p) => ({ ...p, qtyUnit: !p.qtyUnit }))} />
+                      <PcRow label="Item Total (per line)" on={pc.itemTotal !== false} onToggle={() => setPc((p) => ({ ...p, itemTotal: p.itemTotal === false }))} />
                       <PcRow label="Labor Norm hrs/unit" on={!!pc.laborNorm} onToggle={() => setPc((p) => ({ ...p, laborNorm: !p.laborNorm }))} />
                       <PcRow label="Labor Hrs" on={!!pc.laborHrs} onToggle={() => setPc((p) => ({ ...p, laborHrs: !p.laborHrs }))} />
                       <PcRow label="Labor" on={pc.labor} onToggle={() => setPc((p) => ({ ...p, labor: !p.labor }))} />
