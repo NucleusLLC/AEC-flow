@@ -2,6 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_LABEL,
+  FINANCE_APPROVAL_LABEL,
+  FINANCE_APPROVAL_STATUSES,
+  FINANCE_APPROVAL_TONE,
   INVOICE_STATUSES,
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_TONE,
@@ -42,6 +47,14 @@ describe("the enum unions match prisma/schema.prisma", () => {
   it("TaxMode — shared with the proposal module, so it must match there too", () => {
     expect(Object.keys(TAX_MODE_LABEL).sort()).toEqual(schemaEnum("TaxMode").sort());
   });
+
+  it("FinanceApprovalStatus — shared by timesheets and expenses", () => {
+    expect([...FINANCE_APPROVAL_STATUSES].sort()).toEqual(schemaEnum("FinanceApprovalStatus").sort());
+  });
+
+  it("ExpenseCategory", () => {
+    expect([...EXPENSE_CATEGORIES].sort()).toEqual(schemaEnum("ExpenseCategory").sort());
+  });
 });
 
 describe("every value has something to render", () => {
@@ -50,6 +63,21 @@ describe("every value has something to render", () => {
       expect(INVOICE_STATUS_LABEL[s], s).toBeTruthy();
       expect(INVOICE_STATUS_LABEL[s]).not.toBe(s);
       expect(INVOICE_STATUS_TONE[s], s).toBeTruthy();
+    }
+  });
+
+  it("every approval status has a label and a badge tone", () => {
+    for (const s of FINANCE_APPROVAL_STATUSES) {
+      expect(FINANCE_APPROVAL_LABEL[s], s).toBeTruthy();
+      expect(FINANCE_APPROVAL_LABEL[s]).not.toBe(s);
+      expect(FINANCE_APPROVAL_TONE[s], s).toBeTruthy();
+    }
+  });
+
+  it("every expense category has a label", () => {
+    for (const c of EXPENSE_CATEGORIES) {
+      expect(EXPENSE_CATEGORY_LABEL[c], c).toBeTruthy();
+      expect(EXPENSE_CATEGORY_LABEL[c]).not.toBe(c);
     }
   });
 

@@ -118,6 +118,10 @@ export default defineConfig({
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
       "lib/finance/enums.test.ts",
+      // Time and expense arithmetic: the week grid, what may still be billed,
+      // and cost against worth per project. Same reason as every entry above —
+      // named file, pure module.
+      "lib/finance/timesheet.test.ts",
     ],
     environment: "node",
   },

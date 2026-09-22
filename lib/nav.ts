@@ -32,6 +32,8 @@ import {
   Mail,
   ScrollText,
   ReceiptText,
+  Clock3,
+  Wallet,
   Stamp,
   type LucideIcon,
 } from "lucide-react";
@@ -109,6 +111,24 @@ export const INVOICES_ITEM: NavItem = {
   icon: ReceiptText,
 };
 
+/**
+ * Time and expenses, defined here for the same reason as the invoice register:
+ * they appear both in this list and in Module 1's sidebar, and a finance
+ * section called one thing in one module and another elsewhere is a feature the
+ * person logging an hour cannot find.
+ */
+export const TIME_ITEM: NavItem = {
+  label: "Time",
+  href: "/finance/time",
+  icon: Clock3,
+};
+
+export const EXPENSES_ITEM: NavItem = {
+  label: "Expenses",
+  href: "/finance/expenses",
+  icon: Wallet,
+};
+
 /** Section title used wherever the drawings bin appears. */
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
@@ -175,7 +195,7 @@ export const navSections: NavSection[] = [
   },
   {
     title: "Finance",
-    items: [INVOICES_ITEM],
+    items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM],
   },
   {
     title: "People",

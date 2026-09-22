@@ -239,3 +239,186 @@ export type ProposalBilling = {
   /** Engine warnings worth refusing on — e.g. milestones that do not total 100%. */
   warnings: string[];
 };
+
+// ── Time and expenses ──────────────────────────────────────────────────────
+//
+// Same rule as everything above: these unions mirror the schema's enums and
+// `lib/finance/enums.test.ts` fails the build if they drift.
+
+/**
+ * Where a timesheet row or an expense stands with its approver. ONE enum for
+ * both, because it is one decision made by one person about one thing — work
+ * the practice is prepared to stand behind. Whether the row has been BILLED is
+ * not in here: that is a fact recorded on the row (`invoicedAt`), not a state
+ * somebody chooses, and conflating the two is how hours get billed twice.
+ */
+export type FinanceApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+
+export type ExpenseCategory =
+  | "TRAVEL"
+  | "ACCOMMODATION"
+  | "MEALS"
+  | "PRINTING"
+  | "PERMIT_FEE"
+  | "SUBCONSULTANT"
+  | "SOFTWARE"
+  | "EQUIPMENT"
+  | "MATERIALS"
+  | "OTHER";
+
+/** In the order a row lives it. */
+export const FINANCE_APPROVAL_STATUSES: FinanceApprovalStatus[] = [
+  "DRAFT",
+  "SUBMITTED",
+  "APPROVED",
+  "REJECTED",
+];
+
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  "TRAVEL",
+  "ACCOMMODATION",
+  "MEALS",
+  "PRINTING",
+  "PERMIT_FEE",
+  "SUBCONSULTANT",
+  "SOFTWARE",
+  "EQUIPMENT",
+  "MATERIALS",
+  "OTHER",
+];
+
+export const FINANCE_APPROVAL_LABEL: Record<FinanceApprovalStatus, string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "Submitted",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export const FINANCE_APPROVAL_TONE: Record<FinanceApprovalStatus, BadgeTone> = {
+  DRAFT: "slate",
+  SUBMITTED: "blue",
+  APPROVED: "green",
+  REJECTED: "red",
+};
+
+export const EXPENSE_CATEGORY_LABEL: Record<ExpenseCategory, string> = {
+  TRAVEL: "Travel",
+  ACCOMMODATION: "Accommodation",
+  MEALS: "Meals",
+  PRINTING: "Printing & plotting",
+  PERMIT_FEE: "Permit & authority fees",
+  SUBCONSULTANT: "Subconsultant",
+  SOFTWARE: "Software & licences",
+  EQUIPMENT: "Equipment",
+  MATERIALS: "Materials & samples",
+  OTHER: "Other",
+};
+
+export type TimeEntryDTO = {
+  id: string;
+  userId: string;
+  userName: string;
+  projectId: string | null;
+  projectName: string | null;
+  phaseId: string | null;
+  phaseName: string | null;
+  date: string;
+  hours: number;
+  billable: boolean;
+  /** The rates AS THEY WERE when the entry was saved — never joined live. */
+  chargeRate: number | null;
+  costRate: number | null;
+  currency: string;
+  description: string | null;
+  status: FinanceApprovalStatus;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  approvedByName: string | null;
+  rejectedReason: string | null;
+  /** Set when these hours reach an invoice. The double-bill guard. */
+  invoicedAt: string | null;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  /** hours x chargeRate, computed by lib/finance/timesheet.ts. */
+  value: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExpenseDTO = {
+  id: string;
+  userId: string;
+  userName: string;
+  projectId: string | null;
+  projectName: string | null;
+  date: string;
+  category: ExpenseCategory;
+  vendor: string | null;
+  description: string;
+  amount: number;
+  currency: string;
+  billable: boolean;
+  markupPercent: number;
+  /** Paid by the person and owed back to them, as opposed to paid by the firm. */
+  reimbursable: boolean;
+  reimbursedAt: string | null;
+  status: FinanceApprovalStatus;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  approvedByName: string | null;
+  rejectedReason: string | null;
+  invoicedAt: string | null;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  /** amount plus markup — what a client would be charged. */
+  chargeable: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TimeEntryInput = {
+  /** Blank means the signed-in person: you log your own hours. */
+  userId?: string | null;
+  projectId?: string | null;
+  phaseId?: string | null;
+  date: string;
+  hours: number;
+  billable?: boolean;
+  /** Blank takes the person's standard rate; a figure overrides it for this row. */
+  chargeRate?: number | null;
+  costRate?: number | null;
+  currency?: string;
+  description?: string | null;
+};
+
+export type ExpenseInput = {
+  userId?: string | null;
+  projectId?: string | null;
+  date: string;
+  category: ExpenseCategory;
+  vendor?: string | null;
+  description: string;
+  amount: number;
+  currency?: string;
+  billable?: boolean;
+  markupPercent?: number | null;
+  reimbursable?: boolean;
+};
+
+/** The registers' filters. */
+export type TimeFilter = {
+  userId?: string;
+  projectId?: string;
+  status?: FinanceApprovalStatus | "ALL" | "UNBILLED";
+  from?: string;
+  to?: string;
+};
+
+export type ExpenseFilter = {
+  userId?: string;
+  projectId?: string;
+  category?: ExpenseCategory;
+  status?: FinanceApprovalStatus | "ALL" | "UNBILLED";
+  from?: string;
+  to?: string;
+};
