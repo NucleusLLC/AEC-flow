@@ -1110,6 +1110,32 @@ ${!preview ? `@media print {
               )}
             </div>
           </ToolGroup>
+
+          {/* TOTAL CONSTRUCTION COST — the number everyone in the room is actually
+            * asking for, at the top of the sheet rather than a scroll away under the
+            * build-up. Same `grandTotal` the summary and the printed sheet use:
+            * direct cost + general conditions + profit + BBO.
+            *
+            * Both units show WITHOUT the "$ USD" switch, on purpose. That switch
+            * governs what the printed sheet and its columns carry; this tile is the
+            * quick read on screen, and an owner who thinks in dollars should not have
+            * to turn on a print setting to get one. The USD line is dropped when there
+            * is no rate to convert with, rather than printing the local figure twice
+            * under a dollar sign. */}
+          <div className="ml-auto flex shrink-0 flex-col justify-center rounded-lg border border-brand/40 bg-brand/10 px-4 py-2 text-right">
+            <div className="text-[10px] font-medium uppercase tracking-wide text-brand/80">
+              Total construction cost
+            </div>
+            <div className="whitespace-nowrap text-xl font-bold leading-tight tabular-nums text-fg">
+              {est.currency} {nf0(grandTotal)}
+            </div>
+            {usdRate > 0 && est.currency.toUpperCase() !== "USD" ? (
+              <div className="whitespace-nowrap text-xs font-semibold tabular-nums text-brand">
+                $ {nf0(usdAmt(grandTotal))} USD
+                <span className="ml-1 font-normal text-faint">@ {usdRate.toFixed(4)}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
         {saved ? (
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
