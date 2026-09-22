@@ -6,6 +6,7 @@ declare module "next-auth" {
   interface User {
     role: UserRole;
     companyId?: string | null;
+    sessionVersion?: number;
   }
   interface Session {
     user: {
@@ -21,5 +22,9 @@ declare module "next-auth/jwt" {
     id: string;
     role: UserRole;
     companyId: string | null;
+    /** User.sessionVersion when this token was issued (absent on older tokens = 0). */
+    sv?: number;
+    /** Epoch seconds of the last check of `sv` against the database. */
+    svCheckedAt?: number;
   }
 }

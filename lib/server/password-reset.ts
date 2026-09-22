@@ -152,7 +152,11 @@ export async function redeemPasswordReset(
     });
     if (claimed.count !== 1) return null;
 
-    await tx.user.update({ where: { id: row.userId }, data: { passwordHash } });
+    await tx.user.update({
+      where: { id: row.userId },
+      // Signs out every browser still holding a login from before the reset.
+      data: { passwordHash, sessionVersion: { increment: 1 } },
+    });
     // Any other link issued to this account is now pointless — and a liability.
     await tx.passwordResetToken.updateMany({
       where: { userId: row.userId, usedAt: null },

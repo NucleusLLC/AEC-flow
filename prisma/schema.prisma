@@ -254,6 +254,9 @@ model User {
   id               String      @id @default(cuid())
   email            String      @unique
   passwordHash     String?
+  /// Bumped on every password change/reset; a login token carrying an older
+  /// value is refused (lib/auth.ts). prisma/sql/0018_session_version.sql.
+  sessionVersion   Int         @default(0)
   name             String
   companyId        String?
   company          Company?    @relation(fields: [companyId], references: [id])
