@@ -51,6 +51,10 @@ const TENANT_MODELS = new Set<string>([
   // costs the practice — the two figures a competitor would most like to
   // read. See docs/finance/SPEC.md.
   "TimeEntry", "Expense",
+  // Drawing Studio. A redline is one practice saying what is wrong with a
+  // drawing; a review comment names the person who has to fix it. Neither
+  // may cross a company boundary.
+  "DrawingMarkup", "DrawingComment",
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);
