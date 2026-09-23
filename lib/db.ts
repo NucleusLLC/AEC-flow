@@ -47,6 +47,10 @@ const TENANT_MODELS = new Set<string>([
   // app: an invoice outside this set would put one practice's billing in front
   // of another. See docs/finance/SPEC.md.
   "Invoice", "InvoiceLine", "InvoicePayment",
+  // Drawing Studio. A redline is one practice saying what is wrong with a
+  // drawing; a review comment names the person who has to fix it. Neither
+  // may cross a company boundary.
+  "DrawingMarkup", "DrawingComment",
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);

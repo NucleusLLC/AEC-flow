@@ -36,7 +36,7 @@ Two facts shape everything below:
 
 ## Stages
 
-### DS-0 — Know what was uploaded *(this release)*
+### DS-0 — Know what was uploaded ✅ shipped
 
 The system reads, from the file itself:
 
@@ -53,13 +53,13 @@ The system reads, from the file itself:
   when the rules come back low-confidence, only with the title-block text, and
   a failure or a missing key costs nothing — the rules' answer stands.
 
-### DS-1 — A real viewer
+### DS-1 — A real viewer ✅ shipped
 
 The stored PDF, rendered: page navigation, zoom, fit-to-width, rotate, and a
 sheet thumbnail rail for a multi-sheet set. Signed URL per open, never a public
 object.
 
-### DS-2 — Markup and redline
+### DS-2 — Markup and redline ✅ shipped
 
 Vector markup stored per drawing and per page, never burned into the source
 PDF — the original is evidence and stays untouched.
@@ -69,7 +69,7 @@ callout with leader, highlight, measurement (calibrated against a known
 dimension), and stamps (`FOR REVIEW`, `APPROVED`, `REVISE AND RESUBMIT`,
 `AS BUILT`). Per-author colour, per-author layer, show/hide by author.
 
-### DS-3 — Review and collaboration
+### DS-3 — Review and collaboration ✅ shipped, except revision compare
 
 - Comment threads **pinned to a point on a sheet**, with replies, @mentions,
   assignment, and resolve/reopen.
@@ -80,13 +80,13 @@ dimension), and stamps (`FOR REVIEW`, `APPROVED`, `REVISE AND RESUBMIT`,
 - An activity trail per sheet, and an email when somebody is assigned or
   mentioned (the app already sends through Resend).
 
-### DS-4 — Issue it
+### DS-4 — Issue it *(next)*
 
 Flatten the markup onto a copy of the PDF for transmittal, keeping the original
 object untouched. A markup register per sheet, printed in the house style, and
 the existing transmittal gains a "with comments" variant.
 
-### DS-5 — Put it where the work is
+### DS-5 — Put it where the work is ✅ shipped
 
 - `/projects/[id]/drawings` becomes the project's real drawing set.
 - `/design/architecture` gains a drawings area beside its deliverables, so an
@@ -132,3 +132,28 @@ DWG/DXF/RVT rendering (no browser parser worth depending on — see
 `docs/drawings-intake/01-FEASIBILITY.md` §5), OCR for scanned sheets, automatic
 sheet-set splitting of a bound PDF into separate rows (DS-0 reports the page
 count and reads page 1; splitting is DS-1's job), and clash detection.
+
+---
+
+## What shipped, and what is still open (23 SEP 2026)
+
+Shipped: DS-0, DS-1, DS-2, DS-5, and DS-3 except revision compare. Verified in a
+real browser against a local Postgres and a stand-in storage server: an A1 sheet
+rendered from its PDF, a revision cloud and a freehand redline drawn with the
+pointer, both still on the same rooms after a reload and after the view was
+fitted from 100% to 37%, a comment pinned to a point and resolved, and the
+intake screen reading `A-101`, `Ground Floor Plan`, `A1 landscape` and
+`FLOOR_PLAN` off the file.
+
+Still open:
+
+- **DS-4**: flattening markup onto a copy for issue, and a printed markup
+  register.
+- **Revision compare** (DS-3's last piece).
+- **Email on assignment or mention** — the app already sends through Resend;
+  the studio does not call it yet.
+- **A pre-existing 500 on `/drawings/intake`**, reproduced on `main` with none
+  of this work applied: the shell's sidebar calls `useSession` during the
+  server render of that one route and the document returns 500 before React
+  recovers on the client. The page works; the status code and the logged error
+  do not. Worth its own fix.

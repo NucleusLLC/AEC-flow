@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Download, FileStack, Eye } from "lucide-react";
+import Link from "next/link";
+import { Search, Download, FileStack, Eye, PenLine } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DrawingStatusBadge, FileTypeChip } from "@/components/drawings/badges";
@@ -200,7 +201,15 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-[11px] text-faint">{d.code}</span>
-                          <span className="truncate font-medium text-fg">{d.title}</span>
+                          <Link
+                            href={`/drawings/${d.id}`}
+                            className="truncate font-medium text-fg hover:text-brand hover:underline"
+                          >
+                            {d.title}
+                          </Link>
+                          {d.openComments > 0 ? (
+                            <Badge tone="amber">{d.openComments} open</Badge>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -257,6 +266,16 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {/* Review opens the studio — the PDF with its redlines and
+                          its comment thread. Preview stays for the quick look
+                          that does not need any of that. */}
+                      <Link
+                        href={`/drawings/${d.id}`}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-2.5 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90"
+                      >
+                        <PenLine className="h-3.5 w-3.5" />
+                        Review
+                      </Link>
                       <button
                         type="button"
                         onClick={() => setPreview(toPreview(d))}

@@ -58,6 +58,9 @@ export type Drawing = {
   paperOrientation: string | null;
   /** Pages in the uploaded PDF; more than one means a bound set. */
   pageCount: number | null;
+  /** Review comments still open on this sheet. The register's "needs work"
+   *  signal — zero is printed as nothing, not as a zero. */
+  openComments: number;
 };
 
 export type DrawingsSummary = {
