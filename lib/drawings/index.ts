@@ -146,3 +146,32 @@ export function extractDrawingMetadata(input: ExtractionInput): DrawingMetadataD
   }
   return merged;
 }
+
+// Drawing Studio DS-0: what the sheet is, read from the file itself.
+export {
+  PAPER_SIZES,
+  EXACT_TOLERANCE_MM,
+  NEAR_TOLERANCE_MM,
+  MM_PER_POINT,
+  detectPaperSize,
+  describePaper,
+  mmToPoints,
+  oneSizeUp,
+  pointsToMm,
+  undersizeWarning,
+  type DetectedPaper,
+  type PaperMatch,
+  type PaperOrientation,
+  type PaperSeries,
+  type PaperSize,
+} from "./paper";
+export {
+  SHEET_TYPES,
+  SHEET_TYPE_LABEL,
+  classifySheetType,
+  isConfidentClassification,
+  normaliseForMatch,
+  type SheetType,
+  type SheetTypeInput,
+} from "./sheet-type";
+export { type SheetFacts } from "./persistence";

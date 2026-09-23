@@ -40,8 +40,9 @@ export const serverIntakeRepository: DrawingIntakeRepository = {
   async analyseUpload(input): Promise<UploadAnalysis> {
     const result = await analyseDrawingAction(input);
     if (!result.ok) throw new Error(result.error);
-    const { draft, usedTitleBlockText, hasTextLayer, note } = result.analysis;
-    return { proposed: draft, usedTitleBlockText, hasTextLayer, note };
+    const { draft, usedTitleBlockText, hasTextLayer, note, paper, pageCount, sheetType, sheetTypeSource } =
+      result.analysis;
+    return { proposed: draft, usedTitleBlockText, hasTextLayer, note, paper, pageCount, sheetType, sheetTypeSource };
   },
 
   async discardUpload(projectId: string, storageKey: string): Promise<void> {
@@ -60,6 +61,7 @@ export const serverIntakeRepository: DrawingIntakeRepository = {
       audit: input.audit,
       sheetDiscipline: input.metadata.sheetDiscipline ?? null,
       supersedes: input.supersedes,
+      sheet: input.sheet ?? null,
     });
     if (!result.ok) throw new Error(result.error);
     return { id: result.id };

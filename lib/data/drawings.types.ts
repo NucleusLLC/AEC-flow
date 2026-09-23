@@ -47,6 +47,17 @@ export type Drawing = {
   uploadedAt: string; // ISO yyyy-mm-dd
   /** True once the bytes live in storage and can be downloaded. */
   hasFile: boolean;
+  /** What the sheet IS, read off the file at intake (DS-0). Null for a row
+   *  uploaded before that existed, for a CAD file, or for a sheet nothing
+   *  could classify — and the register prints nothing rather than a guess. */
+  sheetType: string | null;
+  /** `rules`, `ai` or `manual` — who said so. */
+  sheetTypeSource: string | null;
+  /** The plot sheet, e.g. `A1`, with its orientation. Null when unmeasured. */
+  paperSize: string | null;
+  paperOrientation: string | null;
+  /** Pages in the uploaded PDF; more than one means a bound set. */
+  pageCount: number | null;
 };
 
 export type DrawingsSummary = {

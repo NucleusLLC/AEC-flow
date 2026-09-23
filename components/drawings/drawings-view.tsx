@@ -5,6 +5,7 @@ import { Search, Download, FileStack, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DrawingStatusBadge, FileTypeChip } from "@/components/drawings/badges";
+import { SHEET_TYPE_LABEL, type SheetType } from "@/lib/drawings/sheet-type";
 import { DocumentPreview, type PreviewDoc } from "@/components/preview/document-preview";
 import { EmailButton } from "@/components/email/email-button";
 import {
@@ -179,6 +180,8 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                 <th className="px-5 py-2.5 font-medium">Drawing</th>
                 <th className="px-3 py-2.5 font-medium">Project</th>
                 <th className="px-3 py-2.5 font-medium">Discipline</th>
+                <th className="px-3 py-2.5 font-medium">Type</th>
+                <th className="px-3 py-2.5 font-medium">Sheet</th>
                 <th className="px-3 py-2.5 font-medium text-center">Rev</th>
                 <th className="px-3 py-2.5 font-medium">Status</th>
                 <th className="px-3 py-2.5 font-medium">File</th>
@@ -206,6 +209,36 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                     <span className="font-mono text-[11px] text-muted">{d.projectNumber}</span>
                   </td>
                   <td className="px-3 py-3 text-muted">{DISCIPLINE_LABEL[d.discipline]}</td>
+                  <td className="px-3 py-3">
+                    {/* Read off the sheet at intake. A row that predates the
+                        reader, or one nothing could classify, prints an em dash
+                        rather than a plausible-looking guess. */}
+                    {d.sheetType ? (
+                      <span className="text-muted">
+                        {SHEET_TYPE_LABEL[d.sheetType as SheetType] ?? d.sheetType}
+                      </span>
+                    ) : (
+                      <span className="text-faint">—</span>
+                    )}
+                    {d.sheetTypeSource === "ai" ? (
+                      <span className="ml-1.5 align-middle text-[10px] uppercase tracking-wide text-violet-600">
+                        AI
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-3">
+                    {d.paperSize ? (
+                      <span className="text-muted">
+                        {d.paperSize}
+                        {d.paperOrientation === "portrait" ? " P" : d.paperOrientation === "landscape" ? " L" : ""}
+                      </span>
+                    ) : (
+                      <span className="text-faint">—</span>
+                    )}
+                    {d.pageCount && d.pageCount > 1 ? (
+                      <div className="text-[10px] text-faint">{d.pageCount} pages</div>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-3 text-center">
                     <Badge tone="neutral">Rev {d.revision}</Badge>
                   </td>

@@ -32,6 +32,11 @@ type DrawingRow = {
   storageKey: string;
   uploadedByName: string | null;
   uploadedAt: Date;
+  sheetType: string | null;
+  sheetTypeSource: string | null;
+  paperSize: string | null;
+  paperOrientation: string | null;
+  pageCount: number | null;
   project: { projectNumber: string; name: string } | null;
 };
 
@@ -48,6 +53,11 @@ const SELECT = {
   storageKey: true,
   uploadedByName: true,
   uploadedAt: true,
+  sheetType: true,
+  sheetTypeSource: true,
+  paperSize: true,
+  paperOrientation: true,
+  pageCount: true,
   project: { select: { projectNumber: true, name: true } },
 } as const;
 
@@ -67,6 +77,11 @@ function toDrawing(row: DrawingRow): Drawing {
     uploadedBy: row.uploadedByName ?? "—",
     uploadedAt: row.uploadedAt.toISOString().slice(0, 10),
     hasFile: row.storageKey.length > 0,
+    sheetType: row.sheetType,
+    sheetTypeSource: row.sheetTypeSource,
+    paperSize: row.paperSize,
+    paperOrientation: row.paperOrientation,
+    pageCount: row.pageCount,
   };
 }
 
