@@ -1,10 +1,10 @@
 -- 0020_time_expenses.sql
 --
 -- Finance F3: the hours the practice works and the money it lays out. Two new
--- tables, two new enums, two new columns on "users".
+-- tables, two new enums, two new columns on "User".
 --
 -- Purely additive: the only change to an existing table is two NULLable rate
--- columns on "users", so it is safe to run against a live database and safe to
+-- columns on "User", so it is safe to run against a live database and safe to
 -- run before the code that uses it reaches production.
 --
 -- NO FOREIGN KEY TO "invoices". When hours or an expense are billed, the
@@ -31,8 +31,12 @@ CREATE TYPE "ExpenseCategory" AS ENUM ('TRAVEL', 'ACCOMMODATION', 'MEALS', 'PRIN
 -- which is not the same as zero — an entry saved against a rateless person is
 -- worth nothing until somebody sets one, and the screens say so rather than
 -- printing a confident 0.00.
-ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "chargeOutRate" DECIMAL(65,30);
-ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "costRate" DECIMAL(65,30);
+-- NOTE THE QUOTED "User". Most tables in this schema carry an @@map to a
+-- snake_case name; the User model does not, so its table is PascalCase and
+-- unquoted `users` does not exist. Caught by rehearsing this file against a
+-- throwaway copy of production's schema before it was run for real.
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "chargeOutRate" DECIMAL(65,30);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "costRate" DECIMAL(65,30);
 
 -- CreateTable
 CREATE TABLE "time_entries" (
