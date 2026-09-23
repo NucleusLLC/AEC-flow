@@ -2464,6 +2464,29 @@ enum DrawingFileType {
   RVT
 }
 
+/// What kind of drawing a sheet is. Read from the title block by
+/// `lib/drawings/sheet-type.ts` (English, Dutch and Spanish), with Claude as a
+/// tie-break when the wording matches no known phrase.
+enum DrawingSheetType {
+  COVER
+  GENERAL_NOTES
+  SITE_PLAN
+  DEMOLITION
+  FLOOR_PLAN
+  ROOF_PLAN
+  REFLECTED_CEILING_PLAN
+  FOUNDATION_PLAN
+  ELEVATION
+  SECTION
+  DETAIL
+  SCHEDULE
+  DIAGRAM
+  THREE_D
+  SURVEY
+  LANDSCAPE
+  OTHER
+}
+
 model Drawing {
   companyId String?
   id        String  @id @default(cuid())
@@ -2479,6 +2502,26 @@ model Drawing {
   revision        String                @default("-")
   status          DrawingRegisterStatus @default(DRAFT)
   issueDate       DateTime?
+
+  /// WHAT THE SHEET IS, read from the file itself (docs/drawings-studio/PLAN.md
+  /// DS-0). Null means nobody could tell — a CAD file, a scan, or a page whose
+  /// media box was unreadable — and null is never shown as a confident answer.
+  sheetType       DrawingSheetType?
+  /// `rules`, `ai` or `manual`: where the type came from, so a register can be
+  /// audited and a model's opinion is never mistaken for a reading.
+  sheetTypeSource String?
+
+  /// THE PLOT SHEET, from the PDF media box. `paperSize` is the NAME (`A1`,
+  /// `ANSI D`) and the millimetres are the page as measured, which is not the
+  /// same thing: a trimmed sheet is an A1 that is 2 mm short.
+  paperSize        String?
+  paperSeries      String?
+  paperOrientation String?
+  paperWidthMm     Decimal?
+  paperHeightMm    Decimal?
+  /// Pages in the uploaded PDF. 1 for a single plotted sheet; more means a
+  /// bound set, and the register says so rather than pretending it is one sheet.
+  pageCount        Int?
 
   /// Storage object key inside the private bucket. NOT a URL — reads are served
   /// as short-lived signed URLs minted per request.
@@ -2515,6 +2558,7 @@ model Drawing {
   @@index([projectId])
   @@index([status])
   @@index([discipline])
+  @@index([companyId, sheetType])
   @@map("drawings")
 }
 
