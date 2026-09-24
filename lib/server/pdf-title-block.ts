@@ -58,6 +58,11 @@ export type TitleBlockRead =
       /** True when the strips were empty and the whole page was used instead. */
       usedWholePage: boolean;
       pageCount: number;
+      /** Page 1's media box, in POINTS. The sheet size lives here and nowhere
+       *  else — `lib/drawings/paper.ts` turns it into a named size. Zero when
+       *  the page reported no geometry. */
+      pageWidthPt: number;
+      pageHeightPt: number;
     }
   | { ok: false; reason: string };
 
@@ -107,6 +112,8 @@ export async function readTitleBlock(bytes: Uint8Array): Promise<TitleBlockRead>
       charCount: doc.charCount,
       usedWholePage: region.usedWholePage,
       pageCount: doc.pageCount,
+      pageWidthPt: Number(page?.width) || 0,
+      pageHeightPt: Number(page?.height) || 0,
     };
   } catch (err) {
     const reason = err instanceof Error && err.message ? err.message : "The PDF could not be read.";

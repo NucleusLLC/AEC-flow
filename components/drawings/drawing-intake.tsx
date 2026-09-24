@@ -38,7 +38,7 @@
  */
 
 import { useCallback, useId, useMemo, useRef, useState } from "react";
-import { FileStack, FileWarning, Info, ScanSearch, Trash2, UploadCloud } from "lucide-react";
+import { FileStack, FileWarning, Info, Ruler, ScanSearch, Trash2, UploadCloud } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,12 @@ import {
   type ProposalValues,
   type SheetDiscipline,
   toDataDiscipline,
+  SHEET_TYPES,
+  SHEET_TYPE_LABEL,
+  describePaper,
+  type DetectedPaper,
+  type SheetFacts,
+  type SheetType,
 } from "@/lib/drawings";
 
 /* ------------------------------------------------------------------ *
@@ -99,6 +105,13 @@ type IntakeItem = {
   /** True only when the server really read title-block text and used it. Goes
    *  into the audit verbatim, so it must not mean "we tried". */
   usedTitleBlockText: boolean;
+  /** What the file says it is: the plot sheet, the page count, the kind of
+   *  drawing. Read by the server (DS-0), corrected here by the user. */
+  sheet: SheetFacts | null;
+  /** The measured page, kept whole so the row can explain a "near" match. */
+  paper: DetectedPaper | null;
+  /** The proposal's evidence, so the type chip can say why it thinks so. */
+  sheetTypeField: Field<SheetType> | null;
 };
 
 export type DrawingIntakeResult = {
@@ -109,6 +122,8 @@ export type DrawingIntakeResult = {
   projectName: string;
   audit: DrawingExtractionAudit;
   supersedes?: string;
+  /** Plot size, page count and kind of drawing, as read and confirmed. */
+  sheet?: SheetFacts | null;
 };
 
 export type DrawingIntakeProps = {
@@ -164,7 +179,11 @@ function ConfidenceChip({
   );
 }
 
-function EvidenceLine({ field }: { field: Field<string> | Field<SheetDiscipline> | null }) {
+function EvidenceLine({
+  field,
+}: {
+  field: Field<string> | Field<SheetDiscipline> | Field<SheetType> | null;
+}) {
   if (!field || field.evidence.length === 0) return null;
   const e = field.evidence[0];
   const extra = field.alternates.length > 0 ? ` · also saw ${field.alternates.map((a) => String(a.value)).join(", ")}` : "";
@@ -207,6 +226,44 @@ function SourceLine({ item }: { item: IntakeItem }) {
   );
 }
 
+/**
+ * The plot sheet, as measured. A separate line from `SourceLine` because it
+ * answers a different question — not "was the drawing read" but "what size is
+ * it" — and because it is true even for a scan: the media box does not need a
+ * text layer.
+ */
+function PaperLine({ item }: { item: IntakeItem }) {
+  const paper = item.paper;
+  if (!paper || paper.confidence === 0) return null;
+  const pages = item.sheet?.pageCount ?? null;
+  return (
+    <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-snug text-faint">
+      <Ruler className="h-3 w-3 shrink-0" aria-hidden="true" />
+      <span>
+        {describePaper(paper)} · {paper.widthMm} × {paper.heightMm} mm
+        {paper.match === "near" ? ` · ${paper.deviationMm} mm off nominal` : ""}
+        {paper.match === "custom" ? " · non-standard sheet" : ""}
+        {pages && pages > 1 ? ` · ${pages} pages` : ""}
+      </span>
+    </p>
+  );
+}
+
+/** Where the drawing type came from: the lexicon, a model, or the user. */
+function SheetTypeChip({ item }: { item: IntakeItem }) {
+  const source = item.sheet?.sheetTypeSource ?? null;
+  if (source === "manual") return <Badge tone="blue">edited</Badge>;
+  if (source === "ai") return <Badge tone="violet">AI · confirm</Badge>;
+  const f = item.sheetTypeField;
+  if (!f) return <Badge tone="slate">not found</Badge>;
+  const tone = f.band === "high" ? "green" : f.band === "medium" ? "amber" : "slate";
+  return (
+    <Badge tone={tone}>
+      {f.band} · {Math.round(f.confidence * 100)}%
+    </Badge>
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * One proposed row
  * ------------------------------------------------------------------ */
@@ -221,12 +278,14 @@ function ProposalRow({
   onRemove,
   onLookup,
   onSupersedeChange,
+  onSheetTypeChange,
 }: {
   item: IntakeItem;
   onChange: (id: string, key: DraftFieldKey, value: string) => void;
   onRemove: (id: string) => void;
   onLookup: (id: string, sheetNumber: string) => void;
   onSupersedeChange: (id: string, supersedes: string | undefined) => void;
+  onSheetTypeChange: (id: string, type: SheetType | "") => void;
 }) {
   const uid = useId();
   const isEdited = (k: DraftFieldKey) => item.edited.includes(k);
@@ -283,6 +342,7 @@ function ProposalRow({
               {item.kind !== "PDF" ? " · filename only — the content cannot be read" : ""}
             </p>
             <SourceLine item={item} />
+            <PaperLine item={item} />
           </div>
         </div>
         <button
@@ -322,6 +382,31 @@ function ProposalRow({
             ))}
           </select>
           <EvidenceLine field={item.draft.discipline} />
+        </div>
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <label
+              htmlFor={`${uid}-sheet-type`}
+              className="text-[11px] font-medium uppercase tracking-wide text-faint"
+            >
+              Drawing type
+            </label>
+            <SheetTypeChip item={item} />
+          </div>
+          <select
+            id={`${uid}-sheet-type`}
+            value={item.sheet?.sheetType ?? ""}
+            onChange={(e) => onSheetTypeChange(item.id, e.target.value as SheetType | "")}
+            className={cn(inputClass, "mt-1")}
+          >
+            <option value="">— not set —</option>
+            {SHEET_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {SHEET_TYPE_LABEL[t]}
+              </option>
+            ))}
+          </select>
+          <EvidenceLine field={item.sheetTypeField} />
         </div>
         {textField("projectNumber", "Project number", "ZA-2026-121")}
         {textField("projectName", "Project name", "Marina Heights Tower")}
@@ -454,12 +539,28 @@ export function DrawingIntake({
             // The user may already be typing. `applyProposal` decides what the
             // better proposal is allowed to overwrite — see lib/drawings/proposal.ts.
             const applied = applyProposal({ values: i.values, edited: i.edited, next: analysis.proposed });
+            const paper = analysis.paper ?? null;
             return {
               ...i,
               draft: analysis.proposed,
               values: applied.values,
               edited: applied.edited,
               usedTitleBlockText: analysis.usedTitleBlockText,
+              paper,
+              sheetTypeField: analysis.sheetType ?? null,
+              // The measured sheet is recorded as measured. Only the TYPE is
+              // editable below, because a user correcting a media box would be
+              // overwriting a measurement with an opinion.
+              sheet: {
+                sheetType: analysis.sheetType?.value ?? null,
+                sheetTypeSource: analysis.sheetTypeSource ?? null,
+                paperSize: paper && paper.confidence > 0 ? paper.size.name : null,
+                paperSeries: paper && paper.confidence > 0 ? paper.size.series : null,
+                paperOrientation: paper && paper.confidence > 0 ? paper.orientation : null,
+                paperWidthMm: paper && paper.confidence > 0 ? paper.widthMm : null,
+                paperHeightMm: paper && paper.confidence > 0 ? paper.heightMm : null,
+                pageCount: analysis.pageCount ?? null,
+              },
               stage: "ready",
               stageNote: analysis.note,
             };
@@ -524,6 +625,9 @@ export function DrawingIntake({
         existing: null,
         stage: "idle",
         usedTitleBlockText: false,
+        sheet: null,
+        paper: null,
+        sheetTypeField: null,
       });
     });
 
@@ -591,6 +695,37 @@ export function DrawingIntake({
     [items, repository, projectId],
   );
 
+  /**
+   * The user corrects the drawing type.
+   *
+   * Choosing the SAME value the machine proposed is not an edit — it is
+   * agreement — so the source only flips to `manual` when the value actually
+   * differs. That keeps the audit honest: `manual` has to mean "a human
+   * disagreed", or the number of corrections stops measuring anything.
+   */
+  const onSheetTypeChange = useCallback((id: string, type: SheetType | "") => {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        const proposed = i.sheetTypeField?.value ?? null;
+        const value = type === "" ? null : type;
+        const agreed = value !== null && value === proposed;
+        return {
+          ...i,
+          sheet: {
+            ...(i.sheet ?? {}),
+            sheetType: value,
+            sheetTypeSource: agreed
+              ? (i.sheet?.sheetTypeSource ?? "rules")
+              : value === null
+                ? null
+                : "manual",
+          },
+        };
+      }),
+    );
+  }, []);
+
   const onSupersedeChange = useCallback((id: string, supersedes: string | undefined) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, supersedes } : i)));
   }, []);
@@ -623,9 +758,12 @@ export function DrawingIntake({
   const confirm = useCallback(async () => {
     if (items.length === 0 || incomplete.length > 0) return;
 
-    const results: Array<DrawingIntakeResult & { itemId: string; staged?: { storageKey: string; mimeType: string } }> = items.map((item) => ({
+    const results: Array<
+      DrawingIntakeResult & { itemId: string; staged?: { storageKey: string; mimeType: string } }
+    > = items.map((item) => ({
       itemId: item.id,
       staged: item.upload,
+      sheet: item.sheet,
       file: item.file,
       kind: item.kind,
       supersedes: item.supersedes,
@@ -718,6 +856,7 @@ export function DrawingIntake({
           metadata: r.metadata,
           audit: r.audit,
           supersedes: r.supersedes,
+          sheet: r.sheet ?? null,
         });
         saved.add(r.file.name);
       }
@@ -836,6 +975,7 @@ export function DrawingIntake({
                 onRemove={removeItem}
                 onLookup={onLookup}
                 onSupersedeChange={onSupersedeChange}
+                onSheetTypeChange={onSheetTypeChange}
               />
             ))}
 

@@ -32,7 +32,10 @@ import { prisma } from "@/lib/db";
 import { validateUpload } from "@/lib/drawings/upload-policy";
 import { buildStorageKey, isKeyForProject } from "@/lib/drawings/storage-key";
 import { extractDrawingMetadata } from "@/lib/drawings";
-import type { DrawingMetadataDraft } from "@/lib/drawings/types";
+import type { DrawingMetadataDraft, Field } from "@/lib/drawings/types";
+import { detectPaperSize, undersizeWarning, type DetectedPaper } from "@/lib/drawings/paper";
+import { classifySheetType, type SheetType } from "@/lib/drawings/sheet-type";
+import { classifySheetTypeWithAi, shouldAskModel } from "@/lib/server/sheet-type-ai";
 import { PDF_PARSE_MAX_BYTES, readTitleBlock } from "@/lib/server/pdf-title-block";
 import type {
   ConfirmedDrawingMetadata,
@@ -196,6 +199,15 @@ export type DrawingAnalysis = {
   /** `true`/`false` for a PDF that was opened; `null` when nothing was opened
    *  (a DWG, an unreadable file, a deployment with no reader). */
   hasTextLayer: boolean | null;
+  /** The plot sheet, read from the PDF media box. Null for anything that was
+   *  not opened as a PDF — a DWG has no page to measure. */
+  paper: DetectedPaper | null;
+  /** Pages in the PDF. More than one means a bound set, not a sheet. */
+  pageCount: number | null;
+  /** What kind of drawing this is, and who said so. `manual` never appears
+   *  here — it is what the register records once a human has corrected it. */
+  sheetType: Field<SheetType> | null;
+  sheetTypeSource: "rules" | "ai" | null;
   /** One line for the user, explaining where the values came from. */
   note: string;
 };
@@ -228,12 +240,27 @@ export async function analyseUploadedDrawing(input: {
   }
 
   const filename = String(input.filename ?? "");
-  const fallback = (note: string, hasTextLayer: boolean | null = null): DrawingAnalysis => ({
-    draft: extractDrawingMetadata({ filename }),
-    usedTitleBlockText: false,
-    hasTextLayer,
-    note,
-  });
+
+  /** A result built from the filename alone. Every early exit goes through it
+   *  so no path forgets to classify what little it has. */
+  const fallback = (note: string, hasTextLayer: boolean | null = null): DrawingAnalysis => {
+    const draft = extractDrawingMetadata({ filename });
+    const sheetType = classifySheetType({
+      filename,
+      title: draft.title?.value ?? null,
+      sheetNumber: draft.sheetNumber?.value ?? null,
+    });
+    return {
+      draft,
+      usedTitleBlockText: false,
+      hasTextLayer,
+      paper: null,
+      pageCount: null,
+      sheetType,
+      sheetTypeSource: sheetType ? "rules" : null,
+      note,
+    };
+  };
 
   // DWG, DXF and RVT are closed binary formats with no JavaScript parser worth
   // depending on — see the feasibility doc §5. The filename is genuinely all
@@ -259,6 +286,51 @@ export async function analyseUploadedDrawing(input: {
     pdfHadTextLayer: read.hasTextLayer,
   });
 
+  // THE SHEET SIZE DOES NOT NEED A TEXT LAYER. It is the media box, so a scan
+  // and an outlined plot both give it up — which is why it is measured here,
+  // before the text-layer branches below, and not inside them.
+  const paper = detectPaperSize(read.pageWidthPt, read.pageHeightPt);
+  const undersize = undersizeWarning(paper);
+  if (undersize) draft.warnings.push(undersize);
+  if (read.pageCount > 1) {
+    draft.warnings.push(
+      `This PDF has ${read.pageCount} pages. It was read as one sheet — page 1 — so the rest ` +
+        `are stored but not indexed as their own sheets.`,
+    );
+  }
+
+  /** Rules first, a model only where the rules could not read the wording. */
+  const classify = async (): Promise<{ f: Field<SheetType> | null; source: "rules" | "ai" | null }> => {
+    const byRules = classifySheetType({
+      filename,
+      title: draft.title?.value ?? null,
+      titleBlockText: titleBlockText || null,
+      sheetNumber: draft.sheetNumber?.value ?? null,
+    });
+    if (
+      !shouldAskModel({
+        ruleConfidence: byRules?.confidence ?? null,
+        hasTextLayer: read.hasTextLayer,
+        titleBlockText,
+      })
+    ) {
+      return { f: byRules, source: byRules ? "rules" : null };
+    }
+    const byAi = await classifySheetTypeWithAi({
+      title: draft.title?.value ?? null,
+      titleBlockText,
+      sheetNumber: draft.sheetNumber?.value ?? null,
+    });
+    // The model is a tie-break, not an override: if it agrees with the rules,
+    // the rules' evidence is the better thing to show, and if it is silent the
+    // rules' answer stands.
+    if (!byAi) return { f: byRules, source: byRules ? "rules" : null };
+    if (byRules && byRules.value === byAi.value) return { f: byRules, source: "rules" };
+    return { f: byAi, source: "ai" };
+  };
+
+  const { f: sheetType, source: sheetTypeSource } = await classify();
+
   if (!read.hasTextLayer) {
     // Not an error. `extractDrawingMetadata` has already put the OCR warning at
     // the top of `draft.warnings`; this line is the short version next to the file.
@@ -266,7 +338,11 @@ export async function analyseUploadedDrawing(input: {
       draft,
       usedTitleBlockText: false,
       hasTextLayer: false,
-      note: "No text layer — this is a scan. Only the filename could be read.",
+      paper,
+      pageCount: read.pageCount,
+      sheetType,
+      sheetTypeSource,
+      note: `No text layer — this is a scan. ${paper.note} Everything else came from the filename.`,
     };
   }
 
@@ -275,7 +351,11 @@ export async function analyseUploadedDrawing(input: {
       draft,
       usedTitleBlockText: false,
       hasTextLayer: true,
-      note: "The PDF has text, but nothing was found in the title-block region.",
+      paper,
+      pageCount: read.pageCount,
+      sheetType,
+      sheetTypeSource,
+      note: `The PDF has text, but nothing was found in the title-block region. ${paper.note}`,
     };
   }
 
@@ -283,9 +363,13 @@ export async function analyseUploadedDrawing(input: {
     draft,
     usedTitleBlockText: true,
     hasTextLayer: true,
+    paper,
+    pageCount: read.pageCount,
+    sheetType,
+    sheetTypeSource,
     note: read.usedWholePage
-      ? "Read from the whole page — no title block was found in the usual corners."
-      : "Read from the title block on page 1.",
+      ? `Read from the whole page — no title block was found in the usual corners. ${paper.note}`
+      : `Read from the title block on page 1. ${paper.note}`,
   };
 }
 
@@ -322,6 +406,22 @@ export type RegisterDrawingArgs = {
   sheetDiscipline?: string | null;
   /** Id of the drawing this one replaces; it is marked SUPERSEDED. */
   supersedes?: string;
+  /**
+   * What was read off the sheet, as the user confirmed it: the plot size, the
+   * page count and the kind of drawing. Absent means "nothing was read", which
+   * is stored as nulls rather than as a guess.
+   */
+  sheet?: {
+    sheetType?: SheetType | null;
+    /** `rules`, `ai`, or `manual` when the user changed what was proposed. */
+    sheetTypeSource?: "rules" | "ai" | "manual" | null;
+    paperSize?: string | null;
+    paperSeries?: string | null;
+    paperOrientation?: string | null;
+    paperWidthMm?: number | null;
+    paperHeightMm?: number | null;
+    pageCount?: number | null;
+  } | null;
 };
 
 export async function registerDrawing(args: RegisterDrawingArgs): Promise<{ id: string }> {
@@ -364,6 +464,14 @@ export async function registerDrawing(args: RegisterDrawingArgs): Promise<{ id: 
           mimeType: object.mimeType || args.mimeType || "application/octet-stream",
           sizeBytes: object.sizeBytes,
           fileType,
+          sheetType: args.sheet?.sheetType ?? null,
+          sheetTypeSource: args.sheet?.sheetTypeSource ?? null,
+          paperSize: args.sheet?.paperSize ?? null,
+          paperSeries: args.sheet?.paperSeries ?? null,
+          paperOrientation: args.sheet?.paperOrientation ?? null,
+          paperWidthMm: args.sheet?.paperWidthMm ?? null,
+          paperHeightMm: args.sheet?.paperHeightMm ?? null,
+          pageCount: args.sheet?.pageCount ?? null,
           extractionAudit: (args.audit ?? null) as unknown as Prisma.InputJsonValue,
           uploadedById: session?.user?.id ?? null,
           uploadedByName: session?.user?.name ?? session?.user?.email ?? null,

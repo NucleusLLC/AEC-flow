@@ -43,6 +43,12 @@ export default defineConfig({
       "lib/drawings/extraction.test.ts",
       "lib/drawings/intake.test.ts",
       "lib/drawings/storage-key.test.ts",
+      // Drawing Studio DS-0: the plot sheet read off the media box, and the
+      // three-language classifier that says what kind of drawing a sheet is.
+      "lib/drawings/paper.test.ts",
+      "lib/drawings/sheet-type.test.ts",
+      // Redline geometry: PDF user space, stroke thinning, clouds, measuring.
+      "lib/drawings/markup.test.ts",
       // Re-proposal: what happens to a half-filled intake form when the
       // server's title-block reading lands after the filename's. Named file,
       // same reason as those above.

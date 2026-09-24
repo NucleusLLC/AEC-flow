@@ -27,7 +27,9 @@
  */
 
 import type { Discipline, DrawingStatus, FileType } from "@/lib/data/drawings.types";
-import type { DraftFieldKey, DrawingMetadataDraft } from "./types";
+import type { DraftFieldKey, DrawingMetadataDraft, Field } from "./types";
+import type { DetectedPaper } from "./paper";
+import type { SheetType } from "./sheet-type";
 
 /** Metadata as confirmed by a human, ready to store. No confidences: by this
  *  point every value is asserted, not proposed. */
@@ -87,6 +89,26 @@ export type RegisterDrawingInput = {
   audit: DrawingExtractionAudit;
   /** Id of the drawing this one replaces; it is marked SUPERSEDED. */
   supersedes?: string;
+  /** What was read off the sheet — plot size, page count, kind of drawing —
+   *  as the user confirmed it. Omitted when nothing could be read. */
+  sheet?: SheetFacts | null;
+};
+
+/**
+ * The sheet as the file describes itself. Separate from `ConfirmedDrawingMetadata`
+ * because none of it is typed by a human: it is measured (the media box) or
+ * classified (the title-block wording), and the only human input is a
+ * correction — which is what `sheetTypeSource: "manual"` records.
+ */
+export type SheetFacts = {
+  sheetType?: SheetType | null;
+  sheetTypeSource?: "rules" | "ai" | "manual" | null;
+  paperSize?: string | null;
+  paperSeries?: string | null;
+  paperOrientation?: string | null;
+  paperWidthMm?: number | null;
+  paperHeightMm?: number | null;
+  pageCount?: number | null;
 };
 
 export type ExistingSheet = {
@@ -111,6 +133,14 @@ export type UploadAnalysis = {
   hasTextLayer: boolean | null;
   /** One line for the user saying where the values came from. */
   note: string;
+  /** The plot sheet, measured from the PDF media box. Null when nothing was
+   *  opened as a PDF. */
+  paper?: DetectedPaper | null;
+  /** Pages in the PDF; more than one means a bound set, not a sheet. */
+  pageCount?: number | null;
+  /** What kind of drawing this is, with its evidence, and who said so. */
+  sheetType?: Field<SheetType> | null;
+  sheetTypeSource?: "rules" | "ai" | null;
 };
 
 /**

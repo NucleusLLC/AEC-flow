@@ -3,7 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Plus, Printer } from "lucide-react";
 import { listDeliverables } from "@/lib/data/design";
+import { getDrawingsByDiscipline } from "@/lib/data/drawings";
 import { DeliverableList } from "@/components/design/deliverable-list";
+import { DisciplineDrawings } from "@/components/drawings/discipline-drawings";
+import type { Discipline as DrawingDiscipline } from "@/lib/data/drawings.types";
 import { DISCIPLINE_LABEL, DISCIPLINE_SLUG, disciplineFromSlug } from "@/lib/design/types";
 
 export async function generateMetadata({
@@ -25,7 +28,18 @@ export default async function DisciplineRegisterPage({
   const discipline = disciplineFromSlug(slug);
   if (!discipline) notFound();
 
-  const items = await listDeliverables({ discipline });
+  // A design discipline is coarser than a drawing one: "Engineering" covers the
+  // structural, MEP and civil sheets that arrive as separate prefixes.
+  const DRAWING_DISCIPLINES: Record<typeof discipline, DrawingDiscipline[]> = {
+    ARCHITECTURE: ["ARCHITECTURE"],
+    ENGINEERING: ["STRUCTURAL", "MEP", "CIVIL"],
+    INTERIOR: ["INTERIOR"],
+  };
+
+  const [items, drawings] = await Promise.all([
+    listDeliverables({ discipline }),
+    getDrawingsByDiscipline(DRAWING_DISCIPLINES[discipline] ?? []),
+  ]);
 
   return (
     <div className="w-full space-y-6">
@@ -58,6 +72,17 @@ export default async function DisciplineRegisterPage({
       </div>
 
       <DeliverableList items={items} />
+
+      <div className="space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-fg">Drawings</h3>
+          <p className="text-sm text-muted">
+            What has actually landed, by project — as opposed to the deliverables above, which are
+            what this discipline undertook to produce.
+          </p>
+        </div>
+        <DisciplineDrawings drawings={drawings} />
+      </div>
     </div>
   );
 }

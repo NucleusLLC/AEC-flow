@@ -11,7 +11,15 @@ export default function AnnotatePage() {
         <div>
           <h2 className="text-xl font-semibold text-fg">Annotate drawing</h2>
           <p className="text-sm text-muted">
-            Mark up a drawing with pen, shapes and text — then print or save to PDF at A1–A4.
+            A scratch pad: drop an image, scribble on it, print it. Nothing here is saved.
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            To mark up a drawing that is <em>on the register</em> — with redlines that persist, are
+            attributed, and can be replied to — open the sheet from{" "}
+            <Link href="/drawings" className="text-brand hover:underline">
+              Drawings
+            </Link>{" "}
+            and press Review.
           </p>
         </div>
         <Link

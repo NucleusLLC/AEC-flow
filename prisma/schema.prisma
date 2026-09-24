@@ -286,23 +286,23 @@ model User {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  sessions         Session[]
-  passwordResets   PasswordResetToken[]
+  sessions           Session[]
+  passwordResets     PasswordResetToken[]
   emailVerifications EmailVerificationToken[]
   /// When this address was confirmed by opening an emailed link. Null = never.
   /// Every account that existed before verification shipped was backfilled to its
   /// creation time (prisma/sql/0019_email_verification.sql) — nobody was asked to
   /// re-prove an address they have been using for months.
-  emailVerifiedAt  DateTime?
-  managedProjects  Project[]            @relation("ProjectManager")
-  phases           PhaseAssignment[]
-  leaveRequests    LeaveRequest[]
-  meetingsAsAuthor MeetingMinute[]
-  actionItems      ActionItem[]
-  proposals        Proposal[]           @relation("ProposalOwner")
-  followUps        Proposal[]           @relation("FollowUpOwner")
-  activityLogs     ActivityLog[]
-  notifications    Notification[]
+  emailVerifiedAt    DateTime?
+  managedProjects    Project[]                @relation("ProjectManager")
+  phases             PhaseAssignment[]
+  leaveRequests      LeaveRequest[]
+  meetingsAsAuthor   MeetingMinute[]
+  actionItems        ActionItem[]
+  proposals          Proposal[]               @relation("ProposalOwner")
+  followUps          Proposal[]               @relation("FollowUpOwner")
+  activityLogs       ActivityLog[]
+  notifications      Notification[]
 }
 
 model Session {
@@ -2464,6 +2464,29 @@ enum DrawingFileType {
   RVT
 }
 
+/// What kind of drawing a sheet is. Read from the title block by
+/// `lib/drawings/sheet-type.ts` (English, Dutch and Spanish), with Claude as a
+/// tie-break when the wording matches no known phrase.
+enum DrawingSheetType {
+  COVER
+  GENERAL_NOTES
+  SITE_PLAN
+  DEMOLITION
+  FLOOR_PLAN
+  ROOF_PLAN
+  REFLECTED_CEILING_PLAN
+  FOUNDATION_PLAN
+  ELEVATION
+  SECTION
+  DETAIL
+  SCHEDULE
+  DIAGRAM
+  THREE_D
+  SURVEY
+  LANDSCAPE
+  OTHER
+}
+
 model Drawing {
   companyId String?
   id        String  @id @default(cuid())
@@ -2479,6 +2502,26 @@ model Drawing {
   revision        String                @default("-")
   status          DrawingRegisterStatus @default(DRAFT)
   issueDate       DateTime?
+
+  /// WHAT THE SHEET IS, read from the file itself (docs/drawings-studio/PLAN.md
+  /// DS-0). Null means nobody could tell — a CAD file, a scan, or a page whose
+  /// media box was unreadable — and null is never shown as a confident answer.
+  sheetType       DrawingSheetType?
+  /// `rules`, `ai` or `manual`: where the type came from, so a register can be
+  /// audited and a model's opinion is never mistaken for a reading.
+  sheetTypeSource String?
+
+  /// THE PLOT SHEET, from the PDF media box. `paperSize` is the NAME (`A1`,
+  /// `ANSI D`) and the millimetres are the page as measured, which is not the
+  /// same thing: a trimmed sheet is an A1 that is 2 mm short.
+  paperSize        String?
+  paperSeries      String?
+  paperOrientation String?
+  paperWidthMm     Decimal?
+  paperHeightMm    Decimal?
+  /// Pages in the uploaded PDF. 1 for a single plotted sheet; more means a
+  /// bound set, and the register says so rather than pretending it is one sheet.
+  pageCount        Int?
 
   /// Storage object key inside the private bucket. NOT a URL — reads are served
   /// as short-lived signed URLs minted per request.
@@ -2504,7 +2547,9 @@ model Drawing {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id])
+  project  Project          @relation(fields: [projectId], references: [id])
+  markups  DrawingMarkup[]
+  comments DrawingComment[]
 
   /// One row per revision of a sheet. NOTE the standing Postgres caveat: this
   /// does not constrain rows whose `companyId` is NULL, because NULLs compare
@@ -2515,6 +2560,7 @@ model Drawing {
   @@index([projectId])
   @@index([status])
   @@index([discipline])
+  @@index([companyId, sheetType])
   @@map("drawings")
 }
 
@@ -3310,7 +3356,7 @@ model Expense {
   amount   Decimal @default(0)
   currency String  @default("AWG")
 
-  billable Boolean @default(true)
+  billable      Boolean @default(true)
   /// Handling percentage added when the cost is passed on. 0 = at cost, which
   /// is what most reimbursables are.
   markupPercent Decimal @default(0)
@@ -3340,4 +3386,113 @@ model Expense {
   @@index([companyId, status])
   @@index([companyId, invoicedAt])
   @@map("expenses")
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Drawing Studio DS-2/DS-3: redline and review (prisma/sql/0022_drawing_studio.sql)
+//
+// THE SOURCE PDF IS NEVER TOUCHED. A markup is a row pointing at a drawing, and
+// flattening (DS-4) writes a NEW object. A practice has to be able to produce
+// the file it was sent, unaltered, months after the argument started.
+//
+// GEOMETRY IS IN PDF USER SPACE — points, origin bottom-left, per page — not in
+// screen pixels. See the header of lib/drawings/markup.ts: a comment made at
+// one zoom on one monitor has to land on the same door on every other.
+// ───────────────────────────────────────────────────────────────────────────
+
+enum DrawingMarkupKind {
+  PEN
+  LINE
+  ARROW
+  RECT
+  ELLIPSE
+  CLOUD
+  TEXT
+  CALLOUT
+  HIGHLIGHT
+  MEASURE
+  STAMP
+}
+
+enum DrawingCommentStatus {
+  OPEN
+  RESOLVED
+}
+
+model DrawingMarkup {
+  companyId String?
+  id        String  @id @default(cuid())
+  drawingId String
+
+  /// 1-based page of the PDF this mark sits on.
+  page Int               @default(1)
+  kind DrawingMarkupKind
+
+  /// The shape, in PDF user space. Discriminated by `kind` and validated by
+  /// `isValidGeometry` before it is written — never a free-form blob.
+  geometry Json
+
+  colour      String  @default("#dc2626")
+  strokeWidth Float   @default(2)
+  /// Body of a TEXT or CALLOUT; the label of a STAMP.
+  text        String?
+  /// Millimetres per point, for a MEASURE, as calibrated when it was taken.
+  /// A drawing's plotted scale is not reliable — see lib/drawings/markup.ts.
+  mmPerPoint  Float?
+
+  authorId   String?
+  authorName String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete: a redline somebody removed is still evidence of the review.
+  deletedAt DateTime?
+
+  drawing Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, drawingId, page])
+  @@index([companyId, authorId])
+  @@map("drawing_markups")
+}
+
+model DrawingComment {
+  companyId String?
+  id        String  @id @default(cuid())
+  drawingId String
+
+  /// Where on the sheet this is about. Null x/y means the comment is about the
+  /// sheet as a whole rather than a place on it — which is a real distinction:
+  /// "the north elevation is missing" is not pinned to anything.
+  page Int    @default(1)
+  x    Float?
+  y    Float?
+
+  body   String
+  status DrawingCommentStatus @default(OPEN)
+
+  /// Replies point at the comment they answer. One level deep on purpose: a
+  /// tree of replies on a drawing is a conversation nobody can read on a site.
+  parentId String?
+
+  authorId   String?
+  authorName String
+
+  assignedToId   String?
+  assignedToName String?
+
+  resolvedAt     DateTime?
+  resolvedByName String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  drawing Drawing          @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  parent  DrawingComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies DrawingComment[] @relation("CommentReplies")
+
+  @@index([companyId, drawingId, page])
+  @@index([companyId, status])
+  @@index([companyId, assignedToId])
+  @@map("drawing_comments")
 }

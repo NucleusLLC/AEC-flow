@@ -32,6 +32,11 @@ type DrawingRow = {
   storageKey: string;
   uploadedByName: string | null;
   uploadedAt: Date;
+  sheetType: string | null;
+  sheetTypeSource: string | null;
+  paperSize: string | null;
+  paperOrientation: string | null;
+  pageCount: number | null;
   project: { projectNumber: string; name: string } | null;
 };
 
@@ -48,10 +53,32 @@ const SELECT = {
   storageKey: true,
   uploadedByName: true,
   uploadedAt: true,
+  sheetType: true,
+  sheetTypeSource: true,
+  paperSize: true,
+  paperOrientation: true,
+  pageCount: true,
   project: { select: { projectNumber: true, name: true } },
 } as const;
 
-function toDrawing(row: DrawingRow): Drawing {
+/**
+ * Open review comments per sheet, in one query rather than one per row.
+ *
+ * A register of forty sheets that issued forty count queries would be the
+ * slowest screen in the app; `groupBy` makes it one. DrawingComment is
+ * tenant-scoped, so there is no company filter to forget here either.
+ */
+async function openCommentCounts(drawingIds: string[]): Promise<Map<string, number>> {
+  if (drawingIds.length === 0) return new Map();
+  const rows = await prisma.drawingComment.groupBy({
+    by: ["drawingId"],
+    where: { drawingId: { in: drawingIds }, status: "OPEN", deletedAt: null },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.drawingId, r._count._all]));
+}
+
+function toDrawing(row: DrawingRow, openComments = 0): Drawing {
   return {
     id: row.id,
     code: row.sheetNumber,
@@ -67,6 +94,12 @@ function toDrawing(row: DrawingRow): Drawing {
     uploadedBy: row.uploadedByName ?? "—",
     uploadedAt: row.uploadedAt.toISOString().slice(0, 10),
     hasFile: row.storageKey.length > 0,
+    sheetType: row.sheetType,
+    sheetTypeSource: row.sheetTypeSource,
+    paperSize: row.paperSize,
+    paperOrientation: row.paperOrientation,
+    pageCount: row.pageCount,
+    openComments,
   };
 }
 
@@ -75,7 +108,8 @@ export async function getDrawings(): Promise<Drawing[]> {
     select: SELECT,
     orderBy: [{ uploadedAt: "desc" }, { sheetNumber: "asc" }],
   });
-  return rows.map(toDrawing);
+  const counts = await openCommentCounts(rows.map((r) => r.id));
+  return rows.map((r) => toDrawing(r, counts.get(r.id) ?? 0));
 }
 
 export async function getProjectDrawings(projectId: string): Promise<Drawing[]> {
@@ -84,7 +118,28 @@ export async function getProjectDrawings(projectId: string): Promise<Drawing[]> 
     select: SELECT,
     orderBy: [{ sheetNumber: "asc" }, { revision: "desc" }],
   });
-  return rows.map(toDrawing);
+  const counts = await openCommentCounts(rows.map((r) => r.id));
+  return rows.map((r) => toDrawing(r, counts.get(r.id) ?? 0));
+}
+
+/**
+ * Every sheet in one or more disciplines, newest first.
+ *
+ * Used by the discipline registers under Design, where the question is "what
+ * has actually landed for architecture", as opposed to the deliverables
+ * register's "what did we promise to produce". The two are different lists on
+ * purpose — see docs/drawings-intake/02-STORAGE.md.
+ */
+export async function getDrawingsByDiscipline(disciplines: Discipline[]): Promise<Drawing[]> {
+  if (disciplines.length === 0) return [];
+  const rows = await prisma.drawing.findMany({
+    where: { discipline: { in: disciplines } },
+    select: SELECT,
+    orderBy: [{ uploadedAt: "desc" }, { sheetNumber: "asc" }],
+    take: 500,
+  });
+  const counts = await openCommentCounts(rows.map((r) => r.id));
+  return rows.map((r) => toDrawing(r, counts.get(r.id) ?? 0));
 }
 
 /** One row, or null when it does not exist or belongs to another company. */
@@ -95,5 +150,7 @@ export async function getDrawing(id: string): Promise<Drawing | null> {
   // to the company id and return null for every signed-in user. `id` is still
   // unique, so this returns the same single row.
   const row = await prisma.drawing.findFirst({ where: { id }, select: SELECT });
-  return row ? toDrawing(row) : null;
+  if (!row) return null;
+  const counts = await openCommentCounts([row.id]);
+  return toDrawing(row, counts.get(row.id) ?? 0);
 }
