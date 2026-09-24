@@ -16,7 +16,8 @@
  *   · a tax percentage outside 0–100.
  */
 import { z } from "zod";
-import { PAYMENT_METHODS } from "./types";
+import { MAX_HOURS_PER_DAY } from "./timesheet";
+import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "./types";
 
 const dateOnly = z
   .string()
@@ -160,6 +161,85 @@ export function parseInvoiceInput(data: unknown) {
 
 export function parseInvoicePaymentInput(data: unknown) {
   return parse(invoicePaymentSchema, data);
+}
+
+// ── Time and expenses ──────────────────────────────────────────────────────
+//
+// WHAT THESE REFUSE, AND WHY EACH ONE MATTERS ON A TIMESHEET:
+//   · zero or negative hours — an entry that says no work was done;
+//   · more than 24 hours in a day — a typed 80 that becomes a billed 80;
+//   · an expense of zero or less — a receipt for nothing, or a credit dressed
+//     as a cost;
+//   · a markup outside 0-100 — the client pays at cost or above it, and a
+//     mistyped 1000 is not a handling fee;
+//   · an expense with no description — a charge nobody can query months later.
+
+export const timeEntrySchema = z.object({
+  userId: optionalText(120),
+  projectId: optionalText(120),
+  phaseId: optionalText(120),
+  date: dateOnly,
+  hours: amount("The hours")
+    .refine((n) => n > 0, "Log more than zero hours")
+    .refine((n) => n <= MAX_HOURS_PER_DAY, `Nobody works more than ${MAX_HOURS_PER_DAY} hours in a day`),
+  billable: z.boolean().optional().transform((v) => v ?? true),
+  chargeRate: optionalPositive("A charge-out rate"),
+  costRate: optionalPositive("A cost rate"),
+  currency: z
+    .string()
+    .trim()
+    .regex(/^[A-Z]{3}$/, "A currency is three letters, e.g. AWG")
+    .optional(),
+  description: optionalText(1000, "The description"),
+});
+
+export const expenseSchema = z.object({
+  userId: optionalText(120),
+  projectId: optionalText(120),
+  date: dateOnly,
+  category: enumOf(EXPENSE_CATEGORIES, "expense category"),
+  vendor: optionalText(200),
+  description: z.string().trim().min(1, "Say what the money was spent on").max(500),
+  amount: amount("The amount").refine((n) => n > 0, "An expense has to be more than zero"),
+  currency: z
+    .string()
+    .trim()
+    .regex(/^[A-Z]{3}$/, "A currency is three letters, e.g. AWG")
+    .optional(),
+  billable: z.boolean().optional().transform((v) => v ?? true),
+  markupPercent: z
+    .union([z.number(), z.string(), z.null()])
+    .optional()
+    .transform((v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(n) ? n : 0;
+    })
+    .refine((n) => n >= 0 && n <= 100, "A markup runs from 0 to 100 percent"),
+  reimbursable: z.boolean().optional().transform((v) => v ?? false),
+});
+
+/** A rejection needs a reason: "rejected" with no note is an argument next week. */
+export const approvalDecisionSchema = z
+  .object({
+    approve: z.boolean(),
+    reason: optionalText(500, "The reason"),
+  })
+  .refine((v) => v.approve || Boolean(v.reason), {
+    message: "Say why it is being sent back",
+    path: ["reason"],
+  });
+
+export function parseTimeEntryInput(data: unknown) {
+  return parse(timeEntrySchema, data);
+}
+
+export function parseExpenseInput(data: unknown) {
+  return parse(expenseSchema, data);
+}
+
+export function parseApprovalDecision(data: unknown) {
+  return parse(approvalDecisionSchema, data);
 }
 
 /** One sentence a user can act on, rather than a JSON dump of issues. */

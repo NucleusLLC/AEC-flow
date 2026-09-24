@@ -47,6 +47,10 @@ const TENANT_MODELS = new Set<string>([
   // app: an invoice outside this set would put one practice's billing in front
   // of another. See docs/finance/SPEC.md.
   "Invoice", "InvoiceLine", "InvoicePayment",
+  // Time and expenses. A timesheet says who worked on what and what an hour
+  // costs the practice — the two figures a competitor would most like to
+  // read. See docs/finance/SPEC.md.
+  "TimeEntry", "Expense",
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);

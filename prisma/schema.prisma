@@ -272,6 +272,13 @@ model User {
   skills           String[]
   annualLeaveTotal Int         @default(22)
   annualLeaveTaken Int         @default(0)
+  /// The person's STANDARD rates, per hour, in the practice's currency. A time
+  /// entry copies them at the moment it is saved (TimeEntry.chargeRate /
+  /// costRate) and never reads them again — changing a rate here prices the
+  /// next hour logged, not last quarter's. `costRate` is what the hour costs
+  /// the practice and is never shown to a client.
+  chargeOutRate    Decimal?
+  costRate         Decimal?
   workingHours     Json?
   preferences      Json? // per-user settings blob (see lib/data/preferences.ts)
   officeLocation   String?
@@ -3193,4 +3200,144 @@ model InvoicePayment {
   @@index([companyId, invoiceId])
   @@index([companyId, paidAt])
   @@map("invoice_payments")
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Finance: time and expenses (prisma/sql/0020_time_expenses.sql)
+//
+// Hours and out-of-pocket costs, recorded against a project so the practice can
+// see what a job is worth, what it cost, and what may still be billed.
+//
+// NEITHER TABLE HAS A FOREIGN KEY TO invoices. When hours are billed, the
+// invoice's id and number are WRITTEN ONTO the row. Voiding or deleting an
+// invoice must never take the timesheet with it — the work happened either way,
+// and an FK with a cascade is how a month of hours disappears behind one
+// mis-click. `invoicedAt` being null is the only test for "can still be billed".
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Where a timesheet row or an expense stands with its approver. Shared by both
+/// tables: it is one decision, made by one person, about one kind of thing.
+enum FinanceApprovalStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum ExpenseCategory {
+  TRAVEL
+  ACCOMMODATION
+  MEALS
+  PRINTING
+  PERMIT_FEE
+  SUBCONSULTANT
+  SOFTWARE
+  EQUIPMENT
+  MATERIALS
+  OTHER
+}
+
+model TimeEntry {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// Who worked the hours. `userName` is snapshotted so a leaver's timesheet
+  /// still reads as theirs.
+  userId   String
+  userName String
+
+  projectId   String?
+  projectName String?
+  phaseId     String?
+  phaseName   String?
+
+  /// The day worked, at UTC midnight. A timesheet is kept by day, not by clock.
+  date  DateTime
+  hours Decimal  @default(0)
+
+  billable Boolean @default(true)
+
+  /// THE RATES AS THEY WERE the day this was saved, copied from the person's
+  /// record. A rate rise next quarter must not silently reprice work already
+  /// done — the same snapshot rule the invoice tables follow.
+  chargeRate Decimal?
+  costRate   Decimal?
+  currency   String   @default("AWG")
+
+  description String?
+
+  status         FinanceApprovalStatus @default(DRAFT)
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+  approvedByName String?
+  rejectedReason String?
+
+  /// Written when these hours reach a client invoice. No FK — see the note above.
+  invoicedAt    DateTime?
+  invoiceId     String?
+  invoiceNumber String?
+  invoiceLineId String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete, and only ever for a row that has not been invoiced.
+  deletedAt DateTime?
+
+  @@index([companyId, userId, date])
+  @@index([companyId, projectId, date])
+  @@index([companyId, status])
+  @@index([companyId, invoicedAt])
+  @@map("time_entries")
+}
+
+model Expense {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// Who incurred it — not necessarily who is owed it; see `reimbursable`.
+  userId   String
+  userName String
+
+  projectId   String?
+  projectName String?
+
+  date        DateTime
+  category    ExpenseCategory @default(OTHER)
+  vendor      String?
+  description String
+
+  amount   Decimal @default(0)
+  currency String  @default("AWG")
+
+  billable Boolean @default(true)
+  /// Handling percentage added when the cost is passed on. 0 = at cost, which
+  /// is what most reimbursables are.
+  markupPercent Decimal @default(0)
+
+  /// Paid out of the person's own pocket, so the practice owes it back.
+  reimbursable Boolean   @default(false)
+  reimbursedAt DateTime?
+
+  status         FinanceApprovalStatus @default(DRAFT)
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+  approvedByName String?
+  rejectedReason String?
+
+  invoicedAt    DateTime?
+  invoiceId     String?
+  invoiceNumber String?
+  invoiceLineId String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([companyId, userId, date])
+  @@index([companyId, projectId, date])
+  @@index([companyId, status])
+  @@index([companyId, invoicedAt])
+  @@map("expenses")
 }
