@@ -55,6 +55,10 @@ const TENANT_MODELS = new Set<string>([
   // drawing; a review comment names the person who has to fix it. Neither
   // may cross a company boundary.
   "DrawingMarkup", "DrawingComment",
+  // Construction contracts. A contract carries the price of a job and the
+  // names of both parties to it; a template is the practice's own paperwork.
+  "ContractTemplate", "ConstructionContract",
+
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
 ]);

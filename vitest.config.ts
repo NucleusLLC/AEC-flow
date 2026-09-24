@@ -128,6 +128,11 @@ export default defineConfig({
       // and cost against worth per project. Same reason as every entry above —
       // named file, pure module.
       "lib/finance/timesheet.test.ts",
+      // Construction contracts: the payment schedule's cent-exact allocation,
+      // and the shape/emphasis rules the typesetter reads. Pure modules.
+      "lib/contracts/schedule.test.ts",
+      "lib/contracts/layout.test.ts",
+      "lib/contracts/preflight.test.ts",
     ],
     environment: "node",
   },

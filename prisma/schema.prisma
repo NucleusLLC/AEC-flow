@@ -3496,3 +3496,121 @@ model DrawingComment {
   @@index([companyId, assignedToId])
   @@map("drawing_comments")
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Construction contracts (prisma/sql/0023_construction_contracts.sql)
+//
+// THE DOCUMENT IS STORED AS STRUCTURE, NOT AS HTML. `body` holds the contract
+// the model returned — title, parties, recitals, numbered articles, schedule,
+// signatures — and the typesetting is a React render of it. A change to the
+// letterhead or the footer then fixes every contract ever made, rather than
+// none of them. docs/contracts/PLAN.md sets out why.
+//
+// THE FIGURES IN `body.schedule` ARE THE APP'S. lib/contracts/schedule.ts
+// recomputes every instalment from the contract sum in integer cents before
+// the row is written; the model supplies only the words.
+// ───────────────────────────────────────────────────────────────────────────
+
+enum ContractStatus {
+  DRAFT
+  ISSUED
+  SIGNED
+  SUPERSEDED
+  VOID
+}
+
+/// A contract the practice uses as its starting point, uploaded as a PDF. The
+/// model reads the real file — layout, numbering and clause structure are part
+/// of what it has to preserve, and a text dump throws all three away.
+model ContractTemplate {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  name        String
+  description String?
+
+  /// Object key in the private bucket. NOT a URL — reads are signed per request.
+  storageKey String
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+
+  /// Retired templates stay readable: a contract generated from one has to be
+  /// explainable years later.
+  archivedAt DateTime?
+
+  uploadedById   String?
+  uploadedByName String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  contracts ConstructionContract[]
+
+  @@index([companyId, archivedAt])
+  @@map("contract_templates")
+}
+
+model ConstructionContract {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// `CC-{year}-{NNN}`, sequential within the practice and never reused.
+  number String
+  status ContractStatus @default(DRAFT)
+
+  projectId     String?
+  projectName   String
+  projectNumber String?
+
+  templateId   String?
+  templateName String?
+
+  /// Snapshotted party names — a contract names who signed it, and a renamed
+  /// client record must not rewrite a document that has been executed.
+  employerName   String
+  contractorName String
+
+  currency     String  @default("AWG")
+  contractSum  Decimal @default(0)
+  exchangeRate Decimal @default(1.75)
+
+  /// The facts the user supplied, kept so a revision starts from them rather
+  /// than from a blank form.
+  facts Json
+
+  /// The contract itself. See the note at the top of this block.
+  body Json
+
+  /// What the model said it changed, and what it could not fill. Shown in the
+  /// review box on screen; never printed.
+  modelNotes Json?
+
+  /// Which model wrote it, so an accuracy question has an answer.
+  modelId     String?
+  generatedAt DateTime?
+
+  issuedAt     DateTime?
+  signedAt     DateTime?
+  /// The contract this one replaces. A contract is superseded, never edited
+  /// after issue.
+  supersedesId String?
+  voidReason   String?
+
+  createdById   String?
+  createdByName String?
+  updatedById   String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  template ContractTemplate? @relation(fields: [templateId], references: [id])
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, projectId])
+  @@index([companyId, createdAt])
+  @@map("construction_contracts")
+}
