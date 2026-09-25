@@ -133,6 +133,9 @@ export default defineConfig({
       "lib/contracts/schedule.test.ts",
       "lib/contracts/layout.test.ts",
       "lib/contracts/preflight.test.ts",
+      // How a revision is numbered and what changed between two versions of one
+      // contract. Pure: two documents in, a change list out.
+      "lib/contracts/revision.test.ts",
     ],
     environment: "node",
   },

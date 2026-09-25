@@ -55,6 +55,21 @@ type Phase = PhaseInput & { key: string };
 let seq = 0;
 const nextKey = () => `phase-${++seq}`;
 
+/**
+ * When set, this composer is writing a REVISION of an existing contract: the
+ * particulars start from that contract's own facts rather than from a blank
+ * form, and the generated document supersedes it.
+ */
+export type Revising = {
+  id: string;
+  /** The predecessor's number, shown so nobody wonders what they are editing. */
+  number: string;
+  /** The number the revision will carry, resolved on the server. */
+  nextNumber: string;
+  facts: ContractFacts;
+  templateId: string | null;
+};
+
 export function ContractComposer({
   projects,
   templates,
@@ -63,6 +78,7 @@ export function ContractComposer({
   hasAiKey,
   hasLogo,
   defaultCurrency,
+  revising,
 }: {
   projects: ProjectOption[];
   templates: TemplateDTO[];
@@ -71,17 +87,25 @@ export function ContractComposer({
   hasAiKey: boolean;
   hasLogo: boolean;
   defaultCurrency: string;
+  revising?: Revising;
 }) {
   const router = useRouter();
 
   const [templateList, setTemplateList] = useState(templates);
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
-  const [facts, setFacts] = useState<ContractFacts>({
-    ...EMPTY_FACTS,
-    currency: defaultCurrency,
-    administratorName: practiceName,
-  });
-  const [phases, setPhases] = useState<Phase[]>([]);
+  const [templateId, setTemplateId] = useState(
+    revising?.templateId ?? templates[0]?.id ?? "",
+  );
+  const [facts, setFacts] = useState<ContractFacts>(
+    revising
+      ? // Everything, including the contract sum: a revision that silently
+        // reset a figure to the default would be a changed contract that reads
+        // like an unchanged one.
+        { ...EMPTY_FACTS, ...revising.facts }
+      : { ...EMPTY_FACTS, currency: defaultCurrency, administratorName: practiceName },
+  );
+  const [phases, setPhases] = useState<Phase[]>(
+    (revising?.facts.phases ?? []).map((p) => ({ ...p, key: nextKey() })),
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -195,7 +219,11 @@ export function ContractComposer({
       const response = await fetch("/api/contracts/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ facts: withPhases, templateId }),
+        body: JSON.stringify({
+          facts: withPhases,
+          templateId,
+          supersedesId: revising?.id ?? null,
+        }),
       });
       if (!response.ok || !response.body) {
         const message = await response.json().catch(() => null);
