@@ -9,6 +9,8 @@ import {
   listStatusHistory,
 } from "@/lib/data/service-proposals";
 import { computeProposal } from "@/lib/proposals/engine/engine";
+import { Emphasised } from "@/components/print/rich-text";
+import { stripMarkers } from "@/lib/documents/emphasis";
 import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
 import { isIssued, isLocked, STATUS_LABEL } from "@/lib/proposals/engine/status";
 import {
@@ -364,8 +366,13 @@ export default async function ServiceProposalDetailPage({
                     <li key={i} className="flex gap-2">
                       <span className={s.included ? "text-emerald-600" : "text-rose-500"}>{s.included ? "✓" : "✕"}</span>
                       <span className={s.included ? "text-fg" : "text-muted line-through"}>
-                        <strong className="font-medium">{s.title}</strong>
-                        {s.description ? <span className="text-muted"> — {s.description}</span> : null}
+                        <strong className="font-medium">{stripMarkers(s.title)}</strong>
+                        {s.description ? (
+                          <span className="text-muted">
+                            {" — "}
+                            <Emphasised text={s.description} />
+                          </span>
+                        ) : null}
                       </span>
                     </li>
                   ))}
@@ -470,11 +477,20 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
+/**
+ * A stored free-text field, shown the way the client will read it.
+ *
+ * `**bold**` is honoured here and not only on the printed document, because a
+ * markup convention you cannot see until you print is one people stop trusting.
+ * Same renderer as the print route, so the two cannot disagree.
+ */
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-xs font-medium text-muted">{label}</div>
-      <p className="mt-0.5 whitespace-pre-wrap text-fg">{value}</p>
+      <p className="mt-0.5 whitespace-pre-wrap text-fg">
+        <Emphasised text={value} />
+      </p>
     </div>
   );
 }
