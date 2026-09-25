@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BREAK_RULES, TABLE_TOKENS } from "@/lib/documents/tokens";
+import { BREAK_RULES, TABLE_TOKENS, UNUSED_AREA_WARN } from "@/lib/documents/tokens";
 import {
   headingRequiredSpace,
   resolveHeadingBreaks,
+  PAGE_START_EPSILON_PX,
   type PageCut,
 } from "@/lib/documents/pagination";
 import { gutterZones, SHEET_GAP_MM } from "@/lib/documents/preview-geometry";
@@ -618,29 +619,100 @@ export function PagedPreview({
         return cut.blockIndex !== undefined ? atoms[cut.blockIndex].el : undefined;
       };
 
+      /**
+       * The block to push when NOTHING STARTS AT THE BOUNDARY AND THERE IS NO
+       * TEXT TO SPLIT.
+       *
+       * `blockStartingAt` wants a block within 4px of the cut, and a boundary
+       * landing in the gap BETWEEN two table rows matches nothing — the rows
+       * above and below both miss it. The flow fallback cannot help either: it
+       * opens the gap by splitting a text node, and there is no text in the gap
+       * between two rows. So no gap opened at all, the page ran on, and the
+       * footer band was drawn across live rows. Measured on a 22-sheet review
+       * register: page 4 came out 1066px against a 994px page.
+       *
+       * The next atom is the right thing to push — it is where the print engine
+       * will break too, since it cannot split that row either. The page ends a
+       * little earlier than the arithmetic said, so the hole it leaves is held
+       * to the same §7.1 tolerance the engine already applies to moving a soft
+       * block down whole.
+       *
+       * This is tried LAST, after the flow split. A boundary falling inside a
+       * paragraph must still split the paragraph: pushing the next atom instead
+       * would end the page early and waste up to the whole tolerance on a prose
+       * document that had a perfectly good break available.
+       *
+       * IT SEARCHES BACKWARDS, and that is the whole correctness of it. Pushing
+       * the atom AFTER the boundary leaves everything between the boundary and
+       * that atom on the page, so the page ends BELOW where a page ends — 1034px
+       * against a 1009px sheet on the contract fixture, which print would then
+       * break somewhere the preview does not show. Pushing the last atom at or
+       * ABOVE the boundary can only make the page shorter, so a page can never
+       * hold more than a page. The hole that leaves is held to the same §7.1
+       * tolerance the engine already applies to moving a soft block down whole.
+       */
+      const atomToPushBack = (at: number): HTMLElement | undefined => {
+        const reach = pageH * UNUSED_AREA_WARN;
+        for (let i = atoms.length - 1; i >= 0; i -= 1) {
+          const a = atoms[i];
+          if (a.top > at + PAGE_START_EPSILON_PX) continue;
+          return at - a.top <= reach ? a.el : undefined;
+        }
+        return undefined;
+      };
+
       // Open a real gap at each cut: the bottom margin of the page ending, plus
       // the top margin of the page beginning. Screen-only — in print the same gap
       // IS the @page margins. See the CSS note in PageRules.
       const gutterPx = gutterMm * pxPerMm;
+
+      // A CUT'S `at` IS A COORDINATE IN THE LAYOUT AS IT WAS BEFORE ANY GAP
+      // OPENED, and every gap opened above it has since pushed the document
+      // down by exactly one gutter. So a cut's coordinate has to be carried
+      // forward by the gaps already opened before it can be used against the
+      // live layout. An element reference needs no such correction, which is
+      // why the marker path was right and only the two coordinate paths were
+      // wrong.
+      //
+      // Measured on a 22-sheet review register: pages 4 and 5 had no atom
+      // starting at the boundary, so both fell back to the raw `cut.at`. Three
+      // gaps had already opened above them, and the footer band was therefore
+      // drawn 384px — about 100mm — too high, straight across live table rows.
+      // Every page whose boundary DID land on an atom was correct, which is
+      // what made it look like a table bug rather than an arithmetic one.
+      let opened = 0;
       const markers = cuts.map((cut) => {
         const starter = starterOf(cut);
-        return starter
-          ? openGutter(starter, gutterPx)
-          : openFlowGutter(el, hostTop, cut.at, gutterPx);
+        const marker =
+          (starter
+            ? openGutter(starter, gutterPx)
+            : openFlowGutter(el, hostTop, cut.at + opened * gutterPx, gutterPx)) ??
+          // Last resort, and only when the two above opened nothing at all.
+          (() => {
+            const back = atomToPushBack(cut.at);
+            return back ? openGutter(back, gutterPx) : undefined;
+          })();
+        // Counted, not assumed from the index: a gap that failed to open shifts
+        // nothing, and an index would then over-correct every cut below it.
+        if (marker) opened += 1;
+        return { marker, shift: opened };
       });
 
       // Positions shifted when the gutters opened, so read them back rather than
       // predicting where everything landed.
       const hostTop2 = el.getBoundingClientRect().top + window.scrollY;
       const bands = cuts.map((cut, i) => {
-        const marker = markers[i];
+        const { marker, shift } = markers[i];
         const top = marker
           ? pageEndAt({
               markerTop: marker.el.getBoundingClientRect().top + window.scrollY - hostTop2,
               gutterPx,
               mode: marker.mode,
             })
-          : cut.at;
+          : // No marker: nothing was inserted for this cut, so it sits where the
+            // gaps opened ABOVE it have left it — `shift` excludes this cut's
+            // own, because it opened none.
+            cut.at + shift * gutterPx;
         return { top, page: i + 1 };
       });
 
