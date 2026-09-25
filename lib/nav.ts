@@ -34,6 +34,7 @@ import {
   ReceiptText,
   Clock3,
   Wallet,
+  TrendingUp,
   Stamp,
   type LucideIcon,
 } from "lucide-react";
@@ -129,6 +130,12 @@ export const EXPENSES_ITEM: NavItem = {
   icon: Wallet,
 };
 
+export const PROFIT_ITEM: NavItem = {
+  label: "Profitability",
+  href: "/finance/profit",
+  icon: TrendingUp,
+};
+
 /** Section title used wherever the drawings bin appears. */
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
@@ -195,7 +202,7 @@ export const navSections: NavSection[] = [
   },
   {
     title: "Finance",
-    items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM],
+    items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM],
   },
   {
     title: "People",
