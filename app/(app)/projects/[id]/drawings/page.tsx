@@ -58,7 +58,7 @@ export default async function ProjectDrawingsPage({ params }: { params: Promise<
           </CardBody>
         </Card>
       ) : (
-        <ProjectDrawingSet drawings={drawings} />
+        <ProjectDrawingSet drawings={drawings} projectId={id} />
       )}
     </div>
   );
