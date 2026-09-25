@@ -33,6 +33,7 @@ import {
 } from "@/lib/server/storage";
 import { sanitiseFilename } from "@/lib/drawings/storage-key";
 import { buildSchedule, reconcileSchedule } from "@/lib/contracts/schedule";
+import { baseNumber, nextRevisionNumber, sortFamily } from "@/lib/contracts/revision";
 import {
   EMPTY_BODY,
   type ContractBody,
@@ -245,6 +246,8 @@ export type ContractSummaryDTO = {
 
 export type ContractDTO = ContractSummaryDTO & {
   exchangeRate: number;
+  /** Which template it was written from, so a revision starts from the same one. */
+  templateId: string | null;
   facts: ContractFacts;
   body: ContractBody;
   modelId: string | null;
@@ -330,6 +333,7 @@ export async function getContract(id: string): Promise<ContractDTO | null> {
   return {
     ...toSummary(row as unknown as SummaryRow),
     exchangeRate: num(row.exchangeRate),
+    templateId: row.templateId,
     facts: row.facts as unknown as ContractFacts,
     body: (row.body as unknown as ContractBody) ?? EMPTY_BODY,
     modelId: row.modelId,
@@ -348,6 +352,51 @@ export async function nextContractNumber(year = new Date().getFullYear()): Promi
     if (m && Number(m[1]) > max) max = Number(m[1]);
   }
   return `CC-${year}-${String(max + 1).padStart(3, "0")}`;
+}
+
+/**
+ * The number the next revision of `id` should carry.
+ *
+ * The whole family is read, not just the one being revised: two people revising
+ * at once, or someone revising a superseded version, must not both land on the
+ * same letter. Falls back to a plain new number if the predecessor has gone.
+ */
+async function nextRevisionNumberFor(id: string): Promise<string> {
+  const previous = await prisma.constructionContract.findFirst({
+    where: { id, deletedAt: null },
+    select: { number: true },
+  });
+  if (!previous) return nextContractNumber();
+  const held = await prisma.constructionContract.findMany({ select: { number: true }, take: 2000 });
+  return nextRevisionNumber(previous.number, held.map((r) => r.number));
+}
+
+/** What the next revision of `id` will be numbered — for the screen that offers it. */
+export async function nextRevisionNumberPreview(id: string): Promise<string> {
+  await requireActor();
+  return nextRevisionNumberFor(id);
+}
+
+/** Every version of one contract, oldest first, whichever one you start from. */
+export async function contractFamily(id: string): Promise<ContractSummaryDTO[]> {
+  await requireActor();
+  const start = await prisma.constructionContract.findFirst({
+    where: { id, deletedAt: null },
+    select: { number: true },
+  });
+  if (!start) return [];
+  const base = baseNumber(start.number);
+
+  // Matched on the NUMBER, not by walking `supersedesId`. The chain is only as
+  // good as its weakest link — one revision saved without a predecessor and the
+  // history silently splits in two — whereas every version of a contract
+  // carries the base number by construction.
+  const rows = await prisma.constructionContract.findMany({
+    where: { deletedAt: null, OR: [{ number: base }, { number: { startsWith: `${base} Rev ` } }] },
+    select: SUMMARY_SELECT,
+    take: 100,
+  });
+  return sortFamily(rows.map(toSummary));
 }
 
 /**
@@ -387,9 +436,16 @@ export async function saveGenerated(input: {
       })
     : null;
 
+  // A revision keeps the contract's number and takes the next letter; a new
+  // contract takes the next number. See lib/contracts/revision.ts for why the
+  // agreement's number must not change when a version of it does.
+  const number = input.supersedesId
+    ? await nextRevisionNumberFor(input.supersedesId)
+    : await nextContractNumber();
+
   const row = await prisma.constructionContract.create({
     data: {
-      number: await nextContractNumber(),
+      number,
       status: "DRAFT",
       projectId: project?.id ?? null,
       projectName: project?.name ?? facts.projectName,
