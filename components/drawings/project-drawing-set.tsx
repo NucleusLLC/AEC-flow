@@ -15,7 +15,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FileStack, PenLine } from "lucide-react";
+import { ClipboardList, FileStack, PenLine } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DrawingStatusBadge, FileTypeChip } from "@/components/drawings/badges";
@@ -36,7 +36,14 @@ const ORDER: Discipline[] = [
   "PROJECT_MANAGEMENT",
 ];
 
-export function ProjectDrawingSet({ drawings }: { drawings: Drawing[] }) {
+export function ProjectDrawingSet({
+  drawings,
+  projectId,
+}: {
+  drawings: Drawing[];
+  /** Needed for the review register, which is a per-project document. */
+  projectId?: string;
+}) {
   const [showSuperseded, setShowSuperseded] = useState(false);
 
   const supersededCount = drawings.filter((d) => d.status === "SUPERSEDED").length;
@@ -66,6 +73,19 @@ export function ProjectDrawingSet({ drawings }: { drawings: Drawing[] }) {
           {visible.length} sheet{visible.length === 1 ? "" : "s"}
         </span>
         {openTotal > 0 ? <Badge tone="amber">{openTotal} comments open</Badge> : null}
+
+        {projectId ? (
+          // Open items by default: the register is a worklist, and printing
+          // everything ever closed is the version nobody asked for.
+          <Link
+            href={`/print/design/review-register/${projectId}?status=OPEN`}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+            Review register
+          </Link>
+        ) : null}
+
         {supersededCount > 0 ? (
           <label className="ml-auto flex items-center gap-2 text-xs text-muted">
             <input
