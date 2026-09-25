@@ -100,6 +100,18 @@ export const GENERAL_DOCUMENTS_ITEM: NavItem = {
 };
 
 /**
+ * Construction contracts, defined once like the invoice register and the
+ * drawings bin: it appears in this list and in Module 1's sidebar, and a
+ * contract filed under one name in one module and another elsewhere is a
+ * document nobody finds twice.
+ */
+export const CONTRACTS_ITEM: NavItem = {
+  label: "Contracts",
+  href: "/documents/contracts",
+  icon: FileSignature,
+};
+
+/**
  * Invoices, defined ONCE like the drawings bin and the permit register: the
  * receivables register appears in this list and in Module 1's sidebar, and a
  * finance section called one thing in one module and another elsewhere is a
@@ -190,6 +202,7 @@ export const navSections: NavSection[] = [
       DRAWINGS_REGISTER_ITEM,
       DRAWINGS_INTAKE_ITEM,
       GENERAL_DOCUMENTS_ITEM,
+      CONTRACTS_ITEM,
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
     ],
   },
