@@ -7,7 +7,8 @@ import { STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { formatCurrency } from "@/lib/format";
 import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { CaPrintShell, PrintSection } from "@/components/construction-admin/print-shell";
-import { RichText } from "@/components/print/rich-text";
+import { Emphasised, RichText } from "@/components/print/rich-text";
+import { stripMarkers } from "@/lib/documents/emphasis";
 import { ProposalIdentificationPrint } from "@/components/service-proposals/proposal-identification";
 
 export const metadata: Metadata = { title: "Service Proposal · Print" };
@@ -88,8 +89,13 @@ export default async function ServiceProposalPrintPage({
                 <li key={i} className="flex gap-2">
                   <span className={s.included ? "text-gray-900" : "text-gray-400"}>{s.included ? "✓" : "✕"}</span>
                   <span className={s.included ? "text-gray-900" : "text-gray-500 line-through"}>
-                    <strong>{s.title}</strong>
-                    {s.description ? <span className="text-gray-600"> — {s.description}</span> : null}
+                    <strong>{stripMarkers(s.title)}</strong>
+                    {s.description ? (
+                      <span className="text-gray-600">
+                        {" — "}
+                        <Emphasised text={s.description} />
+                      </span>
+                    ) : null}
                   </span>
                 </li>
               ))}

@@ -24,6 +24,8 @@
  * stripped of `**` instead: bold inside a heading is noise.
  */
 
+import { markedSpans } from "@/lib/documents/emphasis";
+
 export type TextSpan = { text: string; bold: boolean };
 
 export type ClauseTitle = {
@@ -80,17 +82,15 @@ export function emphasise(text: string, names: string[] = []): TextSpan[] {
   const source = String(text ?? "");
   if (!source) return [];
 
+  // The `**…**` pass is lib/documents/emphasis.ts, shared with the proposal
+  // document so one convention cannot become two. What is layered on top of it
+  // — bolding money, areas and party names the author never marked — belongs to
+  // a contract and stays here.
   const spans: TextSpan[] = [];
-  const marked = /\*\*([\s\S]+?)\*\*/g;
-  let cursor = 0;
-  let m: RegExpExecArray | null;
-
-  while ((m = marked.exec(source))) {
-    if (m.index > cursor) spans.push(...patternSpans(source.slice(cursor, m.index), names));
-    spans.push({ text: m[1], bold: true });
-    cursor = m.index + m[0].length;
+  for (const span of markedSpans(source)) {
+    if (span.bold) spans.push(span);
+    else spans.push(...patternSpans(span.text, names));
   }
-  if (cursor < source.length) spans.push(...patternSpans(source.slice(cursor), names));
   return merge(spans);
 }
 
