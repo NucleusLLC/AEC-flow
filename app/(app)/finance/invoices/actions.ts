@@ -27,6 +27,7 @@ import {
   InvoiceNotFoundError,
   InvoiceNumberInUseError,
 } from "@/lib/data/invoices";
+import { raiseInvoiceFromWork, WorkBillingError } from "@/lib/data/work-billing";
 import {
   issuesToMessage,
   parseInvoiceInput,
@@ -139,5 +140,48 @@ export async function deletePaymentAction(
     return { ok: true, id };
   } catch (e) {
     return failure(e, "Failed to delete the payment.");
+  }
+}
+
+/**
+ * Raise a draft invoice from a project's approved, unbilled time and expenses.
+ *
+ * Takes FormData because the screen is a plain progressively-enhanced form: the
+ * ticked lines travel as repeated `line` fields. The heavy lifting — grouping,
+ * totals, and stamping the source rows inside one transaction — is
+ * `raiseInvoiceFromWork`; this only translates the payload and the errors.
+ */
+export async function raiseFromWorkAction(form: FormData): Promise<InvoiceActionResult> {
+  const projectId = String(form.get("projectId") ?? "").trim();
+  const lineKeys = form.getAll("line").map(String).filter(Boolean);
+  const summarise = form.get("summarise") === "on";
+  const taxName = String(form.get("taxName") ?? "").trim() || null;
+  const taxPercentRaw = Number(form.get("taxPercent"));
+  const taxPercent = Number.isFinite(taxPercentRaw) ? Math.max(0, taxPercentRaw) : 0;
+  // What the screen showed. Sent so the data layer can refuse if the work has
+  // moved since — see `expectedTotal` in lib/data/work-billing.ts.
+  const expectedRaw = Number(form.get("expectedTotal"));
+  const expectedTotal = Number.isFinite(expectedRaw) ? expectedRaw : undefined;
+
+  if (!projectId) return { ok: false, error: "No project was chosen." };
+  if (lineKeys.length === 0) return { ok: false, error: "Tick at least one line to bill." };
+
+  try {
+    const raised = await raiseInvoiceFromWork({
+      projectId,
+      lineKeys,
+      summarise,
+      taxName,
+      taxPercent,
+      expectedTotal,
+    });
+    revalidateInvoice(raised.id);
+    revalidatePath("/finance/time");
+    revalidatePath("/finance/expenses");
+    revalidatePath("/finance/profit");
+    return { ok: true, id: raised.id };
+  } catch (e) {
+    if (e instanceof WorkBillingError) return { ok: false, error: e.message };
+    return failure(e, "Failed to raise the invoice.");
   }
 }
