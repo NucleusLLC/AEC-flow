@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, FileSignature } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Clock, FileSignature } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { InvoiceForm } from "@/components/finance/invoice-form";
 import { getProposalBilling, listBillableProposals } from "@/lib/data/invoices";
+import { projectsWithUnbilledWork, unbilledWork } from "@/lib/data/work-billing";
+import { UnbilledWorkPicker } from "@/components/finance/unbilled-work-picker";
 import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
 import { dueDateFrom } from "@/lib/finance/calc";
@@ -30,9 +32,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ proposal?: string; milestones?: string }>;
+  searchParams: Promise<{ proposal?: string; milestones?: string; work?: string }>;
 }) {
-  const [{ proposal: proposalId, milestones: picked }, clients, projects, proposals] =
+  const [{ proposal: proposalId, milestones: picked, work: workProjectId }, clients, projects, proposals] =
     await Promise.all([searchParams, getClients(), getProjects(), listBillableProposals()]);
 
   const today = ymd(new Date());
@@ -96,6 +98,53 @@ export default async function NewInvoicePage({
             termsDays: 30,
             dueDate: dueDateFrom(today, 30),
             lines,
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Step 2 (work): a project is chosen — pick which of its unbilled lines to
+  // bill. Both groupings are loaded so the "one line for all time" toggle is
+  // instant and, more importantly, so the client never re-groups the figures
+  // itself: every amount on that screen came from the server's own arithmetic.
+  if (workProjectId) {
+    const [detail, summary] = await Promise.all([
+      unbilledWork({ projectId: workProjectId }),
+      unbilledWork({ projectId: workProjectId, summarise: true }),
+    ]);
+
+    return (
+      <div className="w-full max-w-4xl space-y-6">
+        <Link
+          href="/finance/invoices/new"
+          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("Choose a different job")}
+        </Link>
+        <div>
+          <h2 className="text-xl font-semibold text-fg">{detail.projectName}</h2>
+          <p className="text-sm text-muted">
+            {detail.clientName || t("No client on this job")} ·{" "}
+            {fmt(t("{hours} hours and {amount} waiting to be billed"), {
+              hours: detail.totalHours.toFixed(2),
+              amount: formatCurrency(detail.total, detail.currency, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }),
+            })}
+          </p>
+        </div>
+        <UnbilledWorkPicker
+          work={{
+            projectId: workProjectId,
+            projectName: detail.projectName,
+            currency: detail.currency,
+            detailed: detail.lines,
+            summarised: summary.lines,
+            totalHours: detail.totalHours,
+            excluded: detail.excluded,
           }}
         />
       </div>
@@ -210,7 +259,10 @@ export default async function NewInvoicePage({
     );
   }
 
-  // Step 1a: choose a proposal, or write one from scratch.
+  // Step 1a: choose a proposal, a job with unbilled work, or write one from
+  // scratch.
+  const withWork = await projectsWithUnbilledWork();
+
   return (
     <div className="w-full max-w-4xl space-y-6">
       <Link
@@ -260,6 +312,54 @@ export default async function NewInvoicePage({
                     </span>
                     <span className="shrink-0 font-mono text-sm tabular-nums text-fg">
                       {formatCurrency(p.grandTotal, p.currency, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title={t("From time and expenses")}
+          subtitle={t(
+            "Approved, billable work that has not reached an invoice. Oldest first — that is the money that has been waiting longest.",
+          )}
+        />
+        <CardBody>
+          {withWork.length === 0 ? (
+            <p className="text-sm text-muted">
+              {t(
+                "Nothing is waiting to be billed. Hours and expenses appear here once they are marked billable and approved.",
+              )}
+            </p>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {withWork.map((w) => (
+                <li key={`${w.projectId}:${w.currency}`}>
+                  <Link
+                    href={`/finance/invoices/new?work=${w.projectId}`}
+                    className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:bg-surface-2"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Clock className="h-4 w-4 shrink-0 text-muted" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-fg">
+                          {w.projectName}
+                        </span>
+                        <span className="block truncate text-[11px] text-faint">
+                          {w.hours > 0 ? `${fmt(t("{hours} hours"), { hours: w.hours.toFixed(2) })} · ` : ""}
+                          {w.oldest ? fmt(t("oldest {date}"), { date: w.oldest }) : t("expenses only")}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono text-sm tabular-nums text-fg">
+                      {formatCurrency(w.total, w.currency, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
