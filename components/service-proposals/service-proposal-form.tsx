@@ -1282,7 +1282,10 @@ export function ServiceProposalForm({
 
         {/* Scope & terms */}
         <Card>
-          <CardHeader title="Scope narrative & terms" />
+          <CardHeader
+            title="Scope narrative & terms"
+            subtitle="Wrap a phrase in ** to print it bold — a convention nobody is told about is one nobody uses."
+          />
           <CardBody className="space-y-3">
             <div>
               <label className={label}>Scope summary</label>
