@@ -53,6 +53,9 @@ export default defineConfig({
       // server's title-block reading lands after the filename's. Named file,
       // same reason as those above.
       "lib/drawings/proposal.test.ts",
+      // The review register: citable references, ages against a supplied
+      // moment, and who each open item sits with. Pure — rows in, register out.
+      "lib/drawings/review-register.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
       // Section-aware backgrounds — the route→section resolver and the
