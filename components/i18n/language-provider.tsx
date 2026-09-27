@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { DEFAULT_LANG, translate, type Lang } from "@/lib/i18n/dictionaries";
+import { DEFAULT_LANG, isLang, translate, type Lang } from "@/lib/i18n/dictionaries";
 
 const STORAGE_KEY = "aecflow:lang";
 
@@ -25,9 +25,6 @@ export function useLanguage(): LanguageContextValue {
 export function useT(): (text: string) => string {
   return useContext(LanguageContext).t;
 }
-
-const LANG_CODES = ["en", "es", "nl", "de", "zh", "pt"];
-const isLang = (v: unknown): v is Lang => typeof v === "string" && LANG_CODES.includes(v);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Always render the default (en) on the server + first client paint to avoid a

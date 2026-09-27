@@ -139,6 +139,9 @@ export default defineConfig({
       // How a revision is numbered and what changed between two versions of one
       // contract. Pure: two documents in, a change list out.
       "lib/contracts/revision.test.ts",
+      // Translation coverage: every literal t() string has Spanish and Dutch.
+      // Reads source files as text; no React, no database.
+      "lib/i18n/coverage.test.ts",
     ],
     environment: "node",
   },
