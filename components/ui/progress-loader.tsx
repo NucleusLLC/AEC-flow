@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import {
   advanceLoadSignal,
   createLoadSignal,
@@ -74,6 +76,7 @@ export function ProgressLoader({
   // fires `tick` ms later and the bar is live from then on. (The clock is not
   // also sampled synchronously on mount — setState in an effect body is a
   // cascading render, and one 120ms frame at 0% is not worth one.)
+  const t = useT();
   const [now, setNow] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -97,7 +100,7 @@ export function ProgressLoader({
   const rounded = Math.round(pct);
   const overdue = stage ? isOverdue(elapsedInStage, stage.medianMs) : false;
   const showElapsed = shouldShowElapsed(elapsedInStage);
-  const stepLabel = `Step ${index + 1} of ${stages.length}`;
+  const stepLabel = fmt(t("Step {n} of {total}"), { n: index + 1, total: stages.length });
 
   // Ticks on the track at each boundary: they make the stage structure legible,
   // so a pause reads as "waiting on this step" rather than "stuck".
@@ -155,7 +158,7 @@ export function ProgressLoader({
             {signal.detail ? <span className="text-faint"> · {signal.detail}</span> : null}
           </p>
           <p className="text-[11px] text-faint">
-            {overdue ? "Still working — this is taking longer than usual. " : null}
+            {overdue ? `${t("Still working — this is taking longer than usual.")} ` : null}
             {showElapsed ? formatElapsed(elapsedInStage) : " "}
           </p>
         </div>

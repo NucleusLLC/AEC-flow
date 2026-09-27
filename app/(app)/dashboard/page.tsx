@@ -4,6 +4,7 @@ import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock } from "l
 import { authOptions } from "@/lib/auth";
 import { getBetaMembership } from "@/lib/data/account";
 import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import { Greeting } from "@/components/dashboard/greeting";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
@@ -13,7 +14,10 @@ import { getRecentActivity } from "@/lib/data/activity";
 import { formatCurrencyCompact, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
-export const metadata = { title: "Dashboard · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Dashboard")} · AEC-flow` };
+}
 
 function TrendPill({ trend }: { trend?: Trend }) {
   if (!trend) return null;
@@ -63,10 +67,15 @@ export default async function DashboardPage() {
         >
           <CalendarClock className={`h-4 w-4 shrink-0 ${betaDaysLeft <= 14 ? "text-amber-600" : "text-brand"}`} />
           <span>
-            <strong className="font-semibold">{betaDaysLeft} {betaDaysLeft === 1 ? "day" : "days"}</strong> {t("left in your free beta access")}
+            <strong className="font-semibold">
+              {betaDaysLeft === 1 ? t("1 day") : fmt(t("{count} days"), { count: betaDaysLeft })}
+            </strong> {t("left in your free beta access")}
           </span>
           <span className={betaDaysLeft <= 14 ? "text-amber-700" : "text-muted"}>
-            · through {betaUntil.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+            ·{" "}
+            {fmt(t("through {date}"), {
+              date: betaUntil.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }),
+            })}
           </span>
           <span className="ml-auto text-xs text-muted">{t('Tap "New Bug/Wish" anytime to send feedback.')}</span>
         </div>
@@ -98,7 +107,7 @@ export default async function DashboardPage() {
               <TrendPill trend={stat.trend} />
             </div>
             <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{stat.value}</div>
-            <div className="mt-1 text-xs text-faint">{stat.hint}</div>
+            <div className="mt-1 text-xs text-faint">{stat.hintTemplate ? fmt(t(stat.hintTemplate), stat.hintVars ?? {}) : stat.hint}</div>
           </Card>
         ))}
       </div>
@@ -166,9 +175,9 @@ export default async function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-fg">{person.name}</div>
-                  <div className="text-xs text-muted">Back {formatDate(person.until)}</div>
+                  <div className="text-xs text-muted">{fmt(t("Back {date}"), { date: formatDate(person.until) })}</div>
                 </div>
-                <Badge tone="slate">{person.type}</Badge>
+                <Badge tone="slate">{t(person.type)}</Badge>
               </div>
             ))}
           </div>
@@ -180,10 +189,10 @@ export default async function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader
             title={t("Proposals Pipeline")}
-            subtitle={`${formatCurrencyCompact(pipelineTotal)} across ${pipeline.reduce(
-              (n, s) => n + s.count,
-              0,
-            )} proposals`}
+            subtitle={fmt(t("{amount} across {count} proposals"), {
+              amount: formatCurrencyCompact(pipelineTotal),
+              count: pipeline.reduce((n, s) => n + s.count, 0),
+            })}
             action={
               <Link href="/proposals" className="text-xs font-medium text-brand hover:underline">
                 {t("View all")}
@@ -195,7 +204,7 @@ export default async function DashboardPage() {
               <div key={stage.stage}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className="font-medium text-fg">
-                    {stage.stage} <span className="text-faint">· {stage.count}</span>
+                    {t(stage.stage)} <span className="text-faint">· {stage.count}</span>
                   </span>
                   <span className="text-muted">{formatCurrencyCompact(stage.value)}</span>
                 </div>

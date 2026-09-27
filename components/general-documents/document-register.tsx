@@ -23,6 +23,8 @@ import {
   type GeneralDocumentStatus,
   type GeneralDocumentSummaryDTO,
 } from "@/lib/general-documents/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const CONTROL =
   "h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -48,6 +50,7 @@ export function DocumentRegister({
   documents: GeneralDocumentSummaryDTO[];
   today: string;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<GeneralDocumentStatus | "ALL" | "LIVE">("ALL");
   const [category, setCategory] = useState<DocumentCategory | "ALL">("ALL");
@@ -89,8 +92,8 @@ export function DocumentRegister({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search number, title, client, project, addressee…"
-            aria-label="Search documents"
+            placeholder={t("Search number, title, client, project, addressee…")}
+            aria-label={t("Search documents")}
             className={`${CONTROL} w-full pl-8 pr-3 placeholder:text-faint`}
           />
         </div>
@@ -98,14 +101,14 @@ export function DocumentRegister({
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as GeneralDocumentStatus | "ALL" | "LIVE")}
-          aria-label="Filter by status"
+          aria-label={t("Filter by status")}
           className={CONTROL}
         >
-          <option value="ALL">All statuses</option>
-          <option value="LIVE">In play</option>
+          <option value="ALL">{t("All statuses")}</option>
+          <option value="LIVE">{t("In play")}</option>
           {GENERAL_DOCUMENT_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {GENERAL_DOCUMENT_STATUS_LABEL[s]}
+              {t(GENERAL_DOCUMENT_STATUS_LABEL[s])}
             </option>
           ))}
         </select>
@@ -113,40 +116,42 @@ export function DocumentRegister({
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as DocumentCategory | "ALL")}
-          aria-label="Filter by kind"
+          aria-label={t("Filter by kind")}
           className={CONTROL}
         >
-          <option value="ALL">All kinds</option>
+          <option value="ALL">{t("All kinds")}</option>
           {DOCUMENT_CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {DOCUMENT_CATEGORY_LABEL[c]}
+              {t(DOCUMENT_CATEGORY_LABEL[c])}
             </option>
           ))}
         </select>
 
         <span className="text-xs text-muted tabular-nums">
-          {rows.length} of {documents.length}
-          {expiringSoon > 0 ? <span className="ml-1.5">· {expiringSoon} with an end date</span> : null}
+          {fmt(t("{shown} of {total}"), { shown: rows.length, total: documents.length })}
+          {expiringSoon > 0 ? (
+            <span className="ml-1.5">· {fmt(t("{count} with an end date"), { count: expiringSoon })}</span>
+          ) : null}
         </span>
       </div>
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
           <Inbox className="h-8 w-8 text-faint" />
-          <p className="mt-3 text-sm font-medium text-fg">No document matches these filters.</p>
+          <p className="mt-3 text-sm font-medium text-fg">{t("No document matches these filters.")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-1">
           <table className="w-full min-w-[920px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-4 pb-1.5 font-medium">Number</th>
-                <th className="px-3 pb-1.5 font-medium">Document</th>
-                <th className="px-3 pb-1.5 font-medium">For</th>
-                <th className="px-3 pb-1.5 font-medium">Addressed to</th>
-                <th className="px-3 pb-1.5 font-medium">Dated</th>
-                <th className="px-3 pb-1.5 font-medium">Runs to</th>
-                <th className="px-4 pb-1.5 font-medium">Status</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Number")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Document")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("For")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Addressed to")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Dated")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Runs to")}</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -168,7 +173,7 @@ export function DocumentRegister({
                     <div className="truncate font-medium text-fg" title={d.title}>
                       {d.title}
                     </div>
-                    <div className="truncate text-[11px] text-faint">{d.docTypeLabel}</div>
+                    <div className="truncate text-[11px] text-faint">{t(d.docTypeLabel)}</div>
                   </td>
                   <td className="px-3 py-2.5 align-top text-muted">
                     <div className="truncate">{d.clientName ?? "—"}</div>

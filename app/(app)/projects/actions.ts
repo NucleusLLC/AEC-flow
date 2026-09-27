@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createProject, updateProject } from "@/lib/data/projects";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
+import { getServerT } from "@/lib/i18n/server";
 import type { ProjectWriteInput } from "@/lib/data/projects.types";
 
 export type SaveProjectResult =
@@ -44,7 +45,8 @@ export async function saveProject(
     }
     return { ok: true, id: result.id, projectNumber: result.projectNumber };
   } catch (e) {
-    const error = e instanceof Error ? e.message : "Failed to save project.";
+    const t = await getServerT();
+    const error = e instanceof Error ? e.message : t("Failed to save project.");
     return { ok: false, error };
   }
 }

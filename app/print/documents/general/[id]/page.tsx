@@ -9,6 +9,8 @@ import { catalogueEntry } from "@/lib/general-documents/catalogue";
 import { renderSignatures } from "@/lib/general-documents/render";
 import { militaryDate } from "@/lib/building-permits/register";
 import { GENERAL_DOCUMENT_STATUS_LABEL } from "@/lib/general-documents/types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Document · Print" };
 
@@ -36,6 +38,7 @@ export default async function GeneralDocumentPrintPage({
     getFirmIdentity(),
   ]);
   if (!doc) notFound();
+  const t = await getServerT();
 
   const entry = catalogueEntry(doc.docType);
   const signatures = entry
@@ -63,7 +66,7 @@ export default async function GeneralDocumentPrintPage({
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">
-              {doc.docTypeLabel}
+              {t(doc.docTypeLabel)}
             </div>
             <div className="mt-1 font-mono text-xs text-gray-600">
               {doc.number}
@@ -71,9 +74,9 @@ export default async function GeneralDocumentPrintPage({
             </div>
             <div className="text-[11px] text-gray-500">
               {militaryDate(doc.issueDate)}
-              {isDraft ? " · DRAFT" : ""}
-              {doc.status === "VOID" ? " · VOID" : ""}
-              {doc.status === "SUPERSEDED" ? " · SUPERSEDED" : ""}
+              {isDraft ? ` · ${t("DRAFT")}` : ""}
+              {doc.status === "VOID" ? ` · ${t("VOID")}` : ""}
+              {doc.status === "SUPERSEDED" ? ` · ${t("SUPERSEDED")}` : ""}
             </div>
           </div>
         }
@@ -108,8 +111,9 @@ export default async function GeneralDocumentPrintPage({
                 <div className="h-px w-full bg-gray-400" />
                 <div className="mt-1 text-[11px] font-medium text-gray-700">{block.role}</div>
                 <div className="text-[10px] text-gray-500">
-                  {block.name ? `${block.name} · ` : ""}Name · Date
-                  {block.witness ? " · Seal" : ""}
+                  {block.name ? `${block.name} · ` : ""}
+                  {t("Name · Date")}
+                  {block.witness ? ` · ${t("Seal")}` : ""}
                 </div>
               </div>
             ))}
@@ -119,12 +123,14 @@ export default async function GeneralDocumentPrintPage({
 
       {isDraft ? (
         <p className="mt-8 text-[9px] uppercase tracking-wide text-gray-400">
-          Draft — not issued. Status: {GENERAL_DOCUMENT_STATUS_LABEL[doc.status]}.
+          {fmt(t("Draft — not issued. Status: {status}."), {
+            status: t(GENERAL_DOCUMENT_STATUS_LABEL[doc.status]),
+          })}
         </p>
       ) : null}
 
       <div className="mt-6 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {firm.name} · {doc.number} · {doc.docTypeLabel}
+        {firm.name} · {doc.number} · {t(doc.docTypeLabel)}
       </div>
     </PrintSurface>
   );

@@ -4,6 +4,7 @@ import { Calculator, Plus, FileSpreadsheet, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { getProject } from "@/lib/data/projects";
 import { getEstimateById } from "@/lib/data/estimates";
+import { getServerT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export default async function ProjectEstimatesPage({ params }: { params: Promise
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
+  const t = await getServerT();
 
   // A project's estimate is keyed by the project id (see the estimates workspace).
   const estimate = await getEstimateById(id);
@@ -21,11 +23,11 @@ export default async function ProjectEstimatesPage({ params }: { params: Promise
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2 text-faint">
         <Calculator className="h-6 w-6" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-fg">Estimate</h3>
+      <h3 className="mt-4 text-base font-semibold text-fg">{t("Estimate")}</h3>
       <p className="mx-auto mt-1 max-w-md text-sm text-muted">
         {hasEstimate
-          ? "This project has a cost estimate. Open it to edit the bill of quantities, autosave, and print or export to PDF."
-          : "No estimate yet for this project. Create one to start the bill of quantities — it opens with the project's details filled in."}
+          ? t("This project has a cost estimate. Open it to edit the bill of quantities, autosave, and print or export to PDF.")
+          : t("No estimate yet for this project. Create one to start the bill of quantities — it opens with the project's details filled in.")}
       </p>
       <Link
         href={`/estimates?project=${id}`}
@@ -33,11 +35,11 @@ export default async function ProjectEstimatesPage({ params }: { params: Promise
       >
         {hasEstimate ? (
           <>
-            <FileSpreadsheet className="h-4 w-4" /> Open estimate
+            <FileSpreadsheet className="h-4 w-4" /> {t("Open estimate")}
           </>
         ) : (
           <>
-            <Plus className="h-4 w-4" /> Create estimate
+            <Plus className="h-4 w-4" /> {t("Create estimate")}
           </>
         )}
         <ArrowRight className="h-4 w-4" />

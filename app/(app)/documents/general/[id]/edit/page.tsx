@@ -8,6 +8,8 @@ import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { ymd } from "@/lib/building-permits/register";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Edit document · AEC-flow" };
 
@@ -28,6 +30,7 @@ export default async function EditGeneralDocumentPage({
     getProjects(),
     getFirmIdentity(),
   ]);
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
@@ -39,8 +42,8 @@ export default async function EditGeneralDocumentPage({
         {doc.number}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit {doc.number}</h2>
-        <p className="text-sm text-muted">{doc.docTypeLabel}</p>
+        <h2 className="text-xl font-semibold text-fg">{fmt(t("Edit {number}"), { number: doc.number })}</h2>
+        <p className="text-sm text-muted">{t(doc.docTypeLabel)}</p>
       </div>
       <DocumentComposer
         mode="edit"

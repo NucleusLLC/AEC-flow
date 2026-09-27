@@ -2,18 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { createTask, updateTask, setTaskStatus, deleteTask } from "@/lib/data/tasks";
+import { getServerT } from "@/lib/i18n/server";
 import type { TaskInput, TaskStatus } from "@/lib/data/tasks.types";
 
 export type SaveTaskResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function saveTask(mode: "new" | "edit", input: TaskInput): Promise<SaveTaskResult> {
+  const t = await getServerT();
   try {
-    if (!input.title?.trim()) return { ok: false, error: "A task title is required." };
+    if (!input.title?.trim()) return { ok: false, error: t("A task title is required.") };
     const id = mode === "new" ? await createTask(input) : await updateTask(input);
     revalidatePath("/tasks");
     return { ok: true, id };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Failed to save the task." };
+    return { ok: false, error: e instanceof Error ? e.message : t("Failed to save the task.") };
   }
 }
 

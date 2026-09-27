@@ -11,6 +11,7 @@ import {
   transitionServiceProposalAction,
 } from "@/app/(app)/design/service-proposals/actions";
 import { canTransition, type ServiceProposalStatus } from "@/lib/proposals/engine/status";
+import { useT } from "@/components/i18n/language-provider";
 
 const btn =
   "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:border-brand hover:text-fg disabled:opacity-50";
@@ -22,6 +23,7 @@ export function ServiceProposalActions({
   id: string;
   status: ServiceProposalStatus;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function ServiceProposalActions({
     start(async () => {
       const res = await fn();
       if (!res.ok) {
-        setError(res.error ?? "Something went wrong.");
+        setError(res.error ?? t("Something went wrong."));
         return;
       }
       router.refresh();
@@ -74,7 +76,7 @@ export function ServiceProposalActions({
    * rather than re-typing the proposal.
    */
   function duplicate() {
-    runAndOpen(() => duplicateServiceProposalAction(id), "Could not duplicate this proposal.");
+    runAndOpen(() => duplicateServiceProposalAction(id), t("Could not duplicate this proposal."));
   }
 
   const canReview = canTransition(status, "INTERNAL_REVIEW");
@@ -87,27 +89,27 @@ export function ServiceProposalActions({
     <div className="flex flex-wrap items-center gap-2">
       {canReview ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "INTERNAL_REVIEW"))}>
-          <ClipboardCheck className="h-4 w-4" /> Submit for review
+          <ClipboardCheck className="h-4 w-4" /> {t("Submit for review")}
         </button>
       ) : null}
       {canApprove ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "APPROVED_FOR_ISSUE"))}>
-          <ThumbsUp className="h-4 w-4" /> Approve for issue
+          <ThumbsUp className="h-4 w-4" /> {t("Approve for issue")}
         </button>
       ) : null}
       {canIssue ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => issueServiceProposalAction(id))}>
-          <Send className="h-4 w-4" /> Issue to client
+          <Send className="h-4 w-4" /> {t("Issue to client")}
         </button>
       ) : null}
       {canAccept ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "ACCEPTED"))}>
-          <Check className="h-4 w-4" /> Mark accepted
+          <Check className="h-4 w-4" /> {t("Mark accepted")}
         </button>
       ) : null}
       {canReject ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "REJECTED"))}>
-          <X className="h-4 w-4" /> Mark rejected
+          <X className="h-4 w-4" /> {t("Mark rejected")}
         </button>
       ) : null}
       {/* Duplicate sits next to "New revision" on purpose — the two are easily confused, so
@@ -116,24 +118,24 @@ export function ServiceProposalActions({
         type="button"
         disabled={pending}
         className={btn}
-        title="Copy this proposal into a new draft with the next proposal number"
+        title={t("Copy this proposal into a new draft with the next proposal number")}
         onClick={duplicate}
       >
-        <Copy className="h-4 w-4" /> Duplicate
+        <Copy className="h-4 w-4" /> {t("Duplicate")}
       </button>
       <button
         type="button"
         disabled={pending}
         className={btn}
-        title="Continue this offer as the next revision, superseding the issued one, and open it"
+        title={t("Continue this offer as the next revision, superseding the issued one, and open it")}
         onClick={() =>
           runAndOpen(
             () => reviseServiceProposalAction(id),
-            "Could not start a new revision of this proposal.",
+            t("Could not start a new revision of this proposal."),
           )
         }
       >
-        <CopyPlus className="h-4 w-4" /> New revision
+        <CopyPlus className="h-4 w-4" /> {t("New revision")}
       </button>
       <DeleteButton id={id} onError={setError} />
       {error ? <span className="text-sm text-rose-600">{error}</span> : null}
@@ -142,6 +144,7 @@ export function ServiceProposalActions({
 }
 
 function DeleteButton({ id, onError }: { id: string; onError: (m: string) => void }) {
+  const t = useT();
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
@@ -150,7 +153,7 @@ function DeleteButton({ id, onError }: { id: string; onError: (m: string) => voi
     start(async () => {
       const res = await deleteServiceProposalAction(id);
       if (!res.ok) {
-        onError(res.error ?? "Could not delete.");
+        onError(res.error ?? t("Could not delete."));
         setConfirming(false);
         return;
       }
@@ -163,15 +166,15 @@ function DeleteButton({ id, onError }: { id: string; onError: (m: string) => voi
     return (
       <span className="inline-flex items-center gap-2 text-sm">
         <button type="button" onClick={remove} disabled={pending} className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50">
-          {pending ? "Deleting…" : "Confirm delete"}
+          {pending ? t("Deleting…") : t("Confirm delete")}
         </button>
-        <button type="button" onClick={() => setConfirming(false)} className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-muted hover:text-fg">Cancel</button>
+        <button type="button" onClick={() => setConfirming(false)} className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-muted hover:text-fg">{t("Cancel")}</button>
       </span>
     );
   }
   return (
     <button type="button" onClick={() => setConfirming(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:border-rose-300 hover:text-rose-600">
-      <Trash2 className="h-4 w-4" /> Delete
+      <Trash2 className="h-4 w-4" /> {t("Delete")}
     </button>
   );
 }

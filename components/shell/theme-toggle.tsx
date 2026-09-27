@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
 
 export function ThemeToggle() {
+  const t = useT();
   const [dark, setDark] = useState(false);
 
   // Reflect the class the pre-paint script already applied.
@@ -28,8 +30,8 @@ export function ThemeToggle() {
       type="button"
       role="switch"
       aria-checked={dark}
-      aria-label="Toggle dark mode"
-      title={dark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={t("Toggle dark mode")}
+      title={dark ? t("Switch to light mode") : t("Switch to dark mode")}
       onClick={toggle}
       className="relative inline-flex h-8 w-[60px] shrink-0 items-center rounded-full border border-border bg-surface-2 px-1 transition-colors"
     >

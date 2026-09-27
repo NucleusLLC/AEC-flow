@@ -22,11 +22,15 @@ import { getClient, type ProposalStatus } from "@/lib/data/clients";
 import { getActivityForClient } from "@/lib/data/activity";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
+import { PROPOSAL_STATUS_LABEL } from "@/lib/data/proposals.types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const client = await getClient(id);
-  return { title: `${client?.name ?? "Client"} · AEC-flow` };
+  const t = await getServerT();
+  return { title: `${client?.name ?? t("Client")} · AEC-flow` };
 }
 
 const proposalTone: Record<ProposalStatus, Parameters<typeof Badge>[0]["tone"]> = {
@@ -45,6 +49,13 @@ const estimateTone: Record<string, Parameters<typeof Badge>[0]["tone"]> = {
   APPROVED: "green",
 };
 
+/** Estimate status wording; unknown statuses fall back to the raw value. */
+const estimateLabel: Record<string, string> = {
+  DRAFT: "Draft",
+  IN_REVIEW: "In review",
+  APPROVED: "Approved",
+};
+
 function InfoRow({ icon: Icon, children }: { icon: typeof Mail; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2.5 text-sm">
@@ -59,6 +70,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const client = await getClient(id);
   if (!client) notFound();
   const activity = await getActivityForClient(client.id);
+  const t = await getServerT();
 
   const lifetimeValue = client.proposals
     .filter((p) => p.status === "APPROVED")
@@ -69,9 +81,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const activeProjects = client.projects.filter((p) => p.status === "ACTIVE").length;
 
   const metrics = [
-    { label: "Open Pipeline", value: formatCurrency(pipelineValue) },
-    { label: "Won to Date", value: formatCurrency(lifetimeValue) },
-    { label: "Active Projects", value: `${activeProjects} of ${client.projects.length}` },
+    { label: t("Open Pipeline"), value: formatCurrency(pipelineValue) },
+    { label: t("Won to Date"), value: formatCurrency(lifetimeValue) },
+    { label: t("Active Projects"), value: fmt(t("{count} of {total}"), { count: activeProjects, total: client.projects.length }) },
   ];
 
   return (
@@ -81,7 +93,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to clients
+        {t("Back to clients")}
       </Link>
 
       {/* Header */}
@@ -112,21 +124,21 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             target="_blank"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            Print
+            {t("Print")}
           </a>
           <Link
             href={`/clients/${client.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("Edit")}
           </Link>
           <Link
             href="/proposals/new"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
-            New Proposal
+            {t("New Proposal")}
           </Link>
         </div>
       </div>
@@ -147,8 +159,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           {/* Proposals */}
           <Card>
             <CardHeader
-              title="Proposals"
-              subtitle={`${client.proposals.length} total`}
+              title={t("Proposals")}
+              subtitle={fmt(t("{count} total"), { count: client.proposals.length })}
               action={<FileText className="h-4 w-4 text-faint" />}
             />
             {client.proposals.length ? (
@@ -159,7 +171,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[11px] text-faint">{p.ref}</span>
                         <Badge tone={proposalTone[p.status]}>
-                          {p.status.replace(/_/g, " ").toLowerCase()}
+                          {t(PROPOSAL_STATUS_LABEL[p.status] ?? p.status.replace(/_/g, " ")).toLowerCase()}
                         </Badge>
                       </div>
                       <div className="mt-0.5 truncate text-sm font-medium text-fg">{p.title}</div>
@@ -172,15 +184,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 ))}
               </div>
             ) : (
-              <CardBody className="text-sm text-muted">No proposals yet.</CardBody>
+              <CardBody className="text-sm text-muted">{t("No proposals yet.")}</CardBody>
             )}
           </Card>
 
           {/* Projects */}
           <Card>
             <CardHeader
-              title="Projects"
-              subtitle={`${client.projects.length} total`}
+              title={t("Projects")}
+              subtitle={fmt(t("{count} total"), { count: client.projects.length })}
               action={<FolderKanban className="h-4 w-4 text-faint" />}
             />
             {client.projects.length ? (
@@ -203,15 +215,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 ))}
               </div>
             ) : (
-              <CardBody className="text-sm text-muted">No projects yet.</CardBody>
+              <CardBody className="text-sm text-muted">{t("No projects yet.")}</CardBody>
             )}
           </Card>
 
           {/* Estimates — links through to the estimate workspace. */}
           <Card>
             <CardHeader
-              title="Estimates"
-              subtitle={`${client.estimates.length} total`}
+              title={t("Estimates")}
+              subtitle={fmt(t("{count} total"), { count: client.estimates.length })}
               action={<Calculator className="h-4 w-4 text-faint" />}
             />
             {client.estimates.length ? (
@@ -226,7 +238,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[11px] text-faint">{e.number || "—"}</span>
                         <Badge tone={estimateTone[e.status] ?? "slate"}>
-                          {e.status.replace(/_/g, " ").toLowerCase()}
+                          {(estimateLabel[e.status] ? t(estimateLabel[e.status]) : e.status.replace(/_/g, " ")).toLowerCase()}
                         </Badge>
                       </div>
                       <div className="mt-0.5 truncate text-sm font-medium text-fg">{e.name}</div>
@@ -241,16 +253,16 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 ))}
               </div>
             ) : (
-              <CardBody className="text-sm text-muted">No estimates yet.</CardBody>
+              <CardBody className="text-sm text-muted">{t("No estimates yet.")}</CardBody>
             )}
           </Card>
 
           {/* Activity */}
           <Card>
-            <CardHeader title="Recent Activity" />
+            <CardHeader title={t("Recent Activity")} />
             <CardBody>
               {activity.length === 0 ? (
-                <p className="text-sm text-muted">No recent activity.</p>
+                <p className="text-sm text-muted">{t("No recent activity.")}</p>
               ) : (
                 <ol className="space-y-4">
                   {activity.map((entry) => (
@@ -281,7 +293,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         {/* Sidebar */}
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Contact" />
+            <CardHeader title={t("Contact")} />
             <CardBody className="space-y-3">
               {client.email ? (
                 <InfoRow icon={Mail}>
@@ -320,7 +332,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
           {client.contacts.length ? (
             <Card>
-              <CardHeader title="Key Contacts" />
+              <CardHeader title={t("Key Contacts")} />
               <div className="divide-y divide-border">
                 {client.contacts.map((p) => (
                   <div key={p.name} className="flex items-center gap-3 px-5 py-3">
@@ -330,7 +342,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-sm font-medium text-fg">{p.name}</span>
-                        {p.isPrimary ? <Badge tone="blue">primary</Badge> : null}
+                        {p.isPrimary ? <Badge tone="blue">{t("primary")}</Badge> : null}
                       </div>
                       <div className="truncate text-xs text-muted">{p.role}</div>
                       {p.email ? (
@@ -346,13 +358,13 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           ) : null}
 
           <Card>
-            <CardHeader title="Addresses" />
+            <CardHeader title={t("Addresses")} />
             <CardBody className="space-y-3">
               {client.addresses.map((a) => (
                 <InfoRow key={a.label} icon={MapPin}>
                   <span className="block font-medium text-fg">
                     {a.label}
-                    {a.isPrimary ? <span className="ml-1.5 text-xs text-faint">· primary</span> : null}
+                    {a.isPrimary ? <span className="ml-1.5 text-xs text-faint">· {t("primary")}</span> : null}
                   </span>
                   <span className="text-muted">
                     {[a.line1, a.city, a.emirate, a.country].filter(Boolean).join(", ")}
@@ -364,7 +376,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
           {client.notes ? (
             <Card>
-              <CardHeader title="Notes" />
+              <CardHeader title={t("Notes")} />
               <CardBody className="text-sm text-muted">{client.notes}</CardBody>
             </Card>
           ) : null}

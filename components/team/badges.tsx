@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
 import { ROLE_LABEL, type UserRole, type UserStatus } from "@/lib/data/team.types";
 
 type Tone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";
@@ -24,9 +27,11 @@ const roleTone: Record<UserRole, Tone> = {
 };
 
 export function TeamStatusBadge({ status }: { status: UserStatus }) {
-  return <Badge tone={statusTone[status]}>{statusLabel[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={statusTone[status]}>{t(statusLabel[status])}</Badge>;
 }
 
 export function RoleBadge({ role }: { role: UserRole }) {
-  return <Badge tone={roleTone[role]}>{ROLE_LABEL[role]}</Badge>;
+  const t = useT();
+  return <Badge tone={roleTone[role]}>{t(ROLE_LABEL[role])}</Badge>;
 }

@@ -11,8 +11,10 @@ import {
   type MaterialSelectionDTO,
   type MaterialSelectionStatus,
 } from "@/lib/materials/types";
+import { useT } from "@/components/i18n/language-provider";
 
 export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<MaterialSelectionStatus | "ALL">("ALL");
   const [category, setCategory] = useState<string>("ALL");
@@ -42,8 +44,8 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
         <Boxes className="h-8 w-8 text-faint" />
-        <p className="mt-3 text-sm font-medium text-fg">No selections yet</p>
-        <p className="mt-1 text-sm text-muted">Add a material or finish selection to start the schedule.</p>
+        <p className="mt-3 text-sm font-medium text-fg">{t("No selections yet")}</p>
+        <p className="mt-1 text-sm text-muted">{t("Add a material or finish selection to start the schedule.")}</p>
       </div>
     );
   }
@@ -56,7 +58,7 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search tag, product, manufacturer, location…"
+            placeholder={t("Search tag, product, manufacturer, location…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
         </div>
@@ -65,9 +67,9 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
           onChange={(e) => setCategory(e.target.value)}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
         >
-          <option value="ALL">All categories</option>
+          <option value="ALL">{t("All categories")}</option>
           {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>{t(c)}</option>
           ))}
         </select>
         <select
@@ -75,9 +77,9 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
           onChange={(e) => setStatus(e.target.value as MaterialSelectionStatus | "ALL")}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
         >
-          <option value="ALL">All statuses</option>
+          <option value="ALL">{t("All statuses")}</option>
           {MATERIAL_STATUSES.map((s) => (
-            <option key={s} value={s}>{MATERIAL_STATUS_LABEL[s]}</option>
+            <option key={s} value={s}>{t(MATERIAL_STATUS_LABEL[s])}</option>
           ))}
         </select>
       </div>
@@ -86,12 +88,12 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-2.5 font-medium">Tag</th>
-              <th className="px-4 py-2.5 font-medium">Category</th>
-              <th className="px-4 py-2.5 font-medium">Product</th>
-              <th className="px-4 py-2.5 font-medium">Location</th>
-              <th className="px-4 py-2.5 font-medium">Status</th>
-              <th className="px-4 py-2.5 text-right font-medium">Cost</th>
+              <th className="px-4 py-2.5 font-medium">{t("Tag")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Category")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Product")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Location")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Status")}</th>
+              <th className="px-4 py-2.5 text-right font-medium">{t("Cost")}</th>
             </tr>
           </thead>
           <tbody>
@@ -102,7 +104,7 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
                     {m.tag}
                   </Link>
                 </td>
-                <td className="px-4 py-2.5 text-muted">{m.category}</td>
+                <td className="px-4 py-2.5 text-muted">{t(m.category)}</td>
                 <td className="px-4 py-2.5 text-fg">
                   {m.productName}
                   {m.manufacturer ? <span className="text-muted"> · {m.manufacturer}</span> : null}
@@ -117,7 +119,7 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
-                  No selections match your filters.
+                  {t("No selections match your filters.")}
                 </td>
               </tr>
             ) : null}

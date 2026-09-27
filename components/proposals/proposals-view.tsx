@@ -13,6 +13,8 @@ import {
 } from "@/lib/data/proposals.types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "recent" | "value" | "followup";
 
@@ -27,6 +29,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | ProposalStatus; label: string }> = [
 ];
 
 export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | ProposalStatus>("ALL");
   const [sort, setSort] = useState<SortKey>("recent");
@@ -67,7 +70,7 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -79,7 +82,7 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search proposals…"
+              placeholder={t("Search proposals…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -90,9 +93,9 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="h-9 rounded-lg border border-border bg-surface pl-7 pr-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             >
-              <option value="recent">Most recent</option>
-              <option value="value">Fee value</option>
-              <option value="followup">Follow-up date</option>
+              <option value="recent">{t("Most recent")}</option>
+              <option value="value">{t("Fee value")}</option>
+              <option value="followup">{t("Follow-up date")}</option>
             </select>
           </div>
         </div>
@@ -104,13 +107,13 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
           <table className="w-full min-w-[920px] text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-2/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
-                <th className="px-5 py-2.5">Proposal</th>
-                <th className="px-3 py-2.5">Client</th>
-                <th className="px-3 py-2.5">Owner</th>
-                <th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5 text-right">Fee</th>
-                <th className="px-3 py-2.5">Follow-up</th>
-                <th className="px-5 py-2.5 text-right">Preview</th>
+                <th className="px-5 py-2.5">{t("Proposal")}</th>
+                <th className="px-3 py-2.5">{t("Client")}</th>
+                <th className="px-3 py-2.5">{t("Owner")}</th>
+                <th className="px-3 py-2.5">{t("Status")}</th>
+                <th className="px-3 py-2.5 text-right">{t("Fee")}</th>
+                <th className="px-3 py-2.5">{t("Follow-up")}</th>
+                <th className="px-5 py-2.5 text-right">{t("Preview")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -121,7 +124,7 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[11px] text-faint">{p.refNumber}</span>
                         {p.revision > 1 ? (
-                          <span className="text-[10px] text-faint">rev {p.revision}</span>
+                          <span className="text-[10px] text-faint">{fmt(t("rev {n}"), { n: p.revision })}</span>
                         ) : null}
                       </div>
                       <span className="mt-0.5 block max-w-xs truncate font-semibold text-fg group-hover:text-brand">
@@ -168,15 +171,15 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <FileText className="h-5 w-5" />
             </div>
-            <p className="text-sm font-semibold text-fg">No proposals match your filters</p>
-            <p className="text-xs text-muted">Try a different search term or clear the filters.</p>
+            <p className="text-sm font-semibold text-fg">{t("No proposals match your filters")}</p>
+            <p className="text-xs text-muted">{t("Try a different search term or clear the filters.")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {proposals.length} proposals
-        {status !== "ALL" ? ` · ${PROPOSAL_STATUS_LABEL[status]}` : ""}
+        {fmt(t("Showing {shown} of {total} proposals"), { shown: rows.length, total: proposals.length })}
+        {status !== "ALL" ? ` · ${t(PROPOSAL_STATUS_LABEL[status])}` : ""}
       </p>
     </div>
   );

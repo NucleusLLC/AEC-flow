@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { AlertTriangle, FolderPlus } from "lucide-react";
 import { saveProject } from "@/app/(app)/projects/actions";
 import { ClientSelect, type ClientOption } from "@/components/clients/client-select";
+import { useT } from "@/components/i18n/language-provider";
 
 export type CreatedProject = {
   /** Project row id — what estimates key off. */
@@ -58,11 +59,12 @@ export function NewProjectPanel({
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const t = useT();
 
   function submit() {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("Project name is required.");
+      setError(t("Project name is required."));
       return;
     }
     // createProject resolves the client by NAME and throws when it finds none,
@@ -71,7 +73,7 @@ export function NewProjectPanel({
     // literal: the client can be added from the field itself.
     const client = clientList.find((c) => c.id === clientId);
     if (!client) {
-      setError("Pick a client, or add one with “＋ Add a new client”.");
+      setError(t("Pick a client, or add one with “＋ Add a new client”."));
       return;
     }
     setError(null);
@@ -88,7 +90,7 @@ export function NewProjectPanel({
         return;
       }
       if (!res.projectNumber) {
-        setError("Project saved but no project number came back — reload the page.");
+        setError(t("Project saved but no project number came back — reload the page."));
         return;
       }
       onCreated({
@@ -104,22 +106,22 @@ export function NewProjectPanel({
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
       <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-        <FolderPlus className="h-4 w-4 text-brand" /> New project
+        <FolderPlus className="h-4 w-4 text-brand" /> {t("New project")}
       </p>
       <p className="mt-1 text-xs text-muted">
-        Created with the standard six phases, then opened straight away.
+        {t("Created with the standard six phases, then opened straight away.")}
       </p>
 
       {/* No empty-list bail-out any more: with zero clients the form still
           renders and the client picker leads with its create panel. */}
       <div className="mt-3 grid items-start gap-3 sm:grid-cols-3">
         <label className="block text-xs text-muted">
-          Project name
+          {t("Project name")}
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Marina Heights Tower — Phase 3"
-            aria-label="New project name"
+            placeholder={t("Marina Heights Tower — Phase 3")}
+            aria-label={t("New project name")}
             className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
           />
         </label>
@@ -130,11 +132,11 @@ export function NewProjectPanel({
           onCreated={(c) => setClientList((prev) => [...prev, c])}
         />
         <label className="block text-xs text-muted">
-          Site address <span className="text-faint">(optional)</span>
+          {t("Site address")} <span className="text-faint">{t("(optional)")}</span>
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            aria-label="New project site address"
+            aria-label={t("New project site address")}
             className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
           />
         </label>
@@ -153,7 +155,7 @@ export function NewProjectPanel({
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50"
         >
-          {pending ? "Creating…" : submitLabel}
+          {pending ? t("Creating…") : t(submitLabel)}
         </button>
         <button
           type="button"
@@ -161,7 +163,7 @@ export function NewProjectPanel({
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </div>

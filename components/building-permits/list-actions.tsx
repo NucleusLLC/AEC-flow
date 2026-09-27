@@ -16,6 +16,7 @@
 import Link from "next/link";
 import { Printer } from "lucide-react";
 import { EmailButton } from "@/components/email/email-button";
+import { useT } from "@/components/i18n/language-provider";
 
 const BASE = "/print/design/building-permits";
 
@@ -29,6 +30,7 @@ export function PermitListActions({
   scope: string;
   count: number;
 }) {
+  const t = useT();
   const href = (orientation: "landscape" | "portrait") =>
     `${BASE}?${query ? `${query}&` : ""}orientation=${orientation}`;
 
@@ -37,7 +39,7 @@ export function PermitListActions({
       <EmailButton
         subject={`Building Permit Register — ${scope}`}
         attachment="Building Permit Register"
-        label="Email"
+        label={t("Email")}
         relatedType="building-permit-register"
         linkPath={href("landscape")}
         defaultBody={`The building permit register (${scope}) — ${count} ${
@@ -47,16 +49,16 @@ export function PermitListActions({
       <Link
         href={href("landscape")}
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-        title="Print the register as it is filtered here"
+        title={t("Print the register as it is filtered here")}
       >
-        <Printer className="h-4 w-4" /> Print
+        <Printer className="h-4 w-4" /> {t("Print")}
       </Link>
       <Link
         href={href("portrait")}
         className="inline-flex h-9 items-center rounded-lg border border-border px-2.5 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg"
-        title="Print the register in portrait"
+        title={t("Print the register in portrait")}
       >
-        Portrait
+        {t("Portrait")}
       </Link>
     </div>
   );

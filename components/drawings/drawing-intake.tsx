@@ -65,11 +65,13 @@ import {
   toDataDiscipline,
   SHEET_TYPES,
   SHEET_TYPE_LABEL,
-  describePaper,
   type DetectedPaper,
   type SheetFacts,
   type SheetType,
 } from "@/lib/drawings";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
+import { sheetTypeText, tContext } from "@/components/drawings/t-context";
 
 /* ------------------------------------------------------------------ *
  * Editable shape
@@ -169,12 +171,13 @@ function ConfidenceChip({
   field: Field<string> | Field<SheetDiscipline> | null;
   edited: boolean;
 }) {
-  if (edited) return <Badge tone="blue">edited</Badge>;
-  if (!field) return <Badge tone="slate">not found</Badge>;
+  const t = useT();
+  if (edited) return <Badge tone="blue">{t("edited")}</Badge>;
+  if (!field) return <Badge tone="slate">{t("not found")}</Badge>;
   const tone = field.band === "high" ? "green" : field.band === "medium" ? "amber" : "slate";
   return (
     <Badge tone={tone}>
-      {field.band} · {Math.round(field.confidence * 100)}%
+      {t(field.band)} · {Math.round(field.confidence * 100)}%
     </Badge>
   );
 }
@@ -184,12 +187,13 @@ function EvidenceLine({
 }: {
   field: Field<string> | Field<SheetDiscipline> | Field<SheetType> | null;
 }) {
+  const t = useT();
   if (!field || field.evidence.length === 0) return null;
   const e = field.evidence[0];
-  const extra = field.alternates.length > 0 ? ` · also saw ${field.alternates.map((a) => String(a.value)).join(", ")}` : "";
+  const extra = field.alternates.length > 0 ? ` · ${fmt(t("also saw {values}"), { values: field.alternates.map((a) => String(a.value)).join(", ") })}` : "";
   return (
     <p className="mt-1 text-[11px] leading-snug text-faint">
-      from <span className="font-mono">“{e.fragment}”</span>
+      {t("from")} <span className="font-mono">“{e.fragment}”</span>
       {e.note ? ` — ${e.note}` : ""}
       {extra}
     </p>
@@ -202,13 +206,14 @@ function EvidenceLine({
  * identical in the form, and only one of them is the feature.
  */
 function SourceLine({ item }: { item: IntakeItem }) {
+  const t = useT();
   if (item.stage === "idle") return null;
 
   const text =
     item.stage === "uploading"
-      ? "Uploading…"
+      ? t("Uploading…")
       : item.stage === "reading"
-        ? "Reading the title block…"
+        ? t("Reading the title block…")
         : item.stageNote ?? "";
   if (!text) return null;
 
@@ -233,6 +238,7 @@ function SourceLine({ item }: { item: IntakeItem }) {
  * text layer.
  */
 function PaperLine({ item }: { item: IntakeItem }) {
+  const t = useT();
   const paper = item.paper;
   if (!paper || paper.confidence === 0) return null;
   const pages = item.sheet?.pageCount ?? null;
@@ -240,10 +246,10 @@ function PaperLine({ item }: { item: IntakeItem }) {
     <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-snug text-faint">
       <Ruler className="h-3 w-3 shrink-0" aria-hidden="true" />
       <span>
-        {describePaper(paper)} · {paper.widthMm} × {paper.heightMm} mm
-        {paper.match === "near" ? ` · ${paper.deviationMm} mm off nominal` : ""}
-        {paper.match === "custom" ? " · non-standard sheet" : ""}
-        {pages && pages > 1 ? ` · ${pages} pages` : ""}
+        {paper.size.name} {tContext(t, paper.orientation, `${paper.orientation} (orientation)`)} · {paper.widthMm} × {paper.heightMm} mm
+        {paper.match === "near" ? ` · ${fmt(t("{mm} mm off nominal"), { mm: paper.deviationMm })}` : ""}
+        {paper.match === "custom" ? ` · ${t("non-standard sheet")}` : ""}
+        {pages && pages > 1 ? ` · ${fmt(t("{count} pages"), { count: pages })}` : ""}
       </span>
     </p>
   );
@@ -251,15 +257,16 @@ function PaperLine({ item }: { item: IntakeItem }) {
 
 /** Where the drawing type came from: the lexicon, a model, or the user. */
 function SheetTypeChip({ item }: { item: IntakeItem }) {
+  const t = useT();
   const source = item.sheet?.sheetTypeSource ?? null;
-  if (source === "manual") return <Badge tone="blue">edited</Badge>;
-  if (source === "ai") return <Badge tone="violet">AI · confirm</Badge>;
+  if (source === "manual") return <Badge tone="blue">{t("edited")}</Badge>;
+  if (source === "ai") return <Badge tone="violet">{t("AI · confirm")}</Badge>;
   const f = item.sheetTypeField;
-  if (!f) return <Badge tone="slate">not found</Badge>;
+  if (!f) return <Badge tone="slate">{t("not found")}</Badge>;
   const tone = f.band === "high" ? "green" : f.band === "medium" ? "amber" : "slate";
   return (
     <Badge tone={tone}>
-      {f.band} · {Math.round(f.confidence * 100)}%
+      {t(f.band)} · {Math.round(f.confidence * 100)}%
     </Badge>
   );
 }
@@ -287,6 +294,7 @@ function ProposalRow({
   onSupersedeChange: (id: string, supersedes: string | undefined) => void;
   onSheetTypeChange: (id: string, type: SheetType | "") => void;
 }) {
+  const t = useT();
   const uid = useId();
   const isEdited = (k: DraftFieldKey) => item.edited.includes(k);
 
@@ -299,7 +307,7 @@ function ProposalRow({
     <div>
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={`${uid}-${key}`} className="text-[11px] font-medium uppercase tracking-wide text-faint">
-          {label}
+          {t(label)}
         </label>
         <ConfidenceChip field={item.draft[key]} edited={isEdited(key)} />
       </div>
@@ -339,7 +347,7 @@ function ProposalRow({
             <p className="truncate text-sm font-medium text-fg">{item.file.name}</p>
             <p className="text-[11px] text-faint">
               {item.kind} · {formatBytes(item.file.size)}
-              {item.kind !== "PDF" ? " · filename only — the content cannot be read" : ""}
+              {item.kind !== "PDF" ? ` · ${t("filename only — the content cannot be read")}` : ""}
             </p>
             <SourceLine item={item} />
             <PaperLine item={item} />
@@ -348,7 +356,7 @@ function ProposalRow({
         <button
           type="button"
           onClick={() => onRemove(item.id)}
-          aria-label={`Remove ${item.file.name}`}
+          aria-label={fmt(t("Remove {name}"), { name: item.file.name })}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg focus:outline-none focus:ring-2 focus:ring-brand/15"
         >
           <Trash2 className="h-4 w-4" />
@@ -364,7 +372,7 @@ function ProposalRow({
               htmlFor={`${uid}-discipline`}
               className="text-[11px] font-medium uppercase tracking-wide text-faint"
             >
-              Discipline
+              {t("Discipline")}
             </label>
             <ConfidenceChip field={item.draft.discipline} edited={isEdited("discipline")} />
           </div>
@@ -374,10 +382,10 @@ function ProposalRow({
             onChange={(e) => onChange(item.id, "discipline", e.target.value)}
             className={cn(inputClass, "mt-1")}
           >
-            <option value="">— not set —</option>
+            <option value="">{t("— not set —")}</option>
             {(Object.keys(SHEET_DISCIPLINE_LABEL) as SheetDiscipline[]).map((d) => (
               <option key={d} value={d}>
-                {SHEET_DISCIPLINE_LABEL[d]}
+                {t(SHEET_DISCIPLINE_LABEL[d])}
               </option>
             ))}
           </select>
@@ -389,7 +397,7 @@ function ProposalRow({
               htmlFor={`${uid}-sheet-type`}
               className="text-[11px] font-medium uppercase tracking-wide text-faint"
             >
-              Drawing type
+              {t("Drawing type")}
             </label>
             <SheetTypeChip item={item} />
           </div>
@@ -399,10 +407,10 @@ function ProposalRow({
             onChange={(e) => onSheetTypeChange(item.id, e.target.value as SheetType | "")}
             className={cn(inputClass, "mt-1")}
           >
-            <option value="">— not set —</option>
-            {SHEET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {SHEET_TYPE_LABEL[t]}
+            <option value="">{t("— not set —")}</option>
+            {SHEET_TYPES.map((st) => (
+              <option key={st} value={st}>
+                {sheetTypeText(t, SHEET_TYPE_LABEL[st])}
               </option>
             ))}
           </select>
@@ -430,10 +438,18 @@ function ProposalRow({
           <p className="flex items-start gap-2 text-[11px] leading-snug text-muted">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>
-              {item.values.sheetNumber.trim().toUpperCase()} is already on this project:{" "}
-              {existing.map((s) => `rev ${s.revision}${s.status === "SUPERSEDED" ? " (superseded)" : ""}`).join(", ")}.
+              {fmt(t("{sheet} is already on this project: {revisions}."), {
+                sheet: item.values.sheetNumber.trim().toUpperCase(),
+                revisions: existing
+                  .map((s) =>
+                    s.status === "SUPERSEDED"
+                      ? fmt(t("rev {rev} (superseded)"), { rev: s.revision })
+                      : fmt(t("rev {rev}"), { rev: s.revision }),
+                  )
+                  .join(", "),
+              })}
               {clash
-                ? ` Revision ${clash.revision} exists — change the revision, or supersede it below.`
+                ? ` ${fmt(t("Revision {rev} exists — change the revision, or supersede it below."), { rev: clash.revision })}`
                 : ""}
             </span>
           </p>
@@ -445,7 +461,7 @@ function ProposalRow({
                 onChange={(e) => onSupersedeChange(item.id, e.target.checked ? live[0].id : undefined)}
                 className="h-3.5 w-3.5 rounded border-border text-brand focus:ring-brand/30"
               />
-              Mark revision {live[0].revision} as superseded by this upload
+              {fmt(t("Mark revision {rev} as superseded by this upload"), { rev: live[0].revision })}
             </label>
           ) : null}
         </div>
@@ -464,6 +480,7 @@ export function DrawingIntake({
   onConfirm,
   onSaved,
 }: DrawingIntakeProps) {
+  const t = useT();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -511,7 +528,7 @@ export function DrawingIntake({
         // no staged object.
         patchItem(item.id, {
           stage: "failed",
-          stageNote: `${errorMessage(err, "The upload did not finish.")} It will be retried when you confirm.`,
+          stageNote: `${errorMessage(err, t("The upload did not finish."))} ${t("It will be retried when you confirm.")}`,
         });
         return;
       }
@@ -520,7 +537,7 @@ export function DrawingIntake({
         patchItem(item.id, {
           upload: { storageKey, mimeType },
           stage: "ready",
-          stageNote: "Filename only — a CAD file's contents cannot be read here.",
+          stageNote: t("Filename only — a CAD file's contents cannot be read here."),
         });
         return;
       }
@@ -573,18 +590,20 @@ export function DrawingIntake({
           [
             `${item.file.name}: ${analysis.note}`,
             analysis.proposed.sheetNumber
-              ? `Sheet number ${analysis.proposed.sheetNumber.value} proposed.`
-              : "No sheet number found — type one before confirming.",
+              ? fmt(t("Sheet number {sheet} proposed."), { sheet: analysis.proposed.sheetNumber.value })
+              : t("No sheet number found — type one before confirming."),
           ].join(" "),
         );
       } catch (err) {
         patchItem(item.id, {
           stage: "ready",
-          stageNote: `The title block could not be read (${errorMessage(err, "unknown error")}). The filename proposal is unchanged.`,
+          stageNote: fmt(t("The title block could not be read ({error}). The filename proposal is unchanged."), {
+            error: errorMessage(err, t("unknown error")),
+          }),
         });
       }
     },
-    [repository, projectId, patchItem],
+    [repository, projectId, patchItem, t],
   );
 
   const accept = useCallback((fileList: FileList | null) => {
@@ -596,7 +615,7 @@ export function DrawingIntake({
     );
 
     if (batchError) {
-      setRejections([{ name: `${files.length} files`, message: batchError }]);
+      setRejections([{ name: fmt(t("{count} files"), { count: files.length }), message: batchError }]);
       setAnnouncement(batchError);
       return;
     }
@@ -607,7 +626,7 @@ export function DrawingIntake({
     files.forEach((file, i) => {
       const verdict = verdicts[i];
       if (!verdict?.ok) {
-        refused.push({ name: file.name, message: verdict?.message ?? "Rejected." });
+        refused.push({ name: file.name, message: verdict?.message ?? t("Rejected.") });
         return;
       }
       // First pass: the filename, instantly and with no network. The server's
@@ -645,15 +664,17 @@ export function DrawingIntake({
     const found = accepted.filter((a) => a.draft.sheetNumber).length;
     setAnnouncement(
       [
-        `${accepted.length} of ${files.length} file${files.length === 1 ? "" : "s"} accepted.`,
-        accepted.length > 0 ? `Sheet number proposed for ${found} of ${accepted.length}.` : "",
-        refused.length > 0 ? `${refused.length} rejected: ${refused.map((r) => r.message).join(" ")}` : "",
-        accepted.length > 0 ? "Check every proposed value before confirming." : "",
+        files.length === 1
+          ? fmt(t("{count} of 1 file accepted."), { count: accepted.length })
+          : fmt(t("{count} of {total} files accepted."), { count: accepted.length, total: files.length }),
+        accepted.length > 0 ? fmt(t("Sheet number proposed for {found} of {count}."), { found, count: accepted.length }) : "",
+        refused.length > 0 ? fmt(t("{count} rejected: {reasons}"), { count: refused.length, reasons: refused.map((r) => r.message).join(" ") }) : "",
+        accepted.length > 0 ? t("Check every proposed value before confirming.") : "",
       ]
         .filter(Boolean)
         .join(" "),
     );
-  }, [stageItem]);
+  }, [stageItem, t]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -797,15 +818,15 @@ export function DrawingIntake({
     if (!repository) {
       setSaveState("error");
       setSaveMessage(
-        "Storage is not connected yet, so nothing was saved. The confirmed values were handed to the page instead.",
+        t("Storage is not connected yet, so nothing was saved. The confirmed values were handed to the page instead."),
       );
-      setAnnouncement("Storage is not connected yet — nothing was saved.");
+      setAnnouncement(t("Storage is not connected yet — nothing was saved."));
       return;
     }
 
     if (!projectId) {
       setSaveState("error");
-      setSaveMessage("Choose a project before saving — a drawing has to belong to one.");
+      setSaveMessage(t("Choose a project before saving — a drawing has to belong to one."));
       return;
     }
 
@@ -839,7 +860,7 @@ export function DrawingIntake({
           if (!upload.ok) {
             // Registering after a failed PUT would create a register entry
             // pointing at nothing, which is worse than not saving at all.
-            throw new Error(`${r.file.name} did not upload (${upload.status}).`);
+            throw new Error(fmt(t("{name} did not upload ({status})."), { name: r.file.name, status: upload.status }));
           }
           storageKey = ticket.storageKey;
         }
@@ -862,7 +883,9 @@ export function DrawingIntake({
       }
       setItems([]);
       setSaveState("idle");
-      setAnnouncement(`${results.length} drawing${results.length === 1 ? "" : "s"} saved.`);
+      setAnnouncement(
+        results.length === 1 ? t("1 drawing saved.") : fmt(t("{count} drawings saved."), { count: results.length }),
+      );
       onSaved?.();
     } catch (err) {
       // `registerDrawing` deletes the object when the row cannot be written, so
@@ -873,20 +896,20 @@ export function DrawingIntake({
           .map((i) => (i.id === failedItemId ? { ...i, upload: undefined, stage: "ready" as StageState } : i)),
       );
       setSaveState("error");
-      const message = err instanceof Error ? err.message : "Saving failed.";
-      const prefix = saved.size > 0 ? `${saved.size} saved, then stopped. ` : "";
+      const message = err instanceof Error ? err.message : t("Saving failed.");
+      const prefix = saved.size > 0 ? `${fmt(t("{count} saved, then stopped."), { count: saved.size })} ` : "";
       setSaveMessage(prefix + message);
-      setAnnouncement(`Saving failed. ${prefix}${message}`);
+      setAnnouncement(`${t("Saving failed.")} ${prefix}${message}`);
       if (saved.size > 0) onSaved?.();
     }
-  }, [items, incomplete, onConfirm, onSaved, repository, projectId]);
+  }, [items, incomplete, onConfirm, onSaved, repository, projectId, t]);
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title="Add drawings"
-          subtitle="Drop files or browse. Every value below is a proposal — check it before confirming."
+          title={t("Add drawings")}
+          subtitle={t("Drop files or browse. Every value below is a proposal — check it before confirming.")}
         />
         <CardBody>
           <div
@@ -905,10 +928,12 @@ export function DrawingIntake({
               <UploadCloud className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
-              <p className="text-sm font-medium text-fg">Drop drawing files here</p>
+              <p className="text-sm font-medium text-fg">{t("Drop drawing files here")}</p>
               <p className="mt-0.5 text-xs text-muted">
-                PDF, DWG, DXF or RVT · up to {MAX_FILES_PER_BATCH} files ·{" "}
-                {formatBytes(MAX_FILE_BYTES)} each
+                {fmt(t("PDF, DWG, DXF or RVT · up to {count} files · {size} each"), {
+                  count: MAX_FILES_PER_BATCH,
+                  size: formatBytes(MAX_FILE_BYTES),
+                })}
               </p>
             </div>
 
@@ -916,7 +941,7 @@ export function DrawingIntake({
                 drop zone does — the drop zone is the shortcut, not the door. */}
             <div className="flex flex-col items-center gap-1.5">
               <label htmlFor={inputId} className="text-xs font-medium text-fg">
-                Or choose files
+                {t("Or choose files")}
               </label>
               <input
                 ref={inputRef}
@@ -963,8 +988,8 @@ export function DrawingIntake({
       {items.length > 0 ? (
         <Card>
           <CardHeader
-            title={`Confirm ${items.length} drawing${items.length === 1 ? "" : "s"}`}
-            subtitle="Extraction proposes; you confirm. A wrong sheet number is worse than a blank one."
+            title={items.length === 1 ? t("Confirm 1 drawing") : fmt(t("Confirm {count} drawings"), { count: items.length })}
+            subtitle={t("Extraction proposes; you confirm. A wrong sheet number is worse than a blank one.")}
           />
           <CardBody className="space-y-4">
             {items.map((item) => (
@@ -981,7 +1006,7 @@ export function DrawingIntake({
 
             {incomplete.length > 0 ? (
               <p className="text-xs text-muted">
-                A sheet number is required before saving. Missing on: {incomplete.join(", ")}.
+                {fmt(t("A sheet number is required before saving. Missing on: {files}."), { files: incomplete.join(", ") })}
               </p>
             ) : null}
 
@@ -992,8 +1017,8 @@ export function DrawingIntake({
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] text-faint">
                 {repository
-                  ? "Files are already in storage; confirming writes the register row. Nothing is registered until you confirm."
-                  : "Storage is not connected yet — confirming hands the values to this page without saving."}
+                  ? t("Files are already in storage; confirming writes the register row. Nothing is registered until you confirm.")
+                  : t("Storage is not connected yet — confirming hands the values to this page without saving.")}
               </p>
               <button
                 type="button"
@@ -1006,7 +1031,7 @@ export function DrawingIntake({
                   "disabled:cursor-not-allowed disabled:opacity-50",
                 )}
               >
-                {saveState === "saving" ? "Saving…" : `Confirm ${items.length}`}
+                {saveState === "saving" ? t("Saving…") : fmt(t("Confirm {count}"), { count: items.length })}
               </button>
             </div>
           </CardBody>

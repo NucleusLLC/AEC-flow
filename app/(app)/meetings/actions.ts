@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createMeeting, updateMeeting } from "@/lib/data/meetings";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
+import { getServerT } from "@/lib/i18n/server";
 import type { MeetingWriteInput } from "@/lib/data/meetings.types";
 
 export type SaveMeetingResult =
@@ -35,7 +36,8 @@ export async function saveMeeting(
     }
     return { ok: true, id };
   } catch (e) {
-    const error = e instanceof Error ? e.message : "Failed to save meeting.";
+    const t = await getServerT();
+    const error = e instanceof Error ? e.message : t("Failed to save meeting.");
     return { ok: false, error };
   }
 }

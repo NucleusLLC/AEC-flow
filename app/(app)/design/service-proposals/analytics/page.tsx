@@ -3,31 +3,33 @@ import { ArrowLeft, FileSignature, CircleDollarSign, Trophy, TrendingUp, Layers,
 import { getServiceProposalAnalytics } from "@/lib/data/service-proposals";
 import { ProposalAnalyticsCharts } from "@/components/service-proposals/analytics-charts";
 import { formatCurrency } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Proposal Analytics · AEC-flow" };
 
 export default async function ServiceProposalAnalyticsPage() {
+  const t = await getServerT();
   const a = await getServiceProposalAnalytics();
   const money = (n: number) => formatCurrency(n, a.currency, { maximumFractionDigits: 0 });
 
   return (
     <div className="w-full space-y-6">
       <Link href="/design/service-proposals" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> Service Proposals
+        <ArrowLeft className="h-4 w-4" /> {t("Service Proposals")}
       </Link>
 
       <div>
-        <h2 className="text-xl font-semibold text-fg">Proposal Analytics</h2>
-        <p className="text-sm text-muted">Pipeline, win rate and proposed value across all service proposals.</p>
+        <h2 className="text-xl font-semibold text-fg">{t("Proposal Analytics")}</h2>
+        <p className="text-sm text-muted">{t("Pipeline, win rate and proposed value across all service proposals.")}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <Tile icon={FileSignature} label="Proposals" value={String(a.total)} />
-        <Tile icon={CircleDollarSign} label="Proposed value" value={money(a.proposedValue)} />
-        <Tile icon={Layers} label="Open value" value={money(a.openValue)} />
-        <Tile icon={CheckCircle2} label="Accepted value" value={money(a.acceptedValue)} />
-        <Tile icon={Trophy} label="Win rate" value={`${a.winRate}%`} />
-        <Tile icon={TrendingUp} label="Avg proposal" value={money(a.avgValue)} />
+        <Tile icon={FileSignature} label={t("Proposals")} value={String(a.total)} />
+        <Tile icon={CircleDollarSign} label={t("Proposed value")} value={money(a.proposedValue)} />
+        <Tile icon={Layers} label={t("Open value")} value={money(a.openValue)} />
+        <Tile icon={CheckCircle2} label={t("Accepted value")} value={money(a.acceptedValue)} />
+        <Tile icon={Trophy} label={t("Win rate")} value={`${a.winRate}%`} />
+        <Tile icon={TrendingUp} label={t("Avg proposal")} value={money(a.avgValue)} />
       </div>
 
       <ProposalAnalyticsCharts

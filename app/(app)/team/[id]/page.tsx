@@ -14,6 +14,8 @@ import { getActionItemsForUser } from "@/lib/data/meetings";
 import { ActionStatusBadge } from "@/components/meetings/badges";
 import { formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -37,6 +39,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
   const member = await getTeamMember(id);
   if (!member) notFound();
   const actionItems = await getActionItemsForUser(member.id);
+  const t = await getServerT();
 
   const leaveRemaining = member.annualLeaveTotal - member.annualLeaveTaken;
 
@@ -47,7 +50,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Team
+        {t("Team")}
       </Link>
 
       {/* Header */}
@@ -63,7 +66,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
             <RoleBadge role={member.role} />
             <span>
-              {member.discipline ? DISCIPLINE_LABEL[member.discipline] : DEPARTMENT_LABEL[member.department]}
+              {t(member.discipline ? DISCIPLINE_LABEL[member.discipline] : DEPARTMENT_LABEL[member.department])}
             </span>
           </div>
         </div>
@@ -72,7 +75,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
           <Pencil className="h-4 w-4" />
-          Edit
+          {t("Edit")}
         </Link>
       </div>
 
@@ -81,7 +84,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
         <div className="space-y-6 lg:col-span-2">
           {member.bio ? (
             <Card>
-              <CardHeader title="About" />
+              <CardHeader title={t("About")} />
               <CardBody>
                 <p className="text-sm leading-relaxed text-muted">{member.bio}</p>
               </CardBody>
@@ -90,8 +93,8 @@ export default async function TeamMemberPage({ params }: PageProps) {
 
           <Card>
             <CardHeader
-              title="Current Projects"
-              subtitle={`${member.currentProjects.length} active`}
+              title={t("Current Projects")}
+              subtitle={fmt(t("{count} active"), { count: member.currentProjects.length })}
             />
             <div className="divide-y divide-border">
               {member.currentProjects.length > 0 ? (
@@ -105,17 +108,17 @@ export default async function TeamMemberPage({ params }: PageProps) {
                       <div className="truncate text-sm font-medium text-fg">{p.name}</div>
                       <div className="font-mono text-[11px] text-faint">{p.id}</div>
                     </div>
-                    <Badge tone="slate">{p.role}</Badge>
+                    <Badge tone="slate">{t(p.role)}</Badge>
                   </Link>
                 ))
               ) : (
-                <p className="px-5 py-6 text-sm text-muted">No active project assignments.</p>
+                <p className="px-5 py-6 text-sm text-muted">{t("No active project assignments.")}</p>
               )}
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="Action Items" subtitle={`${actionItems.length} open`} />
+            <CardHeader title={t("Action Items")} subtitle={fmt(t("{count} open"), { count: actionItems.length })} />
             <div className="divide-y divide-border">
               {actionItems.length > 0 ? (
                 actionItems.map((a) => (
@@ -128,21 +131,21 @@ export default async function TeamMemberPage({ params }: PageProps) {
                       <div className="text-sm text-fg">{a.description}</div>
                       <div className="mt-0.5 text-[11px] text-faint">
                         {a.meetingTitle} · {a.projectName}
-                        {a.dueDate ? ` · due ${formatDate(a.dueDate)}` : ""}
+                        {a.dueDate ? ` · ${fmt(t("due {date}"), { date: formatDate(a.dueDate) })}` : ""}
                       </div>
                     </div>
                     <ActionStatusBadge status={a.status} />
                   </Link>
                 ))
               ) : (
-                <p className="px-5 py-6 text-sm text-muted">No open action items.</p>
+                <p className="px-5 py-6 text-sm text-muted">{t("No open action items.")}</p>
               )}
             </div>
           </Card>
 
           {member.skills.length > 0 ? (
             <Card>
-              <CardHeader title="Skills" />
+              <CardHeader title={t("Skills")} />
               <CardBody>
                 <div className="flex flex-wrap gap-2">
                   {member.skills.map((s) => (
@@ -159,32 +162,32 @@ export default async function TeamMemberPage({ params }: PageProps) {
         {/* Right: contact, allocation, leave */}
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Contact & Details" />
+            <CardHeader title={t("Contact & Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <DetailRow label="Email">
+              <DetailRow label={t("Email")}>
                 <a href={`mailto:${member.email}`} className="inline-flex items-center gap-1 hover:text-brand">
                   <Mail className="h-3.5 w-3.5 text-faint" />
                   {member.email}
                 </a>
               </DetailRow>
               {member.phone ? (
-                <DetailRow label="Phone">
+                <DetailRow label={t("Phone")}>
                   <span className="inline-flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5 text-faint" />
                     {member.phone}
                   </span>
                 </DetailRow>
               ) : null}
-              <DetailRow label="Department">{DEPARTMENT_LABEL[member.department]}</DetailRow>
+              <DetailRow label={t("Department")}>{t(DEPARTMENT_LABEL[member.department])}</DetailRow>
               {member.officeLocation ? (
-                <DetailRow label="Office">
+                <DetailRow label={t("Office")}>
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-faint" />
                     {member.officeLocation}
                   </span>
                 </DetailRow>
               ) : null}
-              <DetailRow label="Joined">
+              <DetailRow label={t("Joined")}>
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5 text-faint" />
                   {formatDate(member.joiningDate)}
@@ -194,11 +197,11 @@ export default async function TeamMemberPage({ params }: PageProps) {
           </Card>
 
           <Card>
-            <CardHeader title="Allocation" />
+            <CardHeader title={t("Allocation")} />
             <CardBody className="space-y-3">
               <div>
                 <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-muted">Utilisation</span>
+                  <span className="text-muted">{t("Utilisation")}</span>
                   <span className={cn("font-medium", member.utilisation > 100 ? "text-red-600" : "text-fg")}>
                     {member.utilisation}%
                   </span>
@@ -217,20 +220,20 @@ export default async function TeamMemberPage({ params }: PageProps) {
                   />
                 </div>
               </div>
-              <DetailRowInline label="Capacity target" value={`${member.capacity}%`} />
-              <DetailRowInline label="Active projects" value={String(member.activeProjects)} />
+              <DetailRowInline label={t("Capacity target")} value={`${member.capacity}%`} />
+              <DetailRowInline label={t("Active projects")} value={String(member.activeProjects)} />
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Annual Leave" />
+            <CardHeader title={t("Annual Leave")} />
             <CardBody className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <span className="text-2xl font-semibold text-fg">{leaveRemaining}</span>
-                <span className="text-xs text-muted">days remaining</span>
+                <span className="text-xs text-muted">{t("days remaining")}</span>
               </div>
               <div className="text-xs text-faint">
-                {member.annualLeaveTaken} of {member.annualLeaveTotal} days taken
+                {fmt(t("{taken} of {total} days taken"), { taken: member.annualLeaveTaken, total: member.annualLeaveTotal })}
               </div>
             </CardBody>
           </Card>

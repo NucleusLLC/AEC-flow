@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createProposal, updateProposal } from "@/lib/data/proposals";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { ProposalWriteInput } from "@/lib/data/proposals.types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export type SaveProposalResult =
   | { ok: true; ref: string }
@@ -40,13 +42,14 @@ export async function saveProposal(
      * reason they cannot see: the suggested number is derived from the proposals
      * THIS company can read, so a row belonging to no company — or to another one —
      * collides invisibly. The reference field is editable precisely for this. */
+    const t = await getServerT();
     if (typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002") {
       return {
         ok: false,
-        error: `Reference "${input.ref}" is already in use. Change the reference number and try again.`,
+        error: fmt(t("Reference \"{ref}\" is already in use. Change the reference number and try again."), { ref: input.ref }),
       };
     }
-    const error = e instanceof Error ? e.message : "Failed to save proposal.";
+    const error = e instanceof Error ? e.message : t("Failed to save proposal.");
     return { ok: false, error };
   }
 }

@@ -21,6 +21,10 @@ const COLUMNS: { id: TaskStatus; accent: string }[] = [
   { id: "DONE", accent: "border-t-emerald-400" },
 ];
 
+const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Critical",
+};
+
 const PRIORITY_TONE: Record<TaskPriority, Parameters<typeof Badge>[0]["tone"]> = {
   LOW: "slate", MEDIUM: "blue", HIGH: "amber", CRITICAL: "red",
 };
@@ -95,7 +99,7 @@ export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
                   >
                     <div className="text-sm font-medium text-fg">{t.title}</div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                      <Badge tone={PRIORITY_TONE[t.priority]}>{t.priority.toLowerCase()}</Badge>
+                      <Badge tone={PRIORITY_TONE[t.priority]}>{tr(PRIORITY_LABEL[t.priority]).toLowerCase()}</Badge>
                       {t.dueDate ? (
                         <span className={cn("inline-flex items-center gap-1 text-[11px]", isOverdue(t.dueDate) && t.status !== "DONE" ? "text-red-600" : "text-muted")}>
                           <CalendarClock className="h-3 w-3" /> {t.dueDate}
@@ -119,7 +123,7 @@ export function TasksBoard({ tasks }: { tasks: TaskItem[] }) {
                   placeholder={tr("Add a task…")}
                   className="h-8 w-full rounded-md border border-border bg-surface px-2 text-sm text-fg outline-none placeholder:text-faint focus:ring-1 focus:ring-brand/30"
                 />
-                <button type="button" onClick={() => quickAdd(col.id)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-white hover:bg-brand/90" aria-label="Add task">
+                <button type="button" onClick={() => quickAdd(col.id)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand text-white hover:bg-brand/90" aria-label={tr("Add task")}>
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
@@ -183,14 +187,14 @@ function TaskEditor({ task, onClose, onDone }: { task: TaskItem; onClose: () => 
             </label>
             <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Priority")}</span>
               <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className={field}>
-                {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p.toLowerCase()}</option>)}
+                {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{tr(PRIORITY_LABEL[p]).toLowerCase()}</option>)}
               </select>
             </label>
             <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Due date")}</span>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={field} />
             </label>
             <label className="block"><span className="mb-1 block text-xs text-muted">{tr("Assignee")}</span>
-              <input value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="Name" className={field} />
+              <input value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder={tr("Name")} className={field} />
             </label>
           </div>
           {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div> : null}

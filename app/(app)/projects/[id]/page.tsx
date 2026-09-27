@@ -10,19 +10,23 @@ import { getMeetingsForProject } from "@/lib/data/meetings";
 import { getActivityForProject } from "@/lib/data/activity";
 import { formatDate } from "@/lib/format";
 import type { ProjectSummary } from "@/lib/dashboard";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
-  return { title: project ? `${project.name} · Dashboard · AEC-flow` : "Project · AEC-flow" };
+  const t = await getServerT();
+  return { title: project ? `${project.name} · ${t("Dashboard")} · AEC-flow` : `${t("Project")} · AEC-flow` };
 }
 
 export default async function ProjectDashboardPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
+  const t = await getServerT();
   const meetings = await getMeetingsForProject(project.id);
   const activity = await getActivityForProject(project.id);
 
@@ -52,14 +56,14 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
             target="_blank"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            Print
+            {t("Print")}
           </a>
           <Link
             href={`/projects/${project.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("Edit")}
           </Link>
         </div>
       </div>
@@ -69,19 +73,19 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-            <NotebookPen className="h-4 w-4 text-brand" /> Meeting Minutes
+            <NotebookPen className="h-4 w-4 text-brand" /> {t("Meeting Minutes")}
             <span className="text-xs font-normal text-faint">({meetings.length})</span>
           </h3>
           <Link
             href="/meetings/new"
             className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <Plus className="h-3.5 w-3.5" /> New minutes
+            <Plus className="h-3.5 w-3.5" /> {t("New minutes")}
           </Link>
         </div>
         {meetings.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-muted">
-            No meeting minutes logged for this project yet.
+            {t("No meeting minutes logged for this project yet.")}
           </div>
         ) : (
           <ul className="divide-y divide-border">
@@ -95,8 +99,8 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{m.title}</span>
                   <MeetingTypeBadge type={m.type} />
                   <span className="hidden shrink-0 text-xs text-muted sm:inline">
-                    {m.actionItemsCount} action{m.actionItemsCount === 1 ? "" : "s"}
-                    {m.openActionsCount > 0 ? ` · ${m.openActionsCount} open` : ""}
+                    {fmt(t(m.actionItemsCount === 1 ? "1 action" : "{count} actions"), { count: m.actionItemsCount })}
+                    {m.openActionsCount > 0 ? ` · ${fmt(t("{count} open"), { count: m.openActionsCount })}` : ""}
                   </span>
                 </Link>
               </li>
@@ -109,7 +113,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
       {activity.length > 0 ? (
         <Card className="overflow-hidden p-0">
           <div className="border-b border-border px-4 py-3">
-            <h3 className="text-sm font-semibold text-fg">Recent Activity</h3>
+            <h3 className="text-sm font-semibold text-fg">{t("Recent Activity")}</h3>
           </div>
           <ol className="divide-y divide-border">
             {activity.slice(0, 8).map((entry) => (

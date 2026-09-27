@@ -30,6 +30,8 @@ import {
   setEstimateLockAction,
   loadEstimateAction,
 } from "@/app/(app)/estimates/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type TabKey = "estimate" | "budget" | "takeoff" | "rebar" | "normset" | "prices" | "general" | "wiki";
 
@@ -54,6 +56,7 @@ const SEED_TAKEOFF: TakeoffRow[] = [
 ];
 
 export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet, generalConditions: initialGC, templates: initialTemplates, wiki, logoDataUrl, footer }: { estimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: import("@/lib/server/practice-config").FooterSettings }) {
+  const t = useT();
   const [tab, setTab] = useState<TabKey>("estimate");
   // Print/PDF is ONE path: the EstimatePrintDoc preview overlay. "Export" opens it
   // so the printed output always equals the preview. (Owned here so it survives
@@ -202,7 +205,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
     const res = await setEstimateLockAction(est.id, !locked);
     setLockBusy(false);
     if (res.ok) setEst((p) => ({ ...p, locked: !locked }));
-    else window.alert(res.error);
+    else window.alert(t(res.error));
   };
 
   // Version label suggestion: bump the minor (V1.0 → V1.1). Falls back to a suffix when
@@ -225,7 +228,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
     const res = await duplicateEstimateAction(est.id, dupName);
     setDupBusy(false);
     if (!res.ok) {
-      window.alert(res.error);
+      window.alert(t(res.error));
       return;
     }
     setDupOpen(false);
@@ -248,18 +251,18 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
       {/* Module bar */}
       <Card className="no-print flex flex-wrap items-center gap-2 p-1.5">
         <div className="inline-flex overflow-hidden rounded-lg border border-border">
-          {TABS.map((t, i) => {
-            const Icon = t.icon;
-            const active = tab === t.key;
+          {TABS.map((tabDef, i) => {
+            const Icon = tabDef.icon;
+            const active = tab === tabDef.key;
             return (
               <button
-                key={t.key}
+                key={tabDef.key}
                 type="button"
-                onClick={() => setTab(t.key)}
+                onClick={() => setTab(tabDef.key)}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors ${i > 0 ? "border-l border-border" : ""} ${active ? "bg-slate-800 text-white" : "bg-surface text-muted hover:bg-surface-2 hover:text-fg"}`}
               >
                 <Icon className="h-4 w-4" />
-                {t.label}
+                {t(tabDef.label)}
               </button>
             );
           })}
@@ -267,12 +270,12 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
 
         <div className="ml-auto flex items-center gap-2 pr-1">
           <span className="hidden items-center gap-1 text-[11px] uppercase tracking-wide text-faint sm:inline-flex">
-            <LayoutGrid className="h-3.5 w-3.5" /> Active template
+            <LayoutGrid className="h-3.5 w-3.5" /> {t("Active template")}
           </span>
           {activeTemplate ? (
             <Badge tone="green">{activeTemplate}</Badge>
           ) : (
-            <Badge tone="slate">none — blank start</Badge>
+            <Badge tone="slate">{t("none — blank start")}</Badge>
           )}
 
           {/* Version — copy to a new version, and freeze the one being superseded. */}
@@ -282,7 +285,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
               type="button"
               onClick={toggleLock}
               disabled={!est.id || lockBusy}
-              title={locked ? "Unlock — allow edits to this version again" : "Lock this version — no edits, anywhere, until unlocked"}
+              title={locked ? t("Unlock — allow edits to this version again") : t("Lock this version — no edits, anywhere, until unlocked")}
               className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
                 locked
                   ? "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
@@ -290,32 +293,31 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
               }`}
             >
               {locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
-              {locked ? "Locked" : "Lock"}
+              {locked ? t("Locked") : t("Lock")}
             </button>
             <button
               type="button"
               onClick={openDuplicate}
               disabled={!est.id}
-              title="Copy this estimate into a new, editable version"
+              title={t("Copy this estimate into a new, editable version")}
               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-40"
             >
               <CopyPlus className="h-4 w-4" />
-              New Version
+              {t("New Version")}
             </button>
 
             {dupOpen ? (
               <div className="absolute right-0 top-10 z-30 w-72 rounded-lg border border-border bg-surface p-3 shadow-xl">
-                <div className="mb-1 text-xs font-semibold text-fg">Copy to a new version</div>
+                <div className="mb-1 text-xs font-semibold text-fg">{t("Copy to a new version")}</div>
                 <p className="mb-2 text-[11px] leading-snug text-muted">
-                  Copies every section, line item, take-off and budget setting into a new editable
-                  estimate. <b>{est.version}</b> is left untouched — lock it to freeze it.
+                  {fmt(t("Copies every section, line item, take-off and budget setting into a new editable estimate. {version} is left untouched — lock it to freeze it."), { version: est.version })}
                 </p>
                 <input
                   autoFocus
                   value={dupName}
                   onChange={(e) => setDupName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && dupName.trim() && void doDuplicate()}
-                  placeholder="Version name"
+                  placeholder={t("Version name")}
                   className="mb-2 w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-fg outline-none focus:ring-1 focus:ring-brand/40"
                 />
                 <div className="flex justify-end gap-2">
@@ -324,7 +326,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
                     onClick={() => setDupOpen(false)}
                     className="rounded-md px-2.5 py-1 text-xs text-muted hover:text-fg"
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="button"
@@ -332,7 +334,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
                     disabled={!dupName.trim() || dupBusy}
                     className="rounded-md bg-brand px-2.5 py-1 text-xs font-medium text-brand-fg disabled:opacity-50"
                   >
-                    {dupBusy ? "Copying…" : "Create"}
+                    {dupBusy ? t("Copying…") : t("Create")}
                   </button>
                 </div>
               </div>
@@ -341,13 +343,13 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
 
           {/* Autosave state for the tabs the sheet's own indicator can't reach. */}
           {tab !== "estimate" && est.id && !locked ? (
-            <span className="hidden items-center gap-1 text-[11px] text-faint sm:inline-flex" title="Changes on this tab autosave to the server">
-              {bgSaving ? "Saving…" : bgSaved ? (
+            <span className="hidden items-center gap-1 text-[11px] text-faint sm:inline-flex" title={t("Changes on this tab autosave to the server")}>
+              {bgSaving ? t("Saving…") : bgSaved ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" /> Saved
+                  <Check className="h-3.5 w-3.5 text-emerald-500" /> {t("Saved")}
                 </>
               ) : (
-                "Unsaved…"
+                t("Unsaved…")
               )}
             </span>
           ) : null}
@@ -356,10 +358,10 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
             type="button"
             onClick={() => { setTab("estimate"); setPreview(true); }}
             className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-            title="Open the print preview to print or save as PDF — exactly what prints"
+            title={t("Open the print preview to print or save as PDF — exactly what prints")}
           >
             <FileDown className="h-4 w-4" />
-            Print / PDF
+            {t("Print / PDF")}
           </button>
         </div>
       </Card>
@@ -368,9 +370,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
         <div className="no-print flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
           <Lock className="h-4 w-4 shrink-0" />
           <span>
-            <b>{est.version} is locked.</b> Nothing in this version can be changed — edits are
-            refused by the server, not just hidden. Unlock it, or use <b>New Version</b> to work on
-            a copy.
+            <b>{fmt(t("{version} is locked."), { version: est.version })}</b>{" "}
+            {t("Nothing in this version can be changed — edits are refused by the server, not just hidden. Unlock it, or use New Version to work on a copy.")}
           </span>
         </div>
       ) : null}

@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
 import { DRAWING_STATUS_LABEL, type DrawingStatus, type FileType } from "@/lib/data/drawings.types";
 
 type Tone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";
@@ -18,7 +21,8 @@ const fileColor: Record<FileType, string> = {
 };
 
 export function DrawingStatusBadge({ status }: { status: DrawingStatus }) {
-  return <Badge tone={statusTone[status]}>{DRAWING_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={statusTone[status]}>{t(DRAWING_STATUS_LABEL[status])}</Badge>;
 }
 
 export function FileTypeChip({ type }: { type: FileType }) {

@@ -13,6 +13,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { firmName } from "@/lib/firm-identity";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * A REAL file behind a preview.
@@ -77,6 +79,7 @@ type FileState =
   | { status: "error"; error: string };
 
 export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onClose: () => void }) {
+  const t = useT();
   const style: Style = doc ? styleFor(doc.fileType) : "paper";
   const pages = doc?.pages ?? DEFAULT_PAGES[style];
   const [page, setPage] = useState(1);
@@ -116,13 +119,13 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
         if (!live) return;
         setFileState({
           status: "error",
-          error: err instanceof Error && err.message ? err.message : "The file could not be opened.",
+          error: err instanceof Error && err.message ? err.message : t("The file could not be opened."),
         });
       });
     return () => {
       live = false;
     };
-  }, [inlineFile]);
+  }, [inlineFile, t]);
 
   useEffect(() => {
     if (!doc) return;
@@ -175,7 +178,7 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
           <div className="truncate text-[11px] text-white/60">
             {doc.fileType.toUpperCase()}
             {doc.sizeLabel ? ` · ${doc.sizeLabel}` : ""}
-            {doc.meta?.length ? " · " + doc.meta.map((m) => `${m.label}: ${m.value}`).join(" · ") : ""}
+            {doc.meta?.length ? " · " + doc.meta.map((m) => `${t(m.label)}: ${m.value}`).join(" · ") : ""}
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -183,16 +186,16 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
             type="button"
             onClick={file ? openFile : undefined}
             disabled={!file}
-            title={file ? "Download" : "No file is stored for this document"}
+            title={file ? t("Download") : t("No file is stored for this document")}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Download</span>
+            <span className="hidden sm:inline">{t("Download")}</span>
           </button>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close preview"
+            aria-label={t("Close preview")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/20"
           >
             <X className="h-5 w-5" />
@@ -229,19 +232,19 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              aria-label="Previous page"
+              aria-label={t("Previous page")}
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="text-xs tabular-nums text-white/80">
-              {style === "slides" ? "Slide" : "Page"} {page} / {pages}
+              {style === "slides" ? t("Slide") : t("Page")} {page} / {pages}
             </span>
             <button
               type="button"
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
               disabled={page === pages}
-              aria-label="Next page"
+              aria-label={t("Next page")}
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
@@ -250,10 +253,10 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc | null; onCl
         ) : (
           <span className="text-[11px] text-white/50">
             {file?.inline
-              ? "Showing the stored file. The link expires shortly after this preview closes."
+              ? t("Showing the stored file. The link expires shortly after this preview closes.")
               : file
-                ? "The stored file is intact; only its format cannot be rendered here."
-                : "Preview is representative — live rendering arrives with stored files."}
+                ? t("The stored file is intact; only its format cannot be rendered here.")
+                : t("Preview is representative — live rendering arrives with stored files.")}
           </span>
         )}
       </div>
@@ -290,16 +293,16 @@ function RealFileStage({
   state: FileState;
   onDownload: () => void;
 }) {
+  const t = useT();
   if (!file.inline) {
     return (
       <div className="max-w-md rounded-xl border border-white/15 bg-white/5 p-8 text-center text-white">
         <PencilRuler className="mx-auto h-10 w-10 text-white/50" aria-hidden="true" />
         <p className="mt-4 text-sm font-medium">
-          A {doc.fileType.toUpperCase()} file cannot be shown in a browser
+          {fmt(t("A {type} file cannot be shown in a browser"), { type: doc.fileType.toUpperCase() })}
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-white/60">
-          The file is stored and intact — there is simply no way to render this format here.
-          Download it and open it in your CAD application.
+          {t("The file is stored and intact — there is simply no way to render this format here. Download it and open it in your CAD application.")}
         </p>
         <button
           type="button"
@@ -307,7 +310,7 @@ function RealFileStage({
           className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/15 px-4 text-sm font-medium text-white transition-colors hover:bg-white/25"
         >
           <Download className="h-4 w-4" />
-          Download {doc.fileType.toUpperCase()}
+          {fmt(t("Download {type}"), { type: doc.fileType.toUpperCase() })}
         </button>
       </div>
     );
@@ -317,14 +320,14 @@ function RealFileStage({
     return (
       <div className="max-w-md rounded-xl border border-white/15 bg-white/5 p-8 text-center text-white">
         <FileText className="mx-auto h-10 w-10 text-white/50" aria-hidden="true" />
-        <p className="mt-4 text-sm font-medium">This file could not be opened</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-white/60">{state.error}</p>
+        <p className="mt-4 text-sm font-medium">{t("This file could not be opened")}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-white/60">{t(state.error)}</p>
       </div>
     );
   }
 
   if (state.status !== "ready") {
-    return <p className="text-sm text-white/60">Opening {doc.name}…</p>;
+    return <p className="text-sm text-white/60">{fmt(t("Opening {name}…"), { name: doc.name })}</p>;
   }
 
   return (

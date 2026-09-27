@@ -5,19 +5,27 @@ import { ArrowLeft } from "lucide-react";
 import { OrderForm, type OrderFormValues } from "@/components/orders/order-form";
 import { getOrder } from "@/lib/data/orders";
 import { getClients } from "@/lib/data/clients";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const order = await getOrder(id);
-  return { title: order ? `Edit ${order.orderNumber} · AEC-flow` : "Edit Order · AEC-flow" };
+  const t = await getServerT();
+  return {
+    title: order
+      ? `${fmt(t("Edit {number}"), { number: order.orderNumber })} · AEC-flow`
+      : `${t("Edit order")} · AEC-flow`,
+  };
 }
 
 export default async function EditOrderPage({ params }: PageProps) {
   const { id } = await params;
   const order = await getOrder(id);
   if (!order) notFound();
+  const t = await getServerT();
 
   // The form submits the client by NAME; surface the full roster for the picker,
   // ensuring this order's current client is present (and pre-selected).
@@ -54,7 +62,7 @@ export default async function EditOrderPage({ params }: PageProps) {
         {order.orderNumber}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit order</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit order")}</h2>
         <p className="text-sm text-muted">
           <span className="font-mono text-fg">{order.orderNumber}</span> · {order.title}
         </p>

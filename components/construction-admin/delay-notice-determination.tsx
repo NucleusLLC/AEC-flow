@@ -6,6 +6,8 @@ import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { DELAY_STATUS_LABEL } from "@/lib/ca/labels";
 import type { DelayStatus } from "@/lib/ca/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -23,6 +25,7 @@ export function DelayNoticeDetermination({
   currentApprovedDays: number;
 }) {
   const router = useRouter();
+  const t = useT();
   const [status, setStatus] = useState<DelayStatus>(currentStatus);
   const [approvedDays, setApprovedDays] = useState<number>(currentApprovedDays);
   const [saving, setSaving] = useState(false);
@@ -38,9 +41,9 @@ export function DelayNoticeDetermination({
         body: JSON.stringify({ status, approvedDays }),
       });
       const json = await res.json();
-      if (!res.ok) setMsg({ ok: false, text: json.error ?? `Failed (${res.status})` });
+      if (!res.ok) setMsg({ ok: false, text: json.error ?? fmt(t("Failed ({status})"), { status: res.status }) });
       else {
-        setMsg({ ok: true, text: "Delay notice updated." });
+        setMsg({ ok: true, text: t("Delay notice updated.") });
         router.refresh();
       }
     } catch (err) {
@@ -52,7 +55,7 @@ export function DelayNoticeDetermination({
 
   return (
     <Card>
-      <CardHeader title="Determination" subtitle="Review the claim and certify the extension of time" />
+      <CardHeader title={t("Determination")} subtitle={t("Review the claim and certify the extension of time")} />
       <CardBody className="space-y-3">
         {msg ? (
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
@@ -62,15 +65,15 @@ export function DelayNoticeDetermination({
         ) : null}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Status</label>
+            <label className={labelCls}>{t("Status")}</label>
             <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value as DelayStatus)}>
               {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>{DELAY_STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{t(DELAY_STATUS_LABEL[s])}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={labelCls}>Approved days</label>
+            <label className={labelCls}>{t("Approved days")}</label>
             <input
               type="number"
               min={0}
@@ -81,7 +84,7 @@ export function DelayNoticeDetermination({
           </div>
         </div>
         <button type="button" onClick={submit} disabled={saving} className="inline-flex h-9 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-          {saving ? "Saving…" : "Save determination"}
+          {saving ? t("Saving…") : t("Save determination")}
         </button>
       </CardBody>
     </Card>

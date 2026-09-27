@@ -8,6 +8,8 @@ import { getFirmIdentity } from "@/lib/server/firm";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { militaryDate } from "@/lib/building-permits/register";
 import { CONTRACT_STATUS_LABEL } from "@/lib/contracts/types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Contract · Print" };
 
@@ -36,6 +38,7 @@ export default async function ContractPrintPage({ params }: { params: Promise<{ 
     getPracticeSettings(),
   ]);
   if (!contract) notFound();
+  const t = await getServerT();
 
   const dated = militaryDate((contract.issuedAt ?? contract.createdAt).slice(0, 10));
 
@@ -58,7 +61,7 @@ export default async function ContractPrintPage({ params }: { params: Promise<{ 
         details={
           <div className="text-right text-sm">
             <div className="font-semibold uppercase tracking-wide text-gray-900">
-              {CONTRACT_STATUS_LABEL[contract.status]} contract
+              {fmt(t("{status} contract"), { status: t(CONTRACT_STATUS_LABEL[contract.status]) })}
             </div>
             <div className="font-mono text-xs text-gray-700">{contract.number}</div>
             <div className="text-xs text-gray-700">

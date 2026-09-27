@@ -7,6 +7,8 @@ import { getTeamMember } from "@/lib/data/team";
 import { requireActor } from "@/lib/server/actor";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canChangeMemberAccess } from "@/lib/team/member-write-policy";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -20,6 +22,7 @@ export default async function EditMemberPage({ params }: PageProps) {
   const { id } = await params;
   const [member, actor] = await Promise.all([getTeamMember(id), requireActor().catch(() => null)]);
   if (!member) notFound();
+  const t = await getServerT();
 
   // Mirrors checkMemberWrite for display; the save action enforces it.
   const canChangeAccess =
@@ -57,8 +60,8 @@ export default async function EditMemberPage({ params }: PageProps) {
       </Link>
 
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit Team Member</h2>
-        <p className="text-sm text-muted">Update {member.name}&rsquo;s details in the studio directory.</p>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit Team Member")}</h2>
+        <p className="text-sm text-muted">{fmt(t("Update {name}’s details in the studio directory."), { name: member.name })}</p>
       </div>
 
       <MemberForm mode="edit" initial={initial} canChangeAccess={canChangeAccess} />

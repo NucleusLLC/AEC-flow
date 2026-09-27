@@ -8,6 +8,7 @@ import { DeliverableList } from "@/components/design/deliverable-list";
 import { DisciplineDrawings } from "@/components/drawings/discipline-drawings";
 import type { Discipline as DrawingDiscipline } from "@/lib/data/drawings.types";
 import { DISCIPLINE_LABEL, DISCIPLINE_SLUG, disciplineFromSlug } from "@/lib/design/types";
+import { getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata({
   params,
@@ -24,6 +25,7 @@ export default async function DisciplineRegisterPage({
 }: {
   params: Promise<{ discipline: string }>;
 }) {
+  const t = await getServerT();
   const { discipline: slug } = await params;
   const discipline = disciplineFromSlug(slug);
   if (!discipline) notFound();
@@ -45,13 +47,13 @@ export default async function DisciplineRegisterPage({
     <div className="w-full space-y-6">
       <Link href="/design" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Design Register
+        {t("Design Register")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-fg">{DISCIPLINE_LABEL[discipline]}</h2>
-          <p className="text-sm text-muted">Drawings &amp; documents for this discipline.</p>
+          <h2 className="text-xl font-semibold text-fg">{t(DISCIPLINE_LABEL[discipline])}</h2>
+          <p className="text-sm text-muted">{t("Drawings & documents for this discipline.")}</p>
         </div>
         <div className="flex items-center gap-2">
           {items.length > 0 ? (
@@ -59,14 +61,14 @@ export default async function DisciplineRegisterPage({
               href={`/print/design/transmittal?discipline=${DISCIPLINE_SLUG[discipline]}`}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
             >
-              <Printer className="h-4 w-4" /> Transmittal
+              <Printer className="h-4 w-4" /> {t("Transmittal")}
             </Link>
           ) : null}
           <Link
             href={`/design/new?discipline=${DISCIPLINE_SLUG[discipline]}`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
-            <Plus className="h-4 w-4" /> Add deliverable
+            <Plus className="h-4 w-4" /> {t("Add deliverable")}
           </Link>
         </div>
       </div>
@@ -75,10 +77,9 @@ export default async function DisciplineRegisterPage({
 
       <div className="space-y-3">
         <div>
-          <h3 className="text-base font-semibold text-fg">Drawings</h3>
+          <h3 className="text-base font-semibold text-fg">{t("Drawings")}</h3>
           <p className="text-sm text-muted">
-            What has actually landed, by project — as opposed to the deliverables above, which are
-            what this discipline undertook to produce.
+            {t("What has actually landed, by project — as opposed to the deliverables above, which are what this discipline undertook to produce.")}
           </p>
         </div>
         <DisciplineDrawings drawings={drawings} />

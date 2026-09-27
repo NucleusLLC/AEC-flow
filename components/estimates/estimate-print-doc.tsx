@@ -38,6 +38,11 @@ import {
   type MeasuredBlock,
   type TextMeasurer,
 } from "@/lib/estimates/pagination-engine";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
+
+/** Translator passed into the pure builders below (labels only — no figures). */
+type Tr = (text: string) => string;
 
 const MM = 96 / 25.4;
 
@@ -368,6 +373,7 @@ function buildReportData(
   props: EstimatePrintDocProps,
   columns: ColDef[],
   printableWidth: number,
+  t: Tr,
 ): { reportData: ReportData; columnWidths: ColumnWidths } {
   const { est, rate, nf0, pc, grandTotalRows, notes, generalConditions, gcActive } = props;
   // The Total/amount columns print dual-currency ($ left of the system unit) when USD is on.
@@ -424,7 +430,7 @@ function buildReportData(
           id: it.id,
           code: it.code,
           description: pc.methodDetail
-            ? `${it.task || "—"}  ·  [${METHOD_TAG[it.calculationMethod ?? "norm"]}]`
+            ? `${it.task || "—"}  ·  [${t(METHOD_TAG[it.calculationMethod ?? "norm"])}]`
             : it.task || "—",
           unit: pc.qtyUnit ? it.unit : undefined,
           zebra: zebraIdx++ % 2 === 1,
@@ -449,7 +455,7 @@ function buildReportData(
       }),
       subtotal: {
         id: cat.id,
-        label: `Subtotal — ${cat.name}`,
+        label: `${t("Subtotal")} — ${cat.name}`,
         values: {
           // Hours add up; the per-unit RATE columns don't (a sum of rates is meaningless),
           // so they're deliberately absent here and render blank.
@@ -479,7 +485,7 @@ function buildReportData(
       const months = enabled.find((g) => g.unit === "month")?.qty;
       appendixCategories.push({
         id: "general-conditions",
-        name: months ? `General Conditions / Overhead — ${nf0(months)} project months` : "General Conditions / Overhead",
+        name: months ? fmt(t("General Conditions / Overhead — {months} project months"), { months: nf0(months) }) : t("General Conditions / Overhead"),
         pageBreakBefore: true,
         subtotalDisplay: dualMoney(gcTotal),
         items: enabled.map((g, i) => ({
@@ -496,7 +502,7 @@ function buildReportData(
         })),
         subtotal: {
           id: "gc",
-          label: "Subtotal — General Conditions / Overhead",
+          label: `${t("Subtotal")} — ${t("General Conditions / Overhead")}`,
           values: { total: dualMoney(gcTotal) },
         },
       });
@@ -517,7 +523,7 @@ function buildReportData(
       const imTotal = imported.reduce((s, x) => s + x.equip, 0);
       appendixCategories.push({
         id: "imported-materials",
-        name: "Imported Materials, Equipment & Logistics",
+        name: t("Imported Materials, Equipment & Logistics"),
         pageBreakBefore: true,
         subtotalDisplay: dualMoney(imTotal),
         items: imported.map(({ it, equip, section }, i) => ({
@@ -535,7 +541,7 @@ function buildReportData(
         })),
         subtotal: {
           id: "im",
-          label: "Subtotal — Imported Materials, Equipment & Logistics",
+          label: `${t("Subtotal")} — ${t("Imported Materials, Equipment & Logistics")}`,
           values: { total: dualMoney(imTotal) },
         },
       });
@@ -547,7 +553,7 @@ function buildReportData(
     categories,
     // GC / Imported-Materials breakdowns flow AFTER the Cost Summary.
     appendixCategories,
-    grandTotal: grandTotalRows.length ? { rows: grandTotalRows, notes, title: "Cost Summary" } : undefined,
+    grandTotal: grandTotalRows.length ? { rows: grandTotalRows, notes, title: t("Cost Summary") } : undefined,
     // The Cost Summary must sit IMMEDIATELY after the last section of the estimation
     // sheet — never forced onto its own page. The engine's placeGrandTotal already
     // keeps it on the current page when it fits and only breaks to the next page if
@@ -561,6 +567,7 @@ function buildReportData(
 function buildAppendixBlocks(
   props: EstimatePrintDocProps,
   profile: ReturnType<typeof getTextSizeProfile>,
+  t: Tr,
 ): MeasuredBlock[] {
   const { est, pc, nf0, schedule, payment } = props;
   const currency = est.currency;
@@ -595,14 +602,14 @@ function buildAppendixBlocks(
         // Gantt bar — positioned by start day, sized by duration; labelled with the cost %.
         {
           gantt: { start: (s.start / totalDays) * 100, width: (s.days / totalDays) * 100 },
-          label: s.days ? `Day ${s.start + 1}–${s.end} · ${pctLabel}` : "",
+          label: s.days ? `${fmt(t("Day {start}–{end}"), { start: s.start + 1, end: s.end })} · ${pctLabel}` : "",
           pct: pctLabel,
         },
         { v: pctLabel, align: "right" as const },
         { v: money(s.cost), align: "right" as const },
       ];
     });
-    const meta = `${schedule.startDate ? `${schedule.startDate} → ${r.endDate} · ` : ""}${nf1(r.weeks)} weeks · ${schedule.workingDaysPerWeek}-day week · ${schedule.hoursPerDay}h/day${schedule.overlapPct ? ` · ${schedule.overlapPct}% overlap` : ""}${schedule.contingencyDays ? ` · +${schedule.contingencyDays}d contingency` : ""}`;
+    const meta = `${schedule.startDate ? `${schedule.startDate} → ${r.endDate} · ` : ""}${fmt(t("{weeks} weeks"), { weeks: nf1(r.weeks) })} · ${fmt(t("{days}-day week"), { days: schedule.workingDaysPerWeek })} · ${fmt(t("{hours}h/day"), { hours: schedule.hoursPerDay })}${schedule.overlapPct ? ` · ${fmt(t("{pct}% overlap"), { pct: schedule.overlapPct })}` : ""}${schedule.contingencyDays ? ` · ${fmt(t("+{days}d contingency"), { days: schedule.contingencyDays })}` : ""}`;
     blocks.push({
       id: "timeline",
       type: "timeline",
@@ -610,25 +617,25 @@ function buildAppendixBlocks(
       pageBreakBefore: true,
       height: tableHeight(rows.length),
       data: {
-        title: "Time-Schedule Coupler",
+        title: t("Time-Schedule Coupler"),
         meta,
         gridTemplate: `150px 60px 44px 46px minmax(0,1fr) 52px ${usd ? 168 : 104}px`,
         head: [
-          { label: "Section", align: "left" },
-          { label: "Hours", align: "right" },
-          { label: "Crew", align: "center" },
-          { label: "Days", align: "right" },
-          { label: `Schedule · 0–${r.totalDays} days`, align: "left" },
+          { label: t("section"), align: "left" },
+          { label: t("Hours"), align: "right" },
+          { label: t("Crew"), align: "center" },
+          { label: t("Days"), align: "right" },
+          { label: fmt(t("Schedule · 0–{days} days"), { days: r.totalDays }), align: "left" },
           { label: "%", align: "right" },
-          { label: "Cost", align: "right" },
+          { label: t("Cost"), align: "right" },
         ],
         rows,
         foot: [
-          { v: "Project", align: "left", bold: true },
+          { v: t("Project"), align: "left", bold: true },
           { v: nf0(r.totalHours), align: "right", bold: true },
           { v: "", align: "center" },
           { v: String(r.totalDays), align: "right", bold: true },
-          { v: `${r.totalDays} days · ${nf1(r.weeks)} wks`, align: "left" },
+          { v: fmt(t("{days} days · {weeks} wks"), { days: r.totalDays, weeks: nf1(r.weeks) }), align: "left" },
           { v: "100%", align: "right", bold: true },
           { v: money(r.grandCost), align: "right", bold: true },
         ],
@@ -658,30 +665,30 @@ function buildAppendixBlocks(
       pageBreakBefore: true,
       height: tableHeight(rows.length),
       data: {
-        title: "Payment Phase Configurator (PayApp)",
+        title: t("Payment Phase Configurator (PayApp)"),
         meta: `${
           !payment.retentionEnabled
-            ? "No retainage (full draws released)"
+            ? t("No retainage (full draws released)")
             : payment.retentionMode === "manual"
-              ? `Per-phase retainage · total retained ${money(d.totalHeld)}`
-              : `Retainage ${payment.retention}% held from each draw · total retained ${money(d.totalHeld)}`
-        } · ${d.sumPct === 100 ? "balanced 100%" : `${nf1(d.sumPct)}% allocated`}`,
+              ? fmt(t("Per-phase retainage · total retained {amount}"), { amount: money(d.totalHeld) })
+              : fmt(t("Retainage {pct}% held from each draw · total retained {amount}"), { pct: payment.retention, amount: money(d.totalHeld) })
+        } · ${d.sumPct === 100 ? t("balanced 100%") : fmt(t("{pct}% allocated"), { pct: nf1(d.sumPct) })}`,
         gridTemplate: usd
           ? "28px 130px minmax(0,1fr) 48px 168px 150px 168px"
           : "28px 150px minmax(0,1fr) 54px 116px 104px 116px",
         head: [
           { label: "#", align: "left" },
-          { label: "Draw phase", align: "left" },
-          { label: "Disbursement trigger / milestone", align: "left" },
+          { label: t("Draw phase"), align: "left" },
+          { label: t("Disbursement trigger / milestone"), align: "left" },
           { label: "%", align: "right" },
-          { label: "Draw amount", align: "right" },
-          { label: "Retainage", align: "right" },
-          { label: "Net release", align: "right" },
+          { label: t("Draw amount"), align: "right" },
+          { label: t("Retainage"), align: "right" },
+          { label: t("Net release"), align: "right" },
         ],
         rows,
         foot: [
           { v: "", align: "left" },
-          { v: "Total disbursement", align: "left", bold: true },
+          { v: t("Total disbursement"), align: "left", bold: true },
           { v: "", align: "left" },
           { v: `${nf1(d.sumPct)}%`, align: "right", bold: true },
           { v: money(d.totalAmount), align: "right", bold: true },
@@ -698,6 +705,7 @@ function buildAppendixBlocks(
 
 export function EstimatePrintDoc(props: EstimatePrintDocProps) {
   const { est, paper, orient, textSize, pc, showProgress, debug, onPages } = props;
+  const t = useT();
 
   const { pages, context, columns, gridTemplate, pageSettings, headerTopH, logoH, colHeadRowH, coverMemo } = useMemo(() => {
     const profile = getTextSizeProfile(textSize);
@@ -721,7 +729,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
       measureText: makeTextMeasurer(),
     };
     const columns = buildColumns(pc, showProgress, !!pc && !!props.usdSecondary);
-    const { reportData, columnWidths } = buildReportData(props, columns, printableWidth);
+    const { reportData, columnWidths } = buildReportData(props, columns, printableWidth, t);
     // The recap (Direct Cost + Profit + BBO + Grand Total) ALWAYS prints FIRST, on its
     // own page. The detailed Direct Cost breakdown then follows on later pages WITHOUT
     // these lines.
@@ -731,14 +739,14 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
         type: "notes",
         height: profile.lineHeight + profile.verticalPadding * 2,
         keepTogether: true,
-        data: { notes: `Average Labor Rate: ${est.currency} ${props.nf0(props.rate)} / hr` },
+        data: { notes: fmt(t("Average Labor Rate: {rate} / hr"), { rate: `${est.currency} ${props.nf0(props.rate)}` }) },
       };
       const recapTitle: MeasuredBlock = {
         id: "recap-title",
         type: "sheetTitle",
         height: profile.titleHeight,
         keepTogether: true,
-        data: { title: "Cost Summary" },
+        data: { title: t("Cost Summary") },
       };
       const recap = measureGrandTotalBlock(
         { rows: props.grandTotalRows, notes: props.notes },
@@ -766,7 +774,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
           type: "chart",
           keepTogether: true,
           height: chartTitleH + 8 + chartsRowH + profile.verticalPadding * 2,
-          data: { title: "Cost Breakdown", segments, chartTitleH, barRowH, pieD },
+          data: { title: t("Cost Breakdown"), segments, chartTitleH, barRowH, pieD },
         });
       }
       // The detailed breakdown starts on a fresh page after the recap page.
@@ -786,7 +794,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
     }
     // The Cost Summary recap ALSO prints at the end of the estimation (reportData.grandTotal
     // is left set by buildReportData), so it appears both up front and as the conclusion.
-    reportData.extraBlocks = buildAppendixBlocks(props, profile);
+    reportData.extraBlocks = buildAppendixBlocks(props, profile, t);
     const pages = simulateReportPages(reportData, context, columnWidths);
     const gridTemplate = columns
       .map((c) =>
@@ -797,7 +805,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
       .join(" ");
     return { pages, context, columns, gridTemplate, pageSettings, headerTopH, logoH, colHeadRowH, coverMemo };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [est, paper, orient, textSize, pc, showProgress, debug, props.grandTotalRows, props.rate, props.notes, props.generalConditions, props.gcActive, props.schedule, props.payment, props.memo, props.logoScale, props.chartData, props.importedAmount]);
+  }, [est, paper, orient, textSize, pc, showProgress, debug, props.grandTotalRows, props.rate, props.notes, props.generalConditions, props.gcActive, props.schedule, props.payment, props.memo, props.logoScale, props.chartData, props.importedAmount, t]);
 
   // Validate (loud, never silent) + report page count to the parent (incl. the cover).
   useEffect(() => {
@@ -892,10 +900,10 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
             <div style={{ height: headerTopH, borderBottom: "0.5px dotted #64748b" }}>
               <div style={{ fontWeight: 700, fontSize: profile.fontSize + 2 }}>
                 {est.projectName}
-                {page.pageNumber > 1 ? <span className="epd-cont"> (continued)</span> : null}
+                {page.pageNumber > 1 ? <span className="epd-cont"> {t("(continued)")}</span> : null}
               </div>
               <div style={{ color: "#64748b", fontSize: profile.fontSize - 1 }}>
-                No. {est.projectNumber ?? est.projectId ?? "—"} · {est.location} · Ver {est.version} · {est.date}
+                No. {est.projectNumber ?? est.projectId ?? "—"} · {est.location} · {t("Ver")} {est.version} · {est.date}
               </div>
             </div>
             {page.blocks.some((b) => b.type === "category" || b.type === "itemRow" || b.type === "subtotal") ? (
@@ -910,7 +918,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
               >
                 {columns.map((c) => (
                   <div key={c.key} className="epd-cell" style={{ textAlign: c.align }}>
-                    {c.label}
+                    {t(c.label)}
                   </div>
                 ))}
               </div>
@@ -946,7 +954,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
                 }}
               >
                 <div style={{ fontWeight: 700, fontSize: profile.fontSize, color: "#0f172a", marginBottom: 3 }}>
-                  Memo / Remark
+                  {t("Memo / Remark")}
                 </div>
                 <div
                   style={{
@@ -999,7 +1007,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
             </span>
             {pc.pageNum ? (
               <span>
-                Page {page.pageNumber + coverOffset} of {totalPages}
+                {fmt(t("Page {page} of {pages}"), { page: page.pageNumber + coverOffset, pages: totalPages })}
               </span>
             ) : (
               <span />
@@ -1042,6 +1050,7 @@ function CoverPage({
   pageNum: boolean;
   totalPages: number;
 }) {
+  const t = useT();
   const facts: { label: string; value: string }[] = [
     { label: "Client", value: est.client?.trim() || "—" },
     { label: "Project No.", value: est.projectNumber ?? est.projectId ?? "—" },
@@ -1068,7 +1077,7 @@ function CoverPage({
       {/* Masthead — logo right, "Cost Estimate" label left. */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", borderBottom: "0.5px dotted #64748b", paddingBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
-          Cost Estimate
+          {t("Cost Estimate")}
         </div>
         {logoDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- data URL, print context
@@ -1089,7 +1098,7 @@ function CoverPage({
           />
         ) : (
           <div style={{ width: "100%", height: "100%", borderRadius: 6, border: "1px dashed #cbd5e1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13 }}>
-            Project image / rendering
+            {t("Project image / rendering")}
           </div>
         )}
       </div>
@@ -1099,7 +1108,7 @@ function CoverPage({
         {est.projectName}
       </div>
       <div style={{ marginTop: 4, fontSize: 13, color: "#64748b" }}>
-        Version {est.version}
+        {fmt(t("Version {version}"), { version: est.version })}
         {est.date ? ` · ${est.date}` : ""}
       </div>
 
@@ -1107,13 +1116,13 @@ function CoverPage({
       <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px 32px" }}>
         {facts.map((f) => (
           <div key={f.label} style={{ borderTop: "1px solid #e2e8f0", paddingTop: 6 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94a3b8" }}>{f.label}</div>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#94a3b8" }}>{t(f.label)}</div>
             <div style={{ marginTop: 2, fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{f.value}</div>
           </div>
         ))}
       </div>
       <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 6, background: "#0f172a", color: "#fff", padding: "12px 16px" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.85 }}>Total Project Cost</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", opacity: 0.85 }}>{t("Total Project Cost")}</span>
         <span style={{ fontSize: 20, fontWeight: 800 }}>{totalDisplay}</span>
       </div>
 
@@ -1134,7 +1143,7 @@ function CoverPage({
         <span style={{ fontFamily: footerFontFamily || undefined, fontSize: footerFontSize || undefined }}>
           {footerText ?? "AEC Management Suite"}
         </span>
-        {pageNum ? <span>Page 1 of {totalPages}</span> : <span />}
+        {pageNum ? <span>{fmt(t("Page {page} of {pages}"), { page: 1, pages: totalPages })}</span> : <span />}
       </div>
     </div>
   );
@@ -1157,6 +1166,12 @@ function BlockView({
   zebra?: boolean;
   rowSubtotal?: boolean;
 }) {
+  const t = useT();
+  // The engine names repeated headers "<name> (continued)"; translate that suffix for display.
+  const contLabel = (label?: string) =>
+    label && label.endsWith(" (continued)")
+      ? fmt(t("{name} (continued)"), { name: label.slice(0, -" (continued)".length) })
+      : label;
   const common: React.CSSProperties = {
     position: "absolute",
     top: block.y ?? 0,
@@ -1172,7 +1187,7 @@ function BlockView({
 
   if (block.type === "category") {
     const code = block.data?.code as string | undefined;
-    const name = block.continued ? block.label : block.data?.name;
+    const name = block.continued ? contLabel(block.label) : block.data?.name;
     const showSub = rowSubtotal && !block.continued && block.data?.subtotalDisplay;
     if (showSub) {
       const iTotal = columns.findIndex((c) => c.key === "total");
@@ -1225,7 +1240,7 @@ function BlockView({
   if (block.type === "subcategory") {
     return (
       <div style={{ ...common, paddingLeft: 16 }} className="epd-cat">
-        <span>{block.continued ? block.label : block.data?.name}</span>
+        <span>{block.continued ? contLabel(block.label) : block.data?.name}</span>
         {dbgTag}
       </div>
     );

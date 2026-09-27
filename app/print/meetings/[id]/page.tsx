@@ -5,13 +5,15 @@ import { getMeeting } from "@/lib/data/meetings";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const meeting = await getMeeting(id);
-  return { title: meeting ? `${meeting.title} — Minutes` : "Meeting Minutes" };
+  const t = await getServerT();
+  return { title: meeting ? `${meeting.title} — ${t("Minutes")}` : t("Meeting Minutes") };
 }
 
 export default async function MeetingPrintPage({ params }: PageProps) {
@@ -21,6 +23,7 @@ export default async function MeetingPrintPage({ params }: PageProps) {
   const { logoDataUrl, logo } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const t = await getServerT();
 
   return (
     // The document supplies its content; PrintSurface supplies the page. Before
@@ -29,13 +32,14 @@ export default async function MeetingPrintPage({ params }: PageProps) {
     // configured document typeface was never applied, and there was no paged
     // preview at all: minutes running to four sheets showed on screen as one
     // continuous page with no boundaries and no page numbers.
-    <PrintSurface backHref={`/meetings/${meeting.id}`} backLabel="Back to meeting">
+    <PrintSurface backHref={`/meetings/${meeting.id}`} backLabel={t("Back to meeting")}>
       <MeetingDocument
         meeting={meeting}
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
         companyName={companyName}
         companyLocation={firm.location}
         sheet={false}
+        t={t}
       />
     </PrintSurface>
   );

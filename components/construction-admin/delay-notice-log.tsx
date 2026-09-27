@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { DelayStatusBadge } from "@/components/construction-admin/badges";
 import type { DelayNotice, DelayStatus } from "@/lib/ca/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | DelayStatus; label: string }> = [
   { key: "ALL", label: "All" },
@@ -18,6 +20,7 @@ const FILTERS: Array<{ key: "ALL" | DelayStatus; label: string }> = [
 ];
 
 export function DelayNoticeLog({ notices }: { notices: DelayNotice[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | DelayStatus>("ALL");
 
@@ -44,7 +47,7 @@ export function DelayNoticeLog({ notices }: { notices: DelayNotice[] }) {
                 status === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -54,7 +57,7 @@ export function DelayNoticeLog({ notices }: { notices: DelayNotice[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Search delay notices…"
+            placeholder={t("Search delay notices…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-64"
           />
         </div>
@@ -65,12 +68,12 @@ export function DelayNoticeLog({ notices }: { notices: DelayNotice[] }) {
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Delay notice</th>
-                <th className="px-3 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Responsible</th>
-                <th className="px-3 py-2.5 text-right font-medium">Claimed</th>
-                <th className="px-3 py-2.5 text-right font-medium">Approved</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Delay notice")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Responsible")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Claimed")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Approved")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -84,8 +87,8 @@ export function DelayNoticeLog({ notices }: { notices: DelayNotice[] }) {
                   </td>
                   <td className="px-3 py-3 text-muted">{d.projectName}</td>
                   <td className="px-3 py-3 text-muted">{d.responsibleParty ?? "—"}</td>
-                  <td className="px-3 py-3 text-right tabular-nums text-muted">{d.claimedDays} d</td>
-                  <td className="px-3 py-3 text-right tabular-nums text-fg">{d.approvedDays} d</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-muted">{fmt(t("{days} d"), { days: d.claimedDays })}</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-fg">{fmt(t("{days} d"), { days: d.approvedDays })}</td>
                   <td className="px-5 py-3"><DelayStatusBadge status={d.status} /></td>
                 </tr>
               ))}
@@ -97,12 +100,12 @@ export function DelayNoticeLog({ notices }: { notices: DelayNotice[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <TimerOff className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No delay notices match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No delay notices match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
-      <p className="px-1 text-xs text-faint">Showing {rows.length} of {notices.length} delay notices</p>
+      <p className="px-1 text-xs text-faint">{fmt(t("Showing {count} of {total} delay notices"), { count: rows.length, total: notices.length })}</p>
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy, ClipboardPaste, X, ChevronRight, ChevronDown } from "lucide-react";
 import type { EstimateCategory } from "@/lib/data/estimates";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const CLIP_KEY = "aecflow:estimate-section-clipboard";
 
@@ -41,6 +43,7 @@ export function SectionCopy({
   categories: EstimateCategory[];
   onPaste: (cats: EstimateCategory[]) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [checkedSecs, setCheckedSecs] = useState<Record<string, boolean>>({});
@@ -106,18 +109,18 @@ export function SectionCopy({
         type="button"
         onClick={() => setOpen(true)}
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-        title="Copy sections to reuse in another estimate"
+        title={t("Copy sections to reuse in another estimate")}
       >
-        <Copy className="h-4 w-4" /> Copy sections
+        <Copy className="h-4 w-4" /> {t("Copy sections")}
       </button>
       {clip.length > 0 ? (
         <button
           type="button"
           onClick={doPaste}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-brand/30 bg-brand/5 px-3 text-sm font-medium text-brand transition-colors hover:bg-brand/10"
-          title={`Paste ${clip.length} section(s) · ${clipItemCount} line(s) copied earlier`}
+          title={fmt(t("Paste {sections} section(s) · {lines} line(s) copied earlier"), { sections: clip.length, lines: clipItemCount })}
         >
-          <ClipboardPaste className="h-4 w-4" /> Paste sections ({clip.length})
+          <ClipboardPaste className="h-4 w-4" /> {fmt(t("Paste sections ({count})"), { count: clip.length })}
         </button>
       ) : null}
 
@@ -129,8 +132,8 @@ export function SectionCopy({
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <div>
-                <h3 className="text-sm font-semibold text-fg">Copy sections</h3>
-                <p className="text-xs text-muted">Check the headers and lines to copy, then paste into any estimate.</p>
+                <h3 className="text-sm font-semibold text-fg">{t("Copy sections")}</h3>
+                <p className="text-xs text-muted">{t("Check the headers and lines to copy, then paste into any estimate.")}</p>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="rounded-md p-1 text-faint hover:bg-surface-2 hover:text-fg">
                 <X className="h-4 w-4" />
@@ -139,7 +142,7 @@ export function SectionCopy({
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
               {categories.length === 0 ? (
-                <p className="px-2 py-6 text-center text-sm text-muted">This estimate has no sections yet.</p>
+                <p className="px-2 py-6 text-center text-sm text-muted">{t("This estimate has no sections yet.")}</p>
               ) : (
                 <ul className="space-y-1">
                   {categories.map((c) => {
@@ -160,8 +163,8 @@ export function SectionCopy({
                           >
                             {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-faint" /> : <ChevronRight className="h-3.5 w-3.5 text-faint" />}
                             {c.code ? <span className="font-mono text-[11px] text-muted">{c.code}</span> : null}
-                            {c.name || "Untitled section"}
-                            <span className="text-[11px] text-faint">· {c.items.length} line{c.items.length === 1 ? "" : "s"}</span>
+                            {c.name || t("Untitled section")}
+                            <span className="text-[11px] text-faint">· {c.items.length === 1 ? t("1 line") : fmt(t("{count} lines"), { count: c.items.length })}</span>
                           </button>
                         </div>
                         {isOpen ? (
@@ -175,10 +178,10 @@ export function SectionCopy({
                                   className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30"
                                 />
                                 {it.code ? <span className="font-mono text-[11px] text-muted">{it.code}</span> : null}
-                                <span className="truncate text-fg">{it.task || "(unnamed line)"}</span>
+                                <span className="truncate text-fg">{it.task || t("(unnamed line)")}</span>
                               </li>
                             ))}
-                            {c.items.length === 0 ? <li className="py-1 pl-6 text-xs text-faint">No lines.</li> : null}
+                            {c.items.length === 0 ? <li className="py-1 pl-6 text-xs text-faint">{t("No lines.")}</li> : null}
                           </ul>
                         ) : null}
                       </li>
@@ -189,10 +192,10 @@ export function SectionCopy({
             </div>
 
             <div className="flex items-center justify-between border-t border-border px-5 py-3">
-              <span className="text-xs text-muted">{selectedCount} section(s) selected</span>
+              <span className="text-xs text-muted">{fmt(t("{count} section(s) selected"), { count: selectedCount })}</span>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-2">
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="button"
@@ -200,7 +203,7 @@ export function SectionCopy({
                   disabled={selectedCount === 0}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
                 >
-                  <Copy className="h-4 w-4" /> Copy {selectedCount || ""}
+                  <Copy className="h-4 w-4" /> {t("Copy")} {selectedCount || ""}
                 </button>
               </div>
             </div>

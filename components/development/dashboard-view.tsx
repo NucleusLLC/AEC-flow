@@ -10,6 +10,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress";
 import { formatCurrency, formatCurrencyCompact, formatNumber } from "@/lib/format";
 import type { ProjectMetrics } from "@/lib/development/metrics";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const PIE_COLORS = ["#94a3b8", "#f59e0b", "#8b5cf6", "#10b981"];
 
@@ -30,38 +32,39 @@ export function DevDashboardView({
   metrics: ProjectMetrics;
   closeoutDate: string;
 }) {
+  const t = useT();
   const cur = m.currency;
   return (
     <div className="space-y-6">
       {m.warnings.length > 0 ? (
         <div className="flex items-start gap-2 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <div className="text-sm text-amber-800">{m.warnings.join(" ")}</div>
+          <div className="text-sm text-amber-800">{m.warnings.map((w) => t(w)).join(" ")}</div>
         </div>
       ) : null}
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="Gross parcel" value={`${formatNumber(m.grossParcelArea)} m²`} />
-        <Kpi label="Net sellable" value={`${formatNumber(m.netSellableLand)} m²`} hint={`${m.sellableRatioPct.toFixed(1)}% of gross`} />
-        <Kpi label="Total lots" value={String(m.totalLots)} hint={`${m.totalUnits} units`} />
-        <Kpi label="Break-even" value={`${formatCurrency(m.breakEvenPerM2, cur)}/m²`} />
-        <Kpi label="Project cost" value={formatCurrency(m.totalProjectCost, cur)} />
-        <Kpi label="Expected revenue" value={formatCurrency(m.totalRevenue, cur)} hint={`lots ${formatCurrencyCompact(m.lotRevenue, cur)} · units ${formatCurrencyCompact(m.unitRevenue, cur)}`} />
-        <Kpi label="Total profit" value={formatCurrency(m.totalProfit, cur)} />
-        <Kpi label="Margin / ROI" value={`${m.grossMarginPct.toFixed(1)}% / ${m.roiPct.toFixed(1)}%`} />
-        <Kpi label="Cash collected" value={formatCurrency(m.cashCollected, cur)} />
-        <Kpi label="Receivable" value={formatCurrency(m.outstandingReceivables, cur)} />
-        <Kpi label="Close-out target" value={closeoutDate} />
-        <Kpi label="Budget overruns" value={String(m.budgetOverruns)} />
+        <Kpi label={t("Gross parcel")} value={`${formatNumber(m.grossParcelArea)} m²`} />
+        <Kpi label={t("Net sellable")} value={`${formatNumber(m.netSellableLand)} m²`} hint={fmt(t("{pct}% of gross"), { pct: m.sellableRatioPct.toFixed(1) })} />
+        <Kpi label={t("Total lots")} value={String(m.totalLots)} hint={fmt(t("{count} units"), { count: m.totalUnits })} />
+        <Kpi label={t("Break-even")} value={`${formatCurrency(m.breakEvenPerM2, cur)}/m²`} />
+        <Kpi label={t("Project cost")} value={formatCurrency(m.totalProjectCost, cur)} />
+        <Kpi label={t("Expected revenue")} value={formatCurrency(m.totalRevenue, cur)} hint={fmt(t("lots {lots} · units {units}"), { lots: formatCurrencyCompact(m.lotRevenue, cur), units: formatCurrencyCompact(m.unitRevenue, cur) })} />
+        <Kpi label={t("Total profit")} value={formatCurrency(m.totalProfit, cur)} />
+        <Kpi label={t("Margin / ROI")} value={`${m.grossMarginPct.toFixed(1)}% / ${m.roiPct.toFixed(1)}%`} />
+        <Kpi label={t("Cash collected")} value={formatCurrency(m.cashCollected, cur)} />
+        <Kpi label={t("Receivable")} value={formatCurrency(m.outstandingReceivables, cur)} />
+        <Kpi label={t("Close-out target")} value={closeoutDate} />
+        <Kpi label={t("Budget overruns")} value={String(m.budgetOverruns)} />
       </div>
 
       {/* Progress bars */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {[
-          { label: "Sales progress", pct: m.salesProgressPct, hint: `${m.lotsSold + m.lotsClosed}/${m.totalLots} placed` },
-          { label: "Budget used", pct: m.budgetUsedPct, hint: `${formatCurrencyCompact(m.budgetPaid, cur)} paid` },
-          { label: "Permit progress", pct: m.permitProgressPct, hint: `${m.permitDone}/${m.permitTotal} approved` },
+          { label: t("Sales progress"), pct: m.salesProgressPct, hint: fmt(t("{done}/{total} placed"), { done: m.lotsSold + m.lotsClosed, total: m.totalLots }) },
+          { label: t("Budget used"), pct: m.budgetUsedPct, hint: fmt(t("{amount} paid"), { amount: formatCurrencyCompact(m.budgetPaid, cur) }) },
+          { label: t("Permit progress"), pct: m.permitProgressPct, hint: fmt(t("{done}/{total} approved"), { done: m.permitDone, total: m.permitTotal }) },
         ].map((b) => (
           <Card key={b.label}>
             <CardBody>
@@ -79,29 +82,29 @@ export function DevDashboardView({
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Revenue vs cost" />
+          <CardHeader title={t("Revenue vs cost")} />
           <CardBody>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={[{ name: "Project", Revenue: m.revenueVsCost.revenue, Cost: m.revenueVsCost.cost, Profit: m.revenueVsCost.profit }]}>
+              <BarChart data={[{ name: t("Project"), Revenue: m.revenueVsCost.revenue, Cost: m.revenueVsCost.cost, Profit: m.revenueVsCost.profit }]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tickFormatter={(v) => formatCurrencyCompact(v as number, cur)} tick={{ fontSize: 11 }} width={70} />
                 <Tooltip formatter={(v) => formatCurrency(v as number, cur)} />
                 <Legend />
-                <Bar dataKey="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Cost" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Profit" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Revenue" name={t("Revenue")} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Cost" name={t("Cost")} fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Profit" name={t("Profit")} fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Sales status" />
+          <CardHeader title={t("Sales status")} />
           <CardBody>
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
-                <Pie data={m.salesStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                <Pie data={m.salesStatus.map((s) => ({ ...s, name: t(s.name) }))} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                   {m.salesStatus.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
@@ -112,13 +115,13 @@ export function DevDashboardView({
         </Card>
 
         <Card>
-          <CardHeader title="Cost breakdown by category" />
+          <CardHeader title={t("Cost breakdown by category")} />
           <CardBody>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart layout="vertical" data={m.budgetByCode} margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis type="number" tickFormatter={(v) => formatCurrencyCompact(v as number, cur)} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10 }} />
+                <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 10 }} tickFormatter={(v) => t(String(v))} />
                 <Tooltip formatter={(v) => formatCurrency(v as number, cur)} />
                 <Bar dataKey="budget" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -127,7 +130,7 @@ export function DevDashboardView({
         </Card>
 
         <Card>
-          <CardHeader title="Profit by lot" />
+          <CardHeader title={t("Profit by lot")} />
           <CardBody>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={m.profitByLot}>

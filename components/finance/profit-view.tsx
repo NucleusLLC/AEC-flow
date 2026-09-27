@@ -21,6 +21,8 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardBody } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import type { CurrencyAnalysis } from "@/lib/data/finance-analysis";
@@ -28,6 +30,7 @@ import type { CurrencyAnalysis } from "@/lib/data/finance-analysis";
 type SortKey = "margin" | "earned" | "cost" | "hours" | "unbilled";
 
 export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
+  const t = useT();
   const [currency, setCurrency] = useState(analyses[0]?.currency ?? "AWG");
   const [sort, setSort] = useState<SortKey>("margin");
 
@@ -57,10 +60,11 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
     return (
       <Card>
         <CardBody className="py-12 text-center">
-          <p className="text-sm font-medium text-fg">No hours or expenses have been recorded yet.</p>
+          <p className="text-sm font-medium text-fg">{t("No hours or expenses have been recorded yet.")}</p>
           <p className="mx-auto mt-1 max-w-xl text-sm text-muted">
-            Once the practice logs time against a job, this shows what the job is worth at
-            charge-out, what it has cost, and what is still waiting to be invoiced.
+            {t(
+              "Once the practice logs time against a job, this shows what the job is worth at charge-out, what it has cost, and what is still waiting to be invoiced.",
+            )}
           </p>
         </CardBody>
       </Card>
@@ -70,20 +74,32 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
   const money = (n: number) =>
     formatCurrency(n, analysis.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const t = analysis.totals;
+  const totals = analysis.totals;
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Worth at charge-out" value={money(t.earned)} note={`${t.hours.toFixed(2)} hours worked`} />
-        <Tile label="Cost to the practice" value={money(t.cost)} note={`${t.utilisation}% billable`} />
         <Tile
-          label="Margin"
-          value={money(t.margin)}
-          note={`${t.marginPct}%`}
-          tone={t.margin < 0 ? "red" : t.margin > 0 ? "green" : undefined}
+          label={t("Worth at charge-out")}
+          value={money(totals.earned)}
+          note={fmt(t("{hours} hours worked"), { hours: totals.hours.toFixed(2) })}
         />
-        <Tile label="Not yet billed" value={money(t.unbilled)} note="approved, billable, uninvoiced" />
+        <Tile
+          label={t("Cost to the practice")}
+          value={money(totals.cost)}
+          note={fmt(t("{percent}% billable"), { percent: totals.utilisation })}
+        />
+        <Tile
+          label={t("Margin")}
+          value={money(totals.margin)}
+          note={`${totals.marginPct}%`}
+          tone={totals.margin < 0 ? "red" : totals.margin > 0 ? "green" : undefined}
+        />
+        <Tile
+          label={t("Not yet billed")}
+          value={money(totals.unbilled)}
+          note={t("approved, billable, uninvoiced")}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +107,7 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            aria-label="Currency"
+            aria-label={t("Currency")}
             className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg"
           >
             {analyses.map((a) => (
@@ -104,17 +120,19 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
-          aria-label="Sort by"
+          aria-label={t("Sort by")}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg"
         >
-          <option value="margin">Worst margin first</option>
-          <option value="earned">Most earned</option>
-          <option value="cost">Most costly</option>
-          <option value="hours">Most hours</option>
-          <option value="unbilled">Most unbilled</option>
+          <option value="margin">{t("Worst margin first")}</option>
+          <option value="earned">{t("Most earned")}</option>
+          <option value="cost">{t("Most costly")}</option>
+          <option value="hours">{t("Most hours")}</option>
+          <option value="unbilled">{t("Most unbilled")}</option>
         </select>
         <span className="text-xs tabular-nums text-muted">
-          {rows.length} job{rows.length === 1 ? "" : "s"} in {analysis.currency}
+          {rows.length === 1
+            ? fmt(t("1 job in {currency}"), { currency: analysis.currency })
+            : fmt(t("{count} jobs in {currency}"), { count: rows.length, currency: analysis.currency })}
         </span>
       </div>
 
@@ -122,13 +140,13 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
         <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-              <th className="px-4 pb-1.5 font-medium">Project</th>
-              <th className="px-3 pb-1.5 text-right font-medium">Hours</th>
-              <th className="px-3 pb-1.5 text-right font-medium">Earned</th>
-              <th className="px-3 pb-1.5 text-right font-medium">Cost</th>
-              <th className="px-3 pb-1.5 text-right font-medium">Margin</th>
+              <th className="px-4 pb-1.5 font-medium">{t("Project")}</th>
+              <th className="px-3 pb-1.5 text-right font-medium">{t("Hours")}</th>
+              <th className="px-3 pb-1.5 text-right font-medium">{t("Earned")}</th>
+              <th className="px-3 pb-1.5 text-right font-medium">{t("Cost")}</th>
+              <th className="px-3 pb-1.5 text-right font-medium">{t("Margin")}</th>
               <th className="px-3 pb-1.5 text-right font-medium">%</th>
-              <th className="px-4 pb-1.5 text-right font-medium">Not yet billed</th>
+              <th className="px-4 pb-1.5 text-right font-medium">{t("Not yet billed")}</th>
             </tr>
           </thead>
           <tbody>
@@ -140,7 +158,9 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
                   className="border-b border-border/60 transition-colors last:border-0 even:bg-surface-2/40 hover:bg-surface-2"
                 >
                   <td className="px-4 py-2.5 align-top">
-                    <div className="truncate font-medium text-fg">{p.projectName}</div>
+                    <div className="truncate font-medium text-fg">
+                      {p.projectName === "No project" ? t("No project") : p.projectName}
+                    </div>
                   </td>
                   <td className="px-3 py-2.5 text-right align-top font-mono tabular-nums text-muted">
                     {p.hours.toFixed(2)}
@@ -178,8 +198,9 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
       </div>
 
       <p className="text-xs text-muted">
-        Earned is what the work is worth at charge-out, not what has been invoiced — see the
-        receivables tiles on Invoices for that. Cost counts every hour worked, billable or not.
+        {t(
+          "Earned is what the work is worth at charge-out, not what has been invoiced — see the receivables tiles on Invoices for that. Cost counts every hour worked, billable or not.",
+        )}
       </p>
     </div>
   );

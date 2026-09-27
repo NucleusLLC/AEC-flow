@@ -17,10 +17,13 @@ import { ProgressLoader, createLoadSignal, advanceLoadSignal, type LoadSignal } 
 import { OPEN_ESTIMATE_STAGES } from "@/lib/ui/progress-loader";
 import { ProjectListView } from "./project-list-view";
 import { EstimateWorkspace } from "./estimate-workspace";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type PriceBook = { materials: PriceItem[]; equipment: PriceItem[] };
 
 export function EstimatesApp({ projects, startProjects, clients, initialProjectId, baseEstimate, priceBook, normSet, generalConditions, templates, wiki, logoDataUrl, footer }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; /** Clients a project created inline can be filed under. */ clients?: { id: string; name: string }[]; initialProjectId?: string; baseEstimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: FooterSettings }) {
+  const t = useT();
   const [selected, setSelected] = useState<EstimateProject | null>(null);
   // The selected estimate's OWN persisted sheet (loaded by id), not the base seed.
   const [working, setWorking] = useState<CostEstimate | null>(null);
@@ -70,7 +73,7 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
        * nothing is fetched, changed or saved. */
       const sections = est?.categories.length ?? 0;
       const lines = est?.categories.reduce((n, c) => n + c.items.length, 0) ?? 0;
-      advanceLoadSignal(progress.current, 1, est ? `${sections} sections · ${lines} lines` : "new sheet");
+      advanceLoadSignal(progress.current, 1, est ? fmt(t("{sections} sections · {lines} lines"), { sections, lines }) : t("new sheet"));
 
       setWorking(
         est ?? {
@@ -134,7 +137,7 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center gap-2">
         <button type="button" onClick={close} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg">
-          <ArrowLeft className="h-4 w-4" /> All estimates
+          <ArrowLeft className="h-4 w-4" /> {t("All estimates")}
         </button>
         <span className="text-sm text-faint">/</span>
         <span className="font-mono text-xs text-faint">{selected.projectNumber}</span>
@@ -148,17 +151,16 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
          * mounted, so there is nothing for the autosave to overwrite the stored
          * estimate with. The data is intact on the server; only this load failed. */
         <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-amber-300 bg-amber-50 py-16 text-center">
-          <p className="text-sm font-medium text-amber-900">This estimate could not be loaded.</p>
+          <p className="text-sm font-medium text-amber-900">{t("This estimate could not be loaded.")}</p>
           <p className="max-w-md text-xs text-amber-800">
-            Your saved figures are safe — nothing has been changed. The editor stays closed on purpose,
-            so an incomplete load cannot overwrite them. Try again, and tell your administrator if it persists.
+            {t("Your saved figures are safe — nothing has been changed. The editor stays closed on purpose, so an incomplete load cannot overwrite them. Try again, and tell your administrator if it persists.")}
           </p>
           <button
             type="button"
             onClick={() => openProject(loadFailed)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
           >
-            Try again
+            {t("Try again")}
           </button>
         </div>
       ) : (
@@ -166,7 +168,7 @@ export function EstimatesApp({ projects, startProjects, clients, initialProjectI
          * sheet and no failure, so the guard above keeps its precedence. Only
          * the contents changed: a determinate bar driven by the two stages the
          * load really has, instead of a spinner that looked stuck. */
-        <ProgressLoader signal={progress.current} stages={OPEN_ESTIMATE_STAGES} title="Loading estimate" />
+        <ProgressLoader signal={progress.current} stages={OPEN_ESTIMATE_STAGES} title={t("Loading estimate")} />
       )}
     </div>
   );

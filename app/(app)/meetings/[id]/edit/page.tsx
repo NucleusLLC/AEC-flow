@@ -6,13 +6,16 @@ import { MeetingForm, type MeetingFormValues } from "@/components/meetings/meeti
 import { getMeeting } from "@/lib/data/meetings";
 import { getProjects } from "@/lib/data/projects";
 import { getTeam } from "@/lib/data/team";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const meeting = await getMeeting(id);
-  return { title: meeting ? `Edit ${meeting.title} · AEC-flow` : "Edit Minutes · AEC-flow" };
+  const t = await getServerT();
+  return { title: meeting ? `${fmt(t("Edit {title}"), { title: meeting.title })} · AEC-flow` : `${t("Edit minutes")} · AEC-flow` };
 }
 
 export default async function EditMeetingPage({ params }: PageProps) {
@@ -23,6 +26,7 @@ export default async function EditMeetingPage({ params }: PageProps) {
     getTeam(),
   ]);
   if (!meeting) notFound();
+  const t = await getServerT();
 
   const initial: MeetingFormValues = {
     title: meeting.title,
@@ -56,7 +60,7 @@ export default async function EditMeetingPage({ params }: PageProps) {
         {meeting.title}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit minutes</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit minutes")}</h2>
         <p className="text-sm text-muted">{meeting.title}</p>
       </div>
       <MeetingForm

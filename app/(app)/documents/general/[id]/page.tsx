@@ -12,6 +12,7 @@ import {
 import { getGeneralDocument } from "@/lib/data/general-documents";
 import { catalogueEntry } from "@/lib/general-documents/catalogue";
 import { militaryDate, ymd } from "@/lib/building-permits/register";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Document · AEC-flow" };
 
@@ -23,21 +24,22 @@ export default async function GeneralDocumentPage({
   const { id } = await params;
   const doc = await getGeneralDocument(id);
   if (!doc) notFound();
+  const t = await getServerT();
 
   const today = ymd(new Date());
   const entry = catalogueEntry(doc.docType);
 
   const facts: { label: string; value: string; mono?: boolean }[] = [
-    { label: "Type", value: doc.docTypeLabel },
-    { label: "Client", value: doc.clientName ?? "—" },
-    { label: "Project", value: doc.projectName ?? "—" },
-    { label: "Addressed to", value: doc.counterpartyName ?? doc.contactName ?? "—" },
-    { label: "Our reference", value: doc.reference ?? "—", mono: true },
-    { label: "Dated", value: militaryDate(doc.issueDate), mono: true },
-    { label: "Effective from", value: militaryDate(doc.effectiveDate), mono: true },
-    { label: "Runs to", value: militaryDate(doc.expiryDate), mono: true },
-    { label: "Signed", value: militaryDate(doc.signedAt), mono: true },
-    { label: "Written by", value: doc.createdByName ?? "—" },
+    { label: t("Type"), value: t(doc.docTypeLabel) },
+    { label: t("Client"), value: doc.clientName ?? "—" },
+    { label: t("Project"), value: doc.projectName ?? "—" },
+    { label: t("Addressed to"), value: doc.counterpartyName ?? doc.contactName ?? "—" },
+    { label: t("Our reference"), value: doc.reference ?? "—", mono: true },
+    { label: t("Dated"), value: militaryDate(doc.issueDate), mono: true },
+    { label: t("Effective from"), value: militaryDate(doc.effectiveDate), mono: true },
+    { label: t("Runs to"), value: militaryDate(doc.expiryDate), mono: true },
+    { label: t("Signed"), value: militaryDate(doc.signedAt), mono: true },
+    { label: t("Written by"), value: doc.createdByName ?? "—" },
   ];
 
   return (
@@ -47,7 +49,7 @@ export default async function GeneralDocumentPage({
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        General Documents
+        {t("General Documents")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -62,7 +64,7 @@ export default async function GeneralDocumentPage({
         <EmailButton
           subject={doc.title}
           attachment={`${doc.number} — ${doc.docTypeLabel}`}
-          label="Email"
+          label={t("Email")}
           defaultTo={doc.contactEmail ?? ""}
           relatedType="general-document"
           relatedId={doc.id}
@@ -75,22 +77,22 @@ export default async function GeneralDocumentPage({
 
       {doc.status === "VOID" && doc.voidReason ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-sm text-fg">
-          Voided: {doc.voidReason}
+          {t("Voided:")} {doc.voidReason}
         </p>
       ) : null}
       {doc.status === "SUPERSEDED" ? (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-fg">
-          Superseded by a later document. It stays here as the record of what was issued.
+          {t("Superseded by a later document. It stays here as the record of what was issued.")}
         </p>
       ) : null}
 
       <Card>
         <CardHeader
-          title="The document"
+          title={t("The document")}
           subtitle={
             doc.status === "DRAFT"
-              ? "Still a draft — edit it freely until it is issued."
-              : "Issued. Supersede it rather than editing it."
+              ? t("Still a draft — edit it freely until it is issued.")
+              : t("Issued. Supersede it rather than editing it.")
           }
         />
         <CardBody>
@@ -110,7 +112,7 @@ export default async function GeneralDocumentPage({
                   <div className="mt-1 text-xs text-muted">
                     {block.role.replace(/\{\{firmName\}\}/g, "the practice")}
                   </div>
-                  <div className="text-[11px] text-faint">Name · Date</div>
+                  <div className="text-[11px] text-faint">{t("Name · Date")}</div>
                 </div>
               ))}
             </div>
@@ -119,7 +121,7 @@ export default async function GeneralDocumentPage({
       </Card>
 
       <Card>
-        <CardHeader title="Particulars" />
+        <CardHeader title={t("Particulars")} />
         <CardBody className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {facts.map((f) => (
             <div
@@ -134,7 +136,7 @@ export default async function GeneralDocumentPage({
           ))}
           {doc.notes ? (
             <p className="whitespace-pre-line text-sm text-muted sm:col-span-2">
-              <span className="text-faint">Internal notes: </span>
+              <span className="text-faint">{t("Internal notes:")} </span>
               {doc.notes}
             </p>
           ) : null}

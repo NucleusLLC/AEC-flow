@@ -7,6 +7,8 @@ import { ChangeOrderStatusBadge } from "@/components/construction-admin/badges";
 import { getChangeOrder } from "@/lib/data/ca/change-orders";
 import { changeOrderBreakdown } from "@/lib/ca/calc";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -35,6 +37,7 @@ function MoneyRow({ label, value, currency, strong }: { label: string; value: nu
 }
 
 export default async function ChangeOrderDetailPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const co = await getChangeOrder(id);
   if (!co) notFound();
@@ -44,7 +47,7 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/change-orders" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Change Orders
+        {t("Change Orders")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -52,7 +55,7 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs text-faint">{co.changeOrderNumber}</span>
             <ChangeOrderStatusBadge status={co.status} />
-            {co.version > 1 ? <span className="text-[11px] text-faint">rev {co.version}</span> : null}
+            {co.version > 1 ? <span className="text-[11px] text-faint">{fmt(t("rev {version}"), { version: co.version })}</span> : null}
           </div>
           <h2 className="mt-1 text-xl font-semibold text-fg">{co.title}</h2>
           <span className="inline-flex items-center gap-1.5 text-sm text-muted">
@@ -68,14 +71,14 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Printer className="h-4 w-4" />
-            Print / PDF
+            {t("Print / PDF")}
           </a>
           <Link
             href={`/construction-admin/change-orders/${co.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("Edit")}
           </Link>
         </div>
       </div>
@@ -84,17 +87,17 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
         <div className="space-y-6 lg:col-span-2">
           {co.reason || co.description ? (
             <Card>
-              <CardHeader title="Scope &amp; Reason" />
+              <CardHeader title={t("Scope & Reason")} />
               <CardBody className="space-y-3">
                 {co.reason ? (
                   <div>
-                    <div className="text-xs text-muted">Reason</div>
+                    <div className="text-xs text-muted">{t("Reason")}</div>
                     <p className="mt-0.5 text-sm text-fg">{co.reason}</p>
                   </div>
                 ) : null}
                 {co.description ? (
                   <div>
-                    <div className="text-xs text-muted">Description</div>
+                    <div className="text-xs text-muted">{t("Description")}</div>
                     <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-fg">{co.description}</p>
                   </div>
                 ) : null}
@@ -103,22 +106,22 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
           ) : null}
 
           <Card>
-            <CardHeader title="Cost Breakdown" subtitle="Markups compounded per the module formula" />
+            <CardHeader title={t("Cost Breakdown")} subtitle={t("Markups compounded per the module formula")} />
             <CardBody>
               <div className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
-                <MoneyRow label="Labor" value={co.costLabor} currency={co.currency} />
-                <MoneyRow label="Material" value={co.costMaterial} currency={co.currency} />
-                <MoneyRow label="Equipment" value={co.costEquipment} currency={co.currency} />
-                <MoneyRow label="Subcontractor" value={co.costSubcontractor} currency={co.currency} />
+                <MoneyRow label={t("Labor")} value={co.costLabor} currency={co.currency} />
+                <MoneyRow label={t("Material")} value={co.costMaterial} currency={co.currency} />
+                <MoneyRow label={t("Equipment")} value={co.costEquipment} currency={co.currency} />
+                <MoneyRow label={t("Subcontractor")} value={co.costSubcontractor} currency={co.currency} />
               </div>
               <div className="mt-3 space-y-2 border-t border-border pt-3">
-                <MoneyRow label="Subtotal" value={b.subtotal} currency={co.currency} />
-                <MoneyRow label={`Overhead (${co.overheadPercentage}%)`} value={b.overhead} currency={co.currency} />
-                <MoneyRow label={`Profit (${co.profitPercentage}%)`} value={b.profit} currency={co.currency} />
-                <MoneyRow label={`Contingency (${co.contingencyPercentage}%)`} value={b.contingency} currency={co.currency} />
-                <MoneyRow label={`VAT (${co.vatPercentage}%)`} value={b.vat} currency={co.currency} />
+                <MoneyRow label={t("Subtotal")} value={b.subtotal} currency={co.currency} />
+                <MoneyRow label={fmt(t("Overhead ({pct}%)"), { pct: co.overheadPercentage })} value={b.overhead} currency={co.currency} />
+                <MoneyRow label={fmt(t("Profit ({pct}%)"), { pct: co.profitPercentage })} value={b.profit} currency={co.currency} />
+                <MoneyRow label={fmt(t("Contingency ({pct}%)"), { pct: co.contingencyPercentage })} value={b.contingency} currency={co.currency} />
+                <MoneyRow label={fmt(t("VAT ({pct}%)"), { pct: co.vatPercentage })} value={b.vat} currency={co.currency} />
                 <div className="border-t border-border pt-2">
-                  <MoneyRow label="Total cost" value={b.total} currency={co.currency} strong />
+                  <MoneyRow label={t("Total cost")} value={b.total} currency={co.currency} strong />
                 </div>
               </div>
             </CardBody>
@@ -127,31 +130,31 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Contract Impact" />
+            <CardHeader title={t("Contract Impact")} />
             <CardBody className="space-y-2">
-              <MoneyRow label="Original contract" value={co.originalContractValue} currency={co.currency} />
-              <MoneyRow label="Approved COs to date" value={co.approvedChangeOrdersToDate} currency={co.currency} />
+              <MoneyRow label={t("Original contract")} value={co.originalContractValue} currency={co.currency} />
+              <MoneyRow label={t("Approved COs to date")} value={co.approvedChangeOrdersToDate} currency={co.currency} />
               <div className="border-t border-border pt-2">
-                <MoneyRow label="Revised contract" value={co.revisedContractValue} currency={co.currency} strong />
+                <MoneyRow label={t("Revised contract")} value={co.revisedContractValue} currency={co.currency} strong />
               </div>
               <div className="pt-1">
-                <Row label="Schedule impact">{co.scheduleImpactDays === 0 ? "None" : `${co.scheduleImpactDays > 0 ? "+" : ""}${co.scheduleImpactDays} days`}</Row>
+                <Row label={t("Schedule impact")}>{co.scheduleImpactDays === 0 ? t("None") : fmt(t("{days} days"), { days: `${co.scheduleImpactDays > 0 ? "+" : ""}${co.scheduleImpactDays}` })}</Row>
               </div>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label="Requested by">{co.requestedBy ?? "—"}</Row>
-              <Row label="Contractor">{co.contractor ?? "—"}</Row>
-              <Row label="Architect">{co.architect ?? "—"}</Row>
-              <Row label="Engineer">{co.engineer ?? "—"}</Row>
-              <Row label="Owner">{co.owner ?? "—"}</Row>
-              <Row label="Requested">{formatDate(co.dateRequested)}</Row>
-              <Row label="Submitted">{formatDate(co.dateSubmitted)}</Row>
-              <Row label="Approved">{formatDate(co.dateApproved)}</Row>
-              <Row label="Updated">
+              <Row label={t("Requested by")}>{co.requestedBy ?? "—"}</Row>
+              <Row label={t("Contractor")}>{co.contractor ?? "—"}</Row>
+              <Row label={t("Architect")}>{co.architect ?? "—"}</Row>
+              <Row label={t("Engineer")}>{co.engineer ?? "—"}</Row>
+              <Row label={t("Owner")}>{co.owner ?? "—"}</Row>
+              <Row label={t("Requested")}>{formatDate(co.dateRequested)}</Row>
+              <Row label={t("Submitted")}>{formatDate(co.dateSubmitted)}</Row>
+              <Row label={t("Approved")}>{formatDate(co.dateApproved)}</Row>
+              <Row label={t("Updated")}>
                 <span className="inline-flex items-center gap-1">
                   <CalendarClock className="h-3.5 w-3.5 text-faint" />
                   {formatDate(co.updatedAt)}

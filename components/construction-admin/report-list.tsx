@@ -9,6 +9,8 @@ import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
 import type { CaReport, CaReportType } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const TYPES: Array<{ key: "ALL" | CaReportType; label: string }> = [
   { key: "ALL", label: "All" },
@@ -20,6 +22,7 @@ const TYPES: Array<{ key: "ALL" | CaReportType; label: string }> = [
 ];
 
 export function ReportList({ reports }: { reports: CaReport[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"ALL" | CaReportType>("ALL");
 
@@ -46,7 +49,7 @@ export function ReportList({ reports }: { reports: CaReport[] }) {
                 type === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -56,7 +59,7 @@ export function ReportList({ reports }: { reports: CaReport[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Search reports…"
+            placeholder={t("Search progress reports…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-64"
           />
         </div>
@@ -67,10 +70,10 @@ export function ReportList({ reports }: { reports: CaReport[] }) {
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Report</th>
-                <th className="px-3 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Period</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Report")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Period")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -79,7 +82,7 @@ export function ReportList({ reports }: { reports: CaReport[] }) {
                   <td className="px-5 py-3">
                     <Link href={`/construction-admin/reports/${r.id}`} className="block">
                       <span className="font-mono text-[11px] text-faint">{r.reportNumber}</span>
-                      <span className="mt-0.5 block font-medium text-fg group-hover:text-brand">{CA_REPORT_TYPE_LABEL[r.reportType]}</span>
+                      <span className="mt-0.5 block font-medium text-fg group-hover:text-brand">{t(CA_REPORT_TYPE_LABEL[r.reportType])}</span>
                     </Link>
                   </td>
                   <td className="px-3 py-3 text-muted">{r.projectName}</td>
@@ -97,12 +100,12 @@ export function ReportList({ reports }: { reports: CaReport[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <FileText className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No reports match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No reports match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
-      <p className="px-1 text-xs text-faint">Showing {rows.length} of {reports.length} reports</p>
+      <p className="px-1 text-xs text-faint">{fmt(t("Showing {count} of {total} reports"), { count: rows.length, total: reports.length })}</p>
     </div>
   );
 }

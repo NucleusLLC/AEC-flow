@@ -4,16 +4,20 @@ import { headers } from "next/headers";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { redeemEmailVerification } from "@/lib/server/email-verification";
 import { clientIpFrom } from "@/lib/account-security/rate-limit-policy";
+import { getServerT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Confirm your email · AEC-flow",
-  // The token is in this page's URL. Without this, any outbound link or
-  // third-party asset loaded from here would hand it over in the Referer.
-  referrer: "no-referrer",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: `${t("Confirm your email")} · AEC-flow`,
+    // The token is in this page's URL. Without this, any outbound link or
+    // third-party asset loaded from here would hand it over in the Referer.
+    referrer: "no-referrer",
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Opening the link IS the confirmation — there is no button to press.
@@ -29,6 +33,7 @@ export default async function VerifyEmailPage({ params }: { params: Promise<{ to
   const h = await headers();
   const ip = clientIpFrom((name) => h.get(name) ?? undefined);
   const result = await redeemEmailVerification(token, ip);
+  const t = await getServerT();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-2 px-4">
@@ -36,7 +41,7 @@ export default async function VerifyEmailPage({ params }: { params: Promise<{ to
         <div className="mb-6 text-center">
           <div className="text-2xl font-bold tracking-tight text-fg">AEC-flow</div>
           <div className="mt-0.5 text-xs uppercase tracking-[0.18em] text-muted">
-            AEC Management Suite
+            {t("AEC Management Suite")}
           </div>
         </div>
 
@@ -45,18 +50,18 @@ export default async function VerifyEmailPage({ params }: { params: Promise<{ to
             <>
               <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-500" aria-hidden="true" />
               <h1 className="mb-1 text-lg font-semibold text-fg">
-                {result.already ? "Already confirmed" : "Email confirmed"}
+                {result.already ? t("Already confirmed") : t("Email confirmed")}
               </h1>
               <p className="text-sm text-muted">
                 {result.already
-                  ? "This address was confirmed earlier. There is nothing else to do."
-                  : "Thank you. Password resets and invitations will reach you at this address."}
+                  ? t("This address was confirmed earlier. There is nothing else to do.")
+                  : t("Thank you. Password resets and invitations will reach you at this address.")}
               </p>
               <Link
                 href="/login"
                 className="mt-5 inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:opacity-90"
               >
-                Go to sign in
+                {t("Go to sign in")}
               </Link>
             </>
           ) : (
@@ -65,17 +70,15 @@ export default async function VerifyEmailPage({ params }: { params: Promise<{ to
                 * issued, an expired one and a spent one are indistinguishable here.
                 * The distinction exists in the database, where support can see it. */}
               <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-amber-500" aria-hidden="true" />
-              <h1 className="mb-1 text-lg font-semibold text-fg">This link cannot be used</h1>
+              <h1 className="mb-1 text-lg font-semibold text-fg">{t("This link cannot be used")}</h1>
               <p className="text-sm text-muted">
-                Confirmation links stop working after a week, and a newer one replaces the
-                last straight away. Nothing has changed on your account. Sign in and use
-                &ldquo;Resend&rdquo; on the banner to get a fresh link.
+                {t("Confirmation links stop working after a week, and a newer one replaces the last straight away. Nothing has changed on your account. Sign in and use “Resend” on the banner to get a fresh link.")}
               </p>
               <Link
                 href="/login"
                 className="mt-5 inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium text-fg hover:bg-surface-2"
               >
-                Go to sign in
+                {t("Go to sign in")}
               </Link>
             </>
           )}

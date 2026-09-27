@@ -8,6 +8,8 @@ import { SiteInstructionStatusBadge, DisciplineBadge, ImpactBadge } from "@/comp
 import type { SiteInstruction, SiteInstructionStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | SiteInstructionStatus; label: string }> = [
   { key: "ALL", label: "All" },
@@ -18,6 +20,7 @@ const FILTERS: Array<{ key: "ALL" | SiteInstructionStatus; label: string }> = [
 ];
 
 export function SiteInstructionLog({ instructions }: { instructions: SiteInstruction[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | SiteInstructionStatus>("ALL");
 
@@ -44,7 +47,7 @@ export function SiteInstructionLog({ instructions }: { instructions: SiteInstruc
                 status === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -54,7 +57,7 @@ export function SiteInstructionLog({ instructions }: { instructions: SiteInstruc
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Search instructions…"
+            placeholder={t("Search instructions…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-64"
           />
         </div>
@@ -65,12 +68,12 @@ export function SiteInstructionLog({ instructions }: { instructions: SiteInstruc
           <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Instruction</th>
-                <th className="px-3 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Discipline</th>
-                <th className="px-3 py-2.5 font-medium">Cost impact</th>
-                <th className="px-3 py-2.5 font-medium">Issued</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Instruction")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Discipline")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Cost impact")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Issued")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -97,12 +100,12 @@ export function SiteInstructionLog({ instructions }: { instructions: SiteInstruc
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <ClipboardList className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No site instructions match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No site instructions match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
-      <p className="px-1 text-xs text-faint">Showing {rows.length} of {instructions.length} instructions</p>
+      <p className="px-1 text-xs text-faint">{fmt(t("Showing {count} of {total} instructions"), { count: rows.length, total: instructions.length })}</p>
     </div>
   );
 }

@@ -15,6 +15,7 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { getServerT } from "@/lib/i18n/server";
 import {
   createInvoice,
   deleteInvoice,
@@ -43,6 +44,12 @@ function revalidateInvoice(id: string): void {
   revalidatePath(`${REGISTER}/${id}`);
 }
 
+/** The zod messages are English keys; translate each one before joining them. */
+async function issuesError(issues: { path: string; message: string }[]): Promise<string> {
+  const t = await getServerT();
+  return issuesToMessage(issues.map((i) => ({ ...i, message: t(i.message) })));
+}
+
 function failure(e: unknown, fallback: string): { ok: false; error: string } {
   if (
     e instanceof InvoiceNumberInUseError ||
@@ -56,7 +63,7 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
 
 export async function createInvoiceAction(input: InvoiceInput): Promise<InvoiceActionResult> {
   const parsed = parseInvoiceInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const invoice = await createInvoice(parsed.value as InvoiceInput);
     revalidateInvoice(invoice.id);
@@ -71,7 +78,7 @@ export async function updateInvoiceAction(
   input: InvoiceInput,
 ): Promise<InvoiceActionResult> {
   const parsed = parseInvoiceInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const invoice = await updateInvoice(id, parsed.value as InvoiceInput);
     revalidateInvoice(invoice.id);
@@ -119,7 +126,7 @@ export async function recordPaymentAction(
   input: InvoicePaymentInput,
 ): Promise<InvoiceActionResult> {
   const parsed = parseInvoicePaymentInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const payment = await recordPayment(invoiceId, parsed.value as InvoicePaymentInput);
     revalidateInvoice(invoiceId);

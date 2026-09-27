@@ -44,6 +44,8 @@ import {
   type ScheduleTask,
   type Discipline,
 } from "@/lib/data/schedule";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const LABEL_W = 252;
 const ROW_H = 44;
@@ -53,6 +55,7 @@ const BAR_H = 22;
 type Scale = "day" | "week" | "month" | "year";
 const BASE_PX: Record<Scale, number> = { day: 28, week: 10, month: 3.6, year: 1.1 };
 const SCALES: Scale[] = ["day", "week", "month", "year"];
+const SCALE_LABEL: Record<Scale, string> = { day: "Day", week: "Week", month: "Month", year: "Year" };
 
 // Editable task categories. Defaults cover the firm's disciplines plus
 // Construction / Orders / Critical; users can add, rename, recolour, or remove.
@@ -156,8 +159,9 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 // renders is unchanged — the picker in ScheduleApp always decided that.
 export function ScheduleGantt({ schedules }: { schedules: ProjectSchedule[] }) {
   const selected = schedules[0];
+  const tr = useT();
 
-  if (!selected) return <p className="text-sm text-muted">No schedules available.</p>;
+  if (!selected) return <p className="text-sm text-muted">{tr("No schedules available.")}</p>;
 
   // Remount per project so local edits reset cleanly
   return <GanttBoard key={selected.projectId} schedule={selected} />;
@@ -177,6 +181,7 @@ type Ordered = { task: ScheduleTask; depth: number };
 
 function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
   const [tasks, setTasks] = useState<ScheduleTask[]>(schedule.tasks);
+  const tr = useT();
   // Persistence — Save the whole programme (tasks + dependencies) to the DB.
   // `dirty` is derived from a ref of the last-saved task list (no setState-in-effect).
   const [savePending, startSave] = useTransition();
@@ -252,7 +257,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
   const subsFor = (catId: string) => subcats[catId] ?? [];
   // Prompt for + add a sub-category to a category; returns the new label or null.
   function addSubcategory(catId: string): string | null {
-    const label = window.prompt("New sub-category");
+    const label = window.prompt(tr("New sub-category"));
     if (!label || !label.trim()) return null;
     const v = label.trim();
     setSubcats((prev) => {
@@ -267,7 +272,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
     catById.get(t.category ?? DISCIPLINE_TO_CAT[t.discipline]) ?? categories[0];
 
   function addCategory() {
-    const label = window.prompt("New category name");
+    const label = window.prompt(tr("New category name"));
     if (!label || !label.trim()) return;
     let id = slugify(label);
     if (categories.some((c) => c.id === id)) id = `${id}-${idCounter.current++}`;
@@ -275,7 +280,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
   }
   function renameCategory(id: string) {
     const c = categories.find((x) => x.id === id);
-    const label = window.prompt("Rename category", c?.label ?? "");
+    const label = window.prompt(tr("Rename category"), c?.label ?? "");
     if (label && label.trim())
       setCategories((prev) => prev.map((x) => (x.id === id ? { ...x, label: label.trim() } : x)));
   }
@@ -607,7 +612,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
   }
 
   function rename(task: ScheduleTask) {
-    const name = window.prompt("Rename task", task.name);
+    const name = window.prompt(tr("Rename task"), task.name);
     if (name && name.trim()) patch(task.id, (t) => ({ ...t, name: name.trim() }));
   }
 
@@ -704,10 +709,10 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
         * itself is the only thing here allowed to scroll horizontally.
         */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-muted">
-        <Stat label="Tasks" value={String(tasks.length)} />
-        <Stat label="Overall progress" value={`${overall}%`} />
-        <Stat label="Critical tasks" value={String(cpm.critical.size)} />
-        <Stat label="Critical path" value={`${cpm.projectDays} days`} />
+        <Stat label={tr("Tasks")} value={String(tasks.length)} />
+        <Stat label={tr("Overall progress")} value={`${overall}%`} />
+        <Stat label={tr("Critical tasks")} value={String(cpm.critical.size)} />
+        <Stat label={tr("Critical path")} value={fmt(tr("{count} days"), { count: cpm.projectDays })} />
       </div>
 
       {/* Status board — where the project is vs plan */}
@@ -731,7 +736,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
               ? "bg-brand text-brand-fg hover:bg-brand/90"
               : "border border-border bg-surface text-muted",
           )}
-          title={dirty ? "Save schedule changes" : "All changes saved"}
+          title={dirty ? tr("Save schedule changes") : tr("All changes saved")}
         >
           {savePending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -740,9 +745,9 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
           ) : (
             <Check className="h-3.5 w-3.5" />
           )}
-          {savePending ? "Saving…" : dirty ? "Save" : "Saved"}
+          {savePending ? tr("Saving…") : dirty ? tr("Save") : tr("Saved")}
         </button>
-        {saveError ? <span className="text-xs text-red-600">{saveError}</span> : null}
+        {saveError ? <span className="text-xs text-red-600">{tr(saveError)}</span> : null}
 
         {/* Scale */}
         <div className="inline-flex overflow-hidden rounded-lg border border-border">
@@ -756,18 +761,18 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 scale === s ? "bg-brand text-brand-fg" : "bg-surface text-muted hover:text-fg",
               )}
             >
-              {s}
+              {tr(SCALE_LABEL[s])}
             </button>
           ))}
         </div>
 
         {/* Zoom */}
         <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-1">
-          <button type="button" onClick={() => setZoom((z) => Math.max(0.4, z / 1.25))} className="p-1.5 text-muted hover:text-fg" aria-label="Zoom out">
+          <button type="button" onClick={() => setZoom((z) => Math.max(0.4, z / 1.25))} className="p-1.5 text-muted hover:text-fg" aria-label={tr("Zoom out")}>
             <ZoomOut className="h-4 w-4" />
           </button>
           <span className="w-10 text-center text-[11px] text-faint">{Math.round(zoom * 100)}%</span>
-          <button type="button" onClick={() => setZoom((z) => Math.min(4, z * 1.25))} className="p-1.5 text-muted hover:text-fg" aria-label="Zoom in">
+          <button type="button" onClick={() => setZoom((z) => Math.min(4, z * 1.25))} className="p-1.5 text-muted hover:text-fg" aria-label={tr("Zoom in")}>
             <ZoomIn className="h-4 w-4" />
           </button>
         </div>
@@ -780,7 +785,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-fg"
           >
             <CalendarCog className="h-3.5 w-3.5" />
-            Calendar
+            {tr("Calendar")}
           </button>
           {calPanel ? (
             <>
@@ -789,7 +794,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 {/* Working hours */}
                 <div className="mb-3">
                   <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-faint">
-                    Working hours / day
+                    {tr("Working hours / day")}
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -801,14 +806,14 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                       onChange={(e) => setHoursPerDay(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
                       className="h-8 w-24 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                     />
-                    <span className="text-xs text-muted">hours/day (used for Hours↔Days)</span>
+                    <span className="text-xs text-muted">{tr("hours/day (used for Hours↔Days)")}</span>
                   </div>
                 </div>
 
                 {/* Weekend / off-days */}
                 <div className="mb-3">
                   <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-faint">
-                    Weekend / off-days
+                    {tr("Weekend / off-days")}
                   </span>
                   <div className="flex items-center gap-1">
                     {WEEKDAYS.map((d, i) => (
@@ -826,9 +831,9 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                             ? "bg-surface-2 text-fg ring-1 ring-inset ring-border"
                             : "text-faint hover:bg-surface-2",
                         )}
-                        title={d}
+                        title={tr(d)}
                       >
-                        {d[0]}
+                        {tr(d)[0]}
                       </button>
                     ))}
                   </div>
@@ -837,7 +842,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 {/* Holidays */}
                 <div>
                   <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-faint">
-                    Official holidays ({holidays.length})
+                    {fmt(tr("Official holidays ({count})"), { count: holidays.length })}
                   </span>
                   <div className="mb-2 flex items-center gap-2">
                     <input
@@ -851,12 +856,12 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                       onClick={addHoliday}
                       className="inline-flex h-8 items-center gap-1 rounded-md bg-brand px-2.5 text-xs font-medium text-brand-fg hover:bg-brand/90"
                     >
-                      <Plus className="h-3.5 w-3.5" /> Add
+                      <Plus className="h-3.5 w-3.5" /> {tr("Add")}
                     </button>
                   </div>
                   <div className="max-h-40 space-y-0.5 overflow-y-auto">
                     {holidays.length === 0 ? (
-                      <p className="px-1 py-2 text-xs text-faint">No holidays defined.</p>
+                      <p className="px-1 py-2 text-xs text-faint">{tr("No holidays defined.")}</p>
                     ) : (
                       holidays.map((d) => (
                         <div
@@ -871,7 +876,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                             type="button"
                             onClick={() => removeHoliday(d)}
                             className="rounded p-0.5 text-faint hover:text-red-600"
-                            title="Remove"
+                            title={tr("Remove")}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -895,7 +900,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
           )}
         >
           <GitBranch className="h-3.5 w-3.5" />
-          Critical path
+          {tr("Critical path")}
         </button>
 
         {/* Budget — the toggle and its state are unchanged; only what it reveals is new. */}
@@ -907,10 +912,10 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
             "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
             showBudget ? "border-brand bg-brand/10 text-brand" : "border-border bg-surface text-muted hover:text-fg",
           )}
-          title="Cost-load the schedule: budget vs committed vs received, per activity"
+          title={tr("Cost-load the schedule: budget vs committed vs received, per activity")}
         >
           <CircleDollarSign className="h-3.5 w-3.5" />
-          Budget
+          {tr("Budget")}
         </button>
 
         {/* Link mode */}
@@ -926,7 +931,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
           )}
         >
           <Link2 className="h-3.5 w-3.5" />
-          {linkMode ? (linkSource ? "Pick target…" : "Pick source…") : "Link"}
+          {linkMode ? (linkSource ? tr("Pick target…") : tr("Pick source…")) : tr("Link")}
         </button>
 
         {/* Categories editor */}
@@ -937,14 +942,14 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-fg"
           >
             <Tag className="h-3.5 w-3.5" />
-            Categories
+            {tr("Categories")}
           </button>
           {catPanel ? (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setCatPanel(false)} aria-hidden />
               <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-border bg-surface p-2 shadow-lg">
                 <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">
-                  Task categories
+                  {tr("Task categories")}
                 </div>
                 <div className="max-h-64 space-y-1 overflow-y-auto">
                   {categories.map((c) => (
@@ -954,22 +959,22 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                         value={c.color}
                         onChange={(e) => setCatColor(c.id, e.target.value)}
                         className="h-5 w-5 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0"
-                        title="Change colour"
+                        title={tr("Change colour")}
                       />
                       <button
                         type="button"
                         onClick={() => renameCategory(c.id)}
                         className="min-w-0 flex-1 truncate text-left text-sm text-fg hover:text-brand"
-                        title="Rename"
+                        title={tr("Rename")}
                       >
-                        {c.label}
+                        {tr(c.label)}
                       </button>
                       <button
                         type="button"
                         onClick={() => deleteCategory(c.id)}
                         disabled={categories.length <= 1}
                         className="shrink-0 rounded p-0.5 text-faint hover:text-red-600 disabled:opacity-30"
-                        title="Delete category"
+                        title={tr("Delete category")}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -981,7 +986,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                   onClick={addCategory}
                   className="mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-brand hover:bg-brand/5"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add category
+                  <Plus className="h-3.5 w-3.5" /> {tr("Add category")}
                 </button>
               </div>
             </>
@@ -1006,7 +1011,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
               setNewSub(subsFor(v)[0] ?? "");
             }}
             className="h-8 border-r border-border bg-surface px-2 text-xs text-fg focus:outline-none"
-            title="Category for new task"
+            title={tr("Category for new task")}
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -1024,14 +1029,14 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 } else setNewSub(e.target.value);
               }}
               className="h-8 max-w-[160px] border-r border-border bg-surface px-2 text-xs text-fg focus:outline-none"
-              title="Sub-category for new task"
+              title={tr("Sub-category for new task")}
             >
               {subsFor(newCat).map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
-              <option value={ADD_SENTINEL}>＋ Add new…</option>
+              <option value={ADD_SENTINEL}>{tr("＋ Add new…")}</option>
             </select>
           ) : null}
           <button
@@ -1040,7 +1045,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
             className="inline-flex items-center gap-1.5 bg-brand px-2.5 py-1.5 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Plus className="h-3.5 w-3.5" />
-            Add task
+            {tr("Add task")}
           </button>
         </div>
       </div>
@@ -1075,7 +1080,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 className="flex items-end border-b border-r border-border bg-surface-2 px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-faint"
                 style={{ height: HEADER_H }}
               >
-                Task
+                {tr("Task")}
               </div>
               {ordered.map(({ task, depth }, i) => {
                 const crit = showCritical && cpm.critical.has(task.id);
@@ -1096,7 +1101,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                       onClick={() => setSelId(task.id)}
                       onDoubleClick={() => rename(task)}
                       className="min-w-0 flex-1 text-left"
-                      title="Click to select · double-click to rename"
+                      title={tr("Click to select · double-click to rename")}
                     >
                       <div className={cn("flex items-center gap-1 truncate text-[13px] font-medium text-fg", task.status === "CANCELLED" && "text-faint line-through")}>
                         {crit ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" /> : null}
@@ -1107,7 +1112,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                           className="inline-block h-2 w-2 shrink-0 rounded-sm"
                           style={{ background: resolveCat(task).color }}
                         />
-                        {resolveCat(task).label}
+                        {tr(resolveCat(task).label)}
                         {task.subCategory ? ` · ${task.subCategory}` : ""}
                         {task.assignee ? ` · ${task.assignee}` : ""}
                       </div>
@@ -1118,7 +1123,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                         onClick={() => move(task.id, "up")}
                         disabled={reord.first}
                         className="rounded p-0.5 text-faint hover:text-fg disabled:cursor-default disabled:opacity-25"
-                        title="Move up"
+                        title={tr("Move up")}
                       >
                         <ChevronUp className="h-3.5 w-3.5" />
                       </button>
@@ -1127,7 +1132,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                         onClick={() => move(task.id, "down")}
                         disabled={reord.last}
                         className="rounded p-0.5 text-faint hover:text-fg disabled:cursor-default disabled:opacity-25"
-                        title="Move down"
+                        title={tr("Move down")}
                       >
                         <ChevronDown className="h-3.5 w-3.5" />
                       </button>
@@ -1136,7 +1141,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                           type="button"
                           onClick={() => addSubTask(task)}
                           className="rounded p-0.5 text-faint hover:text-brand"
-                          title="Add sub-task"
+                          title={tr("Add sub-task")}
                         >
                           <Plus className="h-3.5 w-3.5" />
                         </button>
@@ -1201,7 +1206,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                   key={b.iso}
                   className="absolute bg-rose-200/50"
                   style={{ left: b.left, top: HEADER_H, width: Math.max(2, pxPerDay), height: rowsHeight }}
-                  title={`Holiday · ${b.iso}`}
+                  title={`${tr("Holiday")} · ${b.iso}`}
                 />
               ))}
 
@@ -1221,7 +1226,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 * marker below is a different line and is not covered by it. */}
               {display.todayLine && todayLeft !== null ? (
                 <div className="absolute z-10 w-0.5 bg-red-500/80" style={{ left: todayLeft, top: HEADER_H - 6, height: rowsHeight + 6 }}>
-                  <span className="absolute -top-0 left-1 text-[9px] font-semibold text-red-600">today</span>
+                  <span className="absolute -top-0 left-1 text-[9px] font-semibold text-red-600">{tr("today")}</span>
                 </div>
               ) : null}
 
@@ -1232,7 +1237,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                   style={{ left: x(statusDate), top: HEADER_H - 6, height: rowsHeight + 6, width: 0, borderLeft: "2px dashed #4338ca" }}
                 >
                   <span className="absolute -top-0 left-1 rounded bg-indigo-700 px-1 text-[9px] font-semibold text-white">
-                    STATUS
+                    {tr("STATUS")}
                   </span>
                 </div>
               ) : null}
@@ -1313,7 +1318,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                         ? `${durationDays(task) * hoursPerDay}h`
                         : `${durationDays(task)}d`
                     } · ${task.progressPct}%${
-                      showCritical ? ` · slack ${cpm.slack[task.id] ?? 0}d` : ""
+                      showCritical ? ` · ${fmt(tr("slack {count}d"), { count: cpm.slack[task.id] ?? 0 })}` : ""
                     }`}
                   >
                     {!notStarted ? (
@@ -1336,7 +1341,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                       <div
                         className="pointer-events-none absolute top-0 h-full"
                         style={{ left: `${h.expectedPct}%`, width: 2, marginLeft: -1, background: "#0f172a" }}
-                        title={`Planned ${h.expectedPct}% by status date`}
+                        title={fmt(tr("Planned {pct}% by status date"), { pct: h.expectedPct })}
                       />
                     ) : null}
                     <span className="absolute inset-0 flex items-center justify-center px-1 text-[10px] font-semibold" style={{ color: task.progressPct > 45 && !notStarted ? "#fff" : "var(--color-fg)" }}>
@@ -1362,14 +1367,14 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
         {categories.map((c) => (
           <span key={c.id} className="inline-flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-sm" style={{ background: c.color }} />
-            {c.label}
+            {tr(c.label)}
           </span>
         ))}
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm border-2 border-red-500" /> critical path
+          <span className="h-3 w-3 rounded-sm border-2 border-red-500" /> {tr("critical path")}
         </span>
         <span className="ml-auto text-faint">
-          Drag bars to move · drag edges to stretch · {linkMode ? "click two bars to link" : "“Link” to connect tasks"}
+          {tr("Drag bars to move · drag edges to stretch")} · {linkMode ? tr("click two bars to link") : tr("“Link” to connect tasks")}
         </span>
       </div>
 
@@ -1381,24 +1386,24 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 <span className="text-sm font-semibold text-fg">{selected.name}</span>
                 {showCritical && cpm.critical.has(selected.id) ? (
                   <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700 ring-1 ring-inset ring-red-200">
-                    On critical path
+                    {tr("On critical path")}
                   </span>
                 ) : (
-                  <span className="text-[11px] text-faint">slack {cpm.slack[selected.id] ?? 0}d</span>
+                  <span className="text-[11px] text-faint">{fmt(tr("slack {count}d"), { count: cpm.slack[selected.id] ?? 0 })}</span>
                 )}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-faint">Start</span>
+                <span className="text-[11px] text-faint">{tr("Start")}</span>
                 <input
                   type="date"
                   value={selected.start}
                   onChange={(e) => setStart(selected, e.target.value)}
                   className="h-7 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                 />
-                <span className="text-[11px] text-faint">→ ends {formatDate(selected.end)}</span>
+                <span className="text-[11px] text-faint">→ {fmt(tr("ends {date}"), { date: formatDate(selected.end) })}</span>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-faint">Category</span>
+                <span className="text-[11px] text-faint">{tr("Category")}</span>
                 <select
                   value={selected.category ?? DISCIPLINE_TO_CAT[selected.discipline]}
                   onChange={(e) =>
@@ -1408,7 +1413,7 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.label}
+                      {tr(c.label)}
                     </option>
                   ))}
                 </select>
@@ -1433,19 +1438,19 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                       }}
                       className="h-7 max-w-[200px] rounded-md border border-border bg-surface-2 px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                     >
-                      <option value="">— sub-category —</option>
+                      <option value="">{tr("— sub-category —")}</option>
                       {subsFor(selCatId).map((s) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
                       ))}
-                      <option value={ADD_SENTINEL}>＋ Add new…</option>
+                      <option value={ADD_SENTINEL}>{tr("＋ Add new…")}</option>
                     </select>
                   );
                 })()}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-faint">Duration</span>
+                <span className="text-[11px] text-faint">{tr("Duration")}</span>
                 <input
                   type="number"
                   min={1}
@@ -1467,19 +1472,19 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                   }}
                   className="h-7 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                 >
-                  <option value="days">days</option>
-                  <option value="hours">hours</option>
+                  <option value="days">{tr("days")}</option>
+                  <option value="hours">{tr("hours")}</option>
                 </select>
                 <span className="text-[11px] text-faint">
                   {(selected.durationUnit ?? "days") === "hours"
-                    ? `≈ ${durationDays(selected)} working day${durationDays(selected) === 1 ? "" : "s"}`
-                    : `${durationDays(selected) * hoursPerDay}h @ ${hoursPerDay}h/day`}
+                    ? `≈ ${fmt(tr(durationDays(selected) === 1 ? "1 working day" : "{count} working days"), { count: durationDays(selected) })}`
+                    : fmt(tr("{hours}h @ {perDay}h/day"), { hours: durationDays(selected) * hoursPerDay, perDay: hoursPerDay })}
                 </span>
               </div>
 
               {/* Progress + status */}
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-faint">Progress</span>
+                <span className="text-[11px] text-faint">{tr("Progress")}</span>
                 <input
                   type="range"
                   min={0}
@@ -1500,29 +1505,29 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
                 />
                 <span className="text-[11px] text-faint">%</span>
                 <span className="mx-1 h-4 w-px bg-border" />
-                <span className="text-[11px] text-faint">Status</span>
+                <span className="text-[11px] text-faint">{tr("Status")}</span>
                 <select
                   value={selected.status}
                   onChange={(e) => setStatus(selected, e.target.value as ScheduleTask["status"])}
                   className="h-7 rounded-md border border-border bg-surface-2 px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                 >
-                  <option value="NOT_STARTED">Not started</option>
-                  <option value="IN_PROGRESS">In progress</option>
-                  <option value="ON_HOLD">On hold</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
+                  <option value="NOT_STARTED">{tr("Not started")}</option>
+                  <option value="IN_PROGRESS">{tr("In progress")}</option>
+                  <option value="ON_HOLD">{tr("On hold")}</option>
+                  <option value="COMPLETED">{tr("Completed")}</option>
+                  <option value="CANCELLED">{tr("Cancelled")}</option>
                 </select>
               </div>
 
               {selected.dependsOn.length > 0 ? (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] text-faint">Depends on:</span>
+                  <span className="text-[11px] text-faint">{tr("Depends on:")}</span>
                   {selected.dependsOn.map((d) => {
                     const dep = tasks.find((t) => t.id === d);
                     return (
                       <span key={d} className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-fg ring-1 ring-inset ring-border">
                         {dep?.name ?? d}
-                        <button type="button" onClick={() => removeDep(selected.id, d)} className="text-faint hover:text-red-600" aria-label="Remove dependency">
+                        <button type="button" onClick={() => removeDep(selected.id, d)} className="text-faint hover:text-red-600" aria-label={tr("Remove dependency")}>
                           <X className="h-3 w-3" />
                         </button>
                       </span>
@@ -1534,11 +1539,11 @@ function GanttBoard({ schedule }: { schedule: ProjectSchedule }) {
             <div className="flex items-center gap-2">
               {!selected.parentId ? (
                 <button type="button" onClick={() => addSubTask(selected)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-fg hover:bg-surface-2">
-                  <Plus className="h-3.5 w-3.5" /> Sub-task
+                  <Plus className="h-3.5 w-3.5" /> {tr("Sub-task")}
                 </button>
               ) : null}
               <button type="button" onClick={() => deleteTask(selected.id)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
-                <Trash2 className="h-3.5 w-3.5" /> Delete
+                <Trash2 className="h-3.5 w-3.5" /> {tr("Delete")}
               </button>
             </div>
           </div>

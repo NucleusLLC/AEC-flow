@@ -9,9 +9,10 @@
 import { Card, CardBody } from "@/components/ui/card";
 import { registerTotals } from "@/lib/building-permits/register";
 import type { BuildingPermitSummaryDTO } from "@/lib/building-permits/types";
+import { getServerT } from "@/lib/i18n/server";
 import { BadgeCheck, FolderOpen, Hourglass, MailWarning, Stamp } from "lucide-react";
 
-export function PermitRegisterTiles({
+export async function PermitRegisterTiles({
   permits,
   today,
 }: {
@@ -19,18 +20,19 @@ export function PermitRegisterTiles({
   today: string;
 }) {
   const totals = registerTotals(permits, today);
+  const t = await getServerT();
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <Tile icon={FolderOpen} label="Open files" value={totals.open} />
-      <Tile icon={Hourglass} label="Awaiting the authority" value={totals.awaitingAuthority} />
-      <Tile icon={Stamp} label="Concept approved" value={totals.conceptApproved} />
-      <Tile icon={BadgeCheck} label="Issued" value={totals.issued} />
+      <Tile icon={FolderOpen} label={t("Open files")} value={totals.open} />
+      <Tile icon={Hourglass} label={t("Awaiting the authority")} value={totals.awaitingAuthority} />
+      <Tile icon={Stamp} label={t("Concept approved")} value={totals.conceptApproved} />
+      <Tile icon={BadgeCheck} label={t("Issued")} value={totals.issued} />
       {/* The one tile that changes colour. It stays neutral at zero so the red
        * means something the day it appears. */}
       <Tile
         icon={MailWarning}
-        label="Overdue replies"
+        label={t("Overdue replies")}
         value={totals.overdueResponses}
         alert={totals.overdueResponses > 0}
       />

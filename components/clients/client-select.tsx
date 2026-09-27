@@ -19,6 +19,7 @@
 
 import { saveClient } from "@/app/(app)/clients/actions";
 import { CreatableSelect } from "@/components/forms/creatable-select";
+import { useT } from "@/components/i18n/language-provider";
 
 export type ClientOption = { id: string; name: string };
 
@@ -27,7 +28,7 @@ export function ClientSelect({
   value,
   onChange,
   by = "id",
-  label = "Client",
+  label,
   hint,
   id,
   className,
@@ -46,24 +47,25 @@ export function ClientSelect({
   labelClassName?: string;
   onCreated?: (client: ClientOption) => void;
 }) {
+  const t = useT();
   return (
     <CreatableSelect
       id={id}
-      label={label}
+      label={label ?? t("Client")}
       hint={hint}
       className={className}
       labelClassName={labelClassName}
       value={value}
       onChange={onChange}
       options={clients.map((c) => ({ value: by === "id" ? c.id : c.name, label: c.name }))}
-      addLabel="＋ Add a new client"
+      addLabel={t("＋ Add a new client")}
       create={{
-        title: "New client",
-        hint: "Saved as an active client — fill in the rest on the client page later.",
-        submitLabel: "Add client",
+        title: t("New client"),
+        hint: t("Saved as an active client — fill in the rest on the client page later."),
+        submitLabel: t("Add client"),
         fields: [
-          { name: "name", label: "Client name", placeholder: "e.g. Emaar Developments", required: true },
-          { name: "email", label: "Email", type: "email", placeholder: "projects@client.ae" },
+          { name: "name", label: t("Client name"), placeholder: t("e.g. Emaar Developments"), required: true },
+          { name: "email", label: t("Email"), type: "email", placeholder: "projects@client.ae" },
         ],
         submit: async (draft) => {
           const res = await saveClient("new", {

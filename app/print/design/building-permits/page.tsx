@@ -24,8 +24,13 @@ import {
   PERMIT_STATUS_LABEL,
   type BuildingPermitSummaryDTO,
 } from "@/lib/building-permits/types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Building Permit Register · Print" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Building Permit Register")} · ${t("Print")}` };
+}
 
 /**
  * The printed register.
@@ -52,6 +57,7 @@ export default async function BuildingPermitRegisterPrintPage({
   ]);
 
   const today = ymd(new Date());
+  const t = await getServerT();
   const rows = sortPermits(
     filterPermits(permits, {
       status: request.status,
@@ -62,14 +68,14 @@ export default async function BuildingPermitRegisterPrintPage({
     request.sort,
     request.dir,
   );
-  const bands = bandPermits(rows, request.band, (s) => PERMIT_STATUS_LABEL[s]);
+  const bands = bandPermits(rows, request.band, (s) => t(PERMIT_STATUS_LABEL[s]));
   const totals = registerTotals(rows, today);
-  const scope = describePermitPrintScope(request);
+  const scope = describePermitPrintScope(request, t);
 
   return (
     <PrintSurface
       backHref="/design/building-permits"
-      backLabel="Building Permits"
+      backLabel={t("Building Permits")}
       orientation={request.orientation}
       density="compact"
     >
@@ -80,48 +86,57 @@ export default async function BuildingPermitRegisterPrintPage({
           size: practice.logo.size,
         }}
         name={firm.name}
-        tagline="Architecture · Engineering · Project Management"
+        tagline={t("Architecture · Engineering · Project Management")}
         borderClass="border-b-2 border-gray-900 pb-4"
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">
-              Building Permit Register
+              {t("Building Permit Register")}
             </div>
             <div className="mt-1 font-mono text-xs text-gray-600">BP-REG</div>
-            <div className="text-[11px] text-gray-500">Issued {militaryDate(today)}</div>
+            <div className="text-[11px] text-gray-500">{fmt(t("Issued {date}"), { date: militaryDate(today) })}</div>
           </div>
         }
       />
 
       <h1 className="mt-6 text-lg font-bold text-gray-900">{scope}</h1>
       <p className="mt-1 text-[11px] text-gray-500">
-        {rows.length} {rows.length === 1 ? "permit" : "permits"} · {totals.open} open ·{" "}
-        {totals.awaitingAuthority} awaiting the authority · {totals.issued} issued
-        {totals.overdueResponses > 0 ? ` · ${totals.overdueResponses} overdue reply` : ""}
-        {totals.overdueResponses > 1 ? "s" : ""}
+        {[
+          rows.length === 1 ? t("1 permit") : fmt(t("{count} permits"), { count: rows.length }),
+          fmt(t("{count} open"), { count: totals.open }),
+          fmt(t("{count} awaiting the authority"), { count: totals.awaitingAuthority }),
+          fmt(t("{count} issued"), { count: totals.issued }),
+          totals.overdueResponses === 1
+            ? t("1 overdue reply")
+            : totals.overdueResponses > 1
+              ? fmt(t("{count} overdue replies"), { count: totals.overdueResponses })
+              : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       </p>
 
       {rows.length === 0 ? (
-        <p className="mt-6 text-[11px] text-gray-500">No permit matches these filters.</p>
+        <p className="mt-6 text-[11px] text-gray-500">{t("No permit matches these filters.")}</p>
       ) : (
         bands.map((band) => (
           <section key={band.key} className="mt-6">
             {request.band !== "none" ? (
               <h2 className="mb-1 border-b border-gray-300 pb-1 text-[11px] font-semibold text-gray-900">
-                {band.label || "Ungrouped"}
+                {band.label === "No authority recorded" || band.label === "No project" ? t(band.label) : band.label || t("Ungrouped")}
                 <span className="ml-2 font-normal text-gray-400">
                   ({band.permits.length})
                 </span>
               </h2>
             ) : null}
-            <RegisterTable permits={band.permits} today={today} />
+            <RegisterTable permits={band.permits} today={today} t={t} />
           </section>
         ))
       )}
 
       <p className="mt-8 text-[9px] leading-relaxed text-gray-400">
-        Lapsed months run from the submittal date to the permit ready date, or to the date of issue
-        of this register while the permit is still with the authority. © {firm.name}.
+        {t("Lapsed months run from the submittal date to the permit ready date, or to the date of issue of this register while the permit is still with the authority.")}{" "}
+        © {firm.name}.
       </p>
     </PrintSurface>
   );
@@ -134,21 +149,23 @@ export default async function BuildingPermitRegisterPrintPage({
 function RegisterTable({
   permits,
   today,
+  t,
 }: {
   permits: BuildingPermitSummaryDTO[];
   today: string;
+  t: (text: string) => string;
 }) {
   return (
     <table className="w-full border-collapse text-[10px]">
       <thead>
         <tr className="border-b border-gray-300 text-left text-gray-500">
-          <th className="py-1 pr-2 font-medium">Building permit #</th>
-          <th className="py-1 px-2 font-medium">Permit</th>
-          <th className="py-1 px-2 text-center font-medium">Version #</th>
-          <th className="py-1 px-2 font-medium">Submittal date</th>
-          <th className="py-1 px-2 font-medium">Correspondence</th>
-          <th className="py-1 px-2 text-right font-medium">Lapsed (months)</th>
-          <th className="py-1 pl-2 font-medium">Permit ready date</th>
+          <th className="py-1 pr-2 font-medium">{t("Building permit #")}</th>
+          <th className="py-1 px-2 font-medium">{t("Permit")}</th>
+          <th className="py-1 px-2 text-center font-medium">{t("Version #")}</th>
+          <th className="py-1 px-2 font-medium">{t("Submittal date")}</th>
+          <th className="py-1 px-2 font-medium">{t("Correspondence")}</th>
+          <th className="py-1 px-2 text-right font-medium">{t("Lapsed (months)")}</th>
+          <th className="py-1 pl-2 font-medium">{t("Permit ready date")}</th>
         </tr>
       </thead>
       <tbody>
@@ -159,13 +176,13 @@ function RegisterTable({
           return (
             <tr key={p.id} className="break-inside-avoid border-b border-gray-200 align-top">
               <td className="py-1 pr-2">
-                <div className="font-mono text-gray-900">{p.permitNumber ?? "Not yet issued"}</div>
+                <div className="font-mono text-gray-900">{p.permitNumber ?? t("Not yet issued")}</div>
                 <div className="font-mono text-[9px] text-gray-400">{p.reference}</div>
               </td>
               <td className="py-1 px-2">
                 <div className="text-gray-900">{p.title}</div>
                 <div className="text-[9px] text-gray-500">
-                  {[PERMIT_STATUS_LABEL[p.status], p.projectName ?? p.siteAddress]
+                  {[t(PERMIT_STATUS_LABEL[p.status]), p.projectName ?? p.siteAddress]
                     .filter(Boolean)
                     .join(" · ")}
                 </div>
@@ -184,7 +201,7 @@ function RegisterTable({
                     {p.letters.map((l) => (
                       <li key={l.id} className="text-[9px] text-gray-700">
                         <span className="font-mono">
-                          {l.direction === "INCOMING" ? "IN" : "OUT"} {militaryDate(l.letterDate)}
+                          {l.direction === "INCOMING" ? t("IN") : t("OUT")} {militaryDate(l.letterDate)}
                         </span>{" "}
                         {l.letterRef ?? l.subject}
                         {l.pdf ? " (PDF)" : ""}
@@ -198,7 +215,7 @@ function RegisterTable({
                       overdue ? "text-red-700" : "text-gray-700"
                     }`}
                   >
-                    Reply {overdue ? "overdue" : "due"} {militaryDate(p.openResponseDueAt)}
+                    {fmt(overdue ? t("Reply overdue {date}") : t("Reply due {date}"), { date: militaryDate(p.openResponseDueAt) })}
                   </div>
                 ) : null}
               </td>
@@ -210,7 +227,7 @@ function RegisterTable({
                 {p.issuedAt
                   ? militaryDate(p.issuedAt)
                   : p.targetDecisionAt
-                    ? `Target ${militaryDate(p.targetDecisionAt)}`
+                    ? fmt(t("Target {date}"), { date: militaryDate(p.targetDecisionAt) })
                     : "—"}
               </td>
             </tr>

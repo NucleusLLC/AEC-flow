@@ -20,6 +20,8 @@ import {
   addMeetingAction,
   deleteMeetingAction,
 } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const field =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -37,6 +39,7 @@ export function PermitMeetings({
   today: string;
   onChanged: () => Promise<void>;
 }) {
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +81,7 @@ export function PermitMeetings({
         setOpen(false);
         await onChanged();
       } else {
-        setError(res.error);
+        setError(t(res.error));
       }
       setPending(false);
     })();
@@ -89,7 +92,7 @@ export function PermitMeetings({
     setPending(true);
     void (async () => {
       const res = await deleteMeetingAction(permitId, id);
-      if (!res.ok) setError(res.error);
+      if (!res.ok) setError(t(res.error));
       setConfirmId(null);
       await onChanged();
       setPending(false);
@@ -99,7 +102,7 @@ export function PermitMeetings({
   return (
     <div className="space-y-3">
       {meetings.length === 0 ? (
-        <p className="text-sm text-muted">No meeting recorded on this file yet.</p>
+        <p className="text-sm text-muted">{t("No meeting recorded on this file yet.")}</p>
       ) : (
         <ul className="space-y-3">
           {meetings.map((m) => (
@@ -127,21 +130,21 @@ export function PermitMeetings({
                       onClick={() => remove(m.id)}
                       className="font-medium text-red-600 hover:underline"
                     >
-                      Delete
+                      {t("Delete")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmId(null)}
                       className="text-muted hover:underline"
                     >
-                      Keep
+                      {t("Keep")}
                     </button>
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setConfirmId(m.id)}
-                    aria-label={`Delete the meeting of ${militaryDate(m.heldAt)}`}
+                    aria-label={fmt(t("Delete the meeting of {date}"), { date: militaryDate(m.heldAt) })}
                     className="shrink-0 text-faint transition-colors hover:text-red-600"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -153,13 +156,13 @@ export function PermitMeetings({
               ) : null}
               {m.decisions ? (
                 <p className="mt-2 whitespace-pre-line text-sm text-muted">
-                  <span className="text-faint">Decisions: </span>
+                  <span className="text-faint">{t("Decisions:")} </span>
                   {m.decisions}
                 </p>
               ) : null}
               {m.followUp ? (
                 <p className="mt-1 whitespace-pre-line text-sm text-muted">
-                  <span className="text-faint">Follow-up: </span>
+                  <span className="text-faint">{t("Follow-up:")} </span>
                   {m.followUp}
                 </p>
               ) : null}
@@ -174,7 +177,7 @@ export function PermitMeetings({
           className="grid gap-3 rounded-lg border border-border bg-surface-2/40 p-3 sm:grid-cols-3"
         >
           <div>
-            <label className={label}>Held on</label>
+            <label className={label}>{t("Held on")}</label>
             <input
               type="date"
               required
@@ -184,40 +187,40 @@ export function PermitMeetings({
             />
           </div>
           <div>
-            <label className={label}>Subject</label>
+            <label className={label}>{t("Subject")}</label>
             <input
               required
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="e.g. Site visit with the plan examiner"
+              placeholder={t("e.g. Site visit with the plan examiner")}
               className={input}
             />
           </div>
           <div>
-            <label className={label}>Location</label>
+            <label className={label}>{t("Location")}</label>
             <input value={location} onChange={(e) => setLocation(e.target.value)} className={input} />
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Attendees</label>
+            <label className={label}>{t("Attendees")}</label>
             <input
               value={attendees}
               onChange={(e) => setAttendees(e.target.value)}
-              placeholder="Who was there, and for whom"
+              placeholder={t("Who was there, and for whom")}
               className={input}
             />
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Minutes</label>
+            <label className={label}>{t("Minutes")}</label>
             <textarea
               rows={5}
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
-              placeholder="What was said, in enough detail to quote a year from now"
+              placeholder={t("What was said, in enough detail to quote a year from now")}
               className={field}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Decisions</label>
+            <label className={label}>{t("Decisions")}</label>
             <textarea
               rows={2}
               value={decisions}
@@ -226,7 +229,7 @@ export function PermitMeetings({
             />
           </div>
           <div>
-            <label className={label}>Follow-up</label>
+            <label className={label}>{t("Follow-up")}</label>
             <textarea
               rows={2}
               value={followUp}
@@ -240,7 +243,7 @@ export function PermitMeetings({
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {pending ? "Saving…" : "Save minutes"}
+              {pending ? t("Saving…") : t("Save minutes")}
             </button>
             <button
               type="button"
@@ -250,7 +253,7 @@ export function PermitMeetings({
               }}
               className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -260,7 +263,7 @@ export function PermitMeetings({
           onClick={() => setOpen(true)}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> Record a meeting
+          <Plus className="h-4 w-4" /> {t("Record a meeting")}
         </button>
       )}
 

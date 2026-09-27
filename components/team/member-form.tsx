@@ -16,6 +16,8 @@ import {
 } from "@/lib/data/team.types";
 import { saveTeamMember } from "@/app/(app)/team/actions";
 import { MEMBER_ADMIN_ROLES } from "@/lib/team/member-write-policy";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -64,6 +66,7 @@ export function MemberForm({
    */
   canChangeAccess?: boolean;
 }) {
+  const t = useT();
   const accessLocked = mode === "edit" && !canChangeAccess;
   const roleOptions = canChangeAccess
     ? ROLES
@@ -121,25 +124,25 @@ export function MemberForm({
           </div>
           <div className="text-sm">
             <p className="font-medium text-red-800">
-              Could not {mode === "edit" ? "update" : "add"} member.
+              {mode === "edit" ? t("Could not update member.") : t("Could not add member.")}
             </p>
-            <p className="mt-0.5 text-red-700">{error}</p>
+            <p className="mt-0.5 text-red-700">{t(error)}</p>
           </div>
         </div>
       ) : null}
 
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg">Member details</h3>
+        <h3 className="mb-4 text-sm font-semibold text-fg">{t("Member details")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className={labelClass} htmlFor="name">
-              Full name *
+              {t("Full name")} *
             </label>
-            <input id="name" name="name" required className={inputClass} placeholder="e.g. Mariam Al Suwaidi" defaultValue={initial?.name ?? ""} />
+            <input id="name" name="name" required className={inputClass} placeholder={fmt(t("e.g. {example}"), { example: "Mariam Al Suwaidi" })} defaultValue={initial?.name ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="email">
-              Email *
+              {t("Email")} *
             </label>
             <input
               id="email"
@@ -147,7 +150,7 @@ export function MemberForm({
               type="email"
               required
               readOnly={accessLocked}
-              title={accessLocked ? "Only an administrator or director can change a member's email." : undefined}
+              title={accessLocked ? t("Only an administrator or director can change a member's email.") : undefined}
               className={`${inputClass}${accessLocked ? " cursor-not-allowed opacity-70" : ""}`}
               placeholder="name@zenarch.net"
               defaultValue={initial?.email ?? ""}
@@ -155,19 +158,19 @@ export function MemberForm({
           </div>
           <div>
             <label className={labelClass} htmlFor="phone">
-              Phone
+              {t("Phone")}
             </label>
             <input id="phone" name="phone" className={inputClass} placeholder="+971 50 000 0000" defaultValue={initial?.phone ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="officeLocation">
-              Office
+              {t("Office")}
             </label>
             <input id="officeLocation" name="officeLocation" className={inputClass} defaultValue={initial?.officeLocation ?? "Dubai"} />
           </div>
           <div>
             <label className={labelClass} htmlFor="role">
-              Role
+              {t("Role")}
             </label>
             {/* A disabled select is left out of FormData, so a locked role travels in a hidden input. */}
             {accessLocked ? <input type="hidden" name="role" value={initial?.role ?? "STAFF"} /> : null}
@@ -175,45 +178,45 @@ export function MemberForm({
               id="role"
               name={accessLocked ? undefined : "role"}
               disabled={accessLocked}
-              title={accessLocked ? "Only an administrator or director can change a member's role." : undefined}
+              title={accessLocked ? t("Only an administrator or director can change a member's role.") : undefined}
               className={`${inputClass}${accessLocked ? " cursor-not-allowed opacity-70" : ""}`}
               defaultValue={initial?.role ?? "STAFF"}
             >
               {roleOptions.map((r) => (
                 <option key={r} value={r}>
-                  {ROLE_LABEL[r]}
+                  {t(ROLE_LABEL[r])}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className={labelClass} htmlFor="department">
-              Department
+              {t("Department")}
             </label>
             <select id="department" name="department" className={inputClass} defaultValue={initial?.department ?? "DESIGN"}>
               {DEPARTMENTS.map((d) => (
                 <option key={d} value={d}>
-                  {DEPARTMENT_LABEL[d]}
+                  {t(DEPARTMENT_LABEL[d])}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className={labelClass} htmlFor="discipline">
-              Discipline
+              {t("Discipline")}
             </label>
             <select id="discipline" name="discipline" className={inputClass} defaultValue={initial?.discipline ?? ""}>
-              <option value="">— None —</option>
+              <option value="">{t("— None —")}</option>
               {DISCIPLINES.map((d) => (
                 <option key={d} value={d}>
-                  {DISCIPLINE_LABEL[d]}
+                  {t(DISCIPLINE_LABEL[d])}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className={labelClass} htmlFor="capacity">
-              Capacity (%)
+              {t("Capacity (%)")}
             </label>
             <input id="capacity" name="capacity" type="number" min="0" max="100" step="10" className={inputClass} defaultValue={initial?.capacity ?? 100} />
           </div>
@@ -225,14 +228,14 @@ export function MemberForm({
           href={mode === "edit" && initial?.id ? `/team/${initial.id}` : "/team"}
           className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          Cancel
+          {t("Cancel")}
         </Link>
         <button
           type="submit"
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Add member"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Add member")}
         </button>
       </div>
     </form>

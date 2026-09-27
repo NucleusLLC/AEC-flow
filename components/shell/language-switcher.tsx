@@ -6,14 +6,14 @@ import { LANGS, type Lang } from "@/lib/i18n/dictionaries";
 
 /** Compact EN / SP / NL language picker for the topbar. */
 export function LanguageSwitcher() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   return (
-    <label className="relative inline-flex items-center" title="Language">
+    <label className="relative inline-flex items-center" title={t("Language")}>
       <Languages className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
       <select
         value={lang}
         onChange={(e) => setLang(e.target.value as Lang)}
-        aria-label="Language"
+        aria-label={t("Language")}
         className="h-9 cursor-pointer appearance-none rounded-lg border border-border bg-surface pl-7 pr-6 text-xs font-medium text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
       >
         {LANGS.map((l) => (

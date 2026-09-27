@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import { Card, CardBody } from "@/components/ui/card";
 import { TimesheetWeek } from "@/components/finance/timesheet-week";
 import { TimeApprovals } from "@/components/finance/time-approvals";
@@ -10,7 +12,10 @@ import { canManagePasswords } from "@/lib/password-policy";
 import { getSystemCurrency } from "@/lib/format";
 import { ymd } from "@/lib/building-permits/register";
 
-export const metadata: Metadata = { title: "Time · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Time")} · AEC-flow` };
+}
 
 /**
  * A week of hours.
@@ -43,13 +48,14 @@ export default async function TimePage({
 
   const person = people.find((p) => p.id === week.userId);
   const currency = getSystemCurrency();
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Time</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Time")}</h2>
         <p className="text-sm text-muted">
-          The hours the practice works, what they are worth, and what is ready to be billed.
+          {t("The hours the practice works, what they are worth, and what is ready to be billed.")}
         </p>
       </div>
 
@@ -71,10 +77,14 @@ export default async function TimePage({
       {person && person.chargeOutRate === null ? (
         <Card>
           <CardBody className="py-3 text-sm text-muted">
-            No charge-out rate is set for {person.name}, so their hours are worth nothing on this
-            screen. {canApprove ? "Set one below." : "Ask a director to set one."} A rate is copied
-            onto each entry as it is saved, so it prices the next hour logged, not the ones already
-            here.
+            {fmt(
+              t("No charge-out rate is set for {name}, so their hours are worth nothing on this screen."),
+              { name: person.name },
+            )}{" "}
+            {canApprove ? t("Set one below.") : t("Ask a director to set one.")}{" "}
+            {t(
+              "A rate is copied onto each entry as it is saved, so it prices the next hour logged, not the ones already here.",
+            )}
           </CardBody>
         </Card>
       ) : null}

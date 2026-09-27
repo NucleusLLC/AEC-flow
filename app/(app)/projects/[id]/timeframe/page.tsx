@@ -5,13 +5,15 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getProject, DISCIPLINE_LABEL, type PhaseStatus } from "@/lib/data/projects";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
-  return { title: project ? `${project.name} · Timeframe · AEC-flow` : "Project · AEC-flow" };
+  const t = await getServerT();
+  return { title: project ? `${project.name} · ${t("Timeframe")} · AEC-flow` : `${t("Project")} · AEC-flow` };
 }
 
 const phaseTone: Record<PhaseStatus, "neutral" | "blue" | "green" | "amber" | "slate"> = {
@@ -20,6 +22,13 @@ const phaseTone: Record<PhaseStatus, "neutral" | "blue" | "green" | "amber" | "s
   ON_HOLD: "amber",
   COMPLETED: "green",
   CANCELLED: "slate",
+};
+const PHASE_STATUS_LABEL: Record<PhaseStatus, string> = {
+  NOT_STARTED: "Not started",
+  IN_PROGRESS: "In progress",
+  ON_HOLD: "On hold",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
 };
 const barColor: Record<PhaseStatus, string> = {
   NOT_STARTED: "bg-gray-300",
@@ -33,6 +42,7 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
+  const t = await getServerT();
 
   // Timeline bounds across all dated phases (+ project start / target end).
   const stamps: number[] = [];
@@ -57,11 +67,11 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader
-          title="Project Timeframe"
+          title={t("Project Timeframe")}
           subtitle={
             project.startDate
               ? `${formatDate(project.startDate)} → ${formatDate(project.targetEndDate)}`
-              : "Phase schedule"
+              : t("Phase schedule")
           }
           action={<CalendarClock className="h-4 w-4 text-faint" />}
         />
@@ -73,10 +83,10 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
                 <div className="col-span-4 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium text-fg">{ph.name}</span>
-                    {ph.discipline ? <Badge tone="slate">{DISCIPLINE_LABEL[ph.discipline]}</Badge> : null}
+                    {ph.discipline ? <Badge tone="slate">{t(DISCIPLINE_LABEL[ph.discipline])}</Badge> : null}
                   </div>
                   <div className="mt-0.5 text-[11px] text-faint">
-                    {ph.startDate ? `${formatDate(ph.startDate)} – ${formatDate(ph.endDate)}` : "Dates TBC"}
+                    {ph.startDate ? `${formatDate(ph.startDate)} – ${formatDate(ph.endDate)}` : t("Dates TBC")}
                   </div>
                 </div>
                 <div className="col-span-6">
@@ -92,13 +102,13 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
                   </div>
                 </div>
                 <div className="col-span-2 text-right">
-                  <Badge tone={phaseTone[ph.status]}>{ph.status.replace(/_/g, " ").toLowerCase()}</Badge>
+                  <Badge tone={phaseTone[ph.status]}>{t(PHASE_STATUS_LABEL[ph.status]).toLowerCase()}</Badge>
                 </div>
               </div>
             );
           })}
           {project.phases.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted">No phases defined for this project yet.</p>
+            <p className="py-6 text-center text-sm text-muted">{t("No phases defined for this project yet.")}</p>
           ) : null}
         </div>
       </Card>

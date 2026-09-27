@@ -50,7 +50,7 @@ export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
   APPROVED: "Approved",
   ON_HOLD: "On hold",
   REJECTED: "Rejected",
-  VOID: "Void",
+  VOID: "Voided",
 };
 
 const OPEN: ProposalStatus[] = ["DRAFT", "SENT", "PENDING", "ON_HOLD"];

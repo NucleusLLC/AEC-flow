@@ -17,6 +17,9 @@ import { getProposals } from "@/lib/data/proposals";
 import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 import { formatCurrencyCompact } from "@/lib/format";
+import { ROLE_LABEL } from "@/lib/data/team.types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Search · AEC-flow" };
 
@@ -40,7 +43,7 @@ function matches(q: string, ...fields: Array<string | null | undefined>): boolea
   return hay.includes(q);
 }
 
-async function search(q: string): Promise<Group[]> {
+async function search(q: string, t: (text: string) => string): Promise<Group[]> {
   const [clients, projects, proposals, orders, team] = await Promise.all([
     getClients(),
     getProjects(),
@@ -52,7 +55,7 @@ async function search(q: string): Promise<Group[]> {
   const groups: Group[] = [
     {
       key: "clients",
-      label: "Clients",
+      label: t("Clients"),
       icon: Users,
       results: clients
         .filter((c) => matches(q, c.name, c.companyName, c.contactPerson, c.email, c.location, ...c.tags))
@@ -67,7 +70,7 @@ async function search(q: string): Promise<Group[]> {
     },
     {
       key: "projects",
-      label: "Projects",
+      label: t("Projects"),
       icon: FolderKanban,
       results: projects
         .filter((p) => matches(q, p.name, p.projectNumber, p.clientName, p.manager))
@@ -82,7 +85,7 @@ async function search(q: string): Promise<Group[]> {
     },
     {
       key: "proposals",
-      label: "Proposals",
+      label: t("Proposals"),
       icon: FileText,
       results: proposals
         .filter((p) => matches(q, p.refNumber, p.title, p.clientName, p.owner))
@@ -97,7 +100,7 @@ async function search(q: string): Promise<Group[]> {
     },
     {
       key: "orders",
-      label: "Orders",
+      label: t("Orders"),
       icon: ClipboardList,
       results: orders
         .filter((o) => matches(q, o.orderNumber, o.title, o.clientName, o.serviceType))
@@ -112,7 +115,7 @@ async function search(q: string): Promise<Group[]> {
     },
     {
       key: "team",
-      label: "Team",
+      label: t("Team"),
       icon: UsersRound,
       results: team
         .filter((m) => matches(q, m.name, m.email, m.role, m.discipline))
@@ -122,7 +125,7 @@ async function search(q: string): Promise<Group[]> {
           href: `/team/${m.id}`,
           title: m.name,
           subtitle: m.email,
-          badge: <Badge tone="slate">{m.role.toLowerCase()}</Badge>,
+          badge: <Badge tone="slate">{(ROLE_LABEL[m.role] ? t(ROLE_LABEL[m.role]) : m.role).toLowerCase()}</Badge>,
         })),
     },
   ];
@@ -137,21 +140,22 @@ export default async function SearchPage({
 }) {
   const { q: rawQ } = await searchParams;
   const q = (rawQ ?? "").trim();
-  const groups = q ? await search(q.toLowerCase()) : [];
+  const t = await getServerT();
+  const groups = q ? await search(q.toLowerCase(), t) : [];
   const totalResults = groups.reduce((n, g) => n + g.results.length, 0);
 
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Search</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Search")}</h2>
         {q ? (
           <p className="text-sm text-muted">
-            {totalResults} result{totalResults === 1 ? "" : "s"} for{" "}
+            {totalResults === 1 ? t("1 result for") : fmt(t("{count} results for"), { count: totalResults })}{" "}
             <span className="font-medium text-fg">&ldquo;{q}&rdquo;</span>
           </p>
         ) : (
           <p className="text-sm text-muted">
-            Search across clients, projects, proposals, orders, and team.
+            {t("Search across clients, projects, proposals, orders, and team.")}
           </p>
         )}
       </div>
@@ -161,15 +165,15 @@ export default async function SearchPage({
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
             <SearchIcon className="h-5 w-5" />
           </div>
-          <p className="text-sm text-muted">Type a query in the search bar above to begin.</p>
+          <p className="text-sm text-muted">{t("Type a query in the search bar above to begin.")}</p>
         </Card>
       ) : groups.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
             <SearchIcon className="h-5 w-5" />
           </div>
-          <p className="text-sm font-medium text-fg">No matches</p>
-          <p className="text-xs text-muted">Nothing found for &ldquo;{q}&rdquo;. Try another term.</p>
+          <p className="text-sm font-medium text-fg">{t("No matches")}</p>
+          <p className="text-xs text-muted">{fmt(t("Nothing found for “{query}”. Try another term."), { query: q })}</p>
         </Card>
       ) : (
         <div className="space-y-5">

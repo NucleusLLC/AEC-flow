@@ -30,7 +30,7 @@ export const GENERAL_DOCUMENT_STATUS_LABEL: Record<GeneralDocumentStatus, string
   ISSUED: "Issued",
   SIGNED: "Signed",
   SUPERSEDED: "Superseded",
-  VOID: "Void",
+  VOID: "Voided",
 };
 
 export type BadgeTone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";

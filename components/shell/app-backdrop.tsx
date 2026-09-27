@@ -370,7 +370,7 @@ export function AppBackdrop({
               // it, so a keyboard user would lose their place for a second. The
               // reducer already ignores an advance while one is in flight.
               onClick={() => dispatch({ type: "advance" })}
-              title={state.slots[state.active]?.label}
+              title={state.slots[state.active]?.label ? t(state.slots[state.active]!.label) : undefined}
               // `dashboard-bg-chip` pulls the same glass knobs as the cards, so
               // the two never drift apart when the values are tuned.
               className="dashboard-bg-chip inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-muted transition-colors hover:text-fg"

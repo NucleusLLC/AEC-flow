@@ -12,8 +12,13 @@ import {
   PERMIT_TYPE_LABEL,
   SUBMISSION_METHOD_LABEL,
 } from "@/lib/building-permits/types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Building Permit File · Print" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Building Permit File")} · ${t("Print")}` };
+}
 
 /**
  * One permit file on paper: the dates, every version, every letter, the staged
@@ -33,6 +38,7 @@ export default async function BuildingPermitFilePrintPage({
   if (!permit) notFound();
 
   const today = ymd(new Date());
+  const t = await getServerT();
   const version = permitVersion(permit);
   const lapsed = lapsedMonths(permit, today);
   // A letter's PDF is printed with its letter; these are the loose files.
@@ -41,51 +47,51 @@ export default async function BuildingPermitFilePrintPage({
   return (
     <CaPrintShell
       backHref={`/design/building-permits/${permit.id}`}
-      docTitle="Building Permit File"
+      docTitle={t("Building Permit File")}
       refNumber={permit.permitNumber ?? permit.reference}
-      statusLabel={PERMIT_STATUS_LABEL[permit.status]}
+      statusLabel={t(PERMIT_STATUS_LABEL[permit.status])}
       title={permit.title}
       meta={[
-        { label: "Building permit #", value: permit.permitNumber ?? "Not yet issued" },
-        { label: "Version #", value: version ? `V${version.version}` : "—" },
-        { label: "Submittal date", value: militaryDate(permit.submittedAt) },
+        { label: t("Building permit #"), value: permit.permitNumber ?? t("Not yet issued") },
+        { label: t("Version #"), value: version ? `V${version.version}` : "—" },
+        { label: t("Submittal date"), value: militaryDate(permit.submittedAt) },
         {
           // The label follows the value: a sheet that says "Permit ready date:
           // 6.4 months lapsed" reads as a date nobody can parse.
-          label: permit.issuedAt ? "Permit ready date" : "Lapsed (months)",
+          label: permit.issuedAt ? t("Permit ready date") : t("Lapsed (months)"),
           value: permit.issuedAt
             ? militaryDate(permit.issuedAt)
             : lapsed
-              ? `${lapsed.months.toFixed(1)}${lapsed.running ? " (running)" : ""}`
+              ? lapsed.running ? fmt(t("{months} (running)"), { months: lapsed.months.toFixed(1) }) : lapsed.months.toFixed(1)
               : "—",
         },
       ]}
       signatures={[
-        { role: "Prepared by", name: permit.responsibleName ?? "" },
-        { role: "Checked by", name: "" },
-        { role: "Authority", name: permit.authorityContact ?? "" },
+        { role: t("Prepared by"), name: permit.responsibleName ?? "" },
+        { role: t("Checked by"), name: "" },
+        { role: t("Authority"), name: permit.authorityContact ?? "" },
       ]}
     >
-      <PrintSection title="The file">
+      <PrintSection title={t("The file")}>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-[10.5px]">
-          <Fact label="Our reference" value={permit.reference} mono />
-          <Fact label="Type" value={PERMIT_TYPE_LABEL[permit.permitType]} />
-          <Fact label="Authority" value={permit.authority} />
-          <Fact label="Applicant" value={permit.applicantName} />
-          <Fact label="Site address" value={permit.siteAddress} />
-          <Fact label="Parcel" value={permit.parcelNumber} mono />
-          <Fact label="Project" value={permit.projectName} />
-          <Fact label="Acknowledged" value={militaryDate(permit.acknowledgedAt)} mono />
-          <Fact label="Concept approval" value={militaryDate(permit.conceptApprovalAt)} mono />
-          <Fact label="Concept approval ref." value={permit.conceptApprovalRef} mono />
-          <Fact label="Decision" value={militaryDate(permit.decisionAt)} mono />
-          <Fact label="Expires" value={militaryDate(permit.expiresAt)} mono />
+          <Fact label={t("Our reference")} value={permit.reference} mono />
+          <Fact label={t("Type")} value={t(PERMIT_TYPE_LABEL[permit.permitType])} />
+          <Fact label={t("Authority")} value={permit.authority} />
+          <Fact label={t("Applicant")} value={permit.applicantName} />
+          <Fact label={t("Site address")} value={permit.siteAddress} />
+          <Fact label={t("Parcel")} value={permit.parcelNumber} mono />
+          <Fact label={t("Project")} value={permit.projectName} />
+          <Fact label={t("Acknowledged")} value={militaryDate(permit.acknowledgedAt)} mono />
+          <Fact label={t("Concept approval")} value={militaryDate(permit.conceptApprovalAt)} mono />
+          <Fact label={t("Concept approval ref.")} value={permit.conceptApprovalRef} mono />
+          <Fact label={t("Decision")} value={militaryDate(permit.decisionAt)} mono />
+          <Fact label={t("Expires")} value={militaryDate(permit.expiresAt)} mono />
           <Fact
-            label="Lapsed (months)"
-            value={lapsed ? `${lapsed.months.toFixed(1)}${lapsed.running ? " (running)" : ""}` : "—"}
+            label={t("Lapsed (months)")}
+            value={lapsed ? (lapsed.running ? fmt(t("{months} (running)"), { months: lapsed.months.toFixed(1) }) : lapsed.months.toFixed(1)) : "—"}
             mono
           />
-          <Fact label="Target decision" value={militaryDate(permit.targetDecisionAt)} mono />
+          <Fact label={t("Target decision")} value={militaryDate(permit.targetDecisionAt)} mono />
         </dl>
         {permit.description ? (
           <p className="mt-3 whitespace-pre-line text-[10.5px] text-gray-800">
@@ -94,16 +100,16 @@ export default async function BuildingPermitFilePrintPage({
         ) : null}
       </PrintSection>
 
-      <PrintSection title="Versions">
+      <PrintSection title={t("Versions")}>
         {permit.submissions.length === 0 ? (
-          <Empty>No version logged.</Empty>
+          <Empty>{t("No version logged.")}</Empty>
         ) : (
-          <Table head={["Version #", "Submittal date", "Method", "Receipt #", "Received by", "What went in"]}>
+          <Table head={[t("Version #"), t("Submittal date"), t("Method"), t("Receipt #"), t("Received by"), t("What went in")]}>
             {permit.submissions.map((s, i) => (
               <tr key={s.id} className="border-b border-gray-200 align-top">
                 <Cell mono>V{i + 1}</Cell>
                 <Cell mono>{militaryDate(s.submittedAt)}</Cell>
-                <Cell>{SUBMISSION_METHOD_LABEL[s.method]}</Cell>
+                <Cell>{t(SUBMISSION_METHOD_LABEL[s.method])}</Cell>
                 <Cell mono>{s.receiptNumber ?? "—"}</Cell>
                 <Cell>{s.receivedBy ?? "—"}</Cell>
                 <Cell>{s.contents ?? "—"}</Cell>
@@ -113,15 +119,15 @@ export default async function BuildingPermitFilePrintPage({
         )}
       </PrintSection>
 
-      <PrintSection title="Correspondence">
+      <PrintSection title={t("Correspondence")}>
         {permit.correspondence.length === 0 ? (
-          <Empty>No letters on this file.</Empty>
+          <Empty>{t("No letters on this file.")}</Empty>
         ) : (
-          <Table head={["Date", "Direction", "Ref.", "Party", "Subject", "Reply", "File"]}>
+          <Table head={[t("Date"), t("Direction"), t("Ref."), t("Party"), t("Subject"), t("Reply"), t("File")]}>
             {permit.correspondence.map((l) => (
               <tr key={l.id} className="border-b border-gray-200 align-top">
                 <Cell mono>{militaryDate(l.letterDate ?? l.receivedAt)}</Cell>
-                <Cell>{CORRESPONDENCE_DIRECTION_LABEL[l.direction]}</Cell>
+                <Cell>{t(CORRESPONDENCE_DIRECTION_LABEL[l.direction])}</Cell>
                 <Cell mono>{l.letterRef ?? "—"}</Cell>
                 <Cell>{l.party ?? "—"}</Cell>
                 <Cell>
@@ -132,12 +138,12 @@ export default async function BuildingPermitFilePrintPage({
                 </Cell>
                 <Cell mono>
                   {l.respondedAt
-                    ? `Answered ${militaryDate(l.respondedAt)}`
+                    ? fmt(t("Answered {date}"), { date: militaryDate(l.respondedAt) })
                     : l.requiresResponse
-                      ? `Due ${militaryDate(l.responseDueAt)}`
+                      ? fmt(t("Due {date}"), { date: militaryDate(l.responseDueAt) })
                       : "—"}
                 </Cell>
-                <Cell>{l.pdf ? "PDF on file" : "—"}</Cell>
+                <Cell>{l.pdf ? t("PDF on file") : "—"}</Cell>
               </tr>
             ))}
           </Table>
@@ -145,12 +151,12 @@ export default async function BuildingPermitFilePrintPage({
       </PrintSection>
 
       {permit.approvals.length > 0 ? (
-        <PrintSection title="Approvals">
-          <Table head={["Stage", "Status", "Decided", "Ref.", "Valid until", "Conditions"]}>
+        <PrintSection title={t("Approvals")}>
+          <Table head={[t("Stage"), t("Status"), t("Decided"), t("Ref."), t("Valid until"), t("Conditions")]}>
             {permit.approvals.map((a) => (
               <tr key={a.id} className="border-b border-gray-200 align-top">
-                <Cell>{APPROVAL_STAGE_LABEL[a.stage]}</Cell>
-                <Cell>{APPROVAL_STATUS_LABEL[a.status]}</Cell>
+                <Cell>{t(APPROVAL_STAGE_LABEL[a.stage])}</Cell>
+                <Cell>{t(APPROVAL_STATUS_LABEL[a.status])}</Cell>
                 <Cell mono>{militaryDate(a.decidedAt)}</Cell>
                 <Cell mono>{a.refNumber ?? "—"}</Cell>
                 <Cell mono>{militaryDate(a.validUntil)}</Cell>
@@ -162,7 +168,7 @@ export default async function BuildingPermitFilePrintPage({
       ) : null}
 
       {permit.meetings.length > 0 ? (
-        <PrintSection title="Meetings">
+        <PrintSection title={t("Meetings")}>
           {permit.meetings.map((m) => (
             <div key={m.id} className="mt-2 break-inside-avoid text-[10.5px]">
               <div className="font-semibold text-gray-900">
@@ -175,7 +181,7 @@ export default async function BuildingPermitFilePrintPage({
               ) : null}
               {m.decisions ? (
                 <p className="mt-0.5 whitespace-pre-line text-gray-800">
-                  <span className="text-gray-500">Decisions: </span>
+                  <span className="text-gray-500">{t("Decisions:")} </span>
                   {m.decisions}
                 </p>
               ) : null}
@@ -185,15 +191,15 @@ export default async function BuildingPermitFilePrintPage({
       ) : null}
 
       {looseFiles.length > 0 ? (
-        <PrintSection title="Files on the case">
-          <Table head={["Name", "Category", "Date", "Where it is"]}>
+        <PrintSection title={t("Files on the case")}>
+          <Table head={[t("Name"), t("Category"), t("Date"), t("Where it is")]}>
             {looseFiles.map((d) => (
               <tr key={d.id} className="border-b border-gray-200 align-top">
                 <Cell>{d.name}</Cell>
-                <Cell>{DOCUMENT_CATEGORY_LABEL[d.category]}</Cell>
+                <Cell>{t(DOCUMENT_CATEGORY_LABEL[d.category])}</Cell>
                 <Cell mono>{militaryDate(d.documentDate)}</Cell>
                 {/* A file cannot travel on paper: say where it is instead. */}
-                <Cell>{d.storageKey ? (d.filename ?? "In the case file") : (d.externalUrl ?? "—")}</Cell>
+                <Cell>{d.storageKey ? (d.filename ?? t("In the case file")) : (d.externalUrl ?? "—")}</Cell>
               </tr>
             ))}
           </Table>
@@ -201,7 +207,7 @@ export default async function BuildingPermitFilePrintPage({
       ) : null}
 
       {permit.notes ? (
-        <PrintSection title="Notes">
+        <PrintSection title={t("Notes")}>
           <p className="whitespace-pre-line text-[10.5px] text-gray-800">{permit.notes}</p>
         </PrintSection>
       ) : null}

@@ -22,6 +22,7 @@ import {
   voidDocumentAction,
 } from "@/app/(app)/documents/general/actions";
 import type { GeneralDocumentDTO } from "@/lib/general-documents/types";
+import { useT } from "@/components/i18n/language-provider";
 
 const BTN =
   "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-60";
@@ -33,6 +34,7 @@ export function DocumentActions({
   document: GeneralDocumentDTO;
   today: string;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,13 +65,13 @@ export function DocumentActions({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/print/documents/general/${doc.id}`} className={BTN}>
-          Print / PDF
+          {t("Print / PDF")}
         </Link>
 
         {isDraft ? (
           <>
             <Link href={`/documents/general/${doc.id}/edit`} className={BTN}>
-              Edit
+              {t("Edit")}
             </Link>
             <button
               type="button"
@@ -77,7 +79,7 @@ export function DocumentActions({
               onClick={() => run(() => issueDocumentAction(doc.id, doc.issueDate ?? today))}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              <Send className="h-4 w-4" /> Issue
+              <Send className="h-4 w-4" /> {t("Issue")}
             </button>
             <button
               type="button"
@@ -85,7 +87,7 @@ export function DocumentActions({
               onClick={() => setAsking("delete")}
               className={`${BTN} text-red-600`}
             >
-              <Trash2 className="h-4 w-4" /> Delete
+              <Trash2 className="h-4 w-4" /> {t("Delete")}
             </button>
           </>
         ) : null}
@@ -94,7 +96,7 @@ export function DocumentActions({
           <>
             {doc.status === "ISSUED" ? (
               <button type="button" disabled={pending} onClick={() => setAsking("sign")} className={BTN}>
-                <FileSignature className="h-4 w-4" /> Mark signed
+                <FileSignature className="h-4 w-4" /> {t("Mark signed")}
               </button>
             ) : null}
             <button
@@ -102,12 +104,12 @@ export function DocumentActions({
               disabled={pending}
               onClick={() => run(() => supersedeDocumentAction(doc.id), (id) => router.push(`/documents/general/${id}/edit`))}
               className={BTN}
-              title="Create a new draft from this document; this one becomes superseded"
+              title={t("Create a new draft from this document; this one becomes superseded")}
             >
-              <Copy className="h-4 w-4" /> Supersede
+              <Copy className="h-4 w-4" /> {t("Supersede")}
             </button>
             <button type="button" disabled={pending} onClick={() => setAsking("void")} className={`${BTN} text-red-600`}>
-              <Ban className="h-4 w-4" /> Void
+              <Ban className="h-4 w-4" /> {t("Void")}
             </button>
           </>
         ) : null}
@@ -116,7 +118,7 @@ export function DocumentActions({
       {asking === "sign" ? (
         <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-surface-2/40 p-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Signed on</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t("Signed on")}</label>
             <input
               type="date"
               value={signedAt}
@@ -130,10 +132,10 @@ export function DocumentActions({
             onClick={() => run(() => markSignedAction(doc.id, signedAt))}
             className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
           >
-            Record it
+            {t("Record it")}
           </button>
           <button type="button" onClick={() => setAsking(null)} className={BTN}>
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       ) : null}
@@ -142,12 +144,12 @@ export function DocumentActions({
         <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-surface-2/40 p-3">
           <div className="min-w-[260px] flex-1">
             <label className="mb-1 block text-xs font-medium text-muted">
-              Why is it being withdrawn?
+              {t("Why is it being withdrawn?")}
             </label>
             <input
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Superseded by a notarised version"
+              placeholder={t("Superseded by a notarised version")}
               className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg"
             />
           </div>
@@ -157,36 +159,37 @@ export function DocumentActions({
             onClick={() => run(() => voidDocumentAction(doc.id, voidReason))}
             className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-600/90 disabled:opacity-60"
           >
-            Void it
+            {t("Void it")}
           </button>
           <button type="button" onClick={() => setAsking(null)} className={BTN}>
-            Cancel
+            {t("Cancel")}
           </button>
           <p className="w-full text-[11px] text-faint">
-            The text stays readable — voiding records that it no longer applies, it does not erase
-            what was sent.
+            {t(
+              "The text stays readable — voiding records that it no longer applies, it does not erase what was sent.",
+            )}
           </p>
         </div>
       ) : null}
 
       {asking === "delete" ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2/40 p-3">
-          <span className="text-sm text-fg">Delete this draft?</span>
+          <span className="text-sm text-fg">{t("Delete this draft?")}</span>
           <button
             type="button"
             disabled={pending}
             onClick={() => run(() => deleteDocumentAction(doc.id), () => router.push("/documents/general"))}
             className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-600/90 disabled:opacity-60"
           >
-            Delete
+            {t("Delete")}
           </button>
           <button type="button" onClick={() => setAsking(null)} className={BTN}>
-            Keep it
+            {t("Keep it")}
           </button>
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600">{t(error)}</p> : null}
     </div>
   );
 }

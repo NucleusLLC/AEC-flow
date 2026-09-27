@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Globe, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const KEY = "aecflow:worldclocks";
 
@@ -40,6 +42,7 @@ function timeIn(tz: string, now: number): { time: string; day: string } {
 
 /** World clocks — live time across chosen cities; add/remove from a preset list. */
 export function WorldClocks() {
+  const t = useT();
   const [now, setNow] = useState(() => Date.now());
   const [cities, setCities] = useState<City[]>(DEFAULTS);
   const [adding, setAdding] = useState(false);
@@ -87,7 +90,7 @@ export function WorldClocks() {
     <Card className="p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
-          <Globe className="h-4 w-4 text-brand" /> World Clocks
+          <Globe className="h-4 w-4 text-brand" /> {t("World Clocks")}
         </div>
         {available.length > 0 ? (
           <button
@@ -95,7 +98,7 @@ export function WorldClocks() {
             onClick={() => setAdding((v) => !v)}
             className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-muted hover:bg-surface-2 hover:text-fg"
           >
-            <Plus className="h-3 w-3" /> Add city
+            <Plus className="h-3 w-3" /> {t("Add city")}
           </button>
         ) : null}
       </div>
@@ -130,7 +133,7 @@ export function WorldClocks() {
                   type="button"
                   onClick={() => remove(c.tz)}
                   className="rounded p-0.5 text-faint opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
-                  aria-label={`Remove ${c.label}`}
+                  aria-label={fmt(t("Remove {name}"), { name: c.label })}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -138,7 +141,7 @@ export function WorldClocks() {
             </li>
           );
         })}
-        {cities.length === 0 ? <li className="py-4 text-center text-xs text-muted">Add a city to start.</li> : null}
+        {cities.length === 0 ? <li className="py-4 text-center text-xs text-muted">{t("Add a city to start.")}</li> : null}
       </ul>
     </Card>
   );

@@ -11,6 +11,7 @@ import { getFirmIdentity } from "@/lib/server/firm";
 import { getSystemCurrency } from "@/lib/format";
 import { revisionLabel } from "@/lib/contracts/revision";
 import type { ContractFacts } from "@/lib/contracts/types";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Revise contract · AEC-flow" };
 
@@ -27,6 +28,7 @@ export default async function ReviseContractPage({ params }: { params: Promise<{
   const { id } = await params;
   const contract = await getContract(id);
   if (!contract) notFound();
+  const t = await getServerT();
 
   const [projects, templates, people, keyStatus, practice, firm, nextNumber] = await Promise.all([
     getProjects(),
@@ -50,18 +52,30 @@ export default async function ReviseContractPage({ params }: { params: Promise<{
       </Link>
 
       <div>
-        <h2 className="text-xl font-semibold text-fg">Revise this contract</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Revise this contract")}</h2>
         <p className="text-sm text-muted">
-          Change what needs changing; everything else comes across as it stands.
+          {t("Change what needs changing; everything else comes across as it stands.")}
         </p>
       </div>
 
       <p className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-fg">
         <GitBranch className="h-4 w-4 shrink-0 text-amber-600" />
         <span>
-          <span className="font-mono">{contract.number}</span> ({revisionLabel(contract.number)}) will
-          be superseded by <span className="font-mono">{nextNumber}</span>. The agreement keeps its
-          number — only the revision letter moves.
+          {t(
+            "{number} ({revision}) will be superseded by {next}. The agreement keeps its number — only the revision letter moves.",
+          )
+            .split(/(\{number\}|\{revision\}|\{next\})/)
+            .map((part, i) =>
+              part === "{number}" ? (
+                <span key={i} className="font-mono">{contract.number}</span>
+              ) : part === "{revision}" ? (
+                t(revisionLabel(contract.number))
+              ) : part === "{next}" ? (
+                <span key={i} className="font-mono">{nextNumber}</span>
+              ) : (
+                part
+              ),
+            )}
         </span>
       </p>
 

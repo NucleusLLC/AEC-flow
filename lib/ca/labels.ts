@@ -186,3 +186,20 @@ export const DISCIPLINE_LABEL: Record<CaDiscipline, string> = {
   CIVIL: "Civil",
   OTHER: "Other",
 };
+
+/**
+ * Translate a label from the maps above. "Open" and "Void" are also verbs
+ * elsewhere in the app ("Open" a file, "Void" an invoice), and the dictionary
+ * has one entry per English string, so the status senses are looked up under a
+ * context key and fall back to the plain English label when it is missing.
+ */
+const STATUS_CONTEXT_KEY: Record<string, string> = {
+  Open: "Open (status)",
+  Void: "Void (status)",
+};
+export function tCa(t: (text: string) => string, label: string): string {
+  const key = STATUS_CONTEXT_KEY[label];
+  if (!key) return t(label);
+  const v = t(key);
+  return v === key ? label : v;
+}

@@ -3,10 +3,15 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { listMaterialSelections } from "@/lib/data/materials";
 import { PoFromSelections, type SupplierGroup } from "@/components/procurement/po-from-selections";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Create PO from selections · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Create PO from selections")} · AEC-flow` };
+}
 
 export default async function FromSelectionsPage() {
+  const t = await getServerT();
   const orderable = (await listMaterialSelections()).filter(
     (m) => m.status === "APPROVED" && !m.purchaseOrderId,
   );
@@ -29,13 +34,12 @@ export default async function FromSelectionsPage() {
     <div className="w-full max-w-4xl space-y-6">
       <Link href="/procurement" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Procurement
+        {t("Procurement")}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Create PO from approved selections</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Create PO from approved selections")}</h2>
         <p className="text-sm text-muted">
-          Approved material selections not yet on a purchase order, grouped by supplier. Pick the
-          items and issue a draft PO — the selections are linked and marked ordered.
+          {t("Approved material selections not yet on a purchase order, grouped by supplier. Pick the items and issue a draft PO — the selections are linked and marked ordered.")}
         </p>
       </div>
       <PoFromSelections groups={groups} />

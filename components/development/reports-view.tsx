@@ -6,6 +6,7 @@ import { computeLot } from "@/lib/development/calc";
 import type { DevelopmentProjectFull } from "@/lib/data/development.types";
 import type { ProjectMetrics } from "@/lib/development/metrics";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
 
 function downloadCsv(filename: string, rows: Array<Record<string, string | number>>) {
   if (rows.length === 0) return;
@@ -24,6 +25,7 @@ function downloadCsv(filename: string, rows: Array<Record<string, string | numbe
 }
 
 export function ReportsView({ project, metrics: m }: { project: DevelopmentProjectFull; metrics: ProjectMetrics }) {
+  const t = useT();
   const cur = m.currency;
   const costPerM2 = m.costPerNetM2;
 
@@ -54,35 +56,35 @@ export function ReportsView({ project, metrics: m }: { project: DevelopmentProje
   const base = `/print/development/${project.id}`;
   type Report = { title: string; desc: string; icon: typeof Printer; label: string; href?: string; action?: () => void };
   const reports: Report[] = [
-    { title: "Development feasibility report", desc: "Branded A4 pro-forma — land, cost, revenue, profit", href: `${base}/feasibility`, icon: Printer, label: "Open PDF" },
-    { title: "Lot sales report", desc: "Branded A4 — per-lot price, cost, profit, status", href: `${base}/lots`, icon: Printer, label: "Open PDF" },
-    { title: "Investor / bank report", desc: "Branded A4 — capital, returns, receivables", href: `${base}/investor`, icon: Printer, label: "Open PDF" },
-    { title: "Project close-out report", desc: "Branded A4 — delivery, final cost & result, sign-off", href: `${base}/closeout`, icon: Printer, label: "Open PDF" },
-    { title: "Lot sales (spreadsheet)", desc: "Per-lot data for Excel", action: exportLots, icon: Download, label: "Export CSV" },
-    { title: "Budget vs actual (spreadsheet)", desc: "Cost codes — budget, committed, paid, variance", action: exportBudget, icon: Download, label: "Export CSV" },
-    { title: "Cash-flow (spreadsheet)", desc: "Monthly inflows, outflows and position", action: exportCashFlow, icon: Download, label: "Export CSV" },
+    { title: t("Development feasibility report"), desc: t("Branded A4 pro-forma — land, cost, revenue, profit"), href: `${base}/feasibility`, icon: Printer, label: t("Open PDF") },
+    { title: t("Lot sales report"), desc: t("Branded A4 — per-lot price, cost, profit, status"), href: `${base}/lots`, icon: Printer, label: t("Open PDF") },
+    { title: t("Investor / bank report"), desc: t("Branded A4 — capital, returns, receivables"), href: `${base}/investor`, icon: Printer, label: t("Open PDF") },
+    { title: t("Project close-out report"), desc: t("Branded A4 — delivery, final cost & result, sign-off"), href: `${base}/closeout`, icon: Printer, label: t("Open PDF") },
+    { title: t("Lot sales (spreadsheet)"), desc: t("Per-lot data for Excel"), action: exportLots, icon: Download, label: t("Export CSV") },
+    { title: t("Budget vs actual (spreadsheet)"), desc: t("Cost codes — budget, committed, paid, variance"), action: exportBudget, icon: Download, label: t("Export CSV") },
+    { title: t("Cash-flow (spreadsheet)"), desc: t("Monthly inflows, outflows and position"), action: exportCashFlow, icon: Download, label: t("Export CSV") },
   ];
 
   return (
     <div className="space-y-6">
       {/* Printable feasibility summary */}
       <Card>
-        <CardHeader title="Development feasibility summary" subtitle={`${project.name} · ${project.projectNumber}`} />
+        <CardHeader title={t("Development feasibility summary")} subtitle={`${project.name} · ${project.projectNumber}`} />
         <CardBody>
           <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm md:grid-cols-3">
             {[
-              ["Gross parcel", `${m.grossParcelArea.toLocaleString()} m²`],
-              ["Net sellable", `${m.netSellableLand.toLocaleString()} m²`],
-              ["Sellable ratio", `${m.sellableRatioPct.toFixed(1)}%`],
-              ["Total lots / units", `${m.totalLots} / ${m.totalUnits}`],
-              ["Total project cost", formatCurrency(m.totalProjectCost, cur)],
-              ["Cost / net m²", `${formatCurrency(m.costPerNetM2, cur)}/m²`],
-              ["Expected revenue", formatCurrency(m.totalRevenue, cur)],
-              ["Total profit", formatCurrency(m.totalProfit, cur)],
-              ["Gross margin", `${m.grossMarginPct.toFixed(1)}%`],
-              ["ROI", `${m.roiPct.toFixed(1)}%`],
-              ["Break-even /m²", `${formatCurrency(m.breakEvenPerM2, cur)}/m²`],
-              ["Sales progress", `${m.salesProgressPct.toFixed(0)}%`],
+              [t("Gross parcel"), `${m.grossParcelArea.toLocaleString()} m²`],
+              [t("Net sellable"), `${m.netSellableLand.toLocaleString()} m²`],
+              [t("Sellable ratio"), `${m.sellableRatioPct.toFixed(1)}%`],
+              [t("Total lots / units"), `${m.totalLots} / ${m.totalUnits}`],
+              [t("Total project cost"), formatCurrency(m.totalProjectCost, cur)],
+              [t("Cost / net m²"), `${formatCurrency(m.costPerNetM2, cur)}/m²`],
+              [t("Expected revenue"), formatCurrency(m.totalRevenue, cur)],
+              [t("Total profit"), formatCurrency(m.totalProfit, cur)],
+              [t("Gross margin"), `${m.grossMarginPct.toFixed(1)}%`],
+              [t("ROI"), `${m.roiPct.toFixed(1)}%`],
+              [t("Break-even /m²"), `${formatCurrency(m.breakEvenPerM2, cur)}/m²`],
+              [t("Sales progress"), `${m.salesProgressPct.toFixed(0)}%`],
             ].map(([label, value]) => (
               <div key={label} className="flex items-baseline justify-between gap-3 border-b border-dashed border-border py-1.5">
                 <span className="text-muted">{label}</span>
@@ -118,7 +120,7 @@ export function ReportsView({ project, metrics: m }: { project: DevelopmentProje
           );
         })}
       </div>
-      <p className="px-1 text-[11px] text-faint">Branded A4 PDF reports open in a new tab (use the browser&apos;s “Save as PDF”). CSV exports download for Excel.</p>
+      <p className="px-1 text-[11px] text-faint">{t("Branded A4 PDF reports open in a new tab (use the browser's “Save as PDF”). CSV exports download for Excel.")}</p>
     </div>
   );
 }

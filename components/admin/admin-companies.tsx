@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { updateCompanyLicense } from "@/app/(app)/admin/actions";
 import type { AdminCompanyRow } from "@/lib/server/admin";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const PLANS = ["BETA", "STARTER", "PRO", "ENTERPRISE"];
 
@@ -15,18 +17,19 @@ function addMonthsISO(base: string | null, months: number): string {
 }
 
 export function AdminCompanies({ companies }: { companies: AdminCompanyRow[] }) {
+  const t = useT();
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-              <th className="px-5 py-2.5 font-medium">Company</th>
-              <th className="px-3 py-2.5 font-medium">Plan</th>
-              <th className="px-3 py-2.5 font-medium text-center">Users / seats</th>
-              <th className="px-3 py-2.5 font-medium">Access until</th>
-              <th className="px-3 py-2.5 font-medium">Status</th>
-              <th className="px-5 py-2.5 font-medium text-right">Manage</th>
+              <th className="px-5 py-2.5 font-medium">{t("Company")}</th>
+              <th className="px-3 py-2.5 font-medium">{t("Plan")}</th>
+              <th className="px-3 py-2.5 font-medium text-center">{t("Users / seats")}</th>
+              <th className="px-3 py-2.5 font-medium">{t("Access until")}</th>
+              <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+              <th className="px-5 py-2.5 font-medium text-right">{t("Manage")}</th>
             </tr>
           </thead>
           <tbody>
@@ -42,6 +45,7 @@ export function AdminCompanies({ companies }: { companies: AdminCompanyRow[] }) 
 
 function Row({ company }: { company: AdminCompanyRow }) {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [plan, setPlan] = useState(company.plan);
   const [seats, setSeats] = useState(company.seatLimit);
@@ -82,13 +86,13 @@ function Row({ company }: { company: AdminCompanyRow }) {
               <span className="ml-2 rounded bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-brand">FOUNDER</span>
             ) : null}
           </div>
-          <div className="text-xs text-faint">since {company.createdAt}</div>
+          <div className="text-xs text-faint">{fmt(t("since {date}"), { date: company.createdAt })}</div>
         </td>
         <td className="px-3 py-3 text-muted">{company.plan}</td>
         <td className="px-3 py-3 text-center text-muted">
           {company.userCount} / {company.seatLimit}
         </td>
-        <td className="px-3 py-3 text-muted">{company.isFounder ? "—" : company.expiresAt ?? "never"}</td>
+        <td className="px-3 py-3 text-muted">{company.isFounder ? "—" : company.expiresAt ?? t("never")}</td>
         <td className="px-3 py-3">
           <span
             className={
@@ -99,7 +103,7 @@ function Row({ company }: { company: AdminCompanyRow }) {
                   : "text-emerald-600"
             }
           >
-            {company.isFounder ? "Owner" : expired ? "Expired" : "Active"}
+            {company.isFounder ? t("Owner") : expired ? t("Expired") : t("Active")}
           </span>
         </td>
         <td className="px-5 py-3 text-right">
@@ -108,7 +112,7 @@ function Row({ company }: { company: AdminCompanyRow }) {
             onClick={() => setOpen((v) => !v)}
             className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg hover:bg-surface-2"
           >
-            {open ? "Close" : "Edit"}
+            {open ? t("Close") : t("Edit")}
           </button>
         </td>
       </tr>
@@ -117,7 +121,7 @@ function Row({ company }: { company: AdminCompanyRow }) {
           <td colSpan={6} className="px-5 py-4">
             <div className="flex flex-wrap items-end gap-3">
               <label className="block">
-                <span className="mb-1 block text-xs text-muted">Plan</span>
+                <span className="mb-1 block text-xs text-muted">{t("Plan")}</span>
                 <select value={plan} onChange={(e) => setPlan(e.target.value)} className="h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-fg">
                   {PLANS.map((p) => (
                     <option key={p} value={p}>{p}</option>
@@ -125,26 +129,26 @@ function Row({ company }: { company: AdminCompanyRow }) {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs text-muted">Seats</span>
+                <span className="mb-1 block text-xs text-muted">{t("Seats")}</span>
                 <input type="number" min={1} value={seats} onChange={(e) => setSeats(Number(e.target.value))} className="h-9 w-24 rounded-lg border border-border bg-surface px-2.5 text-sm text-fg" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs text-muted">Access until (blank = never)</span>
+                <span className="mb-1 block text-xs text-muted">{t("Access until (blank = never)")}</span>
                 <input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} className="h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-fg" />
               </label>
               <button type="button" disabled={pending} onClick={() => save()} className="h-9 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-                {pending ? "Saving…" : "Save"}
+                {pending ? t("Saving…") : t("Save")}
               </button>
               <div className="flex gap-2">
                 <button type="button" disabled={pending} onClick={() => save({ expiry: addMonthsISO(expiry || null, 6) })} className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-fg hover:bg-surface disabled:opacity-50">
-                  +6 months
+                  {t("+6 months")}
                 </button>
                 <button type="button" disabled={pending} onClick={() => save({ expiry: new Date().toISOString().slice(0, 10) })} className="h-9 rounded-lg border border-rose-200 px-3 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50">
-                  Suspend now
+                  {t("Suspend now")}
                 </button>
               </div>
             </div>
-            {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+            {error ? <p className="mt-2 text-xs text-rose-600">{t(error)}</p> : null}
           </td>
         </tr>
       ) : null}

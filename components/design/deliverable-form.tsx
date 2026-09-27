@@ -22,6 +22,7 @@ import {
   createDeliverableAction,
   updateDeliverableAction,
 } from "@/app/(app)/design/actions";
+import { useT } from "@/components/i18n/language-provider";
 
 type Option = { id: string; name: string };
 
@@ -40,6 +41,7 @@ export function DeliverableForm({
   initial?: DesignDeliverableDTO;
   defaultDiscipline?: DesignDiscipline;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -101,47 +103,47 @@ export function DeliverableForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <Card>
-        <CardHeader title="Deliverable" />
+        <CardHeader title={t("Deliverable")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Number *</label>
+            <label className={label}>{t("Number *")}</label>
             <input value={number} onChange={(e) => setNumber(e.target.value)} className={`${field} font-mono`} placeholder="A-101" />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Title *</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder="Ground floor plan" />
+            <label className={label}>{t("Title *")}</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder={t("Ground floor plan")} />
           </div>
           <div>
-            <label className={label}>Discipline</label>
+            <label className={label}>{t("Discipline")}</label>
             <select value={discipline} onChange={(e) => setDiscipline(e.target.value as DesignDiscipline)} className={field}>
               {DISCIPLINES.map((d) => (
-                <option key={d} value={d}>{DISCIPLINE_LABEL[d]}</option>
+                <option key={d} value={d}>{t(DISCIPLINE_LABEL[d])}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Type</label>
+            <label className={label}>{t("Type")}</label>
             <select value={type} onChange={(e) => setType(e.target.value as DeliverableType)} className={field}>
-              {DELIVERABLE_TYPES.map((t) => (
-                <option key={t} value={t}>{DELIVERABLE_TYPE_LABEL[t]}</option>
+              {DELIVERABLE_TYPES.map((ty) => (
+                <option key={ty} value={ty}>{t(DELIVERABLE_TYPE_LABEL[ty])}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Revision</label>
+            <label className={label}>{t("Revision")}</label>
             <input value={revision} onChange={(e) => setRevision(e.target.value)} className={field} placeholder="A / P1 / C1" />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Issue & status" />
+        <CardHeader title={t("Issue & status")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Status</label>
+            <label className={label}>{t("Status")}</label>
             <select value={status} onChange={(e) => setStatus(e.target.value as DeliverableStatus)} className={field}>
               {DELIVERABLE_STATUSES.map((s) => (
-                <option key={s} value={s}>{DELIVERABLE_STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{t(DELIVERABLE_STATUS_LABEL[s])}</option>
               ))}
             </select>
           </div>
@@ -150,46 +152,46 @@ export function DeliverableForm({
               against a project that does not exist yet is the common case, and
               leaving is the only thing the old select allowed. */}
           <ProjectSelect
-            label="Project"
+            label={t("Project")}
             projects={projects}
             value={projectId}
             onChange={setProjectId}
             onCreated={(p) => setProjects((prev) => [...prev, { id: p.id, name: p.projectName }])}
             allowEmpty
-            placeholder="— None —"
+            placeholder={t("— None —")}
           />
           <div>
-            <label className={label}>Issued to</label>
-            <input value={issuedTo} onChange={(e) => setIssuedTo(e.target.value)} className={field} placeholder="Contractor / client" />
+            <label className={label}>{t("Issued to")}</label>
+            <input value={issuedTo} onChange={(e) => setIssuedTo(e.target.value)} className={field} placeholder={t("Contractor / client")} />
           </div>
           <div>
-            <label className={label}>Issued date</label>
+            <label className={label}>{t("Issued date")}</label>
             <input type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Due date</label>
+            <label className={label}>{t("Due date")}</label>
             <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={field} />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Sheet & file" />
+        <CardHeader title={t("Sheet & file")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Scale</label>
+            <label className={label}>{t("Scale")}</label>
             <input value={scale} onChange={(e) => setScale(e.target.value)} className={field} placeholder="1:100" />
           </div>
           <div>
-            <label className={label}>Sheet size</label>
+            <label className={label}>{t("Sheet size")}</label>
             <input value={sheetSize} onChange={(e) => setSheetSize(e.target.value)} className={field} placeholder="A1" />
           </div>
           <div>
-            <label className={label}>File link</label>
+            <label className={label}>{t("File link")}</label>
             <input value={fileLink} onChange={(e) => setFileLink(e.target.value)} className={field} placeholder="https://…" />
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Notes</label>
+            <label className={label}>{t("Notes")}</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${field} h-auto py-2`} />
           </div>
         </CardBody>
@@ -197,7 +199,7 @@ export function DeliverableForm({
 
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
-          <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {t(error)}
         </div>
       ) : null}
 
@@ -207,14 +209,14 @@ export function DeliverableForm({
           disabled={pending}
           className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Add deliverable"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Add deliverable")}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-muted hover:text-fg"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </form>

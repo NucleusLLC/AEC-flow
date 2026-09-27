@@ -12,6 +12,8 @@ import {
   type PriceItem,
 } from "@/lib/data/price-lists.types";
 import { savePriceBookAction } from "@/app/(app)/estimates/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const editCls =
   "w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-xs text-fg outline-none hover:border-border focus:border-border focus:ring-1 focus:ring-brand/30";
@@ -25,6 +27,7 @@ export function PriceListView({
   equipment: PriceItem[];
   onSaved?: (materials: PriceItem[], equipment: PriceItem[]) => void;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<"materials" | "equipment">("materials");
   const [region, setRegion] = useState<string>(DEFAULT_REGION);
   const [q, setQ] = useState("");
@@ -99,17 +102,17 @@ export function PriceListView({
       <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/50 px-4 py-3">
         <div className="inline-flex overflow-hidden rounded-lg border border-border">
           <button type="button" onClick={() => setTab("materials")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${tab === "materials" ? "bg-brand text-brand-fg" : "bg-surface text-muted hover:text-fg"}`}>
-            <Package className="h-3.5 w-3.5" /> Materials
+            <Package className="h-3.5 w-3.5" /> {t("Materials")}
           </button>
           <button type="button" onClick={() => setTab("equipment")} className={`inline-flex items-center gap-1.5 border-l border-border px-3 py-1.5 text-xs font-medium transition-colors ${tab === "equipment" ? "bg-brand text-brand-fg" : "bg-surface text-muted hover:text-fg"}`}>
-            <Wrench className="h-3.5 w-3.5" /> Equipment
+            <Wrench className="h-3.5 w-3.5" /> {t("Equipment")}
           </button>
         </div>
 
         {tab === "materials" ? (
           <label className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs">
             <MapPin className="h-3.5 w-3.5 text-brand" />
-            <span className="text-faint">Location</span>
+            <span className="text-faint">{t("Location")}</span>
             <select value={region} onChange={(e) => setRegion(e.target.value)} className="bg-transparent text-xs font-medium text-fg outline-none">
               {PRICE_REGIONS.map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -120,28 +123,28 @@ export function PriceListView({
 
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${tab}…`} className="h-8 w-48 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tab === "materials" ? t("Search materials…") : t("Search equipment…")} className="h-8 w-48 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
         </div>
 
         <button type="button" onClick={addNew} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
-          <Plus className="h-4 w-4" /> Add New
+          <Plus className="h-4 w-4" /> {t("Add New")}
         </button>
 
         <button type="button" onClick={onSave} disabled={saving} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-          <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
+          <Save className="h-3.5 w-3.5" /> {saving ? t("Saving…") : t("Save")}
         </button>
-        {saveMsg === "saved" ? <span className="text-[11px] font-medium text-green-600">Saved ✓</span> : saveMsg ? <span className="text-[11px] text-red-600" title={saveMsg}>Save failed</span> : null}
+        {saveMsg === "saved" ? <span className="text-[11px] font-medium text-green-600">{t("Saved ✓")}</span> : saveMsg ? <span className="text-[11px] text-red-600" title={t(saveMsg)}>{t("Save failed")}</span> : null}
 
         {tab === "materials" ? (
-          <button type="button" onClick={fetchLive} disabled={!canFetch || loading} title={canFetch ? "Fetch current prices from APEX & Kooyman" : "Live fetch available for Aruba suppliers"} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-40">
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> {loading ? "Fetching…" : "Fetch live prices (AI)"}
+          <button type="button" onClick={fetchLive} disabled={!canFetch || loading} title={canFetch ? t("Fetch current prices from APEX & Kooyman") : t("Live fetch available for Aruba suppliers")} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-40">
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> {loading ? t("Fetching…") : t("Fetch live prices (AI)")}
           </button>
         ) : null}
       </div>
 
       {fetchedAt && tab === "materials" ? (
         <div className="border-b border-border bg-green-500/10 px-4 py-1.5 text-[11px] text-green-400">
-          {fetchedAt === "error" ? "Could not reach the price service — showing last known values." : `Live prices updated ${new Date(fetchedAt).toLocaleString()} · sources: APEX, kooymanbv.com (Aruba).`}
+          {fetchedAt === "error" ? t("Could not reach the price service — showing last known values.") : fmt(t("Live prices updated {date} · sources: APEX, kooymanbv.com (Aruba)."), { date: new Date(fetchedAt).toLocaleString() })}
         </div>
       ) : null}
 
@@ -149,12 +152,12 @@ export function PriceListView({
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-faint">
-              <th className="border-b border-border px-2 py-1.5 text-left text-faint">Code</th>
-              <th className="border-b border-border px-2 py-1.5 text-left text-faint">Item</th>
-              <th className="border-b border-border px-2 py-1.5 text-left text-faint">Category</th>
-              <th className="border-b border-border px-2 py-1.5 text-left text-faint">Supplier</th>
-              <th className="border-b border-border px-2 py-1.5 text-center text-faint">Unit</th>
-              <th className="border-b border-l border-border bg-green-500/15 px-2 py-1.5 text-right text-green-400">Unit Price</th>
+              <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Code")}</th>
+              <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Item")}</th>
+              <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Category")}</th>
+              <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Supplier")}</th>
+              <th className="border-b border-border px-2 py-1.5 text-center text-faint">{t("Unit")}</th>
+              <th className="border-b border-l border-border bg-green-500/15 px-2 py-1.5 text-right text-green-400">{t("Unit Price")}</th>
               <th className="border-b border-border px-1 py-1.5" />
             </tr>
           </thead>
@@ -162,8 +165,8 @@ export function PriceListView({
             {filtered.map((p) => (
               <tr key={p.id} className="border-b border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-surface-2">
                 <td className="px-2 py-1"><input value={p.code} onChange={(e) => patch(p.id, { code: e.target.value.toUpperCase() })} placeholder="CODE" className={`${editCls} font-mono text-[11px] uppercase text-muted`} /></td>
-                <td className="px-2 py-1"><input value={p.name} onChange={(e) => patch(p.id, { name: e.target.value })} placeholder="Item name" className={`${editCls} min-w-[160px]`} /></td>
-                <td className="px-2 py-1"><input value={p.category} onChange={(e) => patch(p.id, { category: e.target.value })} placeholder="Category" className={`${editCls} text-[11px] text-muted`} /></td>
+                <td className="px-2 py-1"><input value={p.name} onChange={(e) => patch(p.id, { name: e.target.value })} placeholder={t("Item name")} className={`${editCls} min-w-[160px]`} /></td>
+                <td className="px-2 py-1"><input value={p.category} onChange={(e) => patch(p.id, { category: e.target.value })} placeholder={t("Category")} className={`${editCls} text-[11px] text-muted`} /></td>
                 <td className="px-2 py-1"><input value={p.supplier ?? ""} onChange={(e) => patch(p.id, { supplier: e.target.value })} placeholder="—" className={`${editCls} text-[11px] text-faint`} /></td>
                 <td className="px-2 py-1 text-center"><input value={p.unit} onChange={(e) => patch(p.id, { unit: e.target.value })} className={`${editCls} w-12 text-center text-[11px]`} /></td>
                 <td className="border-l border-green-500/20 bg-green-500/10 px-2 py-1 text-right">
@@ -171,13 +174,13 @@ export function PriceListView({
                   <input type="number" value={p.unitPrice} onChange={(e) => patch(p.id, { unitPrice: Number(e.target.value) || 0 })} className="w-20 rounded border border-transparent bg-transparent px-1 py-0.5 text-right text-xs font-medium tabular-nums text-green-400 outline-none hover:border-green-500/30 focus:border-green-500/40 focus:ring-1 focus:ring-brand/30" />
                 </td>
                 <td className="px-1 py-1 text-center">
-                  <button type="button" onClick={() => remove(p.id)} aria-label="Remove" className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => remove(p.id)} aria-label={t("Remove")} className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                 </td>
               </tr>
             ))}
             {!filtered.length ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted">No items — use “Add New”.</td>
+                <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted">{t("No items — use “Add New”.")}</td>
               </tr>
             ) : null}
           </tbody>
@@ -185,7 +188,7 @@ export function PriceListView({
       </div>
 
       <p className="border-t border-border px-4 py-2 text-[11px] text-faint">
-        {tab === "materials" ? `${filtered.length} items · ${region}` : `${filtered.length} items`} · every row is editable; Save persists the price book to the database (and feeds the estimate sheet’s cost picker).
+        {tab === "materials" ? `${fmt(t("{count} items"), { count: filtered.length })} · ${region}` : fmt(t("{count} items"), { count: filtered.length })} · {t("every row is editable; Save persists the price book to the database (and feeds the estimate sheet’s cost picker).")}
       </p>
     </Card>
   );

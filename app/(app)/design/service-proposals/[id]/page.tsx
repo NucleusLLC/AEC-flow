@@ -29,6 +29,8 @@ import { ProposalIdentificationDetail } from "@/components/service-proposals/pro
 import { VersionTag } from "@/components/service-proposals/version-tag";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Service Proposal · AEC-flow" };
 
@@ -37,6 +39,7 @@ export default async function ServiceProposalDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getServerT();
   const { id } = await params;
   const p = await getServiceProposal(id);
   if (!p) notFound();
@@ -139,7 +142,7 @@ export default async function ServiceProposalDetailPage({
   return (
     <div className="w-full max-w-5xl space-y-6">
       <Link href="/design/service-proposals" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> Service Proposals
+        <ArrowLeft className="h-4 w-4" /> {t("Service Proposals")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -149,11 +152,11 @@ export default async function ServiceProposalDetailPage({
             <ServiceProposalStatusBadge status={p.status} />
             <VersionTag
               label={p.versionLabel}
-              title="Whole numbers are versions issued to the client; a minor means work in progress."
+              title={t("Whole numbers are versions issued to the client; a minor means work in progress.")}
             />
           </div>
           <p className="mt-1 font-mono text-sm text-muted">
-            {p.number}{p.revision > 1 ? ` · rev ${p.revision}` : ""}
+            {p.number}{p.revision > 1 ? ` · ${fmt(t("rev {rev}"), { rev: p.revision })}` : ""}
             {identification.clientDisplayName ? ` · ${identification.clientDisplayName}` : ""}
             {identification.projectDisplayName ? ` · ${identification.projectDisplayName}` : ""}
           </p>
@@ -168,16 +171,16 @@ export default async function ServiceProposalDetailPage({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white shadow-[0_0_0_3px_rgba(16,185,129,0.18)] transition-colors hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-              Project Dashboard
+              {t("Project Dashboard")}
             </Link>
           ) : null}
           {!locked ? (
             <Link href={`/design/service-proposals/${p.id}/edit`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-              <Pencil className="h-4 w-4" /> Edit
+              <Pencil className="h-4 w-4" /> {t("Edit")}
             </Link>
           ) : null}
           <EmailButton
-            label="Email proposal"
+            label={t("Email proposal")}
             subject={proposalEmailSubject(emailInput)}
             attachment={`${p.number} — Service Proposal`}
             defaultTo={proposalRecipient({
@@ -190,7 +193,7 @@ export default async function ServiceProposalDetailPage({
             linkPath={`/print/service-proposals/${p.id}`}
           />
           <Link href={`/print/service-proposals/${p.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-            <Printer className="h-4 w-4" /> Print / Preview
+            <Printer className="h-4 w-4" /> {t("Print / Preview")}
           </Link>
         </div>
       </div>
@@ -213,7 +216,7 @@ export default async function ServiceProposalDetailPage({
            * screen matches what the client receives. Hidden when there is nothing to show. */}
           {identification.hasAny ? (
             <Card>
-              <CardHeader title="Project & client" />
+              <CardHeader title={t("Project & client")} />
               <CardBody>
                 <ProposalIdentificationDetail identification={identification} />
               </CardBody>
@@ -221,14 +224,14 @@ export default async function ServiceProposalDetailPage({
           ) : null}
 
           <Card>
-            <CardHeader title="Fee breakdown" />
+            <CardHeader title={t("Fee breakdown")} />
             <CardBody>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                    <th className="py-2 font-medium">Component</th>
-                    <th className="py-2 font-medium">Type</th>
-                    <th className="py-2 text-right font-medium">Amount</th>
+                    <th className="py-2 font-medium">{t("Component")}</th>
+                    <th className="py-2 font-medium">{t("Type")}</th>
+                    <th className="py-2 text-right font-medium">{t("Amount")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -236,10 +239,10 @@ export default async function ServiceProposalDetailPage({
                     <tr key={c.id} className="border-b border-border/60">
                       <td className="py-2 text-fg">
                         {c.label}
-                        {c.overrideAmount !== null ? <span className="ml-1.5 text-xs text-amber-600">overridden</span> : null}
+                        {c.overrideAmount !== null ? <span className="ml-1.5 text-xs text-amber-600">{t("overridden")}</span> : null}
                       </td>
                       <td className="py-2 text-muted">
-                        {c.category === "BASE" ? "Base" : c.category === "OPTIONAL" ? (c.countedInTotal ? "Optional ✓" : "Optional") : "Additional"}
+                        {c.category === "BASE" ? t("Base") : c.category === "OPTIONAL" ? (c.countedInTotal ? `${t("Optional")} ✓` : t("Optional")) : t("Additional")}
                       </td>
                       <td className="py-2 text-right tabular-nums text-fg">{money(c.effectiveAmount)}</td>
                     </tr>
@@ -247,14 +250,14 @@ export default async function ServiceProposalDetailPage({
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-border">
-                    <td className="py-2 font-semibold text-fg" colSpan={2}>Total sub-total</td>
+                    <td className="py-2 font-semibold text-fg" colSpan={2}>{t("Total sub-total")}</td>
                     <td className="py-2 text-right font-semibold tabular-nums text-fg">
                       {money(calc.totals.subtotal)}
                     </td>
                   </tr>
                   {calc.totals.discountTotal > 0 ? (
                     <tr>
-                      <td className="py-1 text-muted" colSpan={2}>Discount</td>
+                      <td className="py-1 text-muted" colSpan={2}>{t("Discount")}</td>
                       <td className="py-1 text-right tabular-nums text-muted">
                         &minus; {money(calc.totals.discountTotal)}
                       </td>
@@ -272,12 +275,12 @@ export default async function ServiceProposalDetailPage({
                     <td className="pb-1 text-xs text-faint" colSpan={3}>
                       ({bboNote(bbo)}
                       {bbo.source === "default"
-                        ? " No tax is set on this proposal, so the practice rate is used."
+                        ? ` ${t("No tax is set on this proposal, so the practice rate is used.")}`
                         : ""})
                     </td>
                   </tr>
                   <tr className="border-t border-border">
-                    <td className="py-2 font-semibold text-fg" colSpan={2}>Total fee</td>
+                    <td className="py-2 font-semibold text-fg" colSpan={2}>{t("Total fee")}</td>
                     <td className="py-2 text-right font-semibold tabular-nums text-fg">
                       {money(calc.totals.grandTotal)}
                     </td>
@@ -289,7 +292,7 @@ export default async function ServiceProposalDetailPage({
 
           {calc.phases.length > 0 ? (
             <Card>
-              <CardHeader title="Design phases" />
+              <CardHeader title={t("Design phases")} />
               <CardBody>
                 <table className="w-full text-sm">
                   <tbody>
@@ -308,16 +311,16 @@ export default async function ServiceProposalDetailPage({
 
           {calc.paymentSchedule.length > 0 ? (
             <Card>
-              <CardHeader title="Payment schedule" />
+              <CardHeader title={t("Payment schedule")} />
               <CardBody>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                      <th className="py-2 font-medium">Milestone</th>
-                      <th className="py-2 text-right font-medium">Share</th>
-                      <th className="py-2 text-right font-medium">Amount</th>
+                      <th className="py-2 font-medium">{t("Milestone")}</th>
+                      <th className="py-2 text-right font-medium">{t("Share")}</th>
+                      <th className="py-2 text-right font-medium">{t("Amount")}</th>
                       <th className="py-2 text-right font-medium">
-                        {bbo.name} incl. ({bbo.percent}%)
+                        {fmt(t("{tax} incl. ({percent}%)"), { tax: bbo.name, percent: bbo.percent })}
                       </th>
                     </tr>
                   </thead>
@@ -337,7 +340,7 @@ export default async function ServiceProposalDetailPage({
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-border">
-                      <td className="py-2 font-semibold text-fg" colSpan={2}>Total</td>
+                      <td className="py-2 font-semibold text-fg" colSpan={2}>{t("Total")}</td>
                       <td className="py-2 text-right font-semibold tabular-nums text-fg">
                         {money(calc.totals.grandTotal)}
                       </td>
@@ -347,8 +350,7 @@ export default async function ServiceProposalDetailPage({
                     </tr>
                     <tr>
                       <td className="pb-1 text-xs text-faint" colSpan={4}>
-                        ({bboNote(bbo)}{" "}Each milestone&rsquo;s share becomes payable in the
-                        month it is invoiced.)
+                        ({bboNote(bbo)}{" "}{t("Each milestone’s share becomes payable in the month it is invoiced.")})
                       </td>
                     </tr>
                   </tfoot>
@@ -359,7 +361,7 @@ export default async function ServiceProposalDetailPage({
 
           {(p.input.scopeItems && p.input.scopeItems.length > 0) ? (
             <Card>
-              <CardHeader title="Scope of services" />
+              <CardHeader title={t("Scope of services")} />
               <CardBody>
                 <ul className="space-y-1.5 text-sm">
                   {p.input.scopeItems.map((s, i) => (
@@ -383,12 +385,12 @@ export default async function ServiceProposalDetailPage({
 
           {p.input.scopeSummary || p.input.terms || p.input.exclusions || p.input.assumptions ? (
             <Card>
-              <CardHeader title="Narrative & terms" />
+              <CardHeader title={t("Narrative & terms")} />
               <CardBody className="space-y-3 text-sm">
-                {p.input.scopeSummary ? <Field label="Scope" value={p.input.scopeSummary} /> : null}
-                {p.input.exclusions ? <Field label="Exclusions" value={p.input.exclusions} /> : null}
-                {p.input.assumptions ? <Field label="Assumptions" value={p.input.assumptions} /> : null}
-                {p.input.terms ? <Field label="Terms" value={p.input.terms} /> : null}
+                {p.input.scopeSummary ? <Field label={t("Scope")} value={p.input.scopeSummary} /> : null}
+                {p.input.exclusions ? <Field label={t("Exclusions")} value={p.input.exclusions} /> : null}
+                {p.input.assumptions ? <Field label={t("Assumptions")} value={p.input.assumptions} /> : null}
+                {p.input.terms ? <Field label={t("Terms")} value={p.input.terms} /> : null}
               </CardBody>
             </Card>
           ) : null}
@@ -396,18 +398,18 @@ export default async function ServiceProposalDetailPage({
 
         <div className="space-y-4">
           <div className="card-surface rounded-xl border border-border bg-surface p-4">
-            <h3 className="text-sm font-semibold text-fg">Totals</h3>
+            <h3 className="text-sm font-semibold text-fg">{t("Totals")}</h3>
             <dl className="mt-3 space-y-1.5 text-sm">
-              <Row k="Base fee" v={money(calc.totals.baseFeeTotal)} />
-              {calc.totals.optionalSelectedTotal > 0 ? <Row k="Optional (selected)" v={money(calc.totals.optionalSelectedTotal)} /> : null}
-              {calc.totals.reimbursablesTotal > 0 ? <Row k="Reimbursables" v={money(calc.totals.reimbursablesTotal)} /> : null}
-              <Row k="Subtotal" v={money(calc.totals.subtotal)} />
-              {calc.totals.discountTotal > 0 ? <Row k="Discount" v={`− ${money(calc.totals.discountTotal)}`} /> : null}
+              <Row k={t("Base fee")} v={money(calc.totals.baseFeeTotal)} />
+              {calc.totals.optionalSelectedTotal > 0 ? <Row k={t("Optional (selected)")} v={money(calc.totals.optionalSelectedTotal)} /> : null}
+              {calc.totals.reimbursablesTotal > 0 ? <Row k={t("Reimbursables")} v={money(calc.totals.reimbursablesTotal)} /> : null}
+              <Row k={t("Subtotal")} v={money(calc.totals.subtotal)} />
+              {calc.totals.discountTotal > 0 ? <Row k={t("Discount")} v={`− ${money(calc.totals.discountTotal)}`} /> : null}
               {/* Named, not "Tax": the sidebar, the fee table and the printed
                 * sheet all state the same figure the same way. */}
               {bbo.amount > 0 ? <Row k={`${bbo.name} ${bbo.percent}%`} v={money(bbo.amount)} /> : null}
               <div className="mt-1.5 flex justify-between border-t border-border pt-2 text-base font-semibold text-fg">
-                <dt>Grand total</dt>
+                <dt>{t("Grand total")}</dt>
                 <dd className="tabular-nums">{money(calc.totals.grandTotal)}</dd>
               </div>
             </dl>
@@ -421,14 +423,14 @@ export default async function ServiceProposalDetailPage({
 
           {p.validUntil ? (
             <div className="card-surface rounded-xl border border-border bg-surface p-4 text-sm">
-              <div className="text-xs text-muted">Valid until</div>
+              <div className="text-xs text-muted">{t("Valid until")}</div>
               <div className="mt-0.5 font-medium text-fg">{p.validUntil}</div>
             </div>
           ) : null}
 
           {versions.length > 0 ? (
             <div className="card-surface rounded-xl border border-border bg-surface p-4">
-              <h3 className="text-sm font-semibold text-fg">Issued versions</h3>
+              <h3 className="text-sm font-semibold text-fg">{t("Issued versions")}</h3>
               <ul className="mt-2 space-y-2 text-sm">
                 {versions.map((v) => (
                   <li key={v.id} className="flex items-baseline justify-between gap-2">
@@ -442,18 +444,18 @@ export default async function ServiceProposalDetailPage({
                 ))}
               </ul>
               <p className="mt-2 border-t border-border pt-2 text-xs text-muted">
-                Each issued version is an immutable snapshot of what the client received.
+                {t("Each issued version is an immutable snapshot of what the client received.")}
               </p>
             </div>
           ) : null}
 
           {history.length > 0 ? (
             <div className="card-surface rounded-xl border border-border bg-surface p-4">
-              <h3 className="text-sm font-semibold text-fg">Status history</h3>
+              <h3 className="text-sm font-semibold text-fg">{t("Status history")}</h3>
               <ul className="mt-2 space-y-2 text-sm">
                 {history.map((h) => (
                   <li key={h.id} className="text-muted">
-                    <span className="text-fg">{STATUS_LABEL[h.toStatus]}</span>
+                    <span className="text-fg">{t(STATUS_LABEL[h.toStatus])}</span>
                     <span className="ml-1.5 text-xs">{h.createdAt.slice(0, 10)}</span>
                     {h.byName ? <span className="text-xs text-faint"> · {h.byName}</span> : null}
                     {h.reason ? <div className="text-xs text-faint">{h.reason}</div> : null}

@@ -8,6 +8,7 @@ import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { getSystemCurrency } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "New contract · AEC-flow" };
 
@@ -25,6 +26,7 @@ export default async function NewContractPage() {
     getPracticeSettings(),
     getFirmIdentity(),
   ]);
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-4">
@@ -32,13 +34,13 @@ export default async function NewContractPage() {
         href="/documents/contracts"
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
-        <ArrowLeft className="h-4 w-4" /> Contracts
+        <ArrowLeft className="h-4 w-4" /> {t("Contracts")}
       </Link>
 
       <div>
-        <h2 className="text-xl font-semibold text-fg">New construction contract</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("New construction contract")}</h2>
         <p className="text-sm text-muted">
-          Your own contract, filled in with this job&apos;s particulars. The wording stays as it is.
+          {t("Your own contract, filled in with this job's particulars. The wording stays as it is.")}
         </p>
       </div>
 

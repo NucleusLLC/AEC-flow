@@ -14,6 +14,8 @@ import {
   type ScheduleConfig,
   type PaymentConfig,
 } from "@/lib/estimates/budget-timeline";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const nf0 = (n: number) => Math.round(n).toLocaleString("en-US");
 const nf1 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
@@ -35,6 +37,7 @@ export function BudgetTimelineView({
   generalConditions?: GeneralConditionItem[];
   gcActive?: boolean;
 }) {
+  const t = useT();
   const money = (n: number) => `${est.currency} ${nf0(n)}`;
 
   // Total Development Cost — the contract price the disbursement draws against:
@@ -92,56 +95,56 @@ export function BudgetTimelineView({
     <div className="space-y-4">
       {/* Summary band */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Total Development Cost" value={money(developmentCost)} tone="text-fg" sub={`Direct ${money(directCost)}${gcAmount ? ` + GC ${money(gcAmount)}` : ""} + Risk&Profit ${est.profitPct}% + BBO ${est.bboPct}%`} icon={<Coins className="h-4 w-4 text-emerald-600" />} />
-        <Stat label="Labour hours" value={`${nf0(totalHours)} h`} tone="text-fg" icon={<Clock className="h-4 w-4 text-blue-600" />} />
-        <Stat label="Duration" value={`${totalDays} d · ${nf1(weeks)} wk`} tone="text-fg" icon={<CalendarClock className="h-4 w-4 text-amber-600" />} />
-        <Stat label="Draw phases" value={`${phases.length}`} tone={sumPct === 100 ? "text-emerald-400" : "text-red-600"} icon={<Landmark className="h-4 w-4 text-violet-600" />} sub={`${nf1(sumPct)}% allocated`} />
+        <Stat label={t("Total Development Cost")} value={money(developmentCost)} tone="text-fg" sub={`${fmt(t("Direct {amount}"), { amount: money(directCost) })}${gcAmount ? ` + ${fmt(t("GC {amount}"), { amount: money(gcAmount) })}` : ""} + ${fmt(t("Risk&Profit {pct}%"), { pct: est.profitPct })} + BBO ${est.bboPct}%`} icon={<Coins className="h-4 w-4 text-emerald-600" />} />
+        <Stat label={t("Labour hours")} value={`${nf0(totalHours)} h`} tone="text-fg" icon={<Clock className="h-4 w-4 text-blue-600" />} />
+        <Stat label={t("Duration")} value={fmt(t("{days} d · {weeks} wk"), { days: totalDays, weeks: nf1(weeks) })} tone="text-fg" icon={<CalendarClock className="h-4 w-4 text-amber-600" />} />
+        <Stat label={t("Draw phases")} value={`${phases.length}`} tone={sumPct === 100 ? "text-emerald-400" : "text-red-600"} icon={<Landmark className="h-4 w-4 text-violet-600" />} sub={fmt(t("{pct}% allocated"), { pct: nf1(sumPct) })} />
       </div>
 
       {/* ---- Time-Schedule Coupler ---- */}
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/50 px-4 py-3">
-          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg"><CalendarClock className="h-4 w-4 text-brand" /> Time-Schedule Coupler</div>
-          <Badge tone={schedManual ? "blue" : "slate"}>{schedManual ? "Customized" : "Automatic"}</Badge>
+          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg"><CalendarClock className="h-4 w-4 text-brand" /> {t("Time-Schedule Coupler")}</div>
+          <Badge tone={schedManual ? "blue" : "slate"}>{schedManual ? t("Customized") : t("Automatic")}</Badge>
           {schedManual ? (
             <label className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs">
-              <Clock className="h-3.5 w-3.5 text-faint" /> Hours / day
+              <Clock className="h-3.5 w-3.5 text-faint" /> {t("Hours / day")}
               <input type="number" min={1} value={hoursPerDay} onChange={(e) => setHoursPerDay(Math.max(1, Number(e.target.value) || 1))} className="w-12 bg-transparent text-right text-xs font-medium text-fg outline-none" />
             </label>
           ) : (
-            <span className="ml-auto text-xs text-muted">{hoursPerDay} h/day · default crew</span>
+            <span className="ml-auto text-xs text-muted">{fmt(t("{hours} h/day · default crew"), { hours: hoursPerDay })}</span>
           )}
           <button type="button" onClick={() => setSchedManual((v) => !v)} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${schedManual ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg"}`}>
-            <SlidersHorizontal className="h-3.5 w-3.5" /> {schedManual ? "Done" : "Customize"}
+            <SlidersHorizontal className="h-3.5 w-3.5" /> {schedManual ? t("Done") : t("Customize")}
           </button>
         </div>
         {schedManual ? (
           <div className="grid grid-cols-2 gap-3 border-b border-border bg-surface-2/30 px-4 py-3 sm:grid-cols-4">
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">Start date</span>
+              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">{t("Start date")}</span>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-8 w-full rounded-lg border border-border bg-surface px-2 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">Working days / week</span>
+              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">{t("Working days / week")}</span>
               <select value={workingDaysPerWeek} onChange={(e) => setWorkingDaysPerWeek(Number(e.target.value))} className="h-8 w-full rounded-lg border border-border bg-surface px-2 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30">
-                <option value={5}>5 (Mon–Fri)</option>
-                <option value={6}>6 (Mon–Sat)</option>
-                <option value={7}>7 (all days)</option>
+                <option value={5}>{t("5 (Mon–Fri)")}</option>
+                <option value={6}>{t("6 (Mon–Sat)")}</option>
+                <option value={7}>{t("7 (all days)")}</option>
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">Section overlap %</span>
+              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">{t("Section overlap %")}</span>
               <input type="number" min={0} max={90} value={overlapPct} onChange={(e) => setOverlapPct(Math.max(0, Math.min(90, Number(e.target.value) || 0)))} className="h-8 w-full rounded-lg border border-border bg-surface px-2 text-right text-xs tabular-nums text-fg outline-none focus:ring-1 focus:ring-brand/30" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">Contingency days</span>
+              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-faint">{t("Contingency days")}</span>
               <input type="number" min={0} value={contingencyDays} onChange={(e) => setContingencyDays(Math.max(0, Number(e.target.value) || 0))} className="h-8 w-full rounded-lg border border-border bg-surface px-2 text-right text-xs tabular-nums text-fg outline-none focus:ring-1 focus:ring-brand/30" />
             </label>
             <div className="col-span-2 text-xs text-muted sm:col-span-4">
               {startDate ? (
-                <>Programme: <span className="font-medium text-fg">{startDate}</span> → <span className="font-medium text-fg">{endDate}</span> · </>
+                <>{t("Programme:")} <span className="font-medium text-fg">{startDate}</span> → <span className="font-medium text-fg">{endDate}</span> · </>
               ) : null}
-              {nf1(weeks)} weeks · {workingDaysPerWeek}-day week{overlapPct ? ` · ${overlapPct}% overlap` : ""}{contingencyDays ? ` · +${contingencyDays}d contingency` : ""}
+              {fmt(t("{weeks} weeks"), { weeks: nf1(weeks) })} · {fmt(t("{days}-day week"), { days: workingDaysPerWeek })}{overlapPct ? ` · ${fmt(t("{pct}% overlap"), { pct: overlapPct })}` : ""}{contingencyDays ? ` · ${fmt(t("+{days}d contingency"), { days: contingencyDays })}` : ""}
             </div>
           </div>
         ) : null}
@@ -150,13 +153,13 @@ export function BudgetTimelineView({
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wide text-faint">
-                <th className="whitespace-nowrap border-b border-border px-2 py-1.5 text-left text-faint">Section</th>
-                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-right text-faint">Hours</th>
-                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-center text-faint">Crew</th>
-                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-right text-faint">Days</th>
-                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-center text-faint">Range</th>
-                <th className="w-full border-b border-l border-border px-2 py-1.5 text-left text-faint">Schedule</th>
-                <th className="whitespace-nowrap border-b border-l border-border bg-green-600/20 px-2 py-1.5 text-right text-faint">Cost</th>
+                <th className="whitespace-nowrap border-b border-border px-2 py-1.5 text-left text-faint">{t("section")}</th>
+                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-right text-faint">{t("Hours")}</th>
+                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-center text-faint">{t("Crew")}</th>
+                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-right text-faint">{t("Days")}</th>
+                <th className="whitespace-nowrap border-b border-border px-1.5 py-1.5 text-center text-faint">{t("Range")}</th>
+                <th className="w-full border-b border-l border-border px-2 py-1.5 text-left text-faint">{t("Schedule")}</th>
+                <th className="whitespace-nowrap border-b border-l border-border bg-green-600/20 px-2 py-1.5 text-right text-faint">{t("Cost")}</th>
               </tr>
             </thead>
             <tbody>
@@ -189,11 +192,11 @@ export function BudgetTimelineView({
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-border bg-surface text-xs font-bold">
-                <td className="px-3 py-2 uppercase tracking-wide text-fg">Project</td>
+                <td className="px-3 py-2 uppercase tracking-wide text-fg">{t("Project")}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-fg">{nf0(totalHours)}</td>
                 <td />
                 <td className="px-3 py-2 text-right tabular-nums text-fg">{totalDays}</td>
-                <td className="px-3 py-2 text-center text-[11px] text-muted">{nf1(weeks)} wks</td>
+                <td className="px-3 py-2 text-center text-[11px] text-muted">{fmt(t("{weeks} wks"), { weeks: nf1(weeks) })}</td>
                 <td />
                 <td className="border-l border-green-500/20 px-3 py-2 text-right tabular-nums text-green-400">{money(grandCost)}</td>
               </tr>
@@ -202,38 +205,38 @@ export function BudgetTimelineView({
         </div>
         <p className="border-t border-border px-4 py-2 text-[11px] text-faint">
           {schedManual
-            ? "Sections run sequentially. Cost-loaded so each phase carries its share of the budget — adjust crew sizes, dates and overlap to compress or extend the programme."
-            : "Automatic programme from default crews. Click Customize to set the start date, crew sizes, working week, overlap and contingency."}
+            ? t("Sections run sequentially. Cost-loaded so each phase carries its share of the budget — adjust crew sizes, dates and overlap to compress or extend the programme.")
+            : t("Automatic programme from default crews. Click Customize to set the start date, crew sizes, working week, overlap and contingency.")}
         </p>
       </Card>
 
       {/* ---- Payment Phase Configurator (PayApp) ---- */}
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/50 px-4 py-3">
-          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg"><Landmark className="h-4 w-4 text-brand" /> Payment Phase Configurator <span className="text-faint">(PayApp)</span></div>
-          <Badge tone={payManual ? "blue" : "slate"}>{payManual ? "Customized" : "Automatic"}</Badge>
+          <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg"><Landmark className="h-4 w-4 text-brand" /> {t("Payment Phase Configurator")} <span className="text-faint">(PayApp)</span></div>
+          <Badge tone={payManual ? "blue" : "slate"}>{payManual ? t("Customized") : t("Automatic")}</Badge>
 
           {/* Retainage toggle (off by default) */}
           <button
             type="button"
             onClick={() => setRetEnabled(!retEnabled)}
-            title="Retainage — hold a % of each draw when the contractor has no performance bond / bank guarantee in place."
+            title={t("Retainage — hold a % of each draw when the contractor has no performance bond / bank guarantee in place.")}
             className={`ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${retEnabled ? "border-amber-500/50 bg-amber-500/10 text-amber-500" : "border-border bg-surface text-muted hover:bg-surface-2"}`}
           >
-            <Shield className="h-3.5 w-3.5" /> Retainage {retEnabled ? "On" : "Off"}
+            <Shield className="h-3.5 w-3.5" /> {retEnabled ? t("Retainage On") : t("Retainage Off")}
           </button>
           {retEnabled && !payManual ? (
             <label className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs">
-              Rate
+              {t("Rate")}
               <input type="number" min={0} max={20} value={retention} onChange={(e) => setRetention(Math.max(0, Math.min(20, Number(e.target.value) || 0)))} className="w-10 bg-transparent text-right text-xs font-medium text-fg outline-none" />%
             </label>
           ) : null}
-          {retEnabled && payManual ? <span className="text-[11px] text-amber-500/80">per-phase %</span> : null}
+          {retEnabled && payManual ? <span className="text-[11px] text-amber-500/80">{t("per-phase %")}</span> : null}
 
           <button type="button" onClick={() => setPayManual(!payManual)} className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${payManual ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg"}`}>
-            <SlidersHorizontal className="h-3.5 w-3.5" /> {payManual ? "Done" : "Customize"}
+            <SlidersHorizontal className="h-3.5 w-3.5" /> {payManual ? t("Done") : t("Customize")}
           </button>
-          {sumPct === 100 ? <Badge tone="green">balanced 100%</Badge> : <Badge tone="red">{nf1(sumPct)}% — must equal 100%</Badge>}
+          {sumPct === 100 ? <Badge tone="green">{t("balanced 100%")}</Badge> : <Badge tone="red">{fmt(t("{pct}% — must equal 100%"), { pct: nf1(sumPct) })}</Badge>}
         </div>
 
         <div className="overflow-x-auto">
@@ -241,12 +244,12 @@ export function BudgetTimelineView({
             <thead>
               <tr className="text-[10px] uppercase tracking-wide text-faint">
                 <th className="border-b border-border px-3 py-1.5 text-left text-faint">#</th>
-                <th className="border-b border-border px-3 py-1.5 text-left text-faint">Draw phase</th>
-                <th className="border-b border-border px-3 py-1.5 text-left text-faint">Disbursement trigger / milestone</th>
+                <th className="border-b border-border px-3 py-1.5 text-left text-faint">{t("Draw phase")}</th>
+                <th className="border-b border-border px-3 py-1.5 text-left text-faint">{t("Disbursement trigger / milestone")}</th>
                 <th className="border-b border-border px-3 py-1.5 text-right text-faint">% </th>
-                <th className="border-b border-l border-border bg-green-600/20 px-3 py-1.5 text-right text-faint">Draw amount</th>
-                <th className="border-b border-border px-3 py-1.5 text-right text-faint">Retainage</th>
-                <th className="border-b border-border px-3 py-1.5 text-right text-faint">Net release</th>
+                <th className="border-b border-l border-border bg-green-600/20 px-3 py-1.5 text-right text-faint">{t("Draw amount")}</th>
+                <th className="border-b border-border px-3 py-1.5 text-right text-faint">{t("Retainage")}</th>
+                <th className="border-b border-border px-3 py-1.5 text-right text-faint">{t("Net release")}</th>
                 {payManual ? <th className="no-print border-b border-border px-1 py-1.5" /> : null}
               </tr>
             </thead>
@@ -281,7 +284,7 @@ export function BudgetTimelineView({
                       <span className="text-faint">—</span>
                     ) : payManual ? (
                       <span className="inline-flex items-center justify-end gap-1">
-                        <input type="number" min={0} max={20} value={p.retentionPct ?? retention} onChange={(e) => patchPhase(p.id, { retentionPct: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })} className="w-10 rounded border border-amber-500/30 bg-amber-500/5 px-1 py-0.5 text-right text-[11px] tabular-nums text-amber-400 outline-none focus:ring-1 focus:ring-amber-500/30" title="Retainage % held from this phase" />
+                        <input type="number" min={0} max={20} value={p.retentionPct ?? retention} onChange={(e) => patchPhase(p.id, { retentionPct: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })} className="w-10 rounded border border-amber-500/30 bg-amber-500/5 px-1 py-0.5 text-right text-[11px] tabular-nums text-amber-400 outline-none focus:ring-1 focus:ring-amber-500/30" title={t("Retainage % held from this phase")} />
                         <span className="text-faint">%</span>
                         <span className="w-16 text-right">{money(held)}</span>
                       </span>
@@ -292,7 +295,7 @@ export function BudgetTimelineView({
                   <td className="px-3 py-1.5 text-right text-xs font-semibold tabular-nums text-fg">{money(net)}</td>
                   {payManual ? (
                     <td className="no-print px-1 py-1 text-center">
-                      <button type="button" onClick={() => removePhase(p.id)} aria-label="Remove phase" className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button type="button" onClick={() => removePhase(p.id)} aria-label={t("Remove phase")} className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     </td>
                   ) : null}
                 </tr>
@@ -301,7 +304,7 @@ export function BudgetTimelineView({
             <tfoot>
               <tr className="border-t-2 border-border bg-surface text-xs font-bold">
                 <td />
-                <td className="px-3 py-2 uppercase tracking-wide text-fg" colSpan={2}>Total disbursement</td>
+                <td className="px-3 py-2 uppercase tracking-wide text-fg" colSpan={2}>{t("Total disbursement")}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-fg">{nf1(sumPct)}%</td>
                 <td className="border-l border-green-500/20 px-3 py-2 text-right tabular-nums text-green-400">{money(totalAmount)}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-amber-400">{retEnabled ? money(retentionHeldTotal) : "—"}</td>
@@ -313,15 +316,17 @@ export function BudgetTimelineView({
         </div>
         <div className="flex flex-wrap items-center gap-3 border-t border-border p-3">
           {payManual ? (
-            <button type="button" onClick={addPhase} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2"><Plus className="h-3.5 w-3.5" /> Add draw phase</button>
+            <button type="button" onClick={addPhase} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2"><Plus className="h-3.5 w-3.5" /> {t("Add draw phase")}</button>
           ) : null}
           <p className="text-[11px] text-faint">
-            <span className="text-muted">Draws are % of the Total Development Cost ({money(developmentCost)}) — direct cost{gcAmount ? " + General Conditions" : ""} + Risk&nbsp;&amp;&nbsp;Profit + BBO.</span>{" "}
+            <span className="text-muted">{gcAmount
+              ? fmt(t("Draws are % of the Total Development Cost ({amount}) — direct cost + General Conditions + Risk & Profit + BBO."), { amount: money(developmentCost) })
+              : fmt(t("Draws are % of the Total Development Cost ({amount}) — direct cost + Risk & Profit + BBO."), { amount: money(developmentCost) })}</span>{" "}
             {!retEnabled
-              ? "Retainage is OFF — full draws are released. Turn it on to hold a % when no performance bond / bank guarantee is posted."
+              ? t("Retainage is OFF — full draws are released. Turn it on to hold a % when no performance bond / bank guarantee is posted.")
               : payManual
-                ? `Per-phase retainage held (${money(retentionHeldTotal)} total), released at final completion. Set each phase's % by risk/complexity.`
-                : `Retainage of ${retention}% is held from each draw and released at final completion (${money(retentionHeldTotal)} total).`}
+                ? fmt(t("Per-phase retainage held ({amount} total), released at final completion. Set each phase's % by risk/complexity."), { amount: money(retentionHeldTotal) })
+                : fmt(t("Retainage of {pct}% is held from each draw and released at final completion ({amount} total)."), { pct: retention, amount: money(retentionHeldTotal) })}
           </p>
         </div>
       </Card>

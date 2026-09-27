@@ -5,7 +5,10 @@ import { Card } from "@/components/ui/card";
 import { MeetingsView } from "@/components/meetings/meetings-view";
 import { getMeetings, summarizeMeetings } from "@/lib/data/meetings";
 
-export const metadata = { title: "Meeting Minutes · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Meeting Minutes")} · AEC-flow` };
+}
 
 export default async function MeetingsPage() {
   const tr = await getServerT();
@@ -14,23 +17,23 @@ export default async function MeetingsPage() {
 
   const tiles = [
     {
-      label: "Total Minutes",
+      label: tr("Total Minutes"),
       value: String(summary.total),
-      hint: "recorded meetings",
+      hint: tr("recorded meetings"),
       icon: NotebookPen,
       accent: "text-brand",
     },
     {
-      label: "This Month",
+      label: tr("This Month"),
       value: String(summary.thisMonth),
-      hint: "meetings logged",
+      hint: tr("meetings logged"),
       icon: CalendarRange,
       accent: "text-blue-600",
     },
     {
-      label: "Open Actions",
+      label: tr("Open Actions"),
       value: String(summary.openActions),
-      hint: "across all minutes",
+      hint: tr("across all minutes"),
       icon: ListChecks,
       accent: "text-amber-600",
     },
@@ -50,7 +53,7 @@ export default async function MeetingsPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          New minutes
+          {tr("New minutes")}
         </Link>
       </div>
 

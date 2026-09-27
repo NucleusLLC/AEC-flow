@@ -3,6 +3,8 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
 import { VersionTag } from "@/components/service-proposals/version-tag";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Shared A4 print surface for Construction Admin documents. Renders the
@@ -46,13 +48,14 @@ export async function CaPrintShell({
   const { logoDataUrl, logo } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const t = await getServerT();
   return (
     <PrintSurface backHref={backHref}>
       {/* Letterhead */}
       <DocumentLetterhead
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
         name={companyName}
-        tagline="Architecture · Engineering · Project Management"
+        tagline={t("Architecture · Engineering · Project Management")}
         borderClass="border-b-2 border-gray-900 pb-4"
         details={
           <div className="text-right">
@@ -92,16 +95,19 @@ export async function CaPrintShell({
             <div key={s.role}>
               <div className="h-px w-full bg-gray-400" />
               <div className="mt-1 text-xs text-gray-600">{s.role}</div>
-              <div className="text-[11px] text-gray-400">{s.name || "Name"} · Date</div>
+              <div className="text-[11px] text-gray-400">{s.name || t("Name")} · {t("Date")}</div>
             </div>
           ))}
         </div>
       </div>
 
       <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
-        Disclaimer: This document is issued for construction administration purposes. Figures are
-        based on information available at the date of issue and remain subject to verification and
-        final account. © {companyName}.
+        {fmt(
+          t(
+            "Disclaimer: This document is issued for construction administration purposes. Figures are based on information available at the date of issue and remain subject to verification and final account. © {company}.",
+          ),
+          { company: companyName },
+        )}
       </p>
 
       <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">

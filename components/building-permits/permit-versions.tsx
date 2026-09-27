@@ -21,6 +21,8 @@ import {
   addSubmissionAction,
   deleteSubmissionAction,
 } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const field =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -38,6 +40,7 @@ export function PermitVersions({
   /** Re-read the case file. See the note in permit-case-file.tsx. */
   onChanged: () => Promise<void>;
 }) {
+  const t = useT();
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +66,7 @@ export function PermitVersions({
         contents: contents || null,
       });
       if (!res.ok) {
-        setError(res.error);
+        setError(t(res.error));
         return;
       }
       setOpen(false);
@@ -78,7 +81,7 @@ export function PermitVersions({
     setError(null);
     start(async () => {
       const res = await deleteSubmissionAction(permitId, id);
-      if (!res.ok) setError(res.error);
+      if (!res.ok) setError(t(res.error));
       setConfirmId(null);
       await onChanged();
     });
@@ -88,18 +91,18 @@ export function PermitVersions({
     <div className="space-y-3">
       {submissions.length === 0 ? (
         <p className="text-sm text-muted">
-          No version logged yet. Log V1 the day the application goes in.
+          {t("No version logged yet. Log V1 the day the application goes in.")}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-3 pb-1.5 font-medium">Version #</th>
-                <th className="px-3 pb-1.5 font-medium">Submittal date</th>
-                <th className="px-3 pb-1.5 font-medium">Method</th>
-                <th className="px-3 pb-1.5 font-medium">Receipt #</th>
-                <th className="px-3 pb-1.5 font-medium">Contents</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Version #")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Submittal date")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Method")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Receipt #")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Contents")}</th>
                 <th className="px-3 pb-1.5" />
               </tr>
             </thead>
@@ -108,7 +111,7 @@ export function PermitVersions({
                 <tr key={s.id} className="border-t border-border/60 even:bg-surface-2/40">
                   <td className="px-3 py-2 font-mono text-xs font-semibold">V{i + 1}</td>
                   <td className="px-3 py-2 font-mono text-xs tabular-nums">{militaryDate(s.submittedAt)}</td>
-                  <td className="px-3 py-2 text-muted">{SUBMISSION_METHOD_LABEL[s.method]}</td>
+                  <td className="px-3 py-2 text-muted">{t(SUBMISSION_METHOD_LABEL[s.method])}</td>
                   <td className="px-3 py-2 font-mono text-xs text-muted">{s.receiptNumber ?? "—"}</td>
                   <td className="max-w-[260px] truncate px-3 py-2 text-muted" title={s.contents ?? ""}>
                     {s.contents ?? "—"}
@@ -122,17 +125,17 @@ export function PermitVersions({
                           onClick={() => remove(s.id)}
                           className="font-medium text-red-600 hover:underline"
                         >
-                          Delete V{i + 1}
+                          {fmt(t("Delete V{n}"), { n: i + 1 })}
                         </button>
                         <button type="button" onClick={() => setConfirmId(null)} className="text-muted hover:underline">
-                          Keep
+                          {t("Keep")}
                         </button>
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setConfirmId(s.id)}
-                        aria-label={`Delete version ${i + 1}`}
+                        aria-label={fmt(t("Delete version {n}"), { n: i + 1 })}
                         className="text-faint transition-colors hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -149,15 +152,15 @@ export function PermitVersions({
       {open ? (
         <form onSubmit={add} className="grid gap-3 rounded-lg border border-border bg-surface-2/40 p-3 sm:grid-cols-4">
           <div>
-            <label className={label}>Version #</label>
+            <label className={label}>{t("Version #")}</label>
             <div className="flex h-9 items-center font-mono text-sm font-semibold">V{next}</div>
           </div>
           <div>
-            <label className={label}>Submittal date</label>
+            <label className={label}>{t("Submittal date")}</label>
             <input type="date" required value={submittedAt} onChange={(e) => setSubmittedAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Method</label>
+            <label className={label}>{t("Method")}</label>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as BuildingPermitSubmissionMethod)}
@@ -165,25 +168,25 @@ export function PermitVersions({
             >
               {SUBMISSION_METHODS.map((m) => (
                 <option key={m} value={m}>
-                  {SUBMISSION_METHOD_LABEL[m]}
+                  {t(SUBMISSION_METHOD_LABEL[m])}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Receipt #</label>
+            <label className={label}>{t("Receipt #")}</label>
             <input value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} className={`${field} font-mono`} />
           </div>
           <div className="sm:col-span-1">
-            <label className={label}>Received by</label>
+            <label className={label}>{t("Received by")}</label>
             <input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} className={field} />
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>What went in</label>
+            <label className={label}>{t("What went in")}</label>
             <input
               value={contents}
               onChange={(e) => setContents(e.target.value)}
-              placeholder="e.g. Revised drawings A-101 to A-104, structural calcs"
+              placeholder={t("e.g. Revised drawings A-101 to A-104, structural calcs")}
               className={field}
             />
           </div>
@@ -193,14 +196,14 @@ export function PermitVersions({
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {pending ? "Saving…" : `Log V${next}`}
+              {pending ? t("Saving…") : fmt(t("Log V{n}"), { n: next })}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -210,7 +213,7 @@ export function PermitVersions({
           onClick={() => setOpen(true)}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> {submissions.length === 0 ? "Log V1" : `Log resubmission (V${next})`}
+          <Plus className="h-4 w-4" /> {submissions.length === 0 ? t("Log V1") : fmt(t("Log resubmission (V{n})"), { n: next })}
         </button>
       )}
 

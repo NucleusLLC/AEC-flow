@@ -8,6 +8,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { DISCIPLINE_LABEL, IMPACT_LEVEL_LABEL, SITE_INSTRUCTION_STATUS_LABEL } from "@/lib/ca/labels";
 import type { SiteInstruction, CaDiscipline, ImpactLevel, SiteInstructionStatus } from "@/lib/ca/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string };
 
@@ -30,6 +32,7 @@ type Values = {
 export function SiteInstructionForm({ projects: projectProp }: { projects: ProjectOption[] }) {
   // Grown when a project is created from the picker below; `projects.find` in
   // the submit handler must read this, not the prop.
+  const t = useT();
   const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; si?: SiteInstruction; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -48,7 +51,7 @@ export function SiteInstructionForm({ projects: projectProp }: { projects: Proje
         body: JSON.stringify({ ...values, projectName: project?.name ?? values.projectId }),
       });
       const json = await res.json();
-      if (!res.ok) setResult({ ok: false, error: json.error ?? `Request failed (${res.status})` });
+      if (!res.ok) setResult({ ok: false, error: json.error ?? fmt(t("Request failed ({status})"), { status: res.status }) });
       else setResult({ ok: true, si: json.data });
     } catch (err) {
       setResult({ ok: false, error: (err as Error).message });
@@ -64,8 +67,8 @@ export function SiteInstructionForm({ projects: projectProp }: { projects: Proje
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 px-5 py-4">
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" /></span>
           <p className="text-sm text-emerald-800">
-            Site instruction {result.si?.instructionNumber} created.{" "}
-            {result.si ? <Link href={`/construction-admin/site-instructions/${result.si.id}`} className="font-medium underline">Open instruction</Link> : null}
+            {fmt(t("Site instruction {number} created."), { number: result.si?.instructionNumber ?? "" })}{" "}
+            {result.si ? <Link href={`/construction-admin/site-instructions/${result.si.id}`} className="font-medium underline">{t("Open instruction")}</Link> : null}
           </p>
         </div>
       ) : result?.error ? (
@@ -76,7 +79,7 @@ export function SiteInstructionForm({ projects: projectProp }: { projects: Proje
       ) : null}
 
       <Card>
-        <CardHeader title="Site Instruction" />
+        <CardHeader title={t("Site Instruction")} />
         <CardBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Was a required select over a list that is empty on a fresh
@@ -88,7 +91,7 @@ export function SiteInstructionForm({ projects: projectProp }: { projects: Proje
               rules={{ required: true }}
               render={({ field }) => (
                 <ProjectSelect
-                  label="Project *"
+                  label={t("Project *")}
                   projects={projects}
                   value={field.value ?? ""}
                   onChange={field.onChange}
@@ -101,54 +104,54 @@ export function SiteInstructionForm({ projects: projectProp }: { projects: Proje
               )}
             />
             <div>
-              <label className={labelCls}>Status</label>
+              <label className={labelCls}>{t("Status")}</label>
               <select className={inputCls} {...register("status")}>
                 {(Object.keys(SITE_INSTRUCTION_STATUS_LABEL) as SiteInstructionStatus[]).map((s) => (
-                  <option key={s} value={s}>{SITE_INSTRUCTION_STATUS_LABEL[s]}</option>
+                  <option key={s} value={s}>{t(SITE_INSTRUCTION_STATUS_LABEL[s])}</option>
                 ))}
               </select>
             </div>
           </div>
           <div>
-            <label className={labelCls}>Title *</label>
-            <input className={inputCls} placeholder="Instruction summary" {...register("title", { required: true })} />
+            <label className={labelCls}>{t("Title *")}</label>
+            <input className={inputCls} placeholder={t("Instruction summary")} {...register("title", { required: true })} />
           </div>
           <div>
-            <label className={labelCls}>Description</label>
-            <textarea className={`${inputCls} h-auto min-h-[100px] py-2`} placeholder="What the contractor is instructed to do…" {...register("description")} />
+            <label className={labelCls}>{t("Description")}</label>
+            <textarea className={`${inputCls} h-auto min-h-[100px] py-2`} placeholder={t("What the contractor is instructed to do…")} {...register("description")} />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelCls}>Issued by</label>
-              <input className={inputCls} placeholder="Consultant / engineer" {...register("issuedBy")} />
+              <label className={labelCls}>{t("Issued by")}</label>
+              <input className={inputCls} placeholder={t("Consultant / engineer")} {...register("issuedBy")} />
             </div>
             <div>
-              <label className={labelCls}>Issued to</label>
-              <input className={inputCls} placeholder="Contractor" {...register("issuedTo")} />
+              <label className={labelCls}>{t("Issued to")}</label>
+              <input className={inputCls} placeholder={t("Contractor")} {...register("issuedTo")} />
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className={labelCls}>Discipline</label>
+              <label className={labelCls}>{t("Discipline")}</label>
               <select className={inputCls} {...register("discipline")}>
                 {(Object.keys(DISCIPLINE_LABEL) as CaDiscipline[]).map((d) => (
-                  <option key={d} value={d}>{DISCIPLINE_LABEL[d]}</option>
+                  <option key={d} value={d}>{t(DISCIPLINE_LABEL[d])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Cost impact</label>
+              <label className={labelCls}>{t("Cost impact")}</label>
               <select className={inputCls} {...register("costImpact")}>
                 {(Object.keys(IMPACT_LEVEL_LABEL) as ImpactLevel[]).map((l) => (
-                  <option key={l} value={l}>{IMPACT_LEVEL_LABEL[l]}</option>
+                  <option key={l} value={l}>{t(IMPACT_LEVEL_LABEL[l])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Schedule impact</label>
+              <label className={labelCls}>{t("Schedule impact")}</label>
               <select className={inputCls} {...register("scheduleImpact")}>
                 {(Object.keys(IMPACT_LEVEL_LABEL) as ImpactLevel[]).map((l) => (
-                  <option key={l} value={l}>{IMPACT_LEVEL_LABEL[l]}</option>
+                  <option key={l} value={l}>{t(IMPACT_LEVEL_LABEL[l])}</option>
                 ))}
               </select>
             </div>
@@ -158,10 +161,10 @@ export function SiteInstructionForm({ projects: projectProp }: { projects: Proje
 
       <div className="flex items-center gap-2">
         <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50">
-          {saving ? "Saving…" : "Create instruction"}
+          {saving ? t("Saving…") : t("Create instruction")}
         </button>
         <Link href="/construction-admin/site-instructions" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2">
-          Cancel
+          {t("Cancel")}
         </Link>
       </div>
     </form>

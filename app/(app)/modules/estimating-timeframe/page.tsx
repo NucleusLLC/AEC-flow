@@ -14,6 +14,8 @@ import {
   getScheduleUrl,
   getSchedulePrintUrl,
 } from "@/lib/integrations/schedule/adapter";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Module 3 Dashboard · AEC-flow" };
 
@@ -31,8 +33,8 @@ const SCH_STATUS: Record<string, { label: string; cls: string }> = {
   empty: { label: "No activities", cls: "bg-slate-500/10 text-slate-500" },
 };
 
-function Badge({ label, cls }: { label: string; cls: string }) {
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{label}</span>;
+function Badge({ label, cls, t }: { label: string; cls: string; t: (text: string) => string }) {
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{t(label)}</span>;
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -63,20 +65,20 @@ export default async function Module3Dashboard() {
   const est = newest ? await getEstimateSummaryById(newest.estimateId) : null;
   // "Active" schedule = the one for the current estimate's project.
   const sched = est?.found ? await getProjectScheduleSummary(est.projectNumber) : null;
+  const t = await getServerT();
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Module identity header */}
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-wider text-brand">
-          Module {M3.number} · {M3.version}
+          {fmt(t("Module {number}"), { number: M3.number })} · {M3.version}
         </div>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-fg">
-          Construction Estimates &amp; Construction Timeframe
+          {t("Construction Estimates & Construction Timeframe")}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Read-only overview. Estimates and Schedule open in their own systems — the numbers here
-          come straight from those systems, unchanged.
+          {t("Read-only overview. Estimates and Schedule open in their own systems — the numbers here come straight from those systems, unchanged.")}
         </p>
       </div>
 
@@ -84,8 +86,8 @@ export default async function Module3Dashboard() {
         {/* Estimates summary (spec §9) */}
         <Card>
           <CardHeader
-            title="Estimates"
-            subtitle="Current estimate"
+            title={t("Estimates")}
+            subtitle={t("Current estimate")}
             action={<Calculator className="h-5 w-5 text-brand" />}
           />
           <CardBody>
@@ -98,27 +100,27 @@ export default async function Module3Dashboard() {
                       {est.projectNumber || "—"} · {est.version}
                     </div>
                   </div>
-                  <Badge {...(EST_STATUS[est.status] ?? EST_STATUS.draft)} />
+                  <Badge {...(EST_STATUS[est.status] ?? EST_STATUS.draft)} t={t} />
                 </div>
                 <div className="divide-y divide-border/60">
-                  <Field label="Current total" value={formatCurrency(est.grandTotal, est.currency)} />
-                  <Field label="Direct cost" value={formatCurrency(est.direct, est.currency)} />
+                  <Field label={t("Current total")} value={formatCurrency(est.grandTotal, est.currency)} />
+                  <Field label={t("Direct cost")} value={formatCurrency(est.direct, est.currency)} />
                   <Field
-                    label="Cost per m²"
+                    label={t("Cost per m²")}
                     value={est.costPerM2 != null ? formatCurrency(est.costPerM2, est.currency) : "—"}
                   />
-                  <Field label="Last modified" value={formatDate(est.date)} />
-                  <Field label="Version lock" value={est.locked ? "Locked" : "Unlocked"} />
+                  <Field label={t("Last modified")} value={formatDate(est.date)} />
+                  <Field label={t("Version lock")} value={est.locked ? t("Locked") : t("Unlocked")} />
                 </div>
                 <div className="mt-4">
-                  <OpenButton href={getEstimateRecordUrl(est.projectNumber)}>Open Estimates</OpenButton>
+                  <OpenButton href={getEstimateRecordUrl(est.projectNumber)}>{t("Open Estimates")}</OpenButton>
                 </div>
               </>
             ) : (
               <div className="py-6 text-center">
-                <p className="text-sm text-muted">No estimates yet.</p>
+                <p className="text-sm text-muted">{t("No estimates yet.")}</p>
                 <div className="mt-3">
-                  <OpenButton href="/estimates">Open Estimates</OpenButton>
+                  <OpenButton href="/estimates">{t("Open Estimates")}</OpenButton>
                 </div>
               </div>
             )}
@@ -128,8 +130,8 @@ export default async function Module3Dashboard() {
         {/* Schedule summary (spec §9) */}
         <Card>
           <CardHeader
-            title="Schedule"
-            subtitle="Active programme"
+            title={t("Schedule")}
+            subtitle={t("Active programme")}
             action={<CalendarClock className="h-5 w-5 text-brand" />}
           />
           <CardBody>
@@ -139,36 +141,36 @@ export default async function Module3Dashboard() {
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-fg">{sched.projectName}</div>
                     <div className="truncate text-xs text-muted">
-                      {sched.projectId} · {sched.taskCount} activities
+                      {sched.projectId} · {fmt(t("{count} activities"), { count: sched.taskCount })}
                     </div>
                   </div>
-                  <Badge {...(SCH_STATUS[sched.overall] ?? SCH_STATUS.empty)} />
+                  <Badge {...(SCH_STATUS[sched.overall] ?? SCH_STATUS.empty)} t={t} />
                 </div>
                 <div className="divide-y divide-border/60">
-                  <Field label="Overall progress" value={`${sched.pctActual}%`} />
-                  <Field label="Planned start" value={formatDate(sched.plannedStart)} />
-                  <Field label="Planned finish" value={formatDate(sched.plannedFinish)} />
+                  <Field label={t("Overall progress")} value={`${sched.pctActual}%`} />
+                  <Field label={t("Planned start")} value={formatDate(sched.plannedStart)} />
+                  <Field label={t("Planned finish")} value={formatDate(sched.plannedFinish)} />
                   <Field
-                    label="Forecast finish"
+                    label={t("Forecast finish")}
                     value={sched.forecastFinish ? formatDate(sched.forecastFinish) : "—"}
                   />
                   <Field
-                    label="Schedule variance"
+                    label={t("Schedule variance")}
                     value={`${sched.varianceDays >= 0 ? "+" : ""}${sched.varianceDays} d`}
                   />
-                  <Field label="Critical activities" value={sched.criticalCount} />
+                  <Field label={t("Critical activities")} value={sched.criticalCount} />
                 </div>
                 <div className="mt-4">
-                  <OpenButton href={getScheduleUrl()}>Open Schedule</OpenButton>
+                  <OpenButton href={getScheduleUrl()}>{t("Open Schedule")}</OpenButton>
                 </div>
               </>
             ) : (
               <div className="py-6 text-center">
                 <p className="text-sm text-muted">
-                  {est?.found ? "No schedule for this project yet." : "No schedule yet."}
+                  {est?.found ? t("No schedule for this project yet.") : t("No schedule yet.")}
                 </p>
                 <div className="mt-3">
-                  <OpenButton href="/schedule">Open Schedule</OpenButton>
+                  <OpenButton href="/schedule">{t("Open Schedule")}</OpenButton>
                 </div>
               </div>
             )}
@@ -178,7 +180,7 @@ export default async function Module3Dashboard() {
 
       {/* Documents (spec §9) */}
       <Card>
-        <CardHeader title="Documents" subtitle="Generate from Estimates or Schedule (source data unchanged)" />
+        <CardHeader title={t("Documents")} subtitle={t("Generate from Estimates or Schedule (source data unchanged)")} />
         <CardBody className="flex flex-wrap gap-3">
           <Link
             href={
@@ -188,7 +190,7 @@ export default async function Module3Dashboard() {
             }
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <FileOutput className="h-4 w-4 text-brand" /> Generate Estimate document
+            <FileOutput className="h-4 w-4 text-brand" /> {t("Generate Estimate document")}
           </Link>
           <Link
             href={
@@ -198,20 +200,20 @@ export default async function Module3Dashboard() {
             }
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <FileOutput className="h-4 w-4 text-brand" /> Generate Schedule document
+            <FileOutput className="h-4 w-4 text-brand" /> {t("Generate Schedule document")}
           </Link>
           <Link
             href="/documents/register"
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <FolderArchive className="h-4 w-4 text-brand" /> View generated documents
+            <FolderArchive className="h-4 w-4 text-brand" /> {t("View generated documents")}
           </Link>
           {est?.found ? (
             <Link
               href={getEstimatePrintUrl(est.estimateId)}
               className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
-              Existing estimate PDF <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("Existing estimate PDF")} <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           ) : null}
           {sched?.found ? (
@@ -219,7 +221,7 @@ export default async function Module3Dashboard() {
               href={getSchedulePrintUrl(sched.projectId)}
               className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
-              Existing programme PDF <ArrowUpRight className="h-3.5 w-3.5" />
+              {t("Existing programme PDF")} <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           ) : null}
         </CardBody>

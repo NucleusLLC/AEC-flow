@@ -1,5 +1,6 @@
 import { Construction } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { TranslatedText } from "@/components/ui/translated-text";
 
 export function ModulePlaceholder({
   title,
@@ -14,10 +15,10 @@ export function ModulePlaceholder({
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
           <Construction className="h-6 w-6" />
         </div>
-        <h2 className="text-lg font-semibold text-fg">{title}</h2>
-        <p className="max-w-md text-sm text-muted">{description}</p>
+        <h2 className="text-lg font-semibold text-fg"><TranslatedText text={title} /></h2>
+        <p className="max-w-md text-sm text-muted"><TranslatedText text={description} /></p>
         <span className="mt-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
-          Coming soon
+          <TranslatedText text="Coming soon" />
         </span>
       </Card>
     </div>

@@ -17,6 +17,8 @@ import { saveProject } from "@/app/(app)/projects/actions";
 import { getSystemCurrency } from "@/lib/format";
 import { ClientSelect } from "@/components/clients/client-select";
 import { MemberSelect } from "@/components/team/member-select";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -65,6 +67,7 @@ export function ProjectForm({
   backHref?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [submitting, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -122,7 +125,7 @@ export function ProjectForm({
           </div>
           <div className="text-sm">
             <p className="font-medium text-red-800">
-              Could not {mode === "edit" ? "update" : "create"} project.
+              {mode === "edit" ? t("Could not update project.") : t("Could not create project.")}
             </p>
             <p className="mt-0.5 text-red-700">{error}</p>
           </div>
@@ -134,32 +137,32 @@ export function ProjectForm({
       ) : null}
 
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg">Project details</h3>
+        <h3 className="mb-4 text-sm font-semibold text-fg">{t("Project details")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="name">
-              Project name *
+              {t("Project name *")}
             </label>
-            <input id="name" name="name" required className={inputClass} placeholder="e.g. Marina Heights Tower — Phase 3" defaultValue={initial?.name} />
+            <input id="name" name="name" required className={inputClass} placeholder={t("e.g. Marina Heights Tower — Phase 3")} defaultValue={initial?.name} />
           </div>
 
           <div>
             <label className={labelClass} htmlFor="projectNumber">
-              Project number
+              {t("Project number")}
             </label>
             <input
               id="projectNumber"
               name="projectNumber"
               className={`${inputClass} font-mono`}
-              placeholder={mode === "edit" ? "" : "Automatic (ZA-YYYY-NNN)"}
+              placeholder={mode === "edit" ? "" : t("Automatic (ZA-YYYY-NNN)")}
               defaultValue={initial?.projectNumber}
               required={mode === "edit"}
               maxLength={40}
             />
             <p className="mt-1 text-[11px] text-faint">
               {mode === "edit"
-                ? "Type your own, e.g. 2026A-019. Must be unique."
-                : "Leave blank for the next automatic number, or type your own, e.g. 2026A-019."}
+                ? t("Type your own, e.g. 2026A-019. Must be unique.")
+                : t("Leave blank for the next automatic number, or type your own, e.g. 2026A-019.")}
             </p>
           </div>
 
@@ -167,7 +170,7 @@ export function ProjectForm({
               `by="name"`. See `resolveClientId` / `resolveManagerId`. */}
           <ClientSelect
             id="clientName"
-            label="Client"
+            label={t("Client")}
             by="name"
             clients={clients.map((c) => ({ id: c, name: c }))}
             value={clientName}
@@ -178,7 +181,7 @@ export function ProjectForm({
 
           <MemberSelect
             id="manager"
-            label="Project manager"
+            label={t("Project manager")}
             by="name"
             members={managers.map((m) => ({ id: m, name: m }))}
             value={manager}
@@ -188,19 +191,19 @@ export function ProjectForm({
             // member added here must be a MANAGER to show up in it again.
             defaultRole="MANAGER"
             allowEmpty
-            placeholder="Most senior user"
-            hint="Left unset, the most senior user is assigned."
+            placeholder={t("Most senior user")}
+            hint={t("Left unset, the most senior user is assigned.")}
             labelClassName={labelClass}
           />
 
           <div>
             <label className={labelClass} htmlFor="status">
-              Status
+              {t("Status")}
             </label>
             <select id="status" name="status" className={inputClass} defaultValue={initial?.status ?? "ACTIVE"}>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {PROJECT_STATUS_LABEL[s]}
+                  {t(PROJECT_STATUS_LABEL[s])}
                 </option>
               ))}
             </select>
@@ -208,12 +211,12 @@ export function ProjectForm({
 
           <div>
             <label className={labelClass} htmlFor="priority">
-              Priority
+              {t("Priority")}
             </label>
             <select id="priority" name="priority" className={inputClass} defaultValue={initial?.priority ?? "MEDIUM"}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
-                  {PRIORITY_LABEL[p]}
+                  {t(PRIORITY_LABEL[p])}
                 </option>
               ))}
             </select>
@@ -221,39 +224,39 @@ export function ProjectForm({
 
           <div>
             <label className={labelClass} htmlFor="startDate">
-              Start date
+              {t("Start date")}
             </label>
             <input id="startDate" name="startDate" type="date" className={inputClass} defaultValue={initial?.startDate} />
           </div>
 
           <div>
             <label className={labelClass} htmlFor="targetEndDate">
-              Target end date
+              {t("Target end date")}
             </label>
             <input id="targetEndDate" name="targetEndDate" type="date" className={inputClass} defaultValue={initial?.targetEndDate} />
           </div>
 
           <div>
             <label className={labelClass} htmlFor="value">
-              Contract value ({getSystemCurrency()})
+              {fmt(t("Contract value ({currency})"), { currency: getSystemCurrency() })}
             </label>
             <input id="value" name="value" type="number" min="0" step="1000" className={inputClass} placeholder="0" defaultValue={initial?.value ? initial.value : undefined} />
           </div>
 
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="siteAddress">
-              Site address
+              {t("Site address")}
             </label>
-            <input id="siteAddress" name="siteAddress" className={inputClass} placeholder="e.g. Dubai Marina, Plot D2, Dubai" defaultValue={initial?.siteAddress} />
+            <input id="siteAddress" name="siteAddress" className={inputClass} placeholder={t("e.g. Dubai Marina, Plot D2, Dubai")} defaultValue={initial?.siteAddress} />
           </div>
 
           <div className="sm:col-span-2">
-            <span className={labelClass}>Disciplines</span>
+            <span className={labelClass}>{t("Disciplines")}</span>
             <div className="flex flex-wrap gap-3">
               {DISCIPLINES.map((d) => (
                 <label key={d} className="inline-flex items-center gap-2 text-sm text-fg">
                   <input type="checkbox" name="disciplines" value={d} defaultChecked={initial?.disciplines.includes(d)} className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
-                  {DISCIPLINE_LABEL[d]}
+                  {t(DISCIPLINE_LABEL[d])}
                 </label>
               ))}
             </div>
@@ -261,14 +264,14 @@ export function ProjectForm({
 
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="description">
-              Description
+              {t("Description")}
             </label>
             <textarea
               id="description"
               name="description"
               rows={3}
               className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15"
-              placeholder="Scope summary, key requirements…"
+              placeholder={t("Scope summary, key requirements…")}
               defaultValue={initial?.description}
             />
           </div>
@@ -280,14 +283,14 @@ export function ProjectForm({
           href={backHref}
           className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          Cancel
+          {t("Cancel")}
         </Link>
         <button
           type="submit"
           disabled={submitting}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? "Saving…" : mode === "edit" ? "Save changes" : "Create project"}
+          {submitting ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Create project")}
         </button>
       </div>
     </form>

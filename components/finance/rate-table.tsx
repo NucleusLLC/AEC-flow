@@ -17,6 +17,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { setPersonRatesAction } from "@/app/(app)/finance/time/actions";
 
 const CONTROL =
@@ -31,6 +33,7 @@ export type RatePerson = {
 
 export function RateTable({ people, currency }: { people: RatePerson[]; currency: string }) {
   const router = useRouter();
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -48,9 +51,9 @@ export function RateTable({ people, currency }: { people: RatePerson[]; currency
   }
 
   function toNumberOrNull(v: string): number | null {
-    const t = v.trim();
-    if (t === "") return null;
-    const n = Number(t.replace(",", "."));
+    const s = v.trim();
+    if (s === "") return null;
+    const n = Number(s.replace(",", "."));
     return Number.isFinite(n) ? n : null;
   }
 
@@ -73,22 +76,25 @@ export function RateTable({ people, currency }: { people: RatePerson[]; currency
   return (
     <Card>
       <CardHeader
-        title="Hourly rates"
-        subtitle={`In ${currency}. A change prices the next hour logged — entries already saved keep the rate they were saved with.`}
+        title={t("Hourly rates")}
+        subtitle={fmt(
+          t("In {currency}. A change prices the next hour logged — entries already saved keep the rate they were saved with."),
+          { currency },
+        )}
       />
       <CardBody className="space-y-2">
         {error ? (
           <p className="rounded-lg border border-red-600/30 bg-red-600/5 px-3 py-2 text-sm text-red-600">
-            {error}
+            {t(error)}
           </p>
         ) : null}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-3 pb-1.5 font-medium">Who</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Charged out at</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Costs the practice</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Who")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Charged out at")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Costs the practice")}</th>
                 <th className="px-3 pb-1.5" />
               </tr>
             </thead>
@@ -102,7 +108,7 @@ export function RateTable({ people, currency }: { people: RatePerson[]; currency
                       onChange={(e) => set(p.id, "charge", e.target.value)}
                       inputMode="decimal"
                       placeholder="—"
-                      aria-label={`What ${p.name} is charged out at, per hour`}
+                      aria-label={fmt(t("What {name} is charged out at, per hour"), { name: p.name })}
                       className={CONTROL}
                     />
                   </td>
@@ -112,7 +118,7 @@ export function RateTable({ people, currency }: { people: RatePerson[]; currency
                       onChange={(e) => set(p.id, "cost", e.target.value)}
                       inputMode="decimal"
                       placeholder="—"
-                      aria-label={`What an hour of ${p.name}'s time costs the practice`}
+                      aria-label={fmt(t("What an hour of {name}'s time costs the practice"), { name: p.name })}
                       className={CONTROL}
                     />
                   </td>
@@ -123,7 +129,7 @@ export function RateTable({ people, currency }: { people: RatePerson[]; currency
                       onClick={() => save(p.id)}
                       className="h-8 rounded-lg border border-border px-3 text-xs text-muted hover:bg-surface-2 disabled:opacity-60"
                     >
-                      {saved === p.id && !pending ? "Saved" : "Save"}
+                      {saved === p.id && !pending ? t("Saved") : t("Save")}
                     </button>
                   </td>
                 </tr>

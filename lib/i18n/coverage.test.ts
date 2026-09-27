@@ -29,13 +29,19 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 /** Literal keys passed to t(...). Template literals and variables are skipped. */
 function literalKeys(): Map<string, string> {
   const keys = new Map<string, string>();
-  const call = /\bt\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')\s*[,)]/g;
+  // t("…") and tr("…") — some files name the hook tr because a loop variable is t.
+  const call = /\btr?\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')\s*[,)]/g;
   for (const dir of ["app", "components", "lib"]) {
     for (const file of sourceFiles(join(ROOT, dir))) {
       const src = readFileSync(file, "utf8");
-      // Only files that use the translation hooks: other modules have their
-      // own helpers called t() (lib/data/estimate-presets.ts builds tasks with one).
-      if (!/\b(useT|getServerT|useLanguage)\(/.test(src)) continue;
+      // Only files that use the translation hooks, import from lib/i18n, or
+      // take a translate function as a prop: other modules have their own
+      // helpers called t() (lib/data/estimate-presets.ts builds tasks with one).
+      const translates =
+        /\b(useT|getServerT|useLanguage)\(/.test(src) ||
+        /from "@\/lib\/i18n\//.test(src) ||
+        /\btr?\??:\s*\(\w+: string\) => string/.test(src);
+      if (!translates) continue;
       for (const m of src.matchAll(call)) {
         const key =
           m[1] !== undefined

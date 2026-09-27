@@ -49,6 +49,8 @@ import {
   type BuildingPermitType,
   type PermitLetterSummary,
 } from "@/lib/building-permits/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const CONTROL =
   "h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -89,6 +91,7 @@ export function PermitRegister({
   authorities: string[];
   today: string;
 }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<BuildingPermitStatus | "ALL" | "OPEN">("ALL");
   const [permitType, setPermitType] = useState<BuildingPermitType | "ALL">("ALL");
@@ -181,8 +184,8 @@ export function PermitRegister({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search permit number, reference, address, letter ref…"
-            aria-label="Search permits"
+            placeholder={t("Search permit number, reference, address, letter ref…")}
+            aria-label={t("Search permits")}
             className={`${CONTROL} w-full pl-8 pr-3 placeholder:text-faint`}
           />
         </div>
@@ -190,14 +193,14 @@ export function PermitRegister({
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as BuildingPermitStatus | "ALL" | "OPEN")}
-          aria-label="Filter by status"
+          aria-label={t("Filter by status")}
           className={CONTROL}
         >
-          <option value="ALL">All</option>
-          <option value="OPEN">Open</option>
+          <option value="ALL">{t("All")}</option>
+          <option value="OPEN">{t("Open")}</option>
           {PERMIT_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {PERMIT_STATUS_LABEL[s]}
+              {t(PERMIT_STATUS_LABEL[s])}
             </option>
           ))}
         </select>
@@ -205,13 +208,13 @@ export function PermitRegister({
         <select
           value={permitType}
           onChange={(e) => setPermitType(e.target.value as BuildingPermitType | "ALL")}
-          aria-label="Filter by permit type"
+          aria-label={t("Filter by permit type")}
           className={CONTROL}
         >
-          <option value="ALL">All types</option>
-          {PERMIT_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {PERMIT_TYPE_LABEL[t]}
+          <option value="ALL">{t("All types")}</option>
+          {PERMIT_TYPES.map((pt) => (
+            <option key={pt} value={pt}>
+              {t(PERMIT_TYPE_LABEL[pt])}
             </option>
           ))}
         </select>
@@ -219,10 +222,10 @@ export function PermitRegister({
         <select
           value={authority}
           onChange={(e) => setAuthority(e.target.value)}
-          aria-label="Filter by authority"
+          aria-label={t("Filter by authority")}
           className={CONTROL}
         >
-          <option value="">All authorities</option>
+          <option value="">{t("All authorities")}</option>
           {authorities.map((a) => (
             <option key={a} value={a}>
               {a}
@@ -233,19 +236,19 @@ export function PermitRegister({
         <select
           value={band}
           onChange={(e) => setBand(e.target.value as BandBy)}
-          aria-label="Group by"
+          aria-label={t("Group by")}
           className={CONTROL}
         >
-          <option value="status">Group by status</option>
-          <option value="authority">Group by authority</option>
-          <option value="project">Group by project</option>
-          <option value="none">No grouping</option>
+          <option value="status">{t("Group by status")}</option>
+          <option value="authority">{t("Group by authority")}</option>
+          <option value="project">{t("Group by project")}</option>
+          <option value="none">{t("No grouping")}</option>
         </select>
 
         <span className="text-xs text-muted tabular-nums">
-          {shown} of {permits.length} permits
+          {fmt(t("{shown} of {total} permits"), { shown, total: permits.length })}
           {overdueShown > 0 ? (
-            <span className="ml-1.5 font-medium text-red-600">· {overdueShown} overdue</span>
+            <span className="ml-1.5 font-medium text-red-600">· {fmt(t("{count} overdue"), { count: overdueShown })}</span>
           ) : null}
         </span>
 
@@ -257,13 +260,13 @@ export function PermitRegister({
       {shown === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
           <Inbox className="h-8 w-8 text-faint" />
-          <p className="mt-3 text-sm font-medium text-fg">No permit matches these filters.</p>
+          <p className="mt-3 text-sm font-medium text-fg">{t("No permit matches these filters.")}</p>
           <button
             type="button"
             onClick={clearFilters}
             className="mt-3 inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            Clear filters
+            {t("Clear filters")}
           </button>
         </div>
       ) : (
@@ -276,17 +279,17 @@ export function PermitRegister({
               <thead>
                 <tr className="whitespace-nowrap text-left align-bottom text-[11px] uppercase tracking-wide text-faint">
                   <th className="px-4 pb-1.5 font-medium">
-                    <SortHeader column="permitNumber" label="Building permit #" {...sortProps} />
+                    <SortHeader column="permitNumber" label={t("Building permit #")} {...sortProps} />
                   </th>
-                  <th className="px-3 pb-1.5 font-medium">Permit</th>
-                  <th className="px-3 pb-1.5 font-medium">Version #</th>
+                  <th className="px-3 pb-1.5 font-medium">{t("Permit")}</th>
+                  <th className="px-3 pb-1.5 font-medium">{t("Version #")}</th>
                   <th className="px-3 pb-1.5 font-medium">
-                    <SortHeader column="submitted" label="Submittal date" {...sortProps} />
+                    <SortHeader column="submitted" label={t("Submittal date")} {...sortProps} />
                   </th>
-                  <th className="px-3 pb-1.5 font-medium">Correspondence</th>
-                  <th className="px-3 pb-1.5 text-right font-medium">Lapsed (months)</th>
+                  <th className="px-3 pb-1.5 font-medium">{t("Correspondence")}</th>
+                  <th className="px-3 pb-1.5 text-right font-medium">{t("Lapsed (months)")}</th>
                   <th className="px-4 pb-1.5 font-medium">
-                    <SortHeader column="ready" label="Permit ready date" {...sortProps} />
+                    <SortHeader column="ready" label={t("Permit ready date")} {...sortProps} />
                   </th>
                 </tr>
               </thead>
@@ -312,10 +315,10 @@ export function PermitRegister({
                     {band === "status" ? (
                       <PermitStatusBadge status={b.key as BuildingPermitStatus} />
                     ) : (
-                      <span className="truncate text-sm font-semibold text-fg">{b.label}</span>
+                      <span className="truncate text-sm font-semibold text-fg">{b.label === "No authority recorded" || b.label === "No project" ? t(b.label) : b.label}</span>
                     )}
                     <span className="text-xs text-muted tabular-nums">
-                      {b.permits.length} {b.permits.length === 1 ? "permit" : "permits"}
+                      {b.permits.length === 1 ? t("1 permit") : fmt(t("{count} permits"), { count: b.permits.length })}
                     </span>
                   </div>
                 ) : null}
@@ -350,6 +353,7 @@ function PermitRow({
   const version = permitVersion(p);
   const lapsed = lapsedMonths(p, today);
   const href = `/design/building-permits/${p.id}`;
+  const t = useT();
 
   return (
     <tr className="border-b border-border/60 transition-colors last:border-0 even:bg-surface-2/40 hover:bg-surface-2">
@@ -371,9 +375,9 @@ function PermitRow({
           ) : (
             <span
               className="block text-xs italic text-faint group-hover:underline"
-              title="The authority has not issued a building permit number yet"
+              title={t("The authority has not issued a building permit number yet")}
             >
-              Not yet issued
+              {t("Not yet issued")}
             </span>
           )}
           <span className="block truncate font-mono text-[11px] text-faint">{p.reference}</span>
@@ -429,7 +433,7 @@ function PermitRow({
             >
               {lapsed.months.toFixed(1)}
             </span>
-            <div className="text-[11px] text-faint">{lapsed.running ? "running" : "final"}</div>
+            <div className="text-[11px] text-faint">{lapsed.running ? t("running") : t("final")}</div>
           </>
         ) : (
           <span className="text-faint">—</span>
@@ -442,8 +446,8 @@ function PermitRow({
             {militaryDate(p.issuedAt)}
           </span>
         ) : p.targetDecisionAt ? (
-          <span className="whitespace-nowrap text-faint" title="Target date — the permit is not ready yet">
-            Target {militaryDate(p.targetDecisionAt)}
+          <span className="whitespace-nowrap text-faint" title={t("Target date — the permit is not ready yet")}>
+            {fmt(t("Target {date}"), { date: militaryDate(p.targetDecisionAt) })}
           </span>
         ) : (
           <span className="font-sans text-faint">—</span>
@@ -463,6 +467,7 @@ function Correspondence({
   today: string;
   href: string;
 }) {
+  const t = useT();
   if (p.letters.length === 0) {
     return p.openResponseDueAt ? (
       <ResponseDueBadge dueAt={p.openResponseDueAt} today={today} />
@@ -483,7 +488,7 @@ function Correspondence({
       </ul>
       {more > 0 ? (
         <Link href={`${href}#correspondence`} className="text-[11px] font-medium text-brand hover:underline">
-          +{more} more
+          {fmt(t("+{count} more"), { count: more })}
         </Link>
       ) : null}
     </div>
@@ -491,20 +496,21 @@ function Correspondence({
 }
 
 function LetterLine({ letter: l }: { letter: PermitLetterSummary }) {
+  const t = useT();
   const Direction = l.direction === "INCOMING" ? ArrowDownLeft : ArrowUpRight;
   const label = [militaryDate(l.letterDate), l.letterRef ?? l.subject].filter((s) => s !== "—").join(" · ");
   return (
     <li className="flex min-w-0 items-center gap-1.5 text-xs">
       <Direction
         className={`h-3.5 w-3.5 shrink-0 ${l.direction === "INCOMING" ? "text-violet-600" : "text-faint"}`}
-        aria-label={l.direction === "INCOMING" ? "Received" : "Sent"}
+        aria-label={l.direction === "INCOMING" ? t("Received") : t("Sent")}
       />
       {l.pdf ? (
         <a
           href={`/design/building-permits/file/${l.pdf.documentId}`}
           target="_blank"
           rel="noopener noreferrer"
-          title={`${l.subject} — open PDF${l.pdf.filename ? ` (${l.pdf.filename})` : ""}`}
+          title={`${l.subject} — ${t("open PDF")}${l.pdf.filename ? ` (${l.pdf.filename})` : ""}`}
           className="inline-flex min-w-0 items-center gap-1 text-fg hover:text-brand hover:underline"
         >
           <FileText className="h-3.5 w-3.5 shrink-0 text-red-600" />
@@ -514,7 +520,7 @@ function LetterLine({ letter: l }: { letter: PermitLetterSummary }) {
           </span>
         </a>
       ) : (
-        <span className="truncate font-mono text-muted" title={`${l.subject} — no PDF attached`}>
+        <span className="truncate font-mono text-muted" title={`${l.subject} — ${t("no PDF attached")}`}>
           {label || l.subject}
         </span>
       )}
@@ -535,6 +541,7 @@ function SortHeader({
   dir: "asc" | "desc";
   onSort: (column: PermitSort) => void;
 }) {
+  const t = useT();
   const active = sort === column;
   const Chevron = dir === "asc" ? ChevronUp : ChevronDown;
   return (
@@ -544,7 +551,7 @@ function SortHeader({
       className={`inline-flex items-center gap-0.5 uppercase tracking-wide transition-colors hover:text-fg ${
         active ? "text-fg" : ""
       }`}
-      aria-label={`Sort by ${label}`}
+      aria-label={fmt(t("Sort by {label}"), { label })}
     >
       {label}
       {active ? <Chevron className="h-3 w-3" /> : null}

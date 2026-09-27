@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { TranslatedText } from "@/components/ui/translated-text";
 
 type Tone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";
 
@@ -48,14 +49,24 @@ const priorityTone: Record<string, Tone> = {
   CRITICAL: "red",
 };
 
+/** "ON_HOLD" -> "On hold": the English display label, which is also the i18n key. */
+function enumLabel(value: string): string {
+  const words = value.replace(/_/g, " ").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 export function StatusBadge({ status }: { status: string }) {
   return (
-    <Badge tone={statusTone[status] ?? "neutral"}>
-      {status.replace(/_/g, " ").toLowerCase()}
+    <Badge tone={statusTone[status] ?? "neutral"} className="lowercase">
+      <TranslatedText text={enumLabel(status)} />
     </Badge>
   );
 }
 
 export function PriorityBadge({ priority }: { priority: string }) {
-  return <Badge tone={priorityTone[priority] ?? "neutral"}>{priority.toLowerCase()}</Badge>;
+  return (
+    <Badge tone={priorityTone[priority] ?? "neutral"} className="lowercase">
+      <TranslatedText text={enumLabel(priority)} />
+    </Badge>
+  );
 }

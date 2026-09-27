@@ -5,6 +5,7 @@ import { DevTabBar } from "@/components/development/dev-tab-bar";
 import { DevStatusBadge } from "@/components/development/badges";
 import { DevProjectActions } from "@/components/development/project-actions";
 import { getDevelopmentProject } from "@/lib/data/development";
+import { getServerT } from "@/lib/i18n/server";
 
 type Props = { params: Promise<{ id: string }>; children: React.ReactNode };
 
@@ -12,11 +13,12 @@ export default async function DevelopmentWorkspaceLayout({ params, children }: P
   const { id } = await params;
   const project = await getDevelopmentProject(id);
   if (!project) notFound();
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-5">
       <Link href="/development" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> Land Development
+        <ArrowLeft className="h-4 w-4" /> {t("Land Development")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">

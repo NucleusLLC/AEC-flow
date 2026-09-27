@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { navSections } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type Command = {
   id: string;
@@ -33,6 +35,7 @@ const CREATE_ROUTES: Array<{ label: string; href: string }> = [
 
 export function CommandPalette() {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -63,8 +66,13 @@ export function CommandPalette() {
 
   const q = query.trim().toLowerCase();
   const filtered = useMemo(
-    () => (q ? commands.filter((c) => c.label.toLowerCase().includes(q)) : commands),
-    [commands, q],
+    () =>
+      q
+        ? commands.filter(
+            (c) => c.label.toLowerCase().includes(q) || t(c.label).toLowerCase().includes(q),
+          )
+        : commands,
+    [commands, q, t],
   );
 
   // The full result list includes a trailing "search the app" action.
@@ -96,8 +104,8 @@ export function CommandPalette() {
   // Focus the input when opened (DOM side-effect only — no setState here).
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => inputRef.current?.focus(), 10);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => inputRef.current?.focus(), 10);
+    return () => clearTimeout(timer);
   }, [open]);
 
   if (!open) return null;
@@ -148,7 +156,7 @@ export function CommandPalette() {
               setActive(0);
             }}
             onKeyDown={onInputKey}
-            placeholder="Search or jump to…"
+            placeholder={t("Search or jump to…")}
             className="h-12 w-full bg-transparent text-sm text-fg placeholder:text-faint focus:outline-none"
           />
           <kbd className="hidden rounded border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] text-faint sm:block">
@@ -159,7 +167,7 @@ export function CommandPalette() {
         {/* Results */}
         <div className="max-h-80 overflow-y-auto py-2">
           {resultCount === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted">No matches</div>
+            <div className="px-4 py-8 text-center text-sm text-muted">{t("No matches")}</div>
           ) : (
             <>
               {groups.map((group) => {
@@ -168,7 +176,7 @@ export function CommandPalette() {
                 return (
                   <div key={group} className="mb-1">
                     <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-faint">
-                      {group}
+                      {t(group)}
                     </div>
                     {items.map((c) => {
                       runningIndex += 1;
@@ -186,7 +194,7 @@ export function CommandPalette() {
                           )}
                         >
                           <Icon className="h-4 w-4 text-faint" />
-                          <span className="flex-1 text-fg">{c.label}</span>
+                          <span className="flex-1 text-fg">{t(c.label)}</span>
                           {active === idx ? <CornerDownLeft className="h-3.5 w-3.5 text-faint" /> : null}
                         </button>
                       );
@@ -202,7 +210,7 @@ export function CommandPalette() {
                     return (
                       <div>
                         <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-faint">
-                          Search
+                          {t("Search")}
                         </div>
                         <button
                           type="button"
@@ -215,7 +223,7 @@ export function CommandPalette() {
                         >
                           <ArrowRight className="h-4 w-4 text-faint" />
                           <span className="flex-1 text-fg">
-                            Search the app for &ldquo;{query.trim()}&rdquo;
+                            {fmt(t("Search the app for “{query}”"), { query: query.trim() })}
                           </span>
                         </button>
                       </div>

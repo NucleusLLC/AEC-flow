@@ -5,8 +5,12 @@ import { Card } from "@/components/ui/card";
 import { ClientsView } from "@/components/clients/clients-view";
 import { getClients, summarizeClients } from "@/lib/data/clients";
 import { formatCurrencyCompact } from "@/lib/format";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata = { title: "Clients · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Clients")} · AEC-flow` };
+}
 
 export default async function ClientsPage() {
   const tr = await getServerT();
@@ -14,10 +18,10 @@ export default async function ClientsPage() {
   const summary = summarizeClients(clients);
 
   const tiles = [
-    { label: "Total Clients", value: String(summary.total), hint: "across all segments" },
-    { label: "Active", value: String(summary.active), hint: `${summary.prospects} prospects in pipeline` },
-    { label: "Open Pipeline", value: formatCurrencyCompact(summary.pipelineValue), hint: "in live proposals" },
-    { label: "Won to Date", value: formatCurrencyCompact(summary.lifetimeValue), hint: "approved proposal value" },
+    { label: tr("Total Clients"), value: String(summary.total), hint: tr("across all segments") },
+    { label: tr("Active"), value: String(summary.active), hint: fmt(tr("{count} prospects in pipeline"), { count: summary.prospects }) },
+    { label: tr("Open Pipeline"), value: formatCurrencyCompact(summary.pipelineValue), hint: tr("in live proposals") },
+    { label: tr("Won to Date"), value: formatCurrencyCompact(summary.lifetimeValue), hint: tr("approved proposal value") },
   ];
 
   return (
@@ -34,7 +38,7 @@ export default async function ClientsPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          New Client
+          {tr("New Client")}
         </Link>
       </div>
 

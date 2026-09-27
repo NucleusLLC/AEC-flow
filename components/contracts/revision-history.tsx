@@ -20,9 +20,11 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/contracts/types";
 import { diffSummary, revisionLabel, type ContractDiff } from "@/lib/contracts/revision";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import type { ContractSummaryDTO } from "@/lib/data/contracts";
 
-export function RevisionHistory({
+export async function RevisionHistory({
   family,
   currentId,
   diff,
@@ -35,13 +37,14 @@ export function RevisionHistory({
   previousNumber: string | null;
 }) {
   if (family.length < 2) return null;
+  const t = await getServerT();
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title="Versions"
-          subtitle="The agreement keeps its number; the revision letter says which version."
+          title={t("Versions")}
+          subtitle={t("The agreement keeps its number; the revision letter says which version.")}
         />
         <CardBody>
           <ul className="divide-y divide-border/60">
@@ -56,17 +59,17 @@ export function RevisionHistory({
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-fg">
                         <span className="font-mono">{v.number}</span>
-                        {v.id === currentId ? " · this one" : ""}
+                        {v.id === currentId ? ` · ${t("this one")}` : ""}
                       </span>
                       <span className="block truncate text-[11px] text-faint">
-                        {revisionLabel(v.number)}
-                        {v.issuedAt ? ` · issued ${formatDate(v.issuedAt.slice(0, 10))}` : ""}
+                        {t(revisionLabel(v.number))}
+                        {v.issuedAt ? ` · ${fmt(t("issued {date}"), { date: formatDate(v.issuedAt.slice(0, 10)) })}` : ""}
                         {v.createdByName ? ` · ${v.createdByName}` : ""}
                       </span>
                     </span>
                   </span>
                   <Badge tone={CONTRACT_STATUS_TONE[v.status]}>
-                    {CONTRACT_STATUS_LABEL[v.status]}
+                    {t(CONTRACT_STATUS_LABEL[v.status])}
                   </Badge>
                 </Link>
               </li>
@@ -78,61 +81,62 @@ export function RevisionHistory({
       {diff && previousNumber ? (
         <Card>
           <CardHeader
-            title={`What changed since ${previousNumber}`}
-            subtitle={diffSummary(diff)}
+            title={fmt(t("What changed since {number}"), { number: previousNumber })}
+            subtitle={t(diffSummary(diff))}
           />
           <CardBody className="space-y-4">
             {diff.identical ? (
               <p className="text-sm text-muted">
-                Nothing differs between these two versions. That is worth knowing before anybody
-                signs the second one.
+                {t(
+                  "Nothing differs between these two versions. That is worth knowing before anybody signs the second one.",
+                )}
               </p>
             ) : null}
 
             {diff.facts.length > 0 ? (
-              <Section title="Particulars">
+              <Section title={t("Particulars")}>
                 {diff.facts.map((f) => (
-                  <Row key={f.label} label={f.label} from={f.from} to={f.to} />
+                  <Row key={f.label} label={t(f.label)} from={f.from} to={f.to} />
                 ))}
               </Section>
             ) : null}
 
             {diff.schedule.length > 0 ? (
-              <Section title="Payment schedule">
+              <Section title={t("Payment schedule")}>
                 {diff.schedule.map((f) => (
-                  <Row key={f.label} label={f.label} from={f.from} to={f.to} />
+                  <Row key={f.label} label={t(f.label)} from={f.from} to={f.to} />
                 ))}
               </Section>
             ) : null}
 
             {diff.articles.length > 0 ? (
-              <Section title="Clauses">
+              <Section title={t("Clauses")}>
                 {diff.articles.map((c, i) => (
                   <div key={`${c.kind}-${i}`} className="py-1.5 text-sm">
                     {c.kind === "added" ? (
                       <p className="text-fg">
-                        <span className="font-medium text-green-700">Added</span> · {c.number}{" "}
+                        <span className="font-medium text-green-700">{t("Added")}</span> · {c.number}{" "}
                         {c.heading}
                       </p>
                     ) : null}
                     {c.kind === "removed" ? (
                       <p className="text-fg">
-                        <span className="font-medium text-red-600">Removed</span> · {c.number}{" "}
+                        <span className="font-medium text-red-600">{t("Removed")}</span> · {c.number}{" "}
                         {c.heading}
                       </p>
                     ) : null}
                     {c.kind === "renumbered" ? (
                       <p className="text-muted">
-                        {c.heading} · now {c.to}, was {c.from}
+                        {c.heading} · {fmt(t("now {to}, was {from}"), { to: c.to, from: c.from })}
                       </p>
                     ) : null}
                     {c.kind === "reworded" ? (
                       <div>
                         <p className="text-fg">
-                          <span className="font-medium text-amber-700">Reworded</span> · {c.number}{" "}
+                          <span className="font-medium text-amber-700">{t("Reworded")}</span> · {c.number}{" "}
                           {c.heading}
                           {c.renumberedFrom ? (
-                            <span className="text-muted"> (was {c.renumberedFrom})</span>
+                            <span className="text-muted"> ({fmt(t("was {from}"), { from: c.renumberedFrom })})</span>
                           ) : null}
                         </p>
                         {c.paragraphs.map((p, j) => (
@@ -150,7 +154,9 @@ export function RevisionHistory({
 
             {diff.unchanged > 0 ? (
               <p className="text-xs text-muted">
-                {diff.unchanged} clause{diff.unchanged === 1 ? "" : "s"} came through unchanged.
+                {diff.unchanged === 1
+                  ? t("1 clause came through unchanged.")
+                  : fmt(t("{count} clauses came through unchanged."), { count: diff.unchanged })}
               </p>
             ) : null}
           </CardBody>

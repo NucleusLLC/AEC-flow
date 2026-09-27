@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { ReportForm } from "@/components/construction-admin/report-form";
 import { getProjects } from "@/lib/data/projects";
 import type { CaReportType } from "@/lib/ca/types";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "New Report · AEC-flow" };
 
@@ -12,6 +13,7 @@ type PageProps = { searchParams: Promise<{ type?: string }> };
 const VALID: CaReportType[] = ["DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY", "EXECUTIVE"];
 
 export default async function NewReportPage({ searchParams }: PageProps) {
+  const t = await getServerT();
   const { type } = await searchParams;
   const projects = await getProjects();
   const options = projects.map((p) => ({ id: p.id, name: p.name }));
@@ -21,11 +23,11 @@ export default async function NewReportPage({ searchParams }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/reports" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Reports
+        {t("Reports")}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Report Generator</h2>
-        <p className="text-sm text-muted">Compile a progress report; it is saved through the API and ready to export as a PDF.</p>
+        <h2 className="text-xl font-semibold text-fg">{t("Report Generator")}</h2>
+        <p className="text-sm text-muted">{t("Compile a progress report; it is saved through the API and ready to export as a PDF.")}</p>
       </div>
       <ReportForm projects={options} defaultType={defaultType} />
     </div>

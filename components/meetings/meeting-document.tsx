@@ -17,6 +17,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { DocumentLetterhead, type LetterheadLogo } from "@/components/print/document-letterhead";
 import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
+import { fmt } from "@/lib/i18n/format";
 
 export function MeetingDocument({
   meeting,
@@ -24,6 +25,7 @@ export function MeetingDocument({
   companyName,
   companyLocation,
   sheet = true,
+  t = (text: string) => text,
 }: {
   meeting: MeetingRecord;
   logo?: LetterheadLogo;
@@ -42,6 +44,9 @@ export function MeetingDocument({
    * for a standalone on-screen render with no surface around it.
    */
   sheet?: boolean;
+  /** Translator for the labels. Server print routes pass `getServerT()`; the
+   *  default leaves the English keys as they are. */
+  t?: (text: string) => string;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
@@ -53,41 +58,41 @@ export function MeetingDocument({
         name={companyName}
         details={
           <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Meeting Minutes</div>
-            <div className="mt-1 text-xs text-gray-600">{MEETING_TYPE_LABEL[meeting.type]} meeting</div>
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{t("Meeting Minutes")}</div>
+            <div className="mt-1 text-xs text-gray-600">{t(`${MEETING_TYPE_LABEL[meeting.type]} meeting`)}</div>
             <div className="text-xs text-gray-500">{formatDate(meeting.meetingDate)}</div>
           </div>
         }
       />
 
       {/* Title */}
-      <h1 className="mt-7 text-xl font-bold text-gray-900">{meeting.title || "Untitled meeting"}</h1>
+      <h1 className="mt-7 text-xl font-bold text-gray-900">{meeting.title || t("Untitled meeting")}</h1>
 
       {/* Header block */}
       <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3 rounded-md bg-gray-50 px-4 py-4 text-xs print:bg-gray-50">
         <div>
-          <div className="text-gray-400">Project</div>
+          <div className="text-gray-400">{t("Project")}</div>
           <div className="font-medium text-gray-900">{meeting.projectName}</div>
         </div>
         <div>
-          <div className="text-gray-400">Type</div>
-          <div className="font-medium text-gray-900">{MEETING_TYPE_LABEL[meeting.type]}</div>
+          <div className="text-gray-400">{t("Type")}</div>
+          <div className="font-medium text-gray-900">{t(MEETING_TYPE_LABEL[meeting.type])}</div>
         </div>
         <div>
-          <div className="text-gray-400">Date</div>
+          <div className="text-gray-400">{t("Date")}</div>
           <div className="font-medium text-gray-900">{formatDate(meeting.meetingDate)}</div>
         </div>
         <div>
-          <div className="text-gray-400">Location</div>
+          <div className="text-gray-400">{t("Location")}</div>
           <div className="font-medium text-gray-900">{meeting.location || "—"}</div>
         </div>
         <div>
-          <div className="text-gray-400">Author</div>
+          <div className="text-gray-400">{t("Author")}</div>
           <div className="font-medium text-gray-900">{meeting.author}</div>
         </div>
         {meeting.followUpDate ? (
           <div>
-            <div className="text-gray-400">Follow-up</div>
+            <div className="text-gray-400">{t("Follow-up")}</div>
             <div className="font-medium text-gray-900">{formatDate(meeting.followUpDate)}</div>
           </div>
         ) : null}
@@ -95,11 +100,11 @@ export function MeetingDocument({
 
       {/* Participants */}
       <div className="mt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Participants</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t("Participants")}</div>
         {meeting.participants.length ? (
           <p className="mt-1 text-gray-700">{meeting.participants.join(", ")}</p>
         ) : (
-          <p className="mt-1 text-gray-400">No participants recorded.</p>
+          <p className="mt-1 text-gray-400">{t("No participants recorded.")}</p>
         )}
       </div>
 
@@ -107,34 +112,34 @@ export function MeetingDocument({
       <div className="mt-7 space-y-4">
         {meeting.summary ? (
           <section>
-            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Summary</h2>
+            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t("Summary")}</h2>
             <p className="mt-1 whitespace-pre-line text-gray-700">{meeting.summary}</p>
           </section>
         ) : null}
         {meeting.discussion ? (
           <section>
-            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Discussion</h2>
+            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t("Discussion")}</h2>
             <p className="mt-1 whitespace-pre-line text-gray-700">{meeting.discussion}</p>
           </section>
         ) : null}
         {meeting.decisions ? (
           <section>
-            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Decisions</h2>
+            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t("Decisions")}</h2>
             <p className="mt-1 whitespace-pre-line text-gray-700">{meeting.decisions}</p>
           </section>
         ) : null}
       </div>
 
       {/* Action items */}
-      <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Action Items</h2>
+      <h2 className="mt-7 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t("Action Items")}</h2>
       <table className="mt-2 w-full border-collapse text-[12.5px]">
         <thead>
           <tr className="border-y border-gray-300 text-left text-[10px] uppercase tracking-wide text-gray-500">
             <th className="w-8 py-2 pr-3 font-semibold">#</th>
-            <th className="py-2 pr-3 font-semibold">Description</th>
-            <th className="py-2 pr-3 font-semibold">Assignee</th>
-            <th className="py-2 pr-3 font-semibold">Due</th>
-            <th className="py-2 font-semibold">Status</th>
+            <th className="py-2 pr-3 font-semibold">{t("Description")}</th>
+            <th className="py-2 pr-3 font-semibold">{t("Assignee")}</th>
+            <th className="py-2 pr-3 font-semibold">{t("Due")}</th>
+            <th className="py-2 font-semibold">{t("Status")}</th>
           </tr>
         </thead>
         <tbody>
@@ -145,19 +150,19 @@ export function MeetingDocument({
                 <td className="py-2 pr-3 text-gray-900">{item.description || "—"}</td>
                 <td className="py-2 pr-3 text-gray-600">{item.assignee || "—"}</td>
                 <td className="py-2 pr-3 text-gray-600">{formatDate(item.dueDate)}</td>
-                <td className="py-2 text-gray-600">{ACTION_STATUS_LABEL[item.status]}</td>
+                <td className="py-2 text-gray-600">{t(ACTION_STATUS_LABEL[item.status])}</td>
               </tr>
             ))
           ) : (
             <tr>
-              <td className="py-3 text-gray-400" colSpan={5}>No action items recorded.</td>
+              <td className="py-3 text-gray-400" colSpan={5}>{t("No action items recorded.")}</td>
             </tr>
           )}
         </tbody>
       </table>
 
       <div className="mt-10 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {documentFooterLine(firm, location, `Minutes recorded by ${meeting.author}`)}
+        {documentFooterLine(firm, location, fmt(t("Minutes recorded by {author}"), { author: meeting.author }))}
       </div>
     </>
   );

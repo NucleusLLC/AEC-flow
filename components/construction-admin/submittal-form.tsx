@@ -8,6 +8,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { DISCIPLINE_LABEL, SUBMITTAL_STATUS_LABEL } from "@/lib/ca/labels";
 import type { Submittal, CaDiscipline, SubmittalStatus } from "@/lib/ca/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string };
 
@@ -28,6 +30,7 @@ type Values = {
 export function SubmittalForm({ projects: projectProp }: { projects: ProjectOption[] }) {
   // Grown when a project is created from the picker below; `projects.find` in
   // the submit handler must read this, not the prop.
+  const t = useT();
   const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; sub?: Submittal; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -46,7 +49,7 @@ export function SubmittalForm({ projects: projectProp }: { projects: ProjectOpti
         body: JSON.stringify({ ...values, projectName: project?.name ?? values.projectId }),
       });
       const json = await res.json();
-      if (!res.ok) setResult({ ok: false, error: json.error ?? `Request failed (${res.status})` });
+      if (!res.ok) setResult({ ok: false, error: json.error ?? fmt(t("Request failed ({status})"), { status: res.status }) });
       else setResult({ ok: true, sub: json.data });
     } catch (err) {
       setResult({ ok: false, error: (err as Error).message });
@@ -62,8 +65,8 @@ export function SubmittalForm({ projects: projectProp }: { projects: ProjectOpti
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 px-5 py-4">
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" /></span>
           <p className="text-sm text-emerald-800">
-            Submittal {result.sub?.submittalNumber} created.{" "}
-            {result.sub ? <Link href={`/construction-admin/submittals/${result.sub.id}`} className="font-medium underline">Open submittal</Link> : null}
+            {fmt(t("Submittal {number} created."), { number: result.sub?.submittalNumber ?? "" })}{" "}
+            {result.sub ? <Link href={`/construction-admin/submittals/${result.sub.id}`} className="font-medium underline">{t("Open submittal")}</Link> : null}
           </p>
         </div>
       ) : result?.error ? (
@@ -74,7 +77,7 @@ export function SubmittalForm({ projects: projectProp }: { projects: ProjectOpti
       ) : null}
 
       <Card>
-        <CardHeader title="Submittal" />
+        <CardHeader title={t("Submittal")} />
         <CardBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Was a required select over a list that is empty on a fresh
@@ -86,7 +89,7 @@ export function SubmittalForm({ projects: projectProp }: { projects: ProjectOpti
               rules={{ required: true }}
               render={({ field }) => (
                 <ProjectSelect
-                  label="Project *"
+                  label={t("Project *")}
                   projects={projects}
                   value={field.value ?? ""}
                   onChange={field.onChange}
@@ -99,37 +102,37 @@ export function SubmittalForm({ projects: projectProp }: { projects: ProjectOpti
               )}
             />
             <div>
-              <label className={labelCls}>Submitted by</label>
-              <input className={inputCls} placeholder="Contractor / supplier" {...register("submittedBy")} />
+              <label className={labelCls}>{t("Submitted by")}</label>
+              <input className={inputCls} placeholder={t("Contractor / supplier")} {...register("submittedBy")} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Title *</label>
-            <input className={inputCls} placeholder="e.g. Curtain wall shop drawings" {...register("title", { required: true })} />
+            <label className={labelCls}>{t("Title *")}</label>
+            <input className={inputCls} placeholder={t("e.g. Curtain wall shop drawings")} {...register("title", { required: true })} />
           </div>
           <div>
-            <label className={labelCls}>Description</label>
-            <textarea className={`${inputCls} h-auto min-h-[100px] py-2`} placeholder="Scope of the submittal…" {...register("description")} />
+            <label className={labelCls}>{t("Description")}</label>
+            <textarea className={`${inputCls} h-auto min-h-[100px] py-2`} placeholder={t("Scope of the submittal…")} {...register("description")} />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className={labelCls}>Discipline</label>
+              <label className={labelCls}>{t("Discipline")}</label>
               <select className={inputCls} {...register("discipline")}>
                 {(Object.keys(DISCIPLINE_LABEL) as CaDiscipline[]).map((d) => (
-                  <option key={d} value={d}>{DISCIPLINE_LABEL[d]}</option>
+                  <option key={d} value={d}>{t(DISCIPLINE_LABEL[d])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Status</label>
+              <label className={labelCls}>{t("Status")}</label>
               <select className={inputCls} {...register("status")}>
                 {(Object.keys(SUBMITTAL_STATUS_LABEL) as SubmittalStatus[]).map((s) => (
-                  <option key={s} value={s}>{SUBMITTAL_STATUS_LABEL[s]}</option>
+                  <option key={s} value={s}>{t(SUBMITTAL_STATUS_LABEL[s])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Required by</label>
+              <label className={labelCls}>{t("Required by")}</label>
               <input type="date" className={inputCls} {...register("dateRequired")} />
             </div>
           </div>
@@ -138,10 +141,10 @@ export function SubmittalForm({ projects: projectProp }: { projects: ProjectOpti
 
       <div className="flex items-center gap-2">
         <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50">
-          {saving ? "Saving…" : "Create submittal"}
+          {saving ? t("Saving…") : t("Create submittal")}
         </button>
         <Link href="/construction-admin/submittals" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2">
-          Cancel
+          {t("Cancel")}
         </Link>
       </div>
     </form>

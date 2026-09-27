@@ -15,6 +15,8 @@ import {
 } from "@/lib/documents/fonts";
 import { bundledFontVariable } from "@/lib/documents/font-loader";
 import { TYPE_SCALE } from "@/lib/documents/tokens";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Settings → Document Control → Typography.
@@ -45,6 +47,7 @@ export function DocumentControlForm({
   initialFontId: string;
   canSave: boolean;
 }) {
+  const t = useT();
   const [fontId, setFontId] = useState(initialFontId);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,8 +81,8 @@ export function DocumentControlForm({
   return (
     <Card>
       <CardHeader
-        title="Document typography"
-        subtitle="The typeface used by every generated document — proposals, reports, registers and correspondence."
+        title={t("Document typography")}
+        subtitle={t("The typeface used by every generated document — proposals, reports, registers and correspondence.")}
       />
       <CardBody className="space-y-5">
         {/* Font choice */}
@@ -111,9 +114,9 @@ export function DocumentControlForm({
                   Aa Bb 123
                 </span>
                 <span className="text-[11px] text-muted">
-                  {f.id === DEFAULT_FONT_ID ? "Recommended · " : ""}
-                  {f.fontSource === "bundled" ? "Embedded" : "System font"}
-                  {f.multilingualSupport ? " · Multilingual" : ""}
+                  {f.id === DEFAULT_FONT_ID ? `${t("Recommended")} · ` : ""}
+                  {f.fontSource === "bundled" ? t("Embedded") : t("System font")}
+                  {f.multilingualSupport ? ` · ${t("Multilingual")}` : ""}
                 </span>
               </button>
             );
@@ -123,16 +126,16 @@ export function DocumentControlForm({
         {error ? (
           <p className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger">
             <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            {error}
+            {t(error)}
           </p>
         ) : null}
         {saved && !error ? (
-          <p className="text-xs text-muted">Documents now use {saved}.</p>
+          <p className="text-xs text-muted">{fmt(t("Documents now use {font}."), { font: saved })}</p>
         ) : null}
 
         {/* Renderer support — never let a substitution be silent (§11.4). */}
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted">Export support</p>
+          <p className="text-xs font-medium text-muted">{t("Export support")}</p>
           <div className="flex flex-wrap gap-1.5">
             {RENDERERS.map((r) => {
               const ok = font.supportedRenderers[r.key];
@@ -144,7 +147,7 @@ export function DocumentControlForm({
                     ok ? "border-border text-fg" : "border-warning/30 bg-warning/5 text-warning",
                   ].join(" ")}
                 >
-                  {r.label}: {ok ? "yes" : "falls back"}
+                  {t(r.label)}: {ok ? t("yes") : t("falls back")}
                 </span>
               );
             })}
@@ -166,10 +169,10 @@ export function DocumentControlForm({
         {/* Live specimen, in the real face at print sizes. */}
         <div className="rounded-lg border border-border bg-white p-5 text-gray-900" style={{ fontFamily: previewFamily }}>
           <div style={{ fontSize: pt(TYPE_SCALE.documentTitle), fontWeight: 700, lineHeight: 1.15 }}>
-            PROJECT PROPOSAL
+            {t("PROJECT PROPOSAL")}
           </div>
           <div style={{ fontSize: pt(TYPE_SCALE.subtitle), color: "#4b5563", marginTop: 2 }}>
-            Architecture, Engineering &amp; Construction Services
+            {t("Architecture, Engineering & Construction Services")}
           </div>
           <div
             style={{
@@ -180,25 +183,24 @@ export function DocumentControlForm({
               paddingBottom: 3,
             }}
           >
-            Scope of services
+            {t("Scope of services")}
           </div>
           <p style={{ fontSize: pt(TYPE_SCALE.body), lineHeight: 1.45, marginTop: 8 }}>
-            The proposed scope includes design development, technical coordination, construction
-            documentation, and project-administration services.
+            {t("The proposed scope includes design development, technical coordination, construction documentation, and project-administration services.")}
           </p>
           <ul style={{ fontSize: pt(TYPE_SCALE.body), lineHeight: 1.45, marginTop: 6, paddingLeft: 16, listStyle: "disc" }}>
-            <li>Master planning and site layout</li>
-            <li>Structural, mechanical and electrical coordination</li>
+            <li>{t("Master planning and site layout")}</li>
+            <li>{t("Structural, mechanical and electrical coordination")}</li>
           </ul>
 
           <table style={{ width: "100%", marginTop: 12, borderCollapse: "collapse", fontSize: pt(TYPE_SCALE.tableBody) }}>
             <tbody>
               <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td style={{ padding: "3px 0" }}>Project No. 2026A-018</td>
+                <td style={{ padding: "3px 0" }}>{t("Project No.")} 2026A-018</td>
                 <td style={{ padding: "3px 0", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>62.5%</td>
               </tr>
               <tr style={{ borderTop: "1.5px solid #111827" }}>
-                <td style={{ padding: "3px 0", fontWeight: 700 }}>Total Professional Fee</td>
+                <td style={{ padding: "3px 0", fontWeight: 700 }}>{t("Total Professional Fee")}</td>
                 <td style={{ padding: "3px 0", textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                   AWG 125,000.00
                 </td>
@@ -212,8 +214,10 @@ export function DocumentControlForm({
         </div>
 
         <p className="text-[11px] text-faint">
-          Font catalog v{FONT_CATALOG_VERSION}. Documents record the typeface they were issued with,
-          so changing this does not alter previously issued documents.
+          {fmt(
+            t("Font catalog v{version}. Documents record the typeface they were issued with, so changing this does not alter previously issued documents."),
+            { version: FONT_CATALOG_VERSION },
+          )}
         </p>
       </CardBody>
     </Card>

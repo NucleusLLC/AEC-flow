@@ -6,6 +6,8 @@ import { PackageCheck, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import type { PurchaseOrderLine } from "@/lib/procurement/types";
 import { receivePurchaseOrderAction } from "@/app/(app)/procurement/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export function PoReceivePanel({
   poId,
@@ -14,6 +16,7 @@ export function PoReceivePanel({
   poId: string;
   lines: PurchaseOrderLine[];
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -48,15 +51,15 @@ export function PoReceivePanel({
   return (
     <Card>
       <CardHeader
-        title="Receive items"
-        subtitle="Record delivered quantities — status updates automatically"
+        title={t("Receive items")}
+        subtitle={t("Record delivered quantities — status updates automatically")}
         action={
           <button
             type="button"
             onClick={receiveAll}
             className="rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-fg"
           >
-            Receive all
+            {t("Receive all")}
           </button>
         }
       />
@@ -70,7 +73,7 @@ export function PoReceivePanel({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm text-fg">{l.description || "—"}</div>
                   <div className="text-xs text-muted">
-                    Ordered {ordered}
+                    {fmt(t("Ordered {count}"), { count: ordered })}
                     {l.unit ? ` ${l.unit}` : ""}
                   </div>
                 </div>
@@ -95,13 +98,13 @@ export function PoReceivePanel({
 
         {error ? (
           <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-sm text-rose-700 dark:text-rose-400">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+            <AlertTriangle className="h-4 w-4 shrink-0" /> {t(error)}
           </div>
         ) : null}
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted">
-            {allReceived ? "All items received → marks the PO Received." : "Partial receipts mark the PO Partially received."}
+            {allReceived ? t("All items received → marks the PO Received.") : t("Partial receipts mark the PO Partially received.")}
           </span>
           <button
             type="button"
@@ -110,7 +113,7 @@ export function PoReceivePanel({
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
           >
             <PackageCheck className="h-4 w-4" />
-            {pending ? "Saving…" : "Record receipt"}
+            {pending ? t("Saving…") : t("Record receipt")}
           </button>
         </div>
       </CardBody>

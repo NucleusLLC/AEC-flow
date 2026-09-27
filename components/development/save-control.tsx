@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Save, Check, AlertTriangle } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Reusable Save button + inline status banner for the editable dev tabs.
@@ -12,13 +14,14 @@ export function SaveControl({
   method = "PUT",
   url,
   build,
-  label = "Save",
+  label,
 }: {
   method?: "PUT" | "PATCH";
   url: string;
   build: () => unknown;
   label?: string;
 }) {
+  const t = useT();
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -28,7 +31,7 @@ export function SaveControl({
     try {
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(build()) });
       const json = await res.json().catch(() => ({}));
-      setMsg(res.ok ? { ok: true, text: "Saved." } : { ok: false, text: json.error ?? `Failed (${res.status})` });
+      setMsg(res.ok ? { ok: true, text: t("Saved.") } : { ok: false, text: json.error ?? fmt(t("Failed ({status})"), { status: res.status }) });
     } catch (err) {
       setMsg({ ok: false, text: (err as Error).message });
     } finally {
@@ -51,7 +54,7 @@ export function SaveControl({
         className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50"
       >
         <Save className="h-4 w-4" />
-        {saving ? "Saving…" : label}
+        {saving ? t("Saving…") : (label ?? t("Save"))}
       </button>
     </div>
   );

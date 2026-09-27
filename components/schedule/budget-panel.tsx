@@ -30,6 +30,8 @@ import {
   type EstimateReconciliation,
   type Money,
 } from "@/lib/schedule/budget";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Budget on the schedule — BUDGET vs COMMITTED vs RECEIVED, per activity.
@@ -80,6 +82,7 @@ export function BudgetPanel({
   onBudgetChange: BudgetChangeHandler;
   onHide: () => void;
 }) {
+  const tr = useT();
   const [data, setData] = useState<ScheduleBudgetData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,9 +168,9 @@ export function BudgetPanel({
           <CircleDollarSign className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-fg">Cost-loaded schedule</div>
+          <div className="text-sm font-semibold text-fg">{tr("Cost-loaded schedule")}</div>
           <p className="text-xs text-muted">
-            Budget from the Cost Estimate, committed and received from purchase orders.
+            {tr("Budget from the Cost Estimate, committed and received from purchase orders.")}
           </p>
         </div>
         <button
@@ -175,23 +178,23 @@ export function BudgetPanel({
           onClick={onHide}
           className="ml-auto rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          Hide
+          {tr("Hide")}
         </button>
       </div>
 
       {loading ? (
         <div className="flex items-center gap-2 px-5 py-8 text-sm text-muted">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading budget…
+          <Loader2 className="h-4 w-4 animate-spin" /> {tr("Loading budget…")}
         </div>
       ) : loadError ? (
         <div className="flex flex-wrap items-center gap-3 px-5 py-8 text-sm text-red-600">
-          <AlertTriangle className="h-4 w-4" /> {loadError}
+          <AlertTriangle className="h-4 w-4" /> {tr(loadError)}
           <button
             type="button"
             onClick={() => void reload()}
             className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
-            <RotateCcw className="mr-1 inline h-3 w-3" /> Retry
+            <RotateCcw className="mr-1 inline h-3 w-3" /> {tr("Retry")}
           </button>
         </div>
       ) : data && rollup ? (
@@ -205,19 +208,19 @@ export function BudgetPanel({
               <thead>
                 <tr className="border-b border-border bg-surface-2 text-left">
                   <th scope="col" className={cn(headCell, "text-left")}>
-                    Activity
+                    {tr("Activity")}
                   </th>
                   <th scope="col" className={cn(headCell, "text-right")}>
-                    Budget
+                    {tr("Budget")}
                   </th>
                   <th scope="col" className={cn(headCell, "text-right")}>
-                    Committed
+                    {tr("Committed")}
                   </th>
-                  <th scope="col" className={cn(headCell, "text-right")} title="Value of goods received against purchase orders. This application records no vendor invoices or payments, so this is not 'spent'.">
-                    Received
+                  <th scope="col" className={cn(headCell, "text-right")} title={tr("Value of goods received against purchase orders. This application records no vendor invoices or payments, so this is not 'spent'.")}>
+                    {tr("Received")}
                   </th>
                   <th scope="col" className={cn(headCell, "text-right")}>
-                    Variance
+                    {tr("Variance")}
                   </th>
                 </tr>
               </thead>
@@ -237,7 +240,7 @@ export function BudgetPanel({
                 {rollup.rows.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted">
-                      This programme has no activities yet.
+                      {tr("This programme has no activities yet.")}
                     </td>
                   </tr>
                 ) : null}
@@ -245,12 +248,17 @@ export function BudgetPanel({
               <tfoot>
                 <tr className="border-t-2 border-border bg-surface-2 font-semibold">
                   <td className="px-3 py-2 text-sm text-fg">
-                    Total
+                    {tr("Total")}
                     {rollup.totals.tasksWithoutBudget > 0 ? (
                       <span className="ml-2 text-[11px] font-normal text-muted">
-                        {rollup.totals.tasksWithoutBudget} of {rollup.totals.tasksTotal}{" "}
-                        {rollup.totals.tasksTotal === 1 ? "activity has" : "activities have"} no budget
-                        set
+                        {fmt(
+                          tr(
+                            rollup.totals.tasksTotal === 1
+                              ? "{count} of {total} activity has no budget set"
+                              : "{count} of {total} activities have no budget set",
+                          ),
+                          { count: rollup.totals.tasksWithoutBudget, total: rollup.totals.tasksTotal },
+                        )}
                       </span>
                     ) : null}
                   </td>
@@ -294,13 +302,12 @@ export function BudgetPanel({
           />
 
           <p className="border-t border-border px-5 py-3 text-[11px] leading-relaxed text-faint">
-            <strong className="font-semibold text-muted">Committed</strong> is the full value of
-            purchase orders that have been issued (drafts and cancellations are excluded).{" "}
-            <strong className="font-semibold text-muted">Received</strong> is the value of goods
-            actually received against them, with tax and shipping apportioned pro-rata — this
-            application records no vendor invoices or payments, so it is deliberately not called
-            &ldquo;spent&rdquo;. Budgets are saved with the programme; use{" "}
-            <strong className="font-semibold text-muted">Save</strong> above.
+            <strong className="font-semibold text-muted">{tr("Committed")}</strong>{" "}
+            {tr("is the full value of purchase orders that have been issued (drafts and cancellations are excluded).")}{" "}
+            <strong className="font-semibold text-muted">{tr("Received")}</strong>{" "}
+            {tr("is the value of goods actually received against them, with tax and shipping apportioned pro-rata — this application records no vendor invoices or payments, so it is deliberately not called “spent”.")}{" "}
+            {tr("Budgets are saved with the programme; use")}{" "}
+            <strong className="font-semibold text-muted">{tr("Save")}</strong> {tr("above.")}
           </p>
         </>
       ) : null}
@@ -319,12 +326,12 @@ function EstimateStrip({
   reconciliation: EstimateReconciliation | null;
   money: (m: Money | null) => string;
 }) {
+  const tr = useT();
   if (!data.estimate.found) {
     return (
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-3 text-xs text-muted">
         <FileSpreadsheet className="h-3.5 w-3.5 text-faint" />
-        This project has no Cost Estimate, so there is no baseline to budget from. Task budgets can
-        still be entered by hand.
+        {tr("This project has no Cost Estimate, so there is no baseline to budget from. Task budgets can still be entered by hand.")}
       </div>
     );
   }
@@ -333,9 +340,12 @@ function EstimateStrip({
     return (
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-amber-50 px-5 py-3 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
         <AlertTriangle className="h-3.5 w-3.5" />
-        The Cost Estimate ({data.estimate.version}) is priced in {data.estimate.currency}, but this
-        rollup is in {data.currency}. Its figures are not converted or seeded — there is no exchange
-        rate in this application.
+        {fmt(
+          tr(
+            "The Cost Estimate ({version}) is priced in {estimateCurrency}, but this rollup is in {currency}. Its figures are not converted or seeded — there is no exchange rate in this application.",
+          ),
+          { version: data.estimate.version, estimateCurrency: data.estimate.currency, currency: data.currency },
+        )}
       </div>
     );
   }
@@ -344,15 +354,15 @@ function EstimateStrip({
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border px-5 py-3 text-xs">
       <span className="inline-flex items-center gap-1.5 text-muted">
         <FileSpreadsheet className="h-3.5 w-3.5 text-faint" />
-        Cost Estimate {data.estimate.version}
+        {fmt(tr("Cost Estimate {version}"), { version: data.estimate.version })}
       </span>
       {reconciliation ? (
         <>
-          <Figure label="Grand total" value={money(reconciliation.grandTotal)} />
-          <Figure label="Direct cost" value={money(reconciliation.direct)} />
-          <Figure label="Placed on activities" value={money(reconciliation.allocated)} />
+          <Figure label={tr("Grand total")} value={money(reconciliation.grandTotal)} />
+          <Figure label={tr("Direct cost")} value={money(reconciliation.direct)} />
+          <Figure label={tr("Placed on activities")} value={money(reconciliation.allocated)} />
           <Figure
-            label="Not yet placed"
+            label={tr("Not yet placed")}
             value={money(reconciliation.unallocated)}
             tone={reconciliation.unallocated.minor < 0 ? "text-red-600" : undefined}
           />
@@ -392,6 +402,7 @@ function TaskRow({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const tr = useT();
 
   const shown = draft ?? (row.budget === null ? "" : String(toMajor(row.budget)));
 
@@ -424,9 +435,9 @@ function TaskRow({
           {row.budgetSource === "estimate" ? (
             <span
               className="shrink-0 rounded-full bg-brand/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-brand"
-              title="Taken from the project's Cost Estimate"
+              title={tr("Taken from the project's Cost Estimate")}
             >
-              Est
+              {tr("Est")}
             </span>
           ) : null}
           {row.commitmentCount > 0 ? (
@@ -439,7 +450,7 @@ function TaskRow({
       <td className="px-3 py-1.5">
         <div className="flex items-center justify-end gap-1.5">
           <label className="sr-only" htmlFor={`budget-${row.taskId}`}>
-            Budget for {row.name}
+            {fmt(tr("Budget for {name}"), { name: row.name })}
           </label>
           <input
             id={`budget-${row.taskId}`}
@@ -474,7 +485,7 @@ function TaskRow({
               type="button"
               onClick={onOpenPicker}
               aria-expanded={pickerOpen}
-              title="Take this budget from the Cost Estimate"
+              title={tr("Take this budget from the Cost Estimate")}
               className={cn(
                 "shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
                 pickerOpen
@@ -482,13 +493,13 @@ function TaskRow({
                   : "border-border bg-surface text-muted hover:text-fg",
               )}
             >
-              Est…
+              {tr("Est…")}
             </button>
           ) : null}
         </div>
         {error ? (
           <div id={`budget-err-${row.taskId}`} className="mt-0.5 text-right text-[10px] text-red-600">
-            {error}
+            {tr(error)}
           </div>
         ) : null}
       </td>
@@ -541,6 +552,7 @@ function EstimatePicker({
     [task?.budgetRef],
   );
   const [picked, setPicked] = useState<Set<string>>(initial);
+  const tr = useT();
 
   const refs = useMemo(() => [...picked], [picked]);
   const total = useMemo(() => sumEstimateLines(lines, refs, currency), [lines, refs, currency]);
@@ -559,28 +571,27 @@ function EstimatePicker({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Coins className="h-3.5 w-3.5 text-brand" />
         <span className="text-xs font-semibold text-fg">
-          Estimate lines for “{task?.name ?? "activity"}”
+          {fmt(tr("Estimate lines for “{name}”"), { name: task?.name ?? tr("activity") })}
         </span>
         <button
           type="button"
           onClick={onClose}
           className="ml-auto rounded p-1 text-faint transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          aria-label="Close estimate picker"
+          aria-label={tr("Close estimate picker")}
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
       <p className="mb-2 text-[11px] text-muted">
-        Choose the estimate lines this activity is funded by. The budget becomes their exact sum —
-        selecting a section already covers its items, so those are not counted twice.
+        {tr("Choose the estimate lines this activity is funded by. The budget becomes their exact sum — selecting a section already covers its items, so those are not counted twice.")}
       </p>
       <div
         role="group"
-        aria-label="Estimate lines"
+        aria-label={tr("Estimate lines")}
         className="max-h-64 overflow-y-auto rounded-lg border border-border bg-surface"
       >
         {lines.length === 0 ? (
-          <p className="px-3 py-4 text-xs text-muted">This estimate has no priced lines.</p>
+          <p className="px-3 py-4 text-xs text-muted">{tr("This estimate has no priced lines.")}</p>
         ) : (
           lines.map((l) => {
             const on = picked.has(l.ref);
@@ -608,7 +619,7 @@ function EstimatePicker({
                 >
                   {l.label}
                   {coveredByParent ? (
-                    <span className="ml-1.5 text-[10px] text-faint">(in section)</span>
+                    <span className="ml-1.5 text-[10px] text-faint">{tr("(in section)")}</span>
                   ) : null}
                 </span>
                 <span className="shrink-0 font-mono text-xs tabular-nums text-fg">
@@ -621,7 +632,7 @@ function EstimatePicker({
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <span className="text-xs text-muted">
-          Selected{" "}
+          {tr("Selected")}{" "}
           <span className="font-mono text-sm font-semibold tabular-nums text-fg">
             {formatCurrency(toMajor(total), currency, { maximumFractionDigits: 2 })}
           </span>
@@ -632,14 +643,14 @@ function EstimatePicker({
           disabled={refs.length === 0}
           className="ml-auto rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-default disabled:opacity-50"
         >
-          Set budget
+          {tr("Set budget")}
         </button>
         <button
           type="button"
           onClick={onClose}
           className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
-          Cancel
+          {tr("Cancel")}
         </button>
       </div>
     </div>
@@ -668,6 +679,7 @@ function Buckets({
   error: string | null;
   onAssign: (purchaseOrderId: string, taskKey: string | null) => void;
 }) {
+  const tr = useT();
   const { unassigned, orphaned, excluded, doubleCountedParents } = rollup;
   const nothing =
     unassigned.count === 0 &&
@@ -680,23 +692,28 @@ function Buckets({
     <div className="space-y-3 border-t border-border bg-surface-2 px-5 py-4">
       {error ? (
         <p className="flex items-center gap-1.5 text-xs text-red-600">
-          <AlertTriangle className="h-3.5 w-3.5" /> {error}
+          <AlertTriangle className="h-3.5 w-3.5" /> {tr(error)}
         </p>
       ) : null}
 
       {unassigned.count > 0 ? (
-        <section aria-label="Unassigned commitments">
+        <section aria-label={tr("Unassigned commitments")}>
           <h3 className="mb-1.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-fg">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-            {unassigned.count} purchase{" "}
-            {unassigned.count === 1 ? "order is" : "orders are"} not assigned to an activity
+            {fmt(
+              tr(
+                unassigned.count === 1
+                  ? "{count} purchase order is not assigned to an activity"
+                  : "{count} purchase orders are not assigned to an activity",
+              ),
+              { count: unassigned.count },
+            )}
             <span className="font-mono tabular-nums text-muted">
-              {money(unassigned.committed)} committed · {money(unassigned.received)} received
+              {fmt(tr("{committed} committed · {received} received"), { committed: money(unassigned.committed), received: money(unassigned.received) })}
             </span>
           </h3>
           <p className="mb-2 text-[11px] text-muted">
-            This money is real and is excluded from every figure in the table above. Assign each
-            order to the activity it belongs to.
+            {tr("This money is real and is excluded from every figure in the table above. Assign each order to the activity it belongs to.")}
           </p>
           <ul className="space-y-1">
             {unassigned.orders.map((o) => (
@@ -707,7 +724,7 @@ function Buckets({
                   {o.status.toLowerCase()}
                 </span>
                 <label className="sr-only" htmlFor={`assign-${o.id}`}>
-                  Assign {o.reference} to an activity
+                  {fmt(tr("Assign {reference} to an activity"), { reference: o.reference })}
                 </label>
                 <select
                   id={`assign-${o.id}`}
@@ -716,7 +733,7 @@ function Buckets({
                   onChange={(e) => onAssign(o.id, e.target.value || null)}
                   className="ml-auto max-w-[240px] rounded-md border border-border bg-surface px-2 py-1 text-xs text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-50"
                 >
-                  <option value="">Assign to activity…</option>
+                  <option value="">{tr("Assign to activity…")}</option>
                   {tasks.map((t) => (
                     <option key={t.id} value={t.id}>
                       {"— ".repeat(t.depth)}
@@ -731,13 +748,19 @@ function Buckets({
       ) : null}
 
       {orphaned.count > 0 ? (
-        <section aria-label="Orphaned commitments">
+        <section aria-label={tr("Orphaned commitments")}>
           <h3 className="mb-1.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-fg">
             <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-            {orphaned.count} purchase {orphaned.count === 1 ? "order points" : "orders point"} at an
-            activity that no longer exists
+            {fmt(
+              tr(
+                orphaned.count === 1
+                  ? "{count} purchase order points at an activity that no longer exists"
+                  : "{count} purchase orders point at an activity that no longer exists",
+              ),
+              { count: orphaned.count },
+            )}
             <span className="font-mono tabular-nums text-muted">
-              {money(orphaned.committed)} committed
+              {fmt(tr("{amount} committed"), { amount: money(orphaned.committed) })}
             </span>
           </h3>
           <ul className="space-y-1">
@@ -746,7 +769,7 @@ function Buckets({
                 <span className="font-mono text-fg">{o.reference}</span>
                 <span className="truncate text-muted">{o.vendorName}</span>
                 <label className="sr-only" htmlFor={`reassign-${o.id}`}>
-                  Reassign {o.reference}
+                  {fmt(tr("Reassign {reference}"), { reference: o.reference })}
                 </label>
                 <select
                   id={`reassign-${o.id}`}
@@ -755,7 +778,7 @@ function Buckets({
                   onChange={(e) => onAssign(o.id, e.target.value || null)}
                   className="ml-auto max-w-[240px] rounded-md border border-border bg-surface px-2 py-1 text-xs text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-50"
                 >
-                  <option value="">Reassign to an activity…</option>
+                  <option value="">{tr("Reassign to an activity…")}</option>
                   {tasks.map((t) => (
                     <option key={t.id} value={t.id}>
                       {"— ".repeat(t.depth)}
@@ -770,31 +793,41 @@ function Buckets({
       ) : null}
 
       {excluded.count > 0 ? (
-        <section aria-label="Excluded commitments">
+        <section aria-label={tr("Excluded commitments")}>
           <h3 className="mb-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-fg">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-            {excluded.count} purchase {excluded.count === 1 ? "order is" : "orders are"} in another
-            currency ({excluded.currencies.join(", ")})
+            {fmt(
+              tr(
+                excluded.count === 1
+                  ? "{count} purchase order is in another currency ({currencies})"
+                  : "{count} purchase orders are in another currency ({currencies})",
+              ),
+              { count: excluded.count, currencies: excluded.currencies.join(", ") },
+            )}
           </h3>
           <p className="text-[11px] text-muted">
-            Not converted and not included in any total — this application holds no exchange rate,
-            and inventing one would fabricate money.{" "}
+            {tr("Not converted and not included in any total — this application holds no exchange rate, and inventing one would fabricate money.")}{" "}
             {excluded.orders.map((o) => o.reference).join(", ")}
           </p>
         </section>
       ) : null}
 
       {doubleCountedParents.length > 0 ? (
-        <section aria-label="Double-counted parents">
+        <section aria-label={tr("Double-counted parents")}>
           <h3 className="mb-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-fg">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-            Budget may be counted twice
+            {tr("Budget may be counted twice")}
           </h3>
           <p className="text-[11px] text-muted">
-            {doubleCountedParents.join(", ")} {doubleCountedParents.length === 1 ? "carries" : "carry"}{" "}
-            a budget and also {doubleCountedParents.length === 1 ? "has" : "have"} budgeted sub-tasks.
-            Each figure is counted once in the total, so the parent&rsquo;s own amount is added on top
-            of its children&rsquo;s rather than replaced by them.
+            {fmt(
+              tr(
+                doubleCountedParents.length === 1
+                  ? "{names} carries a budget and also has budgeted sub-tasks."
+                  : "{names} carry a budget and also have budgeted sub-tasks.",
+              ),
+              { names: doubleCountedParents.join(", ") },
+            )}{" "}
+            {tr("Each figure is counted once in the total, so the parent’s own amount is added on top of its children’s rather than replaced by them.")}
           </p>
         </section>
       ) : null}

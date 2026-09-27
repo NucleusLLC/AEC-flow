@@ -9,6 +9,7 @@ import { getGeneralConditions } from "@/lib/data/general-conditions-db";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { footerMarginBoxesCss } from "@/lib/documents/footer-boxes";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -18,7 +19,8 @@ type PageProps = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const est = await getEstimateById(id);
-  return { title: est ? `${est.id} — Cost Estimate` : "Cost Estimate" };
+  const t = await getServerT();
+  return { title: est ? `${est.id} — ${t("Cost Estimate")}` : t("Cost Estimate") };
 }
 
 export default async function EstimatePrintPage({ params, searchParams }: PageProps) {
@@ -29,6 +31,7 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
   const { logoDataUrl, logo, profile, footer } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const t = await getServerT();
 
   // General Conditions are opt-in (matches the editor's default-off toggle). Use the
   // firm's SAVED General Conditions (DB), not the static seed, so the exported PDF
@@ -59,6 +62,7 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
         marginRightMm: 14,
         marginBottomMm: 14,
         footerLeft: footer.text,
+        pageNumberFormat: t("Page {page} of {pages}"),
       })} } @media print { html, body { background: #fff; } }`}</style>
 
       {/* Toolbar — hidden when printing */}
@@ -68,14 +72,14 @@ export default async function EstimatePrintPage({ params, searchParams }: PagePr
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to estimate
+          {t("Back to estimate")}
         </Link>
         <PrintButton />
       </div>
 
       {/* A4 document sheet */}
       <div className="my-6 print:my-0">
-        <EstimateDocument est={est} generalConditions={generalConditions} usdRate={usdRate} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} />
+        <EstimateDocument est={est} generalConditions={generalConditions} usdRate={usdRate} logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }} companyName={companyName} tr={t} />
       </div>
     </div>
   );

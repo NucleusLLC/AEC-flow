@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, updateClient, getClients } from "@/lib/data/clients";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { ClientWriteInput } from "@/lib/data/clients.types";
+import { getServerT } from "@/lib/i18n/server";
 
 export type SaveClientResult =
   | { ok: true; id: string }
@@ -19,7 +20,8 @@ export async function saveClient(
   input: ClientWriteInput,
 ): Promise<SaveClientResult> {
   if (!input.name?.trim()) {
-    return { ok: false, error: "Client name is required." };
+    const t = await getServerT();
+    return { ok: false, error: t("Client name is required.") };
   }
   try {
     const cleaned = { ...input, name: input.name.trim() };
@@ -39,7 +41,8 @@ export async function saveClient(
     }
     return { ok: true, id };
   } catch (e) {
-    const error = e instanceof Error ? e.message : "Failed to save client.";
+    const t = await getServerT();
+    const error = e instanceof Error ? e.message : t("Failed to save client.");
     return { ok: false, error };
   }
 }

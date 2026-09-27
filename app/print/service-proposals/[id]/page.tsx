@@ -5,13 +5,18 @@ import { computeProposal } from "@/lib/proposals/engine/engine";
 import type { ProposalCalcInput } from "@/lib/proposals/engine/types";
 import { STATUS_LABEL } from "@/lib/proposals/engine/status";
 import { formatCurrency } from "@/lib/format";
-import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
+import { bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { CaPrintShell, PrintSection } from "@/components/construction-admin/print-shell";
 import { Emphasised, RichText } from "@/components/print/rich-text";
 import { stripMarkers } from "@/lib/documents/emphasis";
 import { ProposalIdentificationPrint } from "@/components/service-proposals/proposal-identification";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Service Proposal · Print" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Service Proposal")} · ${t("Print")}` };
+}
 
 /**
  * Client-facing proposal document.
@@ -29,6 +34,7 @@ export default async function ServiceProposalPrintPage({
   const { id } = await params;
   const p = await getServiceProposal(id);
   if (!p) notFound();
+  const t = await getServerT();
 
   const identification = await getServiceProposalIdentification(p);
   const calc = computeProposal(p.input as ProposalCalcInput);
@@ -45,6 +51,8 @@ export default async function ServiceProposalPrintPage({
     taxableSubtotal: calc.totals.taxableSubtotal,
   });
   const milestoneBbo = bboPerMilestone(calc.paymentSchedule, bbo.amount, p.currency);
+  // Same wording as bboNote() in lib/proposals/bbo, translated for the document.
+  const bboText = fmt(t(bbo.included ? "{name} is included in the price." : "{name} is added to the price."), { name: bbo.name });
 
   const baseComponents = calc.components.filter((c) => c.category === "BASE");
   const selectedOptional = calc.components.filter((c) => c.category === "OPTIONAL" && c.countedInTotal);
@@ -53,33 +61,33 @@ export default async function ServiceProposalPrintPage({
   return (
     <CaPrintShell
       backHref={`/design/service-proposals/${p.id}`}
-      docTitle="Service Proposal"
+      docTitle={t("Service Proposal")}
       refNumber={`${p.number}${p.revision > 1 ? ` r${p.revision}` : ""}`}
-      statusLabel={STATUS_LABEL[p.status]}
+      statusLabel={t(STATUS_LABEL[p.status])}
       versionLabel={p.versionLabel}
       title={p.title}
       meta={[
-        { label: "Client", value: identification.clientDisplayName ?? "—" },
-        { label: "Project", value: identification.projectDisplayName ?? "—" },
-        { label: "Issued", value: p.issuedAt ? p.issuedAt.slice(0, 10) : "—" },
-        { label: "Valid until", value: p.validUntil ?? "—" },
+        { label: t("Client"), value: identification.clientDisplayName ?? "—" },
+        { label: t("Project"), value: identification.projectDisplayName ?? "—" },
+        { label: t("Issued"), value: p.issuedAt ? p.issuedAt.slice(0, 10) : "—" },
+        { label: t("Valid until"), value: p.validUntil ?? "—" },
       ]}
       signatures={[
-        { role: "Prepared by", name: p.createdByName ?? "" },
-        { role: "For the client", name: p.contactName ?? "" },
-        { role: "Date", name: "" },
+        { role: t("Prepared by"), name: p.createdByName ?? "" },
+        { role: t("For the client"), name: p.contactName ?? "" },
+        { role: t("Date"), name: "" },
       ]}
     >
       {/* Identification block — the default opening section of the document. Absent entirely
        * when the proposal has no linked client or project. */}
       {identification.hasAny ? (
-        <PrintSection title="Project & client">
-          <ProposalIdentificationPrint identification={identification} />
+        <PrintSection title={t("Project & client")}>
+          <ProposalIdentificationPrint identification={identification} t={t} />
         </PrintSection>
       ) : null}
 
       {p.input.scopeSummary || (p.input.scopeItems && p.input.scopeItems.length > 0) ? (
-        <PrintSection title="Scope of services">
+        <PrintSection title={t("Scope of services")}>
           {p.input.scopeSummary ? (
             <RichText text={p.input.scopeSummary} />
           ) : null}
@@ -104,12 +112,12 @@ export default async function ServiceProposalPrintPage({
         </PrintSection>
       ) : null}
 
-      <PrintSection title="Professional fees">
+      <PrintSection title={t("Professional fees")}>
         <table className="w-full border-collapse text-[11px]">
           <thead>
             <tr className="border-b border-gray-300 text-left text-gray-500">
-              <th className="py-1.5 pr-2 font-medium">Service</th>
-              <th className="py-1.5 pl-2 text-right font-medium">Fee</th>
+              <th className="py-1.5 pr-2 font-medium">{t("Service")}</th>
+              <th className="py-1.5 pl-2 text-right font-medium">{t("Fee")}</th>
             </tr>
           </thead>
           <tbody>
@@ -121,18 +129,18 @@ export default async function ServiceProposalPrintPage({
             ))}
             {selectedOptional.map((c) => (
               <tr key={c.id} className="border-b border-gray-200">
-                <td className="py-1.5 pr-2 text-gray-900">{c.label} <span className="text-gray-400">(optional, included)</span></td>
+                <td className="py-1.5 pr-2 text-gray-900">{c.label} <span className="text-gray-400">{t("(optional, included)")}</span></td>
                 <td className="py-1.5 pl-2 text-right tabular-nums text-gray-900">{money(c.effectiveAmount)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t border-gray-300">
-              <td className="py-1.5 pr-2 font-semibold text-gray-900">Subtotal</td>
+              <td className="py-1.5 pr-2 font-semibold text-gray-900">{t("Subtotal")}</td>
               <td className="py-1.5 pl-2 text-right font-semibold tabular-nums text-gray-900">{money(calc.totals.subtotal)}</td>
             </tr>
             {calc.totals.discountTotal > 0 ? (
-              <tr><td className="py-1 pr-2 text-gray-600">Discount</td><td className="py-1 pl-2 text-right tabular-nums text-gray-700">− {money(calc.totals.discountTotal)}</td></tr>
+              <tr><td className="py-1 pr-2 text-gray-600">{t("Discount")}</td><td className="py-1 pl-2 text-right tabular-nums text-gray-700">− {money(calc.totals.discountTotal)}</td></tr>
             ) : null}
             {bbo.amount > 0 ? (
               <tr>
@@ -143,13 +151,13 @@ export default async function ServiceProposalPrintPage({
               </tr>
             ) : null}
             <tr className="border-t border-gray-300">
-              <td className="py-1.5 pr-2 font-bold text-gray-900">Grand total</td>
+              <td className="py-1.5 pr-2 font-bold text-gray-900">{t("Grand total")}</td>
               <td className="py-1.5 pl-2 text-right font-bold tabular-nums text-gray-900">{money(calc.totals.grandTotal)}</td>
             </tr>
             {bbo.amount > 0 ? (
               <tr>
                 <td className="pt-1 text-[10px] text-gray-500" colSpan={2}>
-                  ({bboNote(bbo)})
+                  ({bboText})
                 </td>
               </tr>
             ) : null}
@@ -158,13 +166,16 @@ export default async function ServiceProposalPrintPage({
 
         {p.showFeeDerivation && calc.basis ? (
           <p className="mt-2 text-[10px] text-gray-500">
-            Percentage fees are based on the {calc.basis.label.toLowerCase()} of {money(calc.basis.amount)}.
+            {fmt(t("Percentage fees are based on the {basis} of {amount}."), {
+              basis: t(calc.basis.label).toLowerCase(),
+              amount: money(calc.basis.amount),
+            })}
           </p>
         ) : null}
       </PrintSection>
 
       {calc.phases.length > 0 ? (
-        <PrintSection title="Design phases">
+        <PrintSection title={t("Design phases")}>
           <table className="w-full border-collapse text-[11px]">
             <tbody>
               {calc.phases.map((ph) => (
@@ -180,15 +191,15 @@ export default async function ServiceProposalPrintPage({
       ) : null}
 
       {calc.paymentSchedule.length > 0 ? (
-        <PrintSection title="Payment schedule">
+        <PrintSection title={t("Payment schedule")}>
           <table className="w-full border-collapse text-[11px]">
             <thead>
               <tr className="border-b border-gray-300 text-left text-gray-500">
-                <th className="py-1.5 pr-2 font-medium">Instalment</th>
-                <th className="py-1.5 px-2 text-right font-medium">Share</th>
-                <th className="py-1.5 px-2 text-right font-medium">Amount</th>
+                <th className="py-1.5 pr-2 font-medium">{t("Instalment")}</th>
+                <th className="py-1.5 px-2 text-right font-medium">{t("Share")}</th>
+                <th className="py-1.5 px-2 text-right font-medium">{t("Amount")}</th>
                 <th className="py-1.5 pl-2 text-right font-medium">
-                  {bbo.name} incl. ({bbo.percent}%)
+                  {fmt(t("{name} incl. ({pct}%)"), { name: bbo.name, pct: bbo.percent })}
                 </th>
               </tr>
             </thead>
@@ -209,7 +220,7 @@ export default async function ServiceProposalPrintPage({
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-300">
-                <td className="py-1.5 pr-2 font-semibold text-gray-900" colSpan={2}>Total</td>
+                <td className="py-1.5 pr-2 font-semibold text-gray-900" colSpan={2}>{t("Total")}</td>
                 <td className="py-1.5 px-2 text-right font-semibold tabular-nums text-gray-900">
                   {money(calc.totals.grandTotal)}
                 </td>
@@ -219,8 +230,7 @@ export default async function ServiceProposalPrintPage({
               </tr>
               <tr>
                 <td className="pt-1 text-[10px] text-gray-500" colSpan={4}>
-                  ({bboNote(bbo)}{" "}Each instalment&rsquo;s share is payable in the month it is
-                  invoiced.)
+                  ({bboText}{" "}{t("Each instalment’s share is payable in the month it is invoiced.")})
                 </td>
               </tr>
             </tfoot>
@@ -229,7 +239,7 @@ export default async function ServiceProposalPrintPage({
       ) : null}
 
       {otherOptional.length > 0 ? (
-        <PrintSection title="Optional services (not included in the total)">
+        <PrintSection title={t("Optional services (not included in the total)")}>
           <table className="w-full border-collapse text-[11px]">
             <tbody>
               {otherOptional.map((c) => (
@@ -244,19 +254,19 @@ export default async function ServiceProposalPrintPage({
       ) : null}
 
       {p.input.assumptions ? (
-        <PrintSection title="Assumptions">
+        <PrintSection title={t("Assumptions")}>
           <RichText text={p.input.assumptions} />
         </PrintSection>
       ) : null}
 
       {p.input.exclusions ? (
-        <PrintSection title="Exclusions">
+        <PrintSection title={t("Exclusions")}>
           <RichText text={p.input.exclusions} />
         </PrintSection>
       ) : null}
 
       {p.input.terms ? (
-        <PrintSection title="Terms & conditions">
+        <PrintSection title={t("Terms & conditions")}>
           <RichText text={p.input.terms} />
         </PrintSection>
       ) : null}

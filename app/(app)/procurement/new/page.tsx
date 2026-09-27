@@ -3,10 +3,15 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PurchaseOrderForm } from "@/components/procurement/purchase-order-form";
 import { getProjects } from "@/lib/data/projects";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "New Purchase Order · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("New Purchase Order")} · AEC-flow` };
+}
 
 export default async function NewPurchaseOrderPage() {
+  const t = await getServerT();
   const projects = await getProjects();
   const options = projects.map((p) => ({ id: p.id, name: p.name }));
 
@@ -17,12 +22,12 @@ export default async function NewPurchaseOrderPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Procurement
+        {t("Procurement")}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">New Purchase Order</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("New Purchase Order")}</h2>
         <p className="text-sm text-muted">
-          The PO number is assigned on save. Line totals and the order total calculate live.
+          {t("The PO number is assigned on save. Line totals and the order total calculate live.")}
         </p>
       </div>
       <PurchaseOrderForm projects={options} mode="new" />

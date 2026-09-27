@@ -9,6 +9,8 @@ import {
 import { copySummary, copyLines, currenciesMatch } from "@/lib/estimates/copy-lines";
 import type { CopyDestination, EstimateCategory } from "@/lib/data/estimates.types";
 import { militaryDate } from "@/lib/building-permits/register";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * "Copy to another / new project" — the destination picker for coded tasks
@@ -42,6 +44,7 @@ export function CopyTasksDialog({
   onClose: () => void;
   onCopied?: (result: { estimateId: string; taskCount: number }) => void;
 }) {
+  const t = useT();
   const [projects, setProjects] = useState<CopyDestination[] | null>(null);
   const [targetId, setTargetId] = useState<string>("");
   const [includeQuantities, setIncludeQuantities] = useState(false);
@@ -136,13 +139,13 @@ export function CopyTasksDialog({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="inline-flex items-center gap-2 text-sm font-semibold text-fg">
-            <Copy className="h-4 w-4 text-brand" /> Copy tasks to another project
+            <Copy className="h-4 w-4 text-brand" /> {t("Copy tasks to another project")}
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            aria-label="Close"
+            aria-label={t("Close")}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-faint hover:text-fg disabled:opacity-40"
           >
             <X className="h-4 w-4" />
@@ -155,15 +158,16 @@ export function CopyTasksDialog({
               <Check className="h-6 w-6" />
             </span>
             <div className="text-sm font-semibold text-fg">
-              {done.taskCount} {done.taskCount === 1 ? "task" : "tasks"} copied to{" "}
-              {target?.name ?? "the project"}
+              {done.taskCount === 1
+                ? fmt(t("1 task copied to {project}"), { project: target?.name ?? t("the project") })
+                : fmt(t("{count} tasks copied to {project}"), { count: done.taskCount, project: target?.name ?? t("the project") })}
             </div>
             <div className="text-xs text-muted">
               {done.created
-                ? "That project had no estimate, so one was created for it."
-                : "They were added after the sections already on that sheet."}
+                ? t("That project had no estimate, so one was created for it.")
+                : t("They were added after the sections already on that sheet.")}
               {done.pricesWithheld
-                ? " Prices were not copied, because the two estimates use different currencies."
+                ? ` ${t("Prices were not copied, because the two estimates use different currencies.")}`
                 : ""}
             </div>
             <div className="mt-3 flex items-center gap-2">
@@ -172,13 +176,13 @@ export function CopyTasksDialog({
                 onClick={onClose}
                 className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-2"
               >
-                Close
+                {t("Close")}
               </button>
               <a
                 href={`/estimates?project=${done.estimateId}`}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90"
               >
-                Open that estimate <ArrowRight className="h-4 w-4" />
+                {t("Open that estimate")} <ArrowRight className="h-4 w-4" />
               </a>
             </div>
           </div>
@@ -189,19 +193,19 @@ export function CopyTasksDialog({
                 <div className="flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
-                    <div className="font-semibold">Nothing was copied.</div>
-                    <div className="mt-0.5">{error}</div>
+                    <div className="font-semibold">{t("Nothing was copied.")}</div>
+                    <div className="mt-0.5">{t(error)}</div>
                   </div>
                 </div>
               ) : null}
 
               <div className="rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
-                <span className="font-medium text-fg">Copying:</span> {preview.text}
+                <span className="font-medium text-fg">{t("Copying:")}</span> {preview.text}
               </div>
 
               <label className="block">
                 <span className="text-xs font-medium uppercase tracking-wide text-faint">
-                  Destination project
+                  {t("Destination project")}
                 </span>
                 <select
                   value={targetId}
@@ -209,32 +213,29 @@ export function CopyTasksDialog({
                   disabled={busy}
                   className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none focus:ring-1 focus:ring-brand/30"
                 >
-                  <option value="">Choose a project…</option>
+                  <option value="">{t("Choose a project…")}</option>
                   {(projects ?? []).map((p) => (
                     <option key={p.id} value={p.id} disabled={p.locked}>
                       {p.projectNumber} · {p.name}
                       {p.hasEstimate
-                        ? ` — estimate ${p.estimateDate ? militaryDate(p.estimateDate) : "undated"}${p.locked ? " (LOCKED)" : ""}`
-                        : " — no estimate yet"}
+                        ? ` — ${fmt(t("estimate {date}"), { date: p.estimateDate ? militaryDate(p.estimateDate) : t("undated") })}${p.locked ? ` (${t("LOCKED")})` : ""}`
+                        : ` — ${t("no estimate yet")}`}
                       {currenciesMatch(p.currency, sourceCurrency) ? "" : ` · ${p.currency}`}
                     </option>
                   ))}
                 </select>
                 {projects === null ? (
-                  <span className="mt-1 block text-xs text-faint">Loading projects…</span>
+                  <span className="mt-1 block text-xs text-faint">{t("Loading projects…")}</span>
                 ) : projects.length === 0 ? (
                   <span className="mt-1 block text-xs text-muted">
-                    There is no other project to copy into yet.
+                    {t("There is no other project to copy into yet.")}
                   </span>
                 ) : null}
               </label>
 
               {target && !target.hasEstimate ? (
                 <div className="rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
-                  {target.name} has no estimate yet, so one will be created — with its
-                  own client and project details, and with this estimate&apos;s labour
-                  rate and margins, so the copied labour norms price to something.
-                  The built-up area does not travel: that describes a building.
+                  {fmt(t("{project} has no estimate yet, so one will be created — with its own client and project details, and with this estimate's labour rate and margins, so the copied labour norms price to something. The built-up area does not travel: that describes a building."), { project: target.name })}
                 </div>
               ) : null}
 
@@ -243,23 +244,22 @@ export function CopyTasksDialog({
                   checked={includeQuantities}
                   onChange={setIncludeQuantities}
                   disabled={busy}
-                  label="Also copy the quantities"
-                  hint="Off by default: a quantity comes from THIS project's take-off, so it describes this building."
+                  label={t("Also copy the quantities")}
+                  hint={t("Off by default: a quantity comes from THIS project's take-off, so it describes this building.")}
                 />
                 <Toggle
                   checked={includePrices && sameCurrency}
                   onChange={setIncludePrices}
                   disabled={busy || !sameCurrency}
-                  label="Also copy the unit prices"
+                  label={t("Also copy the unit prices")}
                   hint={
                     sameCurrency
-                      ? "Prices are snapshots taken when each line was added — region, indexation and FX included."
-                      : `Not available: this estimate is in ${sourceCurrency} and the destination is in ${targetCurrency}, so the stored prices do not mean the same thing.`
+                      ? t("Prices are snapshots taken when each line was added — region, indexation and FX included.")
+                      : fmt(t("Not available: this estimate is in {source} and the destination is in {target}, so the stored prices do not mean the same thing."), { source: sourceCurrency, target: targetCurrency })
                   }
                 />
                 <p className="text-[11px] leading-snug text-faint">
-                  Labour norms (hours per unit) always travel — the destination applies its
-                  own labour rate. Progress is always reset to zero.
+                  {t("Labour norms (hours per unit) always travel — the destination applies its own labour rate. Progress is always reset to zero.")}
                 </p>
               </div>
             </div>
@@ -271,7 +271,7 @@ export function CopyTasksDialog({
                 disabled={busy}
                 className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted hover:text-fg disabled:opacity-40"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -280,7 +280,7 @@ export function CopyTasksDialog({
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
-                {busy ? "Copying…" : "Copy tasks"}
+                {busy ? t("Copying…") : t("Copy tasks")}
               </button>
             </div>
           </>

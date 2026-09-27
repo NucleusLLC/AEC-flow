@@ -2,6 +2,9 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Upload, Printer, Trash2, X } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
+import { tContext } from "@/components/drawings/t-context";
+import { fmt } from "@/lib/i18n/format";
 
 type Photo = { id: string; url: string; caption: string };
 
@@ -17,6 +20,7 @@ const nid = () => `ph${++pid}-${Math.floor(performance.now())}`;
  * Client-side only (data URLs); persistence comes with the storage layer.
  */
 export function PhotoContactSheet() {
+  const t = useT();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [cols, setCols] = useState(2);
   const [rows, setRows] = useState(5);
@@ -66,27 +70,27 @@ export function PhotoContactSheet() {
           onChange={(e) => { onFiles(e.target.files); if (fileRef.current) fileRef.current.value = ""; }} />
         <button type="button" onClick={() => fileRef.current?.click()}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90">
-          <Upload className="h-4 w-4" /> Add photos
+          <Upload className="h-4 w-4" /> {t("Add photos")}
         </button>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-muted">Sheet title</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Site photos — Project / date"
+          <span className="mb-1 block text-xs font-medium text-muted">{t("Sheet title")}</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("Site photos — Project / date")}
             className="h-9 w-64 rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20" />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-muted">Columns</span>
+          <span className="mb-1 block text-xs font-medium text-muted">{t("Columns")}</span>
           <input type="number" min={1} max={6} value={cols} onChange={(e) => setCols(Math.max(1, Math.min(6, Number(e.target.value) || 1)))}
             className="h-9 w-20 rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-muted">Rows</span>
+          <span className="mb-1 block text-xs font-medium text-muted">{t("Rows")}</span>
           <input type="number" min={1} max={10} value={rows} onChange={(e) => setRows(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
             className="h-9 w-20 rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-muted">Paper</span>
+          <span className="mb-1 block text-xs font-medium text-muted">{t("Paper")}</span>
           <select value={paper} onChange={(e) => setPaper(e.target.value as Paper)}
             className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20">
             <option value="A4">A4</option>
@@ -94,11 +98,11 @@ export function PhotoContactSheet() {
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-muted">Orientation</span>
+          <span className="mb-1 block text-xs font-medium text-muted">{t("Orientation")}</span>
           <select value={landscape ? "l" : "p"} onChange={(e) => setLandscape(e.target.value === "l")}
             className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:ring-2 focus:ring-brand/20">
-            <option value="p">Portrait</option>
-            <option value="l">Landscape</option>
+            <option value="p">{tContext(t, "Portrait", "Portrait (orientation)")}</option>
+            <option value="l">{tContext(t, "Landscape", "Landscape (orientation)")}</option>
           </select>
         </label>
 
@@ -106,16 +110,23 @@ export function PhotoContactSheet() {
           {photos.length > 0 ? (
             <button type="button" onClick={() => setPhotos([])}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg">
-              <Trash2 className="h-4 w-4" /> Clear
+              <Trash2 className="h-4 w-4" /> {t("Clear")}
             </button>
           ) : null}
           <button type="button" onClick={() => window.print()} disabled={photos.length === 0}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
-            <Printer className="h-4 w-4" /> Print / Save PDF
+            <Printer className="h-4 w-4" /> {t("Print / Save PDF")}
           </button>
         </div>
         <p className="w-full text-xs text-faint">
-          {photos.length} photo{photos.length === 1 ? "" : "s"} · {cols}×{rows} = {perPage} per {paper} page · {pages.length} page{pages.length === 1 ? "" : "s"}
+          {fmt(t("{photos} · {cols}×{rows} = {perPage} per {paper} page · {pages}"), {
+            photos: photos.length === 1 ? t("1 photo") : fmt(t("{count} photos"), { count: photos.length }),
+            cols,
+            rows,
+            perPage,
+            paper,
+            pages: pages.length === 1 ? t("1 page") : fmt(t("{count} pages"), { count: pages.length }),
+          })}
         </p>
       </div>
 
@@ -123,8 +134,8 @@ export function PhotoContactSheet() {
         <button type="button" onClick={() => fileRef.current?.click()}
           className="flex w-full flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-border bg-surface-2/30 py-16 text-muted hover:border-brand/40 hover:text-fg">
           <Upload className="h-6 w-6" />
-          <span className="text-sm font-medium">Add site photos to build a contact sheet</span>
-          <span className="text-xs text-faint">Default layout: 2 columns × 5 rows on A4</span>
+          <span className="text-sm font-medium">{t("Add site photos to build a contact sheet")}</span>
+          <span className="text-xs text-faint">{t("Default layout: 2 columns × 5 rows on A4")}</span>
         </button>
       ) : (
         <div className="cs-print space-y-6">
@@ -151,7 +162,7 @@ export function PhotoContactSheet() {
                               className="cs-cap shrink-0 border-t border-black/10 bg-white px-1 py-0.5 text-center text-[10px] text-black outline-none" />
                             <button type="button" onClick={() => removePhoto(photo.id)}
                               className="cs-controls absolute right-1 top-1 rounded bg-black/60 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                              aria-label="Remove photo">
+                              aria-label={t("Remove photo")}>
                               <X className="h-3 w-3" />
                             </button>
                           </>

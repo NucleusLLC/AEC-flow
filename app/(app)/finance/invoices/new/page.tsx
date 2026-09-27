@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, FileSignature } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -11,7 +13,10 @@ import { ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 import type { InvoiceLineInput } from "@/lib/finance/types";
 
-export const metadata: Metadata = { title: "New invoice · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("New invoice")} · AEC-flow` };
+}
 
 /**
  * Raise an invoice — from an accepted proposal's payment milestones, or from
@@ -31,6 +36,7 @@ export default async function NewInvoicePage({
     await Promise.all([searchParams, getClients(), getProjects(), listBillableProposals()]);
 
   const today = ymd(new Date());
+  const t = await getServerT();
   const billing = proposalId ? await getProposalBilling(proposalId) : null;
   const chosen = new Set((picked ?? "").split(",").filter(Boolean));
 
@@ -56,14 +62,15 @@ export default async function NewInvoicePage({
           className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" />
-          Choose different milestones
+          {t("Choose different milestones")}
         </Link>
         <div>
           <h2 className="text-xl font-semibold text-fg">
-            Invoice from {billing.proposalNumber}
+            {fmt(t("Invoice from {number}"), { number: billing.proposalNumber })}
           </h2>
           <p className="text-sm text-muted">
-            {lines.length} milestone{lines.length === 1 ? "" : "s"} · {billing.title}
+            {lines.length === 1 ? t("1 milestone") : fmt(t("{count} milestones"), { count: lines.length })} ·{" "}
+            {billing.title}
           </p>
         </div>
         <InvoiceForm
@@ -108,7 +115,7 @@ export default async function NewInvoicePage({
           className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" />
-          Choose a different proposal
+          {t("Choose a different proposal")}
         </Link>
         <div>
           <h2 className="text-xl font-semibold text-fg">{billing.proposalNumber}</h2>
@@ -129,8 +136,8 @@ export default async function NewInvoicePage({
 
         <Card>
           <CardHeader
-            title="Payment milestones"
-            subtitle="Tick what this invoice bills. What has already been invoiced is shown against each one."
+            title={t("Payment milestones")}
+            subtitle={t("Tick what this invoice bills. What has already been invoiced is shown against each one.")}
           />
           <CardBody>
             {/* A GET form: the choice travels in the URL, so the page that
@@ -142,10 +149,10 @@ export default async function NewInvoicePage({
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
                     <th className="pb-1.5" />
-                    <th className="pb-1.5 font-medium">Milestone</th>
-                    <th className="pb-1.5 text-right font-medium">Value</th>
-                    <th className="pb-1.5 text-right font-medium">Invoiced</th>
-                    <th className="pb-1.5 text-right font-medium">Left to bill</th>
+                    <th className="pb-1.5 font-medium">{t("Milestone")}</th>
+                    <th className="pb-1.5 text-right font-medium">{t("Value")}</th>
+                    <th className="pb-1.5 text-right font-medium">{t("Invoiced")}</th>
+                    <th className="pb-1.5 text-right font-medium">{t("Left to bill")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -158,14 +165,16 @@ export default async function NewInvoicePage({
                           value={m.id}
                           disabled={m.remaining <= 0}
                           defaultChecked={m.remaining > 0 && billable.length === 1}
-                          aria-label={`Bill ${m.name}`}
+                          aria-label={fmt(t("Bill {name}"), { name: m.name })}
                         />
                       </td>
                       <td className="py-2">
                         <div className="text-fg">{m.name}</div>
                         <div className="text-[11px] text-faint">
                           {m.percent}%{m.trigger ? ` · ${m.trigger}` : ""}
-                          {m.invoiceNumbers.length > 0 ? ` · on ${m.invoiceNumbers.join(", ")}` : ""}
+                          {m.invoiceNumbers.length > 0
+                            ? ` · ${fmt(t("on {numbers}"), { numbers: m.invoiceNumbers.join(", ") })}`
+                            : ""}
                         </div>
                       </td>
                       <td className="py-2 text-right font-mono tabular-nums text-fg">{money(m.amount)}</td>
@@ -173,7 +182,7 @@ export default async function NewInvoicePage({
                         {m.invoiced > 0 ? money(m.invoiced) : "—"}
                       </td>
                       <td className="py-2 text-right font-mono font-semibold tabular-nums text-fg">
-                        {m.remaining > 0 ? money(m.remaining) : "billed"}
+                        {m.remaining > 0 ? money(m.remaining) : t("billed")}
                       </td>
                     </tr>
                   ))}
@@ -182,15 +191,16 @@ export default async function NewInvoicePage({
 
               {billable.length === 0 ? (
                 <p className="text-sm text-muted">
-                  Every milestone on this proposal has been invoiced. Voiding an invoice frees its
-                  milestones again.
+                  {t(
+                    "Every milestone on this proposal has been invoiced. Voiding an invoice frees its milestones again.",
+                  )}
                 </p>
               ) : (
                 <button
                   type="submit"
                   className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
                 >
-                  Continue with the ticked milestones
+                  {t("Continue with the ticked milestones")}
                 </button>
               )}
             </form>
@@ -208,25 +218,26 @@ export default async function NewInvoicePage({
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Invoices
+        {t("Invoices")}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">New invoice</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("New invoice")}</h2>
         <p className="text-sm text-muted">
-          From an accepted proposal, so the amounts and the tax come across — or from scratch.
+          {t("From an accepted proposal, so the amounts and the tax come across — or from scratch.")}
         </p>
       </div>
 
       <Card>
         <CardHeader
-          title="From an accepted proposal"
-          subtitle="Its payment milestones become the invoice lines."
+          title={t("From an accepted proposal")}
+          subtitle={t("Its payment milestones become the invoice lines.")}
         />
         <CardBody>
           {proposals.length === 0 ? (
             <p className="text-sm text-muted">
-              No proposal has been accepted yet. Invoices raised from a proposal carry its client,
-              currency, tax and milestone amounts across; until then, write one from scratch below.
+              {t(
+                "No proposal has been accepted yet. Invoices raised from a proposal carry its client, currency, tax and milestone amounts across; until then, write one from scratch below.",
+              )}
             </p>
           ) : (
             <ul className="divide-y divide-border/60">
@@ -243,7 +254,7 @@ export default async function NewInvoicePage({
                           <span className="font-mono">{p.number}</span> · {p.title}
                         </span>
                         <span className="block truncate text-[11px] text-faint">
-                          {p.clientName ?? "No client"} · {p.status}
+                          {p.clientName ?? t("No client")} · {p.status}
                         </span>
                       </span>
                     </span>
@@ -262,7 +273,7 @@ export default async function NewInvoicePage({
       </Card>
 
       <Card>
-        <CardHeader title="From scratch" subtitle="For anything the practice never quoted." />
+        <CardHeader title={t("From scratch")} subtitle={t("For anything the practice never quoted.")} />
         <CardBody>
           <InvoiceForm
             mode="new"

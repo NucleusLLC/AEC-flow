@@ -2,6 +2,8 @@ import { DocumentGenerator } from "@/components/documents/document-generator";
 import { getEstimateSummaries } from "@/lib/integrations/estimates/adapter";
 import { getScheduleSummaries } from "@/lib/integrations/schedule/adapter";
 import { isSourceSystem } from "@/lib/documents/catalog";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Document Generator · AEC-flow" };
 
@@ -11,6 +13,7 @@ export default async function GenerateDocumentPage({
   searchParams: Promise<{ source?: string; recordId?: string }>;
 }) {
   const sp = await searchParams;
+  const t = await getServerT();
   const [estimates, schedules] = await Promise.all([
     getEstimateSummaries(),
     getScheduleSummaries(),
@@ -24,7 +27,7 @@ export default async function GenerateDocumentPage({
   }));
   const schRecords = schedules.map((s) => ({
     id: s.projectId,
-    label: `${s.projectName} · ${s.taskCount} activities`,
+    label: `${s.projectName} · ${fmt(t("{count} activities"), { count: s.taskCount })}`,
     sublabel: s.projectId,
     version: null as string | null,
   }));

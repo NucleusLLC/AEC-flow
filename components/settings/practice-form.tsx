@@ -14,6 +14,8 @@ import {
 import type { PracticeProfile } from "@/lib/data/settings";
 import type { FooterSettings, LogoSettings, LogoPosition } from "@/lib/server/practice-config";
 import { currencyOptions } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Quick-pick shortcuts beside the System Currency field. The currently
@@ -81,6 +83,7 @@ export function PracticeForm({
   /** The document footer is app advertising — only the founder may edit it. */
   canEditFooter?: boolean;
 }) {
+  const t = useT();
   const [logoCfg, setLogoCfg] = useState<LogoSettings>(logoSettings);
   const [, startLogoCfg] = useTransition();
   const saveLogoCfg = (next: LogoSettings) => {
@@ -115,7 +118,7 @@ export function PracticeForm({
     setCurMsg(null);
     startCur(async () => {
       const res = await saveSystemCurrencyAction(next);
-      setCurMsg(res.ok ? { kind: "ok", text: `System currency set to ${next}.` } : { kind: "err", text: res.error });
+      setCurMsg(res.ok ? { kind: "ok", text: fmt(t("System currency set to {code}."), { code: next }) } : { kind: "err", text: res.error });
     });
   }
 
@@ -184,18 +187,18 @@ export function PracticeForm({
       {!canSave ? (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <Lock className="h-4 w-4 shrink-0" />
-          Sign in to edit the practice profile.
+          {t("Sign in to edit the practice profile.")}
         </div>
       ) : null}
 
       {/* Logo */}
       <Card>
-        <CardHeader title="Practice Logo" subtitle="Shown on proposals, orders, and exported documents." />
+        <CardHeader title={t("Practice Logo")} subtitle={t("Shown on proposals, orders, and exported documents.")} />
         <CardBody className="flex flex-wrap items-center gap-5">
           <div className="flex h-20 w-32 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-2">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element -- data URL of arbitrary size; next/image isn't a fit
-              <img src={logo} alt="Practice logo" className="max-h-full max-w-full object-contain" />
+              <img src={logo} alt={t("Practice logo")} className="max-h-full max-w-full object-contain" />
             ) : (
               <ImageIcon className="h-7 w-7 text-faint" />
             )}
@@ -210,7 +213,7 @@ export function PracticeForm({
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {logoPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {logo ? "Replace logo" : "Upload logo"}
+                {logo ? t("Replace logo") : t("Upload logo")}
               </button>
               {logo ? (
                 <button
@@ -219,13 +222,13 @@ export function PracticeForm({
                   disabled={!canSave || logoPending}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
                 >
-                  <Trash2 className="h-4 w-4" /> Remove
+                  <Trash2 className="h-4 w-4" /> {t("Remove")}
                 </button>
               ) : null}
             </div>
-            <p className="text-[11px] text-faint">PNG, JPG, or SVG · up to 1 MB · landscape works best.</p>
+            <p className="text-[11px] text-faint">{t("PNG, JPG, or SVG · up to 1 MB · landscape works best.")}</p>
             {logoMsg ? (
-              <p className={logoMsg.kind === "ok" ? "text-sm text-emerald-700" : "text-sm text-red-600"}>{logoMsg.text}</p>
+              <p className={logoMsg.kind === "ok" ? "text-sm text-emerald-700" : "text-sm text-red-600"}>{t(logoMsg.text)}</p>
             ) : null}
           </div>
 
@@ -233,7 +236,7 @@ export function PracticeForm({
           <div className="w-full border-t border-border pt-4">
             <div className="flex flex-wrap items-end gap-6">
               <div>
-                <span className="mb-1 block text-xs font-medium text-muted">Position on documents</span>
+                <span className="mb-1 block text-xs font-medium text-muted">{t("Position on documents")}</span>
                 <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
                   {(["left", "center", "right"] as LogoPosition[]).map((pos) => (
                     <button
@@ -243,13 +246,13 @@ export function PracticeForm({
                       onClick={() => saveLogoCfg({ ...logoCfg, position: pos })}
                       className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-colors disabled:opacity-60 ${logoCfg.position === pos ? "bg-brand text-brand-fg" : "text-muted hover:text-fg"}`}
                     >
-                      {pos}
+                      {t(pos.charAt(0).toUpperCase() + pos.slice(1))}
                     </button>
                   ))}
                 </div>
               </div>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-muted">Size — {logoCfg.size}px</span>
+                <span className="mb-1 block text-xs font-medium text-muted">{fmt(t("Size — {size}px"), { size: logoCfg.size })}</span>
                 <input
                   type="range"
                   min={24}
@@ -262,18 +265,18 @@ export function PracticeForm({
                 />
               </label>
             </div>
-            <p className="mt-2 text-[11px] text-faint">Applies to every printed / PDF document — proposals, estimates, orders, schedule and meeting minutes.</p>
+            <p className="mt-2 text-[11px] text-faint">{t("Applies to every printed / PDF document — proposals, estimates, orders, schedule and meeting minutes.")}</p>
           </div>
         </CardBody>
       </Card>
 
       {/* System Currency */}
       <Card>
-        <CardHeader title="System Currency" subtitle="Org-wide monetary unit — the default across every module. Per-record currencies still override." />
+        <CardHeader title={t("System Currency")} subtitle={t("Org-wide monetary unit — the default across every module. Per-record currencies still override.")} />
         <CardBody className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="block">
-              <span className="text-xs font-medium text-muted">Currency (3-letter ISO code)</span>
+              <span className="text-xs font-medium text-muted">{t("Currency (3-letter ISO code)")}</span>
               <input
                 value={cur}
                 onChange={(e) => setCur(e.target.value.toUpperCase().slice(0, 3))}
@@ -288,10 +291,10 @@ export function PracticeForm({
               disabled={!canSave || curPending || cur.length !== 3}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {curPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />} Set currency
+              {curPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />} {t("Set currency")}
             </button>
             {curMsg ? (
-              <span className={curMsg.kind === "ok" ? "text-sm text-emerald-700" : "text-sm text-red-600"}>{curMsg.text}</span>
+              <span className={curMsg.kind === "ok" ? "text-sm text-emerald-700" : "text-sm text-red-600"}>{t(curMsg.text)}</span>
             ) : null}
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -308,34 +311,34 @@ export function PracticeForm({
             ))}
           </div>
           <p className="text-[11px] text-faint">
-            Applies across estimates, proposals, orders, projects, construction admin and dashboards. Records saved with their own currency keep it.
+            {t("Applies across estimates, proposals, orders, projects, construction admin and dashboards. Records saved with their own currency keep it.")}
           </p>
         </CardBody>
       </Card>
 
       {/* Document Footer */}
       <Card>
-        <CardHeader title="Footer Text" subtitle="The line printed at the bottom of every page of exported documents — managed by AEC-flow." />
+        <CardHeader title={t("Footer Text")} subtitle={t("The line printed at the bottom of every page of exported documents — managed by AEC-flow.")} />
         <CardBody className="space-y-3">
           {!canEditFooter ? (
             <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-2/40 px-3 py-2 text-xs text-muted">
               <Lock className="h-3.5 w-3.5 text-faint" />
-              This footer is set by AEC-flow and can&apos;t be changed.
+              {t("This footer is set by AEC-flow and can't be changed.")}
             </div>
           ) : null}
           <div className="flex flex-wrap items-end gap-3">
             <label className="block min-w-[200px] flex-1">
-              <span className="text-xs font-medium text-muted">Footer text</span>
+              <span className="text-xs font-medium text-muted">{t("Footer text")}</span>
               <input
                 value={foot.text}
                 onChange={(e) => setFoot({ ...foot, text: e.target.value })}
                 disabled={!canEditFooter || footPending}
-                placeholder="AEC Management Suite"
+                placeholder={t("AEC Management Suite")}
                 className={inputCls}
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-muted">Font type</span>
+              <span className="text-xs font-medium text-muted">{t("Font type")}</span>
               <select
                 value={foot.fontFamily}
                 onChange={(e) => setFoot({ ...foot, fontFamily: e.target.value })}
@@ -344,12 +347,12 @@ export function PracticeForm({
                 style={{ width: 190 }}
               >
                 {FOOTER_FONTS.map((f) => (
-                  <option key={f.label} value={f.value}>{f.label}</option>
+                  <option key={f.label} value={f.value}>{t(f.label)}</option>
                 ))}
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-muted">Font height (px)</span>
+              <span className="text-xs font-medium text-muted">{t("Font height (px)")}</span>
               <input
                 type="number"
                 min={5}
@@ -363,13 +366,13 @@ export function PracticeForm({
           </div>
           {/* Live preview — mirrors the printed footer (dotted rule above). */}
           <div className="rounded-lg border border-border bg-surface-2/40 px-3 py-2">
-            <span className="text-[10px] uppercase tracking-wide text-faint">Preview</span>
+            <span className="text-[10px] uppercase tracking-wide text-faint">{t("Preview")}</span>
             <div
               className="mt-1 flex items-center justify-between border-t border-dotted pt-1"
               style={{ borderColor: "#475569", fontFamily: foot.fontFamily || undefined, fontSize: foot.fontSize, color: "#475569" }}
             >
               <span>{foot.text || "—"}</span>
-              <span>Page 1 of 4</span>
+              <span>{fmt(t("Page {n} of {total}"), { n: 1, total: 4 })}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -380,10 +383,10 @@ export function PracticeForm({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {footPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Save footer
+              {t("Save footer")}
             </button>
             {footMsg ? (
-              <span className={footMsg.kind === "ok" ? "text-sm text-emerald-700" : "text-sm text-red-600"}>{footMsg.text}</span>
+              <span className={footMsg.kind === "ok" ? "text-sm text-emerald-700" : "text-sm text-red-600"}>{t(footMsg.text)}</span>
             ) : null}
           </div>
         </CardBody>
@@ -391,30 +394,30 @@ export function PracticeForm({
 
       {/* Profile */}
       <Card>
-        <CardHeader title="Practice Profile" subtitle="Appears on proposals, orders, and exported documents." />
+        <CardHeader title={t("Practice Profile")} subtitle={t("Appears on proposals, orders, and exported documents.")} />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Practice name" value={form.name} onChange={(v) => set("name", v)} disabled={disabled} />
-          <Field label="Legal name" value={form.legalName} onChange={(v) => set("legalName", v)} disabled={disabled} />
-          <Field label="Tax Registration Number (TRN)" value={form.trn} onChange={(v) => set("trn", v)} disabled={disabled} />
-          <Field label="Founded" value={form.founded} onChange={(v) => set("founded", v)} disabled={disabled} />
-          <Field label="Address" value={form.addressLine} onChange={(v) => set("addressLine", v)} disabled={disabled} className="block sm:col-span-2" />
-          <Field label="City" value={form.city} onChange={(v) => set("city", v)} disabled={disabled} />
-          <Field label="State" value={form.emirate} onChange={(v) => set("emirate", v)} disabled={disabled} />
-          <Field label="Phone" type="tel" value={form.phone} onChange={(v) => set("phone", v)} disabled={disabled} />
-          <Field label="Email" type="email" value={form.email} onChange={(v) => set("email", v)} disabled={disabled} />
-          <Field label="Website" value={form.website} onChange={(v) => set("website", v)} disabled={disabled} />
-          <Field label="Country" value={form.country} onChange={(v) => set("country", v)} disabled={disabled} />
+          <Field label={t("Practice name")} value={form.name} onChange={(v) => set("name", v)} disabled={disabled} />
+          <Field label={t("Legal name")} value={form.legalName} onChange={(v) => set("legalName", v)} disabled={disabled} />
+          <Field label={t("Tax Registration Number (TRN)")} value={form.trn} onChange={(v) => set("trn", v)} disabled={disabled} />
+          <Field label={t("Founded")} value={form.founded} onChange={(v) => set("founded", v)} disabled={disabled} />
+          <Field label={t("Address")} value={form.addressLine} onChange={(v) => set("addressLine", v)} disabled={disabled} className="block sm:col-span-2" />
+          <Field label={t("City")} value={form.city} onChange={(v) => set("city", v)} disabled={disabled} />
+          <Field label={t("State")} value={form.emirate} onChange={(v) => set("emirate", v)} disabled={disabled} />
+          <Field label={t("Phone")} type="tel" value={form.phone} onChange={(v) => set("phone", v)} disabled={disabled} />
+          <Field label={t("Email")} type="email" value={form.email} onChange={(v) => set("email", v)} disabled={disabled} />
+          <Field label={t("Website")} value={form.website} onChange={(v) => set("website", v)} disabled={disabled} />
+          <Field label={t("Country")} value={form.country} onChange={(v) => set("country", v)} disabled={disabled} />
         </CardBody>
 
         <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
           {saved ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600">
-              <Check className="h-4 w-4" /> Saved
+              <Check className="h-4 w-4" /> {t("Saved")}
             </span>
           ) : null}
           {error ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-red-600">
-              <AlertTriangle className="h-4 w-4" /> {error}
+              <AlertTriangle className="h-4 w-4" /> {t(error)}
             </span>
           ) : null}
           <button
@@ -424,7 +427,7 @@ export function PracticeForm({
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {pending ? "Saving…" : "Save changes"}
+            {pending ? t("Saving…") : t("Save changes")}
           </button>
         </div>
       </Card>

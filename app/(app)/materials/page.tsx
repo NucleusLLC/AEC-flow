@@ -5,14 +5,20 @@ import { MaterialList } from "@/components/materials/material-list";
 import { ProjectFilterBanner } from "@/components/projects/project-filter-banner";
 import { getProject } from "@/lib/data/projects";
 import { formatCurrency } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata = { title: "Material Selection · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Material Selection")} · AEC-flow` };
+}
 
 export default async function MaterialsPage({
   searchParams,
 }: {
   searchParams: Promise<{ project?: string }>;
 }) {
+  const t = await getServerT();
   const { project } = await searchParams;
   const proj = project ? await getProject(project) : null;
   const items = await listMaterialSelections(proj ? project : undefined);
@@ -24,8 +30,8 @@ export default async function MaterialsPage({
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Material Selection</h2>
-          <p className="text-sm text-muted">The finish &amp; product schedule — track selections from proposal to install.</p>
+          <h2 className="text-xl font-semibold text-fg">{t("Material Selection")}</h2>
+          <p className="text-sm text-muted">{t("The finish & product schedule — track selections from proposal to install.")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {orderable > 0 ? (
@@ -33,7 +39,7 @@ export default async function MaterialsPage({
               href="/procurement/from-selections"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
             >
-              <PackagePlus className="h-4 w-4" /> Create PO from approved ({orderable})
+              <PackagePlus className="h-4 w-4" /> {fmt(t("Create PO from approved ({count})"), { count: orderable })}
             </Link>
           ) : null}
           {items.length > 0 ? (
@@ -41,7 +47,7 @@ export default async function MaterialsPage({
               href="/print/materials"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
             >
-              <Printer className="h-4 w-4" /> Print schedule
+              <Printer className="h-4 w-4" /> {t("Print schedule")}
             </Link>
           ) : null}
           <Link
@@ -49,7 +55,7 @@ export default async function MaterialsPage({
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
-            Add selection
+            {t("Add selection")}
           </Link>
         </div>
       </div>
@@ -58,10 +64,10 @@ export default async function MaterialsPage({
         <ProjectFilterBanner projectName={proj.name} clearHref="/materials" />
       ) : summary ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile icon={Boxes} label="Selections" value={String(summary.total)} />
-          <Tile icon={Clock} label="Pending" value={String(summary.pending)} />
-          <Tile icon={CircleCheck} label="Approved+" value={String(summary.approved)} />
-          <Tile icon={CircleDollarSign} label="Selected value" value={money(summary.selectedValue)} />
+          <Tile icon={Boxes} label={t("Selections")} value={String(summary.total)} />
+          <Tile icon={Clock} label={t("Pending")} value={String(summary.pending)} />
+          <Tile icon={CircleCheck} label={t("Approved+")} value={String(summary.approved)} />
+          <Tile icon={CircleDollarSign} label={t("Selected value")} value={money(summary.selectedValue)} />
         </div>
       ) : null}
 

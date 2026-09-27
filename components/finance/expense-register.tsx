@@ -18,6 +18,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Inbox, Search, Send, Trash2, Undo2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { ApprovalBadge, BilledBadge } from "@/components/finance/badges";
 import { formatCurrency } from "@/lib/format";
 import { expenseSummary } from "@/lib/finance/timesheet";
@@ -55,6 +57,7 @@ export function ExpenseRegister({
   currentUserId: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -93,13 +96,13 @@ export function ExpenseRegister({
     setError(null);
     startTransition(async () => {
       const result = await fn();
-      if (!result.ok) setError(result.error ?? "That did not save.");
+      if (!result.ok) setError(result.error ?? t("That did not save."));
       else router.refresh();
     });
   }
 
   function reject(id: string) {
-    const reason = window.prompt("Why is this being sent back?")?.trim();
+    const reason = window.prompt(t("Why is this being sent back?"))?.trim();
     if (!reason) return;
     run(() => decideExpensesAction([id], { approve: false, reason }));
   }
@@ -107,19 +110,27 @@ export function ExpenseRegister({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Spent" value={money(summary.spent)} note={`${summary.count} recorded`} />
-        <Tile label="Rechargeable" value={money(summary.rechargeable)} />
-        <Tile label="Not yet billed" value={money(summary.unbilled)} />
         <Tile
-          label="Waiting for approval"
+          label={t("Spent")}
+          value={money(summary.spent)}
+          note={fmt(t("{count} recorded"), { count: summary.count })}
+        />
+        <Tile label={t("Rechargeable")} value={money(summary.rechargeable)} />
+        <Tile label={t("Not yet billed")} value={money(summary.unbilled)} />
+        <Tile
+          label={t("Waiting for approval")}
           value={money(summary.awaitingApproval)}
-          note={summary.absorbed > 0 ? `${money(summary.absorbed)} absorbed` : undefined}
+          note={
+            summary.absorbed > 0
+              ? fmt(t("{amount} absorbed"), { amount: money(summary.absorbed) })
+              : undefined
+          }
         />
       </div>
 
       {error ? (
         <p className="rounded-lg border border-red-600/30 bg-red-600/5 px-3 py-2 text-sm text-red-600">
-          {error}
+          {t(error)}
         </p>
       ) : null}
 
@@ -129,8 +140,8 @@ export function ExpenseRegister({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search what, who, vendor, project…"
-            aria-label="Search expenses"
+            placeholder={t("Search what, who, vendor, project…")}
+            aria-label={t("Search expenses")}
             className={`${CONTROL} w-full pl-8 pr-3 placeholder:text-faint`}
           />
         </div>
@@ -138,14 +149,14 @@ export function ExpenseRegister({
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as FinanceApprovalStatus | "ALL" | "UNBILLED")}
-          aria-label="Filter by status"
+          aria-label={t("Filter by status")}
           className={CONTROL}
         >
-          <option value="ALL">All</option>
-          <option value="UNBILLED">Ready to bill</option>
+          <option value="ALL">{t("All")}</option>
+          <option value="UNBILLED">{t("Ready to bill")}</option>
           {FINANCE_APPROVAL_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {FINANCE_APPROVAL_LABEL[s]}
+              {t(FINANCE_APPROVAL_LABEL[s])}
             </option>
           ))}
         </select>
@@ -154,7 +165,7 @@ export function ExpenseRegister({
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            aria-label="Currency"
+            aria-label={t("Currency")}
             className={CONTROL}
           >
             {currencies.map((c) => (
@@ -166,27 +177,31 @@ export function ExpenseRegister({
         ) : null}
 
         <span className="text-xs tabular-nums text-muted">
-          {rows.length} of {inCurrency.length} in {currency}
+          {fmt(t("{count} of {total} in {currency}"), {
+            count: rows.length,
+            total: inCurrency.length,
+            currency,
+          })}
         </span>
       </div>
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
           <Inbox className="h-8 w-8 text-faint" />
-          <p className="mt-3 text-sm font-medium text-fg">No expense matches these filters.</p>
+          <p className="mt-3 text-sm font-medium text-fg">{t("No expense matches these filters.")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-1">
           <table className="w-full min-w-[980px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-4 pb-1.5 font-medium">Date</th>
-                <th className="px-3 pb-1.5 font-medium">What</th>
-                <th className="px-3 pb-1.5 font-medium">Project</th>
-                <th className="px-3 pb-1.5 font-medium">Who</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Spent</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Chargeable</th>
-                <th className="px-3 pb-1.5 font-medium">Status</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Date")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("What")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Project")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Who")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Spent")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Chargeable")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Status")}</th>
                 <th className="px-4 pb-1.5" />
               </tr>
             </thead>
@@ -214,12 +229,12 @@ export function ExpenseRegister({
                         <span className="font-medium text-fg">{x.description}</span>
                       )}
                       <div className="text-[11px] text-faint">
-                        {EXPENSE_CATEGORY_LABEL[x.category]}
+                        {t(EXPENSE_CATEGORY_LABEL[x.category])}
                         {x.vendor ? ` · ${x.vendor}` : ""}
                         {x.reimbursable
                           ? x.reimbursedAt
-                            ? " · reimbursed"
-                            : " · owed back"
+                            ? ` · ${t("reimbursed")}`
+                            : ` · ${t("owed back")}`
                           : ""}
                       </div>
                     </td>
@@ -229,7 +244,7 @@ export function ExpenseRegister({
                       {money(x.amount)}
                     </td>
                     <td className="px-3 py-2.5 text-right align-top font-mono tabular-nums text-muted">
-                      {x.billable ? money(x.chargeable) : "Absorbed"}
+                      {x.billable ? money(x.chargeable) : t("Absorbed")}
                     </td>
                     <td className="px-3 py-2.5 align-top">
                       <div className="flex flex-col items-start gap-1">
@@ -244,7 +259,7 @@ export function ExpenseRegister({
                       <div className="flex items-center justify-end gap-2">
                         {(x.status === "DRAFT" || x.status === "REJECTED") && (mine || canApprove) ? (
                           <IconButton
-                            label="Send for approval"
+                            label={t("Send for approval")}
                             disabled={pending}
                             onClick={() => run(() => submitExpensesAction([x.id]))}
                           >
@@ -254,13 +269,13 @@ export function ExpenseRegister({
                         {canApprove && x.status === "SUBMITTED" ? (
                           <>
                             <IconButton
-                              label="Approve"
+                              label={t("Approve")}
                               disabled={pending}
                               onClick={() => run(() => decideExpensesAction([x.id], { approve: true }))}
                             >
                               <Check className="h-4 w-4" />
                             </IconButton>
-                            <IconButton label="Send back" disabled={pending} onClick={() => reject(x.id)}>
+                            <IconButton label={t("Send back")} disabled={pending} onClick={() => reject(x.id)}>
                               <Undo2 className="h-4 w-4" />
                             </IconButton>
                           </>
@@ -272,12 +287,12 @@ export function ExpenseRegister({
                             onClick={() => run(() => markReimbursedAction([x.id], !x.reimbursedAt))}
                             className="rounded-lg border border-border px-2 py-1 text-[11px] text-muted hover:bg-surface-2 disabled:opacity-60"
                           >
-                            {x.reimbursedAt ? "Undo reimbursed" : "Reimbursed"}
+                            {x.reimbursedAt ? t("Undo reimbursed") : t("Reimbursed")}
                           </button>
                         ) : null}
                         {editable ? (
                           <IconButton
-                            label="Delete"
+                            label={t("Delete")}
                             danger
                             disabled={pending}
                             onClick={() => run(() => deleteExpenseAction(x.id))}

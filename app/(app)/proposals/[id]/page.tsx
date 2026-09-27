@@ -23,14 +23,17 @@ import {
   DISCIPLINE_LABEL,
 } from "@/lib/data/proposals";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const proposal = await getProposal(id);
+  const t = await getServerT();
   return {
-    title: proposal ? `${proposal.refNumber} · ${proposal.title} · AEC-flow` : "Proposal · AEC-flow",
+    title: proposal ? `${proposal.refNumber} · ${proposal.title} · AEC-flow` : `${t("Proposal")} · AEC-flow`,
   };
 }
 
@@ -59,6 +62,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
   const { id } = await params;
   const proposal = await getProposal(id);
   if (!proposal) notFound();
+  const t = await getServerT();
 
   const committed = committedFee(proposal);
   const optional = optionalFee(proposal);
@@ -73,7 +77,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Proposals
+        {t("Proposals")}
       </Link>
 
       {/* Header */}
@@ -83,7 +87,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
             <span className="font-mono text-xs text-faint">{proposal.refNumber}</span>
             <ProposalStatusBadge status={proposal.status} />
             {proposal.revision > 1 ? (
-              <span className="text-[11px] text-faint">revision {proposal.revision}</span>
+              <span className="text-[11px] text-faint">{fmt(t("revision {n}"), { n: proposal.revision })}</span>
             ) : null}
           </div>
           <h2 className="mt-1.5 text-2xl font-bold tracking-tight text-fg">{proposal.title}</h2>
@@ -108,21 +112,21 @@ export default async function ProposalDetailPage({ params }: PageProps) {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Printer className="h-4 w-4" />
-            Print / PDF
+            {t("Print / PDF")}
           </a>
           <Link
             href={`/proposals/${proposal.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("Edit")}
           </Link>
           {/* Orders module is not in the beta — show any linked order as a static badge
               (no /orders route yet) and omit the non-functional "Convert to order" action. */}
           {proposal.orderNumber ? (
             <span
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 text-sm font-medium text-muted"
-              title="Linked order"
+              title={t("Linked order")}
             >
               <ClipboardList className="h-4 w-4" />
               {proposal.orderNumber}
@@ -135,21 +139,21 @@ export default async function ProposalDetailPage({ params }: PageProps) {
       <Card className="overflow-hidden border-l-[3px] border-l-brand p-5">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Total fee</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t("Total fee")}</div>
             <div className="mt-1 text-3xl font-bold tracking-tight text-fg">
               {formatCurrency(proposal.totalFee, proposal.currency)}
             </div>
           </div>
           <div className="flex gap-6 text-sm">
             <div>
-              <div className="text-xs font-medium text-muted">Committed</div>
+              <div className="text-xs font-medium text-muted">{t("Committed")}</div>
               <div className="mt-0.5 font-semibold text-fg">
                 {formatCurrency(committed, proposal.currency)}
               </div>
             </div>
             {optional > 0 ? (
               <div>
-                <div className="text-xs font-medium text-muted">Optional add-ons</div>
+                <div className="text-xs font-medium text-muted">{t("Optional add-ons")}</div>
                 <div className="mt-0.5 font-semibold text-fg">
                   {formatCurrency(optional, proposal.currency)}
                 </div>
@@ -157,8 +161,8 @@ export default async function ProposalDetailPage({ params }: PageProps) {
             ) : null}
             {proposal.estimatedDuration ? (
               <div>
-                <div className="text-xs font-medium text-muted">Duration</div>
-                <div className="mt-0.5 font-semibold text-fg">{proposal.estimatedDuration} weeks</div>
+                <div className="text-xs font-medium text-muted">{t("Duration")}</div>
+                <div className="mt-0.5 font-semibold text-fg">{fmt(t("{n} weeks"), { n: proposal.estimatedDuration })}</div>
               </div>
             ) : null}
           </div>
@@ -171,8 +175,8 @@ export default async function ProposalDetailPage({ params }: PageProps) {
           {/* Line items */}
           <Card>
             <SectionHeader
-              title="Line Items"
-              subtitle={`${lineItems.length} item${lineItems.length === 1 ? "" : "s"}`}
+              title={t("Line Items")}
+              subtitle={fmt(t(lineItems.length === 1 ? "1 item" : "{count} items"), { count: lineItems.length })}
               action={<FileText className="h-4 w-4 text-faint" />}
             />
             {lineItems.length ? (
@@ -185,9 +189,9 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="font-semibold text-fg">{li.description}</span>
                             {li.discipline ? (
-                              <Badge tone="slate">{DISCIPLINE_LABEL[li.discipline]}</Badge>
+                              <Badge tone="slate">{t(DISCIPLINE_LABEL[li.discipline])}</Badge>
                             ) : null}
-                            {li.isOptional ? <Badge tone="amber">optional</Badge> : null}
+                            {li.isOptional ? <Badge tone="amber">{t("optional")}</Badge> : null}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-5 py-2 text-right align-middle font-semibold tabular-nums text-fg">
@@ -199,7 +203,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                   <tfoot>
                     <tr className="border-t-2 border-border bg-surface-2/40">
                       <td className="px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-fg">
-                        Committed total
+                        {t("Committed total")}
                       </td>
                       <td className="px-5 py-2.5 text-right font-bold tabular-nums text-fg">
                         {formatCurrency(committed, proposal.currency)}
@@ -209,15 +213,15 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                 </table>
               </div>
             ) : (
-              <CardBody className="text-sm text-muted">No line items captured yet.</CardBody>
+              <CardBody className="text-sm text-muted">{t("No line items captured yet.")}</CardBody>
             )}
           </Card>
 
           {/* Milestones */}
           <Card>
             <SectionHeader
-              title="Payment Milestones"
-              subtitle={milestoneTotal === 100 ? "100% of fee" : `${milestoneTotal}% allocated`}
+              title={t("Payment Milestones")}
+              subtitle={milestoneTotal === 100 ? t("100% of fee") : fmt(t("{pct}% allocated"), { pct: milestoneTotal })}
               action={<CalendarClock className="h-4 w-4 text-faint" />}
             />
             {proposal.milestones.length ? (
@@ -225,10 +229,10 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
-                      <th className="px-5 py-2 font-semibold">Milestone</th>
-                      <th className="px-3 py-2 font-semibold text-center">When</th>
-                      <th className="px-3 py-2 font-semibold text-right">Share</th>
-                      <th className="px-5 py-2 font-semibold text-right">Amount</th>
+                      <th className="px-5 py-2 font-semibold">{t("Milestone")}</th>
+                      <th className="px-3 py-2 font-semibold text-center">{t("When")}</th>
+                      <th className="px-3 py-2 font-semibold text-right">{t("Share")}</th>
+                      <th className="px-5 py-2 font-semibold text-right">{t("Amount")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -236,7 +240,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                       <tr key={m.id} className="transition-colors hover:bg-surface-2/60">
                         <td className="px-5 py-2 font-semibold text-fg">{m.name}</td>
                         <td className="px-3 py-2 text-center text-muted">
-                          {m.dueWeek === null ? "—" : m.dueWeek === 0 ? "Kickoff" : `Week ${m.dueWeek}`}
+                          {m.dueWeek === null ? "—" : m.dueWeek === 0 ? t("Kickoff") : fmt(t("Week {n}"), { n: m.dueWeek })}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted">{m.percentage}%</td>
                         <td className="px-5 py-2 text-right font-semibold tabular-nums text-fg">
@@ -248,22 +252,22 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                 </table>
               </div>
             ) : (
-              <CardBody className="text-sm text-muted">No payment milestones captured yet.</CardBody>
+              <CardBody className="text-sm text-muted">{t("No payment milestones captured yet.")}</CardBody>
             )}
           </Card>
 
-          <TextCard title="Scope Summary" body={proposal.scopeSummary} />
-          <TextCard title="Exclusions" body={proposal.exclusions} />
-          <TextCard title="Assumptions" body={proposal.assumptions} />
-          <TextCard title="Terms" body={proposal.terms} />
+          <TextCard title={t("Scope Summary")} body={proposal.scopeSummary} />
+          <TextCard title={t("Exclusions")} body={proposal.exclusions} />
+          <TextCard title={t("Assumptions")} body={proposal.assumptions} />
+          <TextCard title={t("Terms")} body={proposal.terms} />
         </div>
 
         {/* Right: details + follow-up */}
         <div className="space-y-5">
           <Card>
-            <SectionHeader title="Details" />
+            <SectionHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <DetailRow label="Client">
+              <DetailRow label={t("Client")}>
                 {proposal.clientId ? (
                   <Link href={`/clients/${proposal.clientId}`} className="hover:text-brand hover:underline">
                     {proposal.clientName}
@@ -272,24 +276,24 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                   proposal.clientName
                 )}
               </DetailRow>
-              <DetailRow label="Owner">{proposal.owner}</DetailRow>
-              <DetailRow label="Status">
+              <DetailRow label={t("Owner")}>{proposal.owner}</DetailRow>
+              <DetailRow label={t("Status")}>
                 <ProposalStatusBadge status={proposal.status} />
               </DetailRow>
-              <DetailRow label="Revision">
+              <DetailRow label={t("Revision")}>
                 <span className="inline-flex items-center gap-1">
                   <Hash className="h-3.5 w-3.5 text-faint" />
                   {proposal.revision}
                 </span>
               </DetailRow>
-              <DetailRow label="Created">{formatDate(proposal.createdAt)}</DetailRow>
-              <DetailRow label="Sent">{formatDate(proposal.sentAt)}</DetailRow>
-              <DetailRow label="Valid until">{formatDate(proposal.validUntil)}</DetailRow>
+              <DetailRow label={t("Created")}>{formatDate(proposal.createdAt)}</DetailRow>
+              <DetailRow label={t("Sent")}>{formatDate(proposal.sentAt)}</DetailRow>
+              <DetailRow label={t("Valid until")}>{formatDate(proposal.validUntil)}</DetailRow>
               {proposal.approvedAt ? (
-                <DetailRow label="Approved">{formatDate(proposal.approvedAt)}</DetailRow>
+                <DetailRow label={t("Approved")}>{formatDate(proposal.approvedAt)}</DetailRow>
               ) : null}
               {proposal.orderNumber ? (
-                <DetailRow label="Order">
+                <DetailRow label={t("Order")}>
                   <span className="font-mono text-xs text-muted">{proposal.orderNumber}</span>
                 </DetailRow>
               ) : null}
@@ -297,23 +301,23 @@ export default async function ProposalDetailPage({ params }: PageProps) {
           </Card>
 
           <Card>
-            <SectionHeader title="Follow-up" />
+            <SectionHeader title={t("Follow-up")} />
             <CardBody className="space-y-3">
               {proposal.nextAction ? (
                 <div>
-                  <div className="text-xs font-medium text-muted">Next action</div>
+                  <div className="text-xs font-medium text-muted">{t("Next action")}</div>
                   <div className="mt-0.5 text-sm font-medium text-fg">{proposal.nextAction}</div>
                 </div>
               ) : null}
               <div className="flex items-center justify-between gap-4">
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
                   <CalendarClock className="h-3.5 w-3.5 text-faint" />
-                  Follow-up
+                  {t("Follow-up")}
                 </span>
                 <span className="text-sm text-fg">{formatDate(proposal.followUpDate)}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-xs font-medium text-muted">Last contact</span>
+                <span className="text-xs font-medium text-muted">{t("Last contact")}</span>
                 <span className="text-sm text-fg">{formatDate(proposal.lastContactDate)}</span>
               </div>
               {proposal.followUpNotes ? (
@@ -322,7 +326,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                 </p>
               ) : null}
               {!proposal.nextAction && !proposal.followUpDate && !proposal.followUpNotes ? (
-                <p className="text-sm text-muted">No follow-up scheduled.</p>
+                <p className="text-sm text-muted">{t("No follow-up scheduled.")}</p>
               ) : null}
             </CardBody>
           </Card>

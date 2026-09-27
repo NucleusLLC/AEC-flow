@@ -10,6 +10,8 @@ import {
   type TakeoffMethod as Method,
   type TakeoffRow,
 } from "@/lib/data/estimates.types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const METHOD_UNIT: Record<Method, string> = { area: "m²", volume: "m³", linear: "m", count: "no" };
 const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -50,6 +52,7 @@ export function TakeoffView({
   saving?: boolean;
   saved?: boolean;
 }) {
+  const t = useT();
   const trades = normTrades(normSet);
   const normById = (id: string) => normSet.find((n) => n.id === id);
 
@@ -110,13 +113,13 @@ export function TakeoffView({
     <div className="space-y-4">
       <Card className="flex flex-wrap items-center gap-3 px-4 py-3">
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-          <Ruler className="h-4 w-4 text-brand" /> Quantity Take-Off
+          <Ruler className="h-4 w-4 text-brand" /> {t("Quantity Take-Off")}
         </div>
         <p className="text-xs text-muted">
-          Measure elements → quantities compute automatically. Link a Norm Set task to carry its rate & cost, then push straight into the estimate.
+          {t("Measure elements → quantities compute automatically. Link a Norm Set task to carry its rate & cost, then push straight into the estimate.")}
         </p>
         <div className="ml-auto flex items-center gap-2">
-          <label className="text-[11px] font-medium uppercase tracking-wide text-faint">Target section</label>
+          <label className="text-[11px] font-medium uppercase tracking-wide text-faint">{t("Target section")}</label>
           <input
             value={section}
             onChange={(e) => setSection(e.target.value)}
@@ -129,16 +132,16 @@ export function TakeoffView({
             type="button"
             onClick={onSave}
             disabled={saving}
-            title="Save the take-off measurements to the server"
+            title={t("Save the take-off measurements to the server")}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#5c6633] bg-[#4b5320] px-3 text-xs font-semibold text-[#e4e8dc] shadow-sm transition-colors hover:bg-[#3f4a1c] focus:outline-none focus:ring-2 focus:ring-[#8a9a5b]/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saved && !saving ? (
               <>
-                <Check className="h-4 w-4 text-[#c5d18a]" /> Saved
+                <Check className="h-4 w-4 text-[#c5d18a]" /> {t("Saved")}
               </>
             ) : (
               <>
-                <Save className={cn("h-4 w-4", saving && "animate-pulse")} /> {saving ? "Saving…" : "Save"}
+                <Save className={cn("h-4 w-4", saving && "animate-pulse")} /> {saving ? t("Saving…") : t("Save")}
               </>
             )}
           </button>
@@ -148,7 +151,7 @@ export function TakeoffView({
             disabled={!pushable.length}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <ArrowRightToLine className="h-4 w-4" /> Send {pushable.length || ""} to estimate
+            <ArrowRightToLine className="h-4 w-4" /> {pushable.length ? fmt(t("Send {count} to estimate"), { count: pushable.length }) : t("Send to estimate")}
           </button>
         </div>
       </Card>
@@ -158,16 +161,16 @@ export function TakeoffView({
           <table className="w-full min-w-[980px] border-collapse text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wide text-faint">
-                <th className="border-b border-border px-2 py-1.5 text-left text-faint">Description</th>
-                <th className="border-b border-border px-2 py-1.5 text-left text-faint">Norm Set (rate)</th>
-                <th className="border-b border-border px-2 py-1.5 text-center text-faint">Method</th>
-                <th className="border-b border-l border-border px-2 py-1.5 text-right text-faint">Length</th>
-                <th className="border-b border-border px-2 py-1.5 text-right text-faint">Width</th>
-                <th className="border-b border-border px-2 py-1.5 text-right text-faint">Height</th>
+                <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Description")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Norm Set (rate)")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-center text-faint">{t("Method")}</th>
+                <th className="border-b border-l border-border px-2 py-1.5 text-right text-faint">{t("Length")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-right text-faint">{t("Width")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-right text-faint">{t("Height")}</th>
                 <th className="border-b border-border px-2 py-1.5 text-right text-faint">No.</th>
-                <th className="border-b border-border px-2 py-1.5 text-right text-faint">Waste %</th>
-                <th className="border-b border-l border-border bg-green-500/10 px-2 py-1.5 text-right text-green-400">Net Qty</th>
-                <th className="border-b border-border bg-green-500/10 px-2 py-1.5 text-center text-green-400">Unit</th>
+                <th className="border-b border-border px-2 py-1.5 text-right text-faint">{t("Waste %")}</th>
+                <th className="border-b border-l border-border bg-green-500/10 px-2 py-1.5 text-right text-green-400">{t("Net Qty")}</th>
+                <th className="border-b border-border bg-green-500/10 px-2 py-1.5 text-center text-green-400">{t("Unit")}</th>
                 <th className="no-print border-b border-border px-1 py-1.5" />
               </tr>
             </thead>
@@ -182,11 +185,11 @@ export function TakeoffView({
                 return (
                   <tr key={r.id} className="border-b border-border/70 odd:bg-surface even:bg-surface-2">
                     <td className="px-2 py-1">
-                      <input value={r.desc} onChange={(e) => patch(r.id, { desc: e.target.value })} placeholder="Element" className="w-full min-w-[150px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs text-fg outline-none hover:border-border focus:border-border focus:ring-1 focus:ring-brand/30" />
+                      <input value={r.desc} onChange={(e) => patch(r.id, { desc: e.target.value })} placeholder={t("Element")} className="w-full min-w-[150px] rounded border border-transparent bg-transparent px-1 py-0.5 text-xs text-fg outline-none hover:border-border focus:border-border focus:ring-1 focus:ring-brand/30" />
                     </td>
                     <td className="px-2 py-1">
                       <select value={r.normId} onChange={(e) => linkNorm(r.id, e.target.value)} className="w-full min-w-[150px] rounded border border-border bg-surface px-1 py-0.5 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30">
-                        <option value="">— none —</option>
+                        <option value="">{t("— none —")}</option>
                         {trades.map((trade) => (
                           <optgroup key={trade} label={trade}>
                             {normSet.filter((n) => n.trade === trade).map((n) => (
@@ -198,10 +201,10 @@ export function TakeoffView({
                     </td>
                     <td className="px-2 py-1">
                       <select value={r.method} onChange={(e) => { const m = e.target.value as Method; patch(r.id, { method: m, unit: r.normId ? r.unit : METHOD_UNIT[m] }); }} className="w-full rounded border border-border bg-surface px-1 py-0.5 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30">
-                        <option value="area">Area (L×W)</option>
-                        <option value="volume">Volume (L×W×H)</option>
-                        <option value="linear">Linear (L)</option>
-                        <option value="count">Count</option>
+                        <option value="area">{t("Area (L×W)")}</option>
+                        <option value="volume">{t("Volume (L×W×H)")}</option>
+                        <option value="linear">{t("Linear (L)")}</option>
+                        <option value="count">{t("Count")}</option>
                       </select>
                     </td>
                     <td className="px-1 py-1">
@@ -228,7 +231,7 @@ export function TakeoffView({
                       </select>
                     </td>
                     <td className="no-print px-1 py-1 text-center">
-                      <button type="button" onClick={() => removeRow(r.id)} aria-label="Remove" className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600">
+                      <button type="button" onClick={() => removeRow(r.id)} aria-label={t("Remove")} className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </td>
@@ -240,7 +243,7 @@ export function TakeoffView({
         </div>
         <div className="flex items-center gap-3 border-t border-border p-3">
           <button type="button" onClick={addRow} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
-            <Plus className="h-3.5 w-3.5" /> Add measurement
+            <Plus className="h-3.5 w-3.5" /> {t("Add measurement")}
           </button>
           <div className="ml-auto flex flex-wrap gap-2">
             {Object.entries(totalsByUnit).map(([unit, qty]) => (

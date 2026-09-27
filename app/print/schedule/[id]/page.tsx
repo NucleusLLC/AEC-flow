@@ -4,8 +4,12 @@ import { SchedulePrint } from "@/components/schedule/schedule-print";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { SYSTEM_LOCALE } from "@/lib/format";
 import { getFirmIdentity } from "@/lib/server/firm";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Schedule — Print" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Schedule")} — ${t("Print")}` };
+}
 
 export default async function SchedulePrintPage({
   params,

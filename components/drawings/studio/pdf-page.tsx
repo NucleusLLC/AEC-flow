@@ -25,6 +25,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import type { PageView } from "@/lib/drawings/markup";
 
 type PdfDocument = {
@@ -83,6 +85,7 @@ export function PdfPageCanvas({
 }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const docRef = useRef<PdfDocument | null>(null);
+  const t = useT();
   const [ready, setReady] = useState(false);
 
   // One document per file, torn down on unmount. Re-parsing the bytes per page
@@ -107,7 +110,7 @@ export function PdfPageCanvas({
         setReady(true);
       } catch (err) {
         if (!cancelled) {
-          onError?.(err instanceof Error ? err.message : "The drawing could not be opened.");
+          onError?.(err instanceof Error ? err.message : t("The drawing could not be opened."));
         }
       }
     })();
@@ -170,7 +173,7 @@ export function PdfPageCanvas({
       } catch (err) {
         // A cancelled render is the normal result of turning a page quickly.
         const message = err instanceof Error ? err.message : "";
-        if (!cancelled && !/cancel/i.test(message)) onError?.(message || "The page could not be drawn.");
+        if (!cancelled && !/cancel/i.test(message)) onError?.(message || t("The page could not be drawn."));
       }
     })();
 
@@ -186,7 +189,7 @@ export function PdfPageCanvas({
       ref={canvasRef}
       className="block bg-white shadow-[0_1px_3px_rgba(16,24,40,0.12)]"
       style={{ transform: rotation ? `rotate(${rotation}deg)` : undefined }}
-      aria-label={`Drawing page ${page}`}
+      aria-label={fmt(t("Drawing page {page}"), { page })}
     />
   );
 }

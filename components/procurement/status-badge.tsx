@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
 import { PO_STATUS_LABEL, type PurchaseOrderStatus } from "@/lib/procurement/types";
 
 const TONE: Record<PurchaseOrderStatus, "neutral" | "blue" | "green" | "amber" | "red" | "slate"> = {
@@ -11,5 +14,6 @@ const TONE: Record<PurchaseOrderStatus, "neutral" | "blue" | "green" | "amber" |
 };
 
 export function PoStatusBadge({ status }: { status: PurchaseOrderStatus }) {
-  return <Badge tone={TONE[status]}>{PO_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={TONE[status]}>{t(PO_STATUS_LABEL[status])}</Badge>;
 }

@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
 import { STATUS_LABEL, type ServiceProposalStatus } from "@/lib/proposals/engine/status";
 
 const TONE: Record<ServiceProposalStatus, "neutral" | "blue" | "green" | "amber" | "red" | "slate"> = {
@@ -19,5 +22,6 @@ const TONE: Record<ServiceProposalStatus, "neutral" | "blue" | "green" | "amber"
 };
 
 export function ServiceProposalStatusBadge({ status }: { status: ServiceProposalStatus }) {
-  return <Badge tone={TONE[status]}>{STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={TONE[status]}>{t(STATUS_LABEL[status])}</Badge>;
 }

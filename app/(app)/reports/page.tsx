@@ -17,13 +17,14 @@ import {
   type Discipline,
 } from "@/lib/data/projects";
 import { formatCurrencyCompact } from "@/lib/format";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Reports · AEC-flow" };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default async function ReportsPage() {
-  const tr = await getServerT();
+  const t = await getServerT();
   const [proposals, projects] = await Promise.all([getProposals(), getProjects()]);
   const propSummary = summarizeProposals(proposals);
   const projSummary = summarizeProjects(projects);
@@ -39,7 +40,7 @@ export default async function ReportsPage() {
   ];
   const pipelineByStatus: NameValue[] = statusOrder
     .map((s) => ({
-      name: PROPOSAL_STATUS_LABEL[s],
+      name: t(PROPOSAL_STATUS_LABEL[s]),
       value: proposals.filter((p) => p.status === s).reduce((n, p) => n + p.totalFee, 0),
     }))
     .filter((d) => d.value > 0);
@@ -48,7 +49,7 @@ export default async function ReportsPage() {
   const projStatuses: ProjectStatus[] = ["ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"];
   const projectsByStatus: NameValue[] = projStatuses
     .map((s) => ({
-      name: PROJECT_STATUS_LABEL[s],
+      name: t(PROJECT_STATUS_LABEL[s]),
       value: projects.filter((p) => p.status === s).length,
     }))
     .filter((d) => d.value > 0);
@@ -64,7 +65,7 @@ export default async function ReportsPage() {
   ];
   const projectsByDiscipline: NameValue[] = disciplines
     .map((d) => ({
-      name: DISCIPLINE_LABEL[d],
+      name: t(DISCIPLINE_LABEL[d]),
       value: projects.filter((p) => p.disciplines.includes(d)).length,
     }))
     .filter((d) => d.value > 0);
@@ -79,34 +80,34 @@ export default async function ReportsPage() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([ym, value]) => {
       const [y, m] = ym.split("-");
-      return { month: `${MONTHS[Number(m) - 1]} '${y.slice(2)}`, value };
+      return { month: `${t(MONTHS[Number(m) - 1])} '${y.slice(2)}`, value };
     });
 
   const tiles = [
-    { label: "Open Pipeline", value: formatCurrencyCompact(propSummary.openValue), hint: `${propSummary.openCount} live proposals` },
-    { label: "Won to Date", value: formatCurrencyCompact(propSummary.wonValue), hint: `${propSummary.winRate}% win rate` },
-    { label: "Active Projects", value: String(projSummary.active), hint: `${projSummary.atRisk} at risk` },
-    { label: "Portfolio Value", value: formatCurrencyCompact(projSummary.portfolioValue), hint: "active contract value" },
+    { label: t("Open Pipeline"), value: formatCurrencyCompact(propSummary.openValue), hint: fmt(t("{count} live proposals"), { count: propSummary.openCount }) },
+    { label: t("Won to Date"), value: formatCurrencyCompact(propSummary.wonValue), hint: fmt(t("{rate}% win rate"), { rate: propSummary.winRate }) },
+    { label: t("Active Projects"), value: String(projSummary.active), hint: fmt(t("{count} at risk"), { count: projSummary.atRisk }) },
+    { label: t("Portfolio Value"), value: formatCurrencyCompact(projSummary.portfolioValue), hint: t("active contract value") },
   ];
 
   return (
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">{tr("Reports")}</h2>
+          <h2 className="text-xl font-semibold text-fg">{t("Reports")}</h2>
           <p className="text-sm text-muted">
-            {tr("Practice analytics across proposals and project delivery.")}
+            {t("Practice analytics across proposals and project delivery.")}
           </p>
         </div>
         <EmailButton subject="AEC-flow — Practice Report" attachment="Practice Report.pdf" />
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <Card key={t.label} className="p-5">
-            <div className="text-sm text-muted">{t.label}</div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{t.value}</div>
-            <div className="mt-1 text-xs text-faint">{t.hint}</div>
+        {tiles.map((tile) => (
+          <Card key={tile.label} className="p-5">
+            <div className="text-sm text-muted">{tile.label}</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{tile.value}</div>
+            <div className="mt-1 text-xs text-faint">{tile.hint}</div>
           </Card>
         ))}
       </div>

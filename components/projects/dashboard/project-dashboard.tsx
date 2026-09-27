@@ -26,6 +26,7 @@ import {
   type WidgetType,
   type ProjectSummary,
 } from "@/lib/dashboard";
+import { useT } from "@/components/i18n/language-provider";
 
 const ICONS: Record<WidgetType, React.ComponentType<{ className?: string }>> = {
   notes: StickyNote,
@@ -48,6 +49,7 @@ export function ProjectDashboard({ project }: { project: ProjectSummary }) {
     defaultWidgets(),
   );
   const [adding, setAdding] = useState(false);
+  const t = useT();
   // Drag-and-drop reorder state. `grabId` arms a card for dragging (set when the
   // drag handle is pressed) so text/inputs in the card stay interactive; `dragId`
   // is the card in flight; `overId` is the current drop target (for the indicator).
@@ -98,7 +100,7 @@ export function ProjectDashboard({ project }: { project: ProjectSummary }) {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted">
-          Your board — add, rename, drag to reorder and configure widgets. Changes are saved on this device.
+          {t("Your board — add, rename, drag to reorder and configure widgets. Changes are saved on this device.")}
         </p>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -108,7 +110,7 @@ export function ProjectDashboard({ project }: { project: ProjectSummary }) {
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
             >
               <Plus className="h-4 w-4" />
-              Add widget
+              {t("Add widget")}
             </button>
             {adding ? (
               <>
@@ -125,8 +127,8 @@ export function ProjectDashboard({ project }: { project: ProjectSummary }) {
                       >
                         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-faint" />
                         <span className="min-w-0">
-                          <span className="block text-sm font-medium text-fg">{w.name}</span>
-                          <span className="block text-xs text-muted">{w.description}</span>
+                          <span className="block text-sm font-medium text-fg">{t(w.name)}</span>
+                          <span className="block text-xs text-muted">{t(w.description)}</span>
                         </span>
                       </button>
                     );
@@ -139,10 +141,10 @@ export function ProjectDashboard({ project }: { project: ProjectSummary }) {
             type="button"
             onClick={() => setWidgets(defaultWidgets())}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-            title="Reset to the default layout"
+            title={t("Reset to the default layout")}
           >
             <RotateCcw className="h-4 w-4" />
-            Reset
+            {t("Reset")}
           </button>
         </div>
       </div>
@@ -150,7 +152,7 @@ export function ProjectDashboard({ project }: { project: ProjectSummary }) {
       {/* Masonry widget board */}
       {widgets.length === 0 ? (
         <div className="rounded-[var(--radius-card)] border border-dashed border-border py-16 text-center">
-          <p className="text-sm text-muted">No widgets. Use “Add widget” to build your board.</p>
+          <p className="text-sm text-muted">{t("No widgets. Use “Add widget” to build your board.")}</p>
         </div>
       ) : (
         <div className="columns-1 gap-4 md:columns-2 xl:columns-3">

@@ -11,7 +11,10 @@ import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
 
-export const metadata = { title: "Settings · AEC-flow" };
+export async function generateMetadata() {
+  const tr = await getServerT();
+  return { title: `${tr("Settings")} · AEC-flow` };
+}
 
 export default async function SettingsPage() {
   const tr = await getServerT();

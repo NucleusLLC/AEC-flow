@@ -10,6 +10,8 @@ import { computeLot, rollupLots } from "@/lib/development/calc";
 import { LOT_STATUS_LABEL, type LotInventory, type LotStatus } from "@/lib/data/development.types";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { uid } from "@/components/projects/dashboard/hooks";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type Row = LotInventory;
 
@@ -30,6 +32,7 @@ export function LotTable({
   costPerNetM2: number;
   currency: string;
 }) {
+  const t = useT();
   const [rows, setRows] = useState<Row[]>(lots);
 
   const set = (id: string, k: keyof Row, v: string | number) =>
@@ -78,32 +81,32 @@ export function LotTable({
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div>
-          <h3 className="text-sm font-semibold text-fg">Lot inventory</h3>
-          <p className="text-xs text-muted">Allocated cost = area × {formatCurrency(costPerNetM2, currency)}/m² (project cost per net sellable m²).</p>
+          <h3 className="text-sm font-semibold text-fg">{t("Lot inventory")}</h3>
+          <p className="text-xs text-muted">{fmt(t("Allocated cost = area × {rate}/m² (project cost per net sellable m²)."), { rate: formatCurrency(costPerNetM2, currency) })}</p>
         </div>
         <div className="flex items-center gap-2">
-          <CsvImport onRows={importCsv} hint="Columns: lotNumber, area, basePrice, premium, phase, status" />
+          <CsvImport onRows={importCsv} hint={t("Columns: lotNumber, area, basePrice, premium, phase, status")} />
           <button type="button" onClick={add} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-2">
-            <Plus className="h-4 w-4" /> Add lot
+            <Plus className="h-4 w-4" /> {t("Add lot")}
           </button>
-          <SaveControl url={`/api/development/${projectId}/lots`} build={() => ({ lots: rows })} label="Save lots" />
+          <SaveControl url={`/api/development/${projectId}/lots`} build={() => ({ lots: rows })} label={t("Save lots")} />
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[920px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-              <th className="px-2 py-2 font-medium">Lot</th>
-              <th className="px-2 py-2 font-medium">Phase</th>
-              <th className="px-2 py-2 text-right font-medium">Area m²</th>
-              <th className="px-2 py-2 text-right font-medium">Base /m²</th>
-              <th className="px-2 py-2 text-right font-medium">Premium</th>
-              <th className="px-2 py-2 text-right font-medium">Final /m²</th>
-              <th className="px-2 py-2 text-right font-medium">Sales price</th>
-              <th className="px-2 py-2 text-right font-medium">Alloc. cost</th>
-              <th className="px-2 py-2 text-right font-medium">Profit</th>
-              <th className="px-2 py-2 text-right font-medium">Margin</th>
-              <th className="px-2 py-2 font-medium">Status</th>
+              <th className="px-2 py-2 font-medium">{t("Lot")}</th>
+              <th className="px-2 py-2 font-medium">{t("Phase")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Area m²")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Base /m²")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Premium")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Final /m²")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Sales price")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Alloc. cost")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Profit")}</th>
+              <th className="px-2 py-2 text-right font-medium">{t("Margin")}</th>
+              <th className="px-2 py-2 font-medium">{t("Status")}</th>
               <th className="px-2 py-2"></th>
             </tr>
           </thead>
@@ -122,20 +125,20 @@ export function LotTable({
                 <td className={`${cell} text-right tabular-nums ${c.grossMarginPct < 0 ? "text-red-600" : "text-muted"}`}>{c.grossMarginPct.toFixed(1)}%</td>
                 <td className={cell}>
                   <select className="h-8 rounded border border-border bg-surface px-1.5 text-xs" value={r.status} onChange={(e) => set(r.id, "status", e.target.value as LotStatus)}>
-                    {(Object.keys(LOT_STATUS_LABEL) as LotStatus[]).map((s) => <option key={s} value={s}>{LOT_STATUS_LABEL[s]}</option>)}
+                    {(Object.keys(LOT_STATUS_LABEL) as LotStatus[]).map((s) => <option key={s} value={s}>{t(LOT_STATUS_LABEL[s])}</option>)}
                   </select>
                 </td>
                 <td className={cell}>
-                  <button type="button" onClick={() => remove(r.id)} className="text-faint hover:text-red-600" aria-label="Remove lot"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => remove(r.id)} className="text-faint hover:text-red-600" aria-label={t("Remove lot")}><Trash2 className="h-3.5 w-3.5" /></button>
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="bg-surface-2 font-semibold">
-              <td className="px-2 py-2.5" colSpan={2}>Totals · {totals.count} lots</td>
+              <td className="px-2 py-2.5" colSpan={2}>{fmt(t("Totals · {count} lots"), { count: totals.count })}</td>
               <td className="px-2 py-2.5 text-right tabular-nums">{formatNumber(totals.totalArea)}</td>
-              <td className="px-2 py-2.5 text-right text-[11px] font-normal text-muted" colSpan={3}>wavg {formatNumber(totals.weightedAvgSalesPricePerM2)}/m²</td>
+              <td className="px-2 py-2.5 text-right text-[11px] font-normal text-muted" colSpan={3}>{fmt(t("wavg {value}/m²"), { value: formatNumber(totals.weightedAvgSalesPricePerM2) })}</td>
               <td className="px-2 py-2.5 text-right tabular-nums">{formatCurrency(totals.totalRevenue, currency)}</td>
               <td className="px-2 py-2.5 text-right tabular-nums">{formatCurrency(totals.totalCost, currency)}</td>
               <td className="px-2 py-2.5 text-right tabular-nums text-emerald-700">{formatCurrency(totals.totalProfit, currency)}</td>
@@ -145,7 +148,7 @@ export function LotTable({
           </tfoot>
         </table>
       </div>
-      <p className="px-4 py-2 text-[11px] text-faint">Edits recalculate instantly. Use “Save lots” to persist (requires the database to be live).</p>
+      <p className="px-4 py-2 text-[11px] text-faint">{t("Edits recalculate instantly. Use “Save lots” to persist (requires the database to be live).")}</p>
     </Card>
   );
 }

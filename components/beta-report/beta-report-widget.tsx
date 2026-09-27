@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { submitBetaReport } from "@/app/(app)/beta-reports/actions";
 import { BETA_REPORT_OPEN_EVENT } from "@/components/beta-report/open-beta-report";
 import { MAX_SCREENSHOT_CHARS, type BetaReportKind } from "@/lib/data/beta-reports.types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /** Longest edge of the saved screenshot, in px. Downscaling keeps the JPEG well
  * under the server action's body-size limit. */
@@ -37,6 +39,7 @@ type Phase = "form" | "sending" | "done";
  * and the save/action buttons.
  */
 export function BetaReportWidget() {
+  const t = useT();
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -80,10 +83,10 @@ export function BetaReportWidget() {
       if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
-    const t = setTimeout(() => titleRef.current?.focus(), 60);
+    const timer = setTimeout(() => titleRef.current?.focus(), 60);
     return () => {
       window.removeEventListener("keydown", onKey);
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [open, close]);
 
@@ -146,7 +149,7 @@ export function BetaReportWidget() {
         setError("Couldn't capture the screen. You can still send the report without it.");
       }
     } finally {
-      stream?.getTracks().forEach((t) => t.stop());
+      stream?.getTracks().forEach((tr) => tr.stop());
       setCapturing(false);
     }
   }, []);
@@ -200,7 +203,7 @@ export function BetaReportWidget() {
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Beta feedback"
+            aria-label={t("Beta feedback")}
             className={cn(
               "no-print fixed bottom-4 right-4 z-50 flex max-h-[calc(100dvh-2rem)] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl print:hidden",
               capturing && "invisible",
@@ -213,15 +216,15 @@ export function BetaReportWidget() {
                   <MessageSquarePlus className="h-4 w-4" />
                 </span>
                 <div className="leading-tight">
-                  <div className="text-sm font-semibold text-fg">Beta feedback</div>
-                  <div className="text-[11px] text-muted">Report a bug or share a wish</div>
+                  <div className="text-sm font-semibold text-fg">{t("Beta feedback")}</div>
+                  <div className="text-[11px] text-muted">{t("Report a bug or share a wish")}</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={close}
                 className="rounded-md p-1 text-faint transition-colors hover:bg-surface-2 hover:text-fg"
-                aria-label="Close"
+                aria-label={t("Close")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -233,9 +236,9 @@ export function BetaReportWidget() {
                   <Check className="h-6 w-6" />
                 </span>
                 <div>
-                  <div className="text-sm font-semibold text-fg">Thanks — it&apos;s on its way!</div>
+                  <div className="text-sm font-semibold text-fg">{t("Thanks — it’s on its way!")}</div>
                   <p className="mt-1 text-xs text-muted">
-                    Your {isWish ? "wish" : "bug report"} was sent to the team.
+                    {isWish ? t("Your wish was sent to the team.") : t("Your bug report was sent to the team.")}
                   </p>
                 </div>
                 <div className="mt-2 flex gap-2">
@@ -244,14 +247,14 @@ export function BetaReportWidget() {
                     onClick={resetForm}
                     className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
                   >
-                    Send another
+                    {t("Send another")}
                   </button>
                   <button
                     type="button"
                     onClick={close}
                     className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand/90"
                   >
-                    Done
+                    {t("Done")}
                   </button>
                 </div>
               </div>
@@ -263,42 +266,42 @@ export function BetaReportWidget() {
                     active={kind === "BUG"}
                     onClick={() => setKind("BUG")}
                     icon={<Bug className="h-4 w-4" />}
-                    label="Bug"
-                    hint="Something's broken"
+                    label={t("Bug")}
+                    hint={t("Something’s broken")}
                     activeClass="border-red-300 bg-red-50 text-red-700"
                   />
                   <KindButton
                     active={kind === "WISH"}
                     onClick={() => setKind("WISH")}
                     icon={<Lightbulb className="h-4 w-4" />}
-                    label="Wish"
-                    hint="An idea or request"
+                    label={t("Wish")}
+                    hint={t("An idea or request")}
                     activeClass="border-violet-300 bg-violet-50 text-violet-700"
                   />
                 </div>
 
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-muted">Summary</span>
+                  <span className="mb-1 block text-xs font-medium text-muted">{t("Summary")}</span>
                   <input
                     ref={titleRef}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     maxLength={140}
-                    placeholder={isWish ? "I wish I could…" : "What went wrong?"}
+                    placeholder={isWish ? t("I wish I could…") : t("What went wrong?")}
                     className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/20"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-muted">Details</span>
+                  <span className="mb-1 block text-xs font-medium text-muted">{t("Details")}</span>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
                     placeholder={
                       isWish
-                        ? "Describe the idea and why it would help…"
-                        : "Steps to reproduce, what you expected, what happened…"
+                        ? t("Describe the idea and why it would help…")
+                        : t("Steps to reproduce, what you expected, what happened…")
                     }
                     className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/20"
                   />
@@ -307,14 +310,14 @@ export function BetaReportWidget() {
                 {/* Screenshot */}
                 <div>
                   <span className="mb-1 block text-xs font-medium text-muted">
-                    Screenshot <span className="text-faint">(optional)</span>
+                    {t("Screenshot")} <span className="text-faint">{t("(optional)")}</span>
                   </span>
                   {screenshot ? (
                     <div className="group relative overflow-hidden rounded-lg border border-border">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={screenshot}
-                        alt="Captured screenshot"
+                        alt={t("Captured screenshot")}
                         className="max-h-44 w-full object-cover object-top"
                       />
                       <button
@@ -322,7 +325,7 @@ export function BetaReportWidget() {
                         onClick={() => setScreenshot(null)}
                         className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-sm transition-colors hover:bg-black/75"
                       >
-                        <Trash2 className="h-3 w-3" /> Remove
+                        <Trash2 className="h-3 w-3" /> {t("Remove")}
                       </button>
                     </div>
                   ) : (
@@ -332,17 +335,17 @@ export function BetaReportWidget() {
                       className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-surface-2/40 px-3 py-3 text-sm font-medium text-muted transition-colors hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
                     >
                       <Camera className="h-4 w-4" />
-                      Capture screenshot
+                      {t("Capture screenshot")}
                     </button>
                   )}
                   <p className="mt-1 text-[11px] text-faint">
-                    Your browser will ask which screen or window to share.
+                    {t("Your browser will ask which screen or window to share.")}
                   </p>
                 </div>
 
                 {error ? (
                   <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                    {error}
+                    {t(error)}
                   </div>
                 ) : null}
               </div>
@@ -352,7 +355,7 @@ export function BetaReportWidget() {
             {phase !== "done" ? (
               <div className="flex items-center justify-between gap-3 border-t border-border bg-surface-2/40 px-4 py-3">
                 <span className="truncate text-[11px] text-faint">
-                  {session?.user?.name ? `Sending as ${session.user.name}` : "Sending anonymously"}
+                  {session?.user?.name ? fmt(t("Sending as {name}"), { name: session.user.name }) : t("Sending anonymously")}
                 </span>
                 <button
                   type="button"
@@ -365,7 +368,7 @@ export function BetaReportWidget() {
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  {phase === "sending" ? "Sending…" : "Send"}
+                  {phase === "sending" ? t("Sending…") : t("Send")}
                 </button>
               </div>
             ) : null}

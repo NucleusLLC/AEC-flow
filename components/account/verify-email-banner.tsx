@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { MailWarning, Check, Loader2, X } from "lucide-react";
 import { resendVerificationAction } from "@/app/(app)/account/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * "Confirm your email address", across the top of the app.
@@ -20,6 +22,7 @@ export function VerifyEmailBanner({ email }: { email: string }) {
   const [hidden, setHidden] = useState(false);
   const [sent, setSent] = useState(false);
   const [pending, start] = useTransition();
+  const t = useT();
 
   if (hidden) return null;
 
@@ -27,12 +30,11 @@ export function VerifyEmailBanner({ email }: { email: string }) {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-900 dark:text-amber-200">
       <MailWarning className="h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="min-w-0">
-        Confirm <span className="font-semibold">{email}</span> so password resets and
-        invitations can reach you.
+        {fmt(t("Confirm {email} so password resets and invitations can reach you."), { email })}
       </span>
       {sent ? (
         <span className="inline-flex items-center gap-1.5 font-medium">
-          <Check className="h-3.5 w-3.5" aria-hidden="true" /> Email sent — check your inbox
+          <Check className="h-3.5 w-3.5" aria-hidden="true" /> {t("Email sent — check your inbox")}
         </span>
       ) : (
         <button
@@ -47,13 +49,13 @@ export function VerifyEmailBanner({ email }: { email: string }) {
           className="inline-flex h-7 items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2.5 text-xs font-semibold hover:bg-amber-500/25 disabled:opacity-50"
         >
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
-          Resend the link
+          {t("Resend the link")}
         </button>
       )}
       <button
         type="button"
         onClick={() => setHidden(true)}
-        aria-label="Hide until next time"
+        aria-label={t("Hide until next time")}
         className="ml-auto shrink-0 rounded p-1 hover:bg-amber-500/20"
       >
         <X className="h-3.5 w-3.5" aria-hidden="true" />

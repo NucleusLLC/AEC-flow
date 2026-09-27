@@ -5,8 +5,12 @@ import { ProposalForm } from "@/components/proposals/proposal-form";
 import { getProposals } from "@/lib/data/proposals";
 import { getClients } from "@/lib/data/clients";
 import { getTeam } from "@/lib/data/team";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "New Proposal · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("New Proposal")} · AEC-flow` };
+}
 
 /** Next reference in the PRO-YYYY-NNN series (deterministic from existing refs). */
 function nextRef(refs: string[]): string {
@@ -34,6 +38,7 @@ export default async function NewProposalPage() {
     getClients(),
     getTeam(),
   ]);
+  const t = await getServerT();
   const ref = nextRef(proposals.map((p) => p.refNumber));
   const clientOptions = clients.map((c) => ({ id: c.id, name: c.name }));
   // Real team members: the form used to offer four hard-coded demo names, and
@@ -47,12 +52,12 @@ export default async function NewProposalPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Proposals
+        {t("Proposals")}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">New proposal</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("New proposal")}</h2>
         <p className="text-sm text-muted">
-          Draft a fee proposal with line items and payment milestones. Reference{" "}
+          {t("Draft a fee proposal with line items and payment milestones.")} {t("Reference")}{" "}
           <span className="font-mono text-fg">{ref}</span>.
         </p>
       </div>

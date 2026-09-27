@@ -36,8 +36,12 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
   const { module } = useModule();
   const t = useT();
   const user = session?.user;
-  const displayName = user?.name ?? "Account";
-  const roleLabel = user?.role ? ROLE_LABEL[user.role] ?? user.role : "Beta tester";
+  const displayName = user?.name ?? t("Account");
+  const roleLabel = user?.role
+    ? ROLE_LABEL[user.role]
+      ? t(ROLE_LABEL[user.role])
+      : user.role
+    : t("Beta tester");
 
   return (
     <aside
@@ -53,7 +57,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold text-white">AEC-flow</div>
-          <div className="text-[11px] text-sidebar-muted">AEC Management Suite</div>
+          <div className="text-[11px] text-sidebar-muted">{t("AEC Management Suite")}</div>
         </div>
       </div>
 
@@ -79,7 +83,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
                     <li key={item.href}>
                       <div
                         aria-disabled
-                        title="Coming soon — not part of the beta"
+                        title={t("Coming soon — not part of the beta")}
                         className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-muted/50"
                       >
                         <Icon className="h-[18px] w-[18px] shrink-0 text-sidebar-muted/40" strokeWidth={2} />
@@ -212,7 +216,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
           <div
             className="px-2 pt-1 font-mono text-[10px] font-semibold tracking-tight"
             style={{ color: VERSION_COLOR }}
-            title="Deployed version · build"
+            title={t("Deployed version · build")}
           >
             {version}
           </div>

@@ -12,6 +12,7 @@ import {
 } from "@/lib/data/leave.types";
 import { saveLeaveRequest } from "@/app/(app)/leave/actions";
 import { MemberSelect } from "@/components/team/member-select";
+import { useT } from "@/components/i18n/language-provider";
 
 export type LeaveFormInitial = {
   id: string;
@@ -54,6 +55,7 @@ export function LeaveRequestForm({
   mode?: "new" | "edit";
   initial?: LeaveFormInitial;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -101,19 +103,19 @@ export function LeaveRequestForm({
             <AlertTriangle className="h-3.5 w-3.5" />
           </div>
           <div className="text-sm">
-            <p className="font-medium text-red-800">Could not submit leave request.</p>
-            <p className="mt-0.5 text-red-700">{error}</p>
+            <p className="font-medium text-red-800">{t("Could not submit leave request.")}</p>
+            <p className="mt-0.5 text-red-700">{t(error)}</p>
           </div>
         </div>
       ) : null}
 
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg">Leave request</h3>
+        <h3 className="mb-4 text-sm font-semibold text-fg">{t("Leave request")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Leave is filed against a member's display NAME, hence `by="name"`. */}
           <MemberSelect
             id="userName"
-            label="Team member"
+            label={t("Team member")}
             by="name"
             members={members.map((m) => ({ id: m, name: m }))}
             value={userName}
@@ -124,12 +126,12 @@ export function LeaveRequestForm({
 
           <div>
             <label className={labelClass} htmlFor="type">
-              Leave type
+              {t("Leave type")}
             </label>
             <select id="type" name="type" className={inputClass} defaultValue={initial?.type ?? "ANNUAL"}>
-              {TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {LEAVE_TYPE_LABEL[t]}
+              {TYPES.map((lt) => (
+                <option key={lt} value={lt}>
+                  {t(LEAVE_TYPE_LABEL[lt])}
                 </option>
               ))}
             </select>
@@ -137,7 +139,7 @@ export function LeaveRequestForm({
 
           <div>
             <label className={labelClass} htmlFor="startDate">
-              Start date
+              {t("Start date")}
             </label>
             <input
               id="startDate"
@@ -152,7 +154,7 @@ export function LeaveRequestForm({
 
           <div>
             <label className={labelClass} htmlFor="endDate">
-              End date
+              {t("End date")}
             </label>
             <input
               id="endDate"
@@ -166,13 +168,13 @@ export function LeaveRequestForm({
           </div>
 
           <div className="sm:col-span-2 rounded-lg bg-surface-2 px-3 py-2 text-sm text-muted">
-            Working days requested: <span className="font-semibold text-fg">{days}</span>{" "}
-            <span className="text-xs text-faint">(excludes Fri/Sat weekends)</span>
+            {t("Working days requested:")} <span className="font-semibold text-fg">{days}</span>{" "}
+            <span className="text-xs text-faint">{t("(excludes Fri/Sat weekends)")}</span>
           </div>
 
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="reason">
-              Reason (optional)
+              {t("Reason (optional)")}
             </label>
             <textarea
               id="reason"
@@ -180,7 +182,7 @@ export function LeaveRequestForm({
               rows={3}
               defaultValue={initial?.reason ?? ""}
               className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15"
-              placeholder="Family holiday, medical, etc."
+              placeholder={t("Family holiday, medical, etc.")}
             />
           </div>
         </div>
@@ -191,14 +193,14 @@ export function LeaveRequestForm({
           href="/leave"
           className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          Cancel
+          {t("Cancel")}
         </Link>
         <button
           type="submit"
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Submit request"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Submit request")}
         </button>
       </div>
     </form>

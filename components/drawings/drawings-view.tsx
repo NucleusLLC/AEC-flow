@@ -19,6 +19,9 @@ import {
 import { drawingFileUrlAction } from "@/app/(app)/drawings/actions";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
+import { sheetTypeText } from "@/components/drawings/t-context";
 
 function formatSize(kb: number): string {
   return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
@@ -36,16 +39,16 @@ function formatSize(kb: number): string {
  * the same server action the download button uses, which re-checks that the
  * drawing belongs to the caller's company before signing anything.
  */
-function toPreview(d: Drawing): PreviewDoc {
+function toPreview(d: Drawing, t: (text: string) => string): PreviewDoc {
   return {
     name: `${d.code} — ${d.title}`,
     fileType: d.fileType,
     sizeLabel: formatSize(d.sizeKb),
     meta: [
-      { label: "Project", value: d.projectNumber },
-      { label: "Discipline", value: DISCIPLINE_LABEL[d.discipline] },
-      { label: "Rev", value: d.revision },
-      { label: "Status", value: DRAWING_STATUS_LABEL[d.status] },
+      { label: t("Project"), value: d.projectNumber },
+      { label: t("Discipline"), value: t(DISCIPLINE_LABEL[d.discipline]) },
+      { label: t("Rev"), value: d.revision },
+      { label: t("Status"), value: t(DRAWING_STATUS_LABEL[d.status]) },
     ],
     file: d.hasFile
       ? {
@@ -68,6 +71,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | DrawingStatus; label: string }> = [
 ];
 
 export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
+  const t = useT();
   const projects = useMemo(
     () =>
       Array.from(new Map(drawings.map((d) => [d.projectId, d.projectNumber + " — " + d.projectName])).entries()),
@@ -130,7 +134,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -141,7 +145,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search drawings…"
+              placeholder={t("Search drawings…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -150,7 +154,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
             onChange={(e) => setProject(e.target.value)}
             className="h-9 max-w-[220px] rounded-lg border border-border bg-surface px-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
-            <option value="ALL">All projects</option>
+            <option value="ALL">{t("All projects")}</option>
             {projects.map(([id, label]) => (
               <option key={id} value={id}>
                 {label}
@@ -162,10 +166,10 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
             onChange={(e) => setDiscipline(e.target.value as "ALL" | Discipline)}
             className="h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
-            <option value="ALL">All disciplines</option>
+            <option value="ALL">{t("All disciplines")}</option>
             {(Object.keys(DISCIPLINE_LABEL) as Discipline[]).map((d) => (
               <option key={d} value={d}>
-                {DISCIPLINE_LABEL[d]}
+                {t(DISCIPLINE_LABEL[d])}
               </option>
             ))}
           </select>
@@ -178,15 +182,15 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
           <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Drawing</th>
-                <th className="px-3 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Discipline</th>
-                <th className="px-3 py-2.5 font-medium">Type</th>
-                <th className="px-3 py-2.5 font-medium">Sheet</th>
-                <th className="px-3 py-2.5 font-medium text-center">Rev</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium">File</th>
-                <th className="px-3 py-2.5 font-medium">Updated</th>
+                <th className="px-5 py-2.5 font-medium">{t("Drawing")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Discipline")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Type")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Sheet")}</th>
+                <th className="px-3 py-2.5 font-medium text-center">{t("Rev")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("File")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Updated")}</th>
                 <th className="px-5 py-2.5 font-medium text-right"></th>
               </tr>
             </thead>
@@ -208,7 +212,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                             {d.title}
                           </Link>
                           {d.openComments > 0 ? (
-                            <Badge tone="amber">{d.openComments} open</Badge>
+                            <Badge tone="amber">{fmt(t("{count} open"), { count: d.openComments })}</Badge>
                           ) : null}
                         </div>
                       </div>
@@ -217,14 +221,14 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                   <td className="px-3 py-3">
                     <span className="font-mono text-[11px] text-muted">{d.projectNumber}</span>
                   </td>
-                  <td className="px-3 py-3 text-muted">{DISCIPLINE_LABEL[d.discipline]}</td>
+                  <td className="px-3 py-3 text-muted">{t(DISCIPLINE_LABEL[d.discipline])}</td>
                   <td className="px-3 py-3">
                     {/* Read off the sheet at intake. A row that predates the
                         reader, or one nothing could classify, prints an em dash
                         rather than a plausible-looking guess. */}
                     {d.sheetType ? (
                       <span className="text-muted">
-                        {SHEET_TYPE_LABEL[d.sheetType as SheetType] ?? d.sheetType}
+                        {SHEET_TYPE_LABEL[d.sheetType as SheetType] ? sheetTypeText(t, SHEET_TYPE_LABEL[d.sheetType as SheetType]) : d.sheetType}
                       </span>
                     ) : (
                       <span className="text-faint">—</span>
@@ -245,11 +249,11 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                       <span className="text-faint">—</span>
                     )}
                     {d.pageCount && d.pageCount > 1 ? (
-                      <div className="text-[10px] text-faint">{d.pageCount} pages</div>
+                      <div className="text-[10px] text-faint">{fmt(t("{count} pages"), { count: d.pageCount })}</div>
                     ) : null}
                   </td>
                   <td className="px-3 py-3 text-center">
-                    <Badge tone="neutral">Rev {d.revision}</Badge>
+                    <Badge tone="neutral">{fmt(t("Rev {rev}"), { rev: d.revision })}</Badge>
                   </td>
                   <td className="px-3 py-3">
                     <DrawingStatusBadge status={d.status} />
@@ -274,21 +278,21 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-2.5 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90"
                       >
                         <PenLine className="h-3.5 w-3.5" />
-                        Review
+                        {t("Review")}
                       </Link>
                       <button
                         type="button"
-                        onClick={() => setPreview(toPreview(d))}
+                        onClick={() => setPreview(toPreview(d, t))}
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
                       >
                         <Eye className="h-3.5 w-3.5" />
-                        Preview
+                        {t("Preview")}
                       </button>
                       <EmailButton variant="icon" subject={`${d.code} ${d.title} — ${d.projectNumber}`} attachment={`${d.code} ${d.title}.${d.fileType.toLowerCase()}`} relatedType="drawing" relatedId={d.id} />
                       <button
                         type="button"
-                        aria-label={`Download ${d.code}`}
-                        title={d.hasFile ? "Download" : "No file stored for this sheet"}
+                        aria-label={fmt(t("Download {code}"), { code: d.code })}
+                        title={d.hasFile ? t("Download") : t("No file stored for this sheet")}
                         disabled={!d.hasFile || downloading === d.id}
                         onClick={() => download(d.id)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
@@ -308,8 +312,8 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <FileStack className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No drawings match your filters</p>
-            <p className="text-xs text-muted">Try a different project, discipline, or search term.</p>
+            <p className="text-sm font-medium text-fg">{t("No drawings match your filters")}</p>
+            <p className="text-xs text-muted">{t("Try a different project, discipline, or search term.")}</p>
           </div>
         ) : null}
       </Card>
@@ -321,7 +325,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
       ) : null}
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {drawings.length} drawings
+        {fmt(t("Showing {count} of {total} drawings"), { count: rows.length, total: drawings.length })}
       </p>
 
       <DocumentPreview doc={preview} onClose={() => setPreview(null)} />

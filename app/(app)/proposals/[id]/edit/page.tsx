@@ -6,13 +6,16 @@ import { ProposalForm, type ProposalFormValues } from "@/components/proposals/pr
 import { getProposal } from "@/lib/data/proposals";
 import { getClients } from "@/lib/data/clients";
 import { getTeam } from "@/lib/data/team";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const proposal = await getProposal(id);
-  return { title: proposal ? `Edit ${proposal.refNumber} · AEC-flow` : "Edit Proposal · AEC-flow" };
+  const t = await getServerT();
+  return { title: proposal ? `${fmt(t("Edit {ref}"), { ref: proposal.refNumber })} · AEC-flow` : `${t("Edit Proposal")} · AEC-flow` };
 }
 
 export default async function EditProposalPage({ params }: PageProps) {
@@ -23,6 +26,7 @@ export default async function EditProposalPage({ params }: PageProps) {
     getTeam(),
   ]);
   if (!proposal) notFound();
+  const t = await getServerT();
 
   const initial: ProposalFormValues = {
     title: proposal.title,
@@ -60,7 +64,7 @@ export default async function EditProposalPage({ params }: PageProps) {
         {proposal.refNumber}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit proposal</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit proposal")}</h2>
         <p className="text-sm text-muted">
           <span className="font-mono text-fg">{proposal.refNumber}</span> · {proposal.title}
         </p>

@@ -6,8 +6,10 @@ import { Bell, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NotificationItem } from "@/lib/data/notifications.types";
 import { markAllReadAction } from "@/app/(app)/notifications/actions";
+import { useT } from "@/components/i18n/language-provider";
 
 export function NotificationsMenu({ initial }: { initial: NotificationItem[] }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>(initial);
   const [, startTransition] = useTransition();
@@ -25,7 +27,7 @@ export function NotificationsMenu({ initial }: { initial: NotificationItem[] }) 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Notifications"
+        aria-label={t("Notifications")}
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg"
       >
         <Bell className="h-[18px] w-[18px]" />
@@ -41,7 +43,7 @@ export function NotificationsMenu({ initial }: { initial: NotificationItem[] }) 
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
           <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="text-sm font-semibold text-fg">Notifications</span>
+              <span className="text-sm font-semibold text-fg">{t("Notifications")}</span>
               {unreadCount > 0 ? (
                 <button
                   type="button"
@@ -49,14 +51,14 @@ export function NotificationsMenu({ initial }: { initial: NotificationItem[] }) 
                   className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
                 >
                   <Check className="h-3.5 w-3.5" />
-                  Mark all read
+                  {t("Mark all read")}
                 </button>
               ) : null}
             </div>
 
             <div className="max-h-96 overflow-y-auto">
               {items.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-muted">You&rsquo;re all caught up.</div>
+                <div className="px-4 py-8 text-center text-sm text-muted">{t("You’re all caught up.")}</div>
               ) : null}
               {items.map((n) => (
                 <Link

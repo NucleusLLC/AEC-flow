@@ -28,6 +28,7 @@ import {
 import type { AnthropicKeyStatus } from "@/lib/server/ai-config";
 import type { FooterSettings, LogoSettings } from "@/lib/server/practice-config";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 import {
   type PracticeProfile,
   type ProposalTemplate,
@@ -79,27 +80,28 @@ export function SettingsView({
   /** Draws the per-member "Set password" control. Presentation only — the server enforces the real gate. */
   canManagePasswords?: boolean;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>("practice");
 
   return (
     <div className="space-y-5">
       {/* Tab bar */}
       <div className="flex flex-wrap gap-1 border-b border-border">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.key;
+        {TABS.map((tb) => {
+          const Icon = tb.icon;
+          const active = tab === tb.key;
           return (
             <button
-              key={t.key}
+              key={tb.key}
               type="button"
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(tb.key)}
               className={cn(
                 "-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
                 active ? "border-brand text-fg" : "border-transparent text-muted hover:text-fg",
               )}
             >
               <Icon className="h-4 w-4" />
-              {t.label}
+              {t(tb.label)}
             </button>
           );
         })}
@@ -131,6 +133,7 @@ export function SettingsView({
 }
 
 function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
+  const t = useT();
   const [status, setStatus] = useState<AnthropicKeyStatus>(initial);
   const [key, setKey] = useState("");
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -181,7 +184,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
     <Card>
       <CardHeader
         title="Anthropic API"
-        subtitle="Powers AI features such as AI-Fetch in the Estimating Wiki."
+        subtitle={t("Powers AI features such as AI-Fetch in the Estimating Wiki.")}
       />
       <CardBody className="space-y-4">
         {/* Current status */}
@@ -190,27 +193,26 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
           {status.configured ? (
             <span className="inline-flex items-center gap-2 text-sm text-fg">
               <Check className="h-4 w-4 text-emerald-600" />
-              Key configured
+              {t("Key configured")}
               <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-muted">{status.masked}</code>
-              <Badge tone={envManaged ? "blue" : "green"}>{envManaged ? "from environment" : "saved"}</Badge>
+              <Badge tone={envManaged ? "blue" : "green"}>{envManaged ? t("from environment") : t("saved")}</Badge>
             </span>
           ) : (
             <span className="inline-flex items-center gap-2 text-sm text-muted">
               <X className="h-4 w-4 text-faint" />
-              No API key configured — AI features are disabled.
+              {t("No API key configured — AI features are disabled.")}
             </span>
           )}
         </div>
 
         {envManaged ? (
           <p className="text-xs text-muted">
-            A key is set via the <code className="font-mono">ANTHROPIC_API_KEY</code> environment variable, which takes
-            precedence. Remove it from the environment to manage the key here instead.
+            {t("A key is set via the ANTHROPIC_API_KEY environment variable, which takes precedence. Remove it from the environment to manage the key here instead.")}
           </p>
         ) : (
           <>
             <label className="block">
-              <span className="text-xs font-medium text-muted">Anthropic API key</span>
+              <span className="text-xs font-medium text-muted">{t("Anthropic API key")}</span>
               <input
                 type="password"
                 value={key}
@@ -221,8 +223,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
                 className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
               />
               <span className="mt-1 block text-[11px] text-faint">
-                Stored server-side in a local config file (gitignored), never exposed to the browser. Get a key from
-                console.anthropic.com → API Keys.
+                {t("Stored server-side in a local config file (gitignored), never exposed to the browser. Get a key from console.anthropic.com → API Keys.")}
               </span>
             </label>
 
@@ -233,7 +234,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
                 disabled={saving || !key.trim()}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? "Saving…" : "Save key"}
+                {saving ? t("Saving…") : t("Save key")}
               </button>
               <button
                 type="button"
@@ -241,7 +242,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
                 disabled={testing || !status.configured}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Sparkles className="h-4 w-4" /> {testing ? "Testing…" : "Test"}
+                <Sparkles className="h-4 w-4" /> {testing ? t("Testing…") : t("Test")}
               </button>
               {status.configured ? (
                 <button
@@ -250,7 +251,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
                   disabled={saving}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
                 >
-                  <Trash2 className="h-4 w-4" /> Remove
+                  <Trash2 className="h-4 w-4" /> {t("Remove")}
                 </button>
               ) : null}
             </div>
@@ -265,12 +266,12 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
             disabled={testing}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-60"
           >
-            <Sparkles className="h-4 w-4" /> {testing ? "Testing…" : "Test connection"}
+            <Sparkles className="h-4 w-4" /> {testing ? t("Testing…") : t("Test connection")}
           </button>
         ) : null}
 
         {msg ? (
-          <p className={cn("text-sm", msg.kind === "ok" ? "text-emerald-700" : "text-red-600")}>{msg.text}</p>
+          <p className={cn("text-sm", msg.kind === "ok" ? "text-emerald-700" : "text-red-600")}>{t(msg.text)}</p>
         ) : null}
       </CardBody>
     </Card>

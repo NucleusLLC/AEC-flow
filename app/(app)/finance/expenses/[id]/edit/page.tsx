@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -11,7 +13,10 @@ import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import { ymd } from "@/lib/building-permits/register";
 
-export const metadata: Metadata = { title: "Edit an expense · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Edit an expense")} · AEC-flow` };
+}
 
 export default async function EditExpensePage({
   params,
@@ -28,6 +33,7 @@ export default async function EditExpensePage({
   if (!expense) notFound();
 
   const canApprove = canManagePasswords(actor.role, actor.isFounder);
+  const t = await getServerT();
   // The same three tests the data layer applies, so a locked row shows why
   // rather than failing on save. The gate that counts is still the server's.
   const locked =
@@ -41,17 +47,19 @@ export default async function EditExpensePage({
         href="/finance/expenses"
         className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg"
       >
-        <ArrowLeft className="h-4 w-4" /> Expenses
+        <ArrowLeft className="h-4 w-4" /> {t("Expenses")}
       </Link>
 
       {locked ? (
         <Card>
           <CardBody className="py-8 text-center text-sm text-muted">
             {expense.invoicedAt
-              ? `This expense is on invoice ${expense.invoiceNumber ?? "already raised"}, so it cannot be changed.`
+              ? fmt(t("This expense is on invoice {number}, so it cannot be changed."), {
+                  number: expense.invoiceNumber ?? t("already raised"),
+                })
               : expense.status === "APPROVED"
-                ? "This expense has been approved. Ask a director to reopen it."
-                : "This expense belongs to a colleague."}
+                ? t("This expense has been approved. Ask a director to reopen it.")
+                : t("This expense belongs to a colleague.")}
           </CardBody>
         </Card>
       ) : (

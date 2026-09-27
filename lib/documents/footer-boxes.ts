@@ -43,7 +43,30 @@ export type FooterBoxesRequest = {
   footerLeft?: string;
   /** "Page N of M" in the bottom-right margin. */
   pageNumbers?: boolean;
+  /**
+   * The page-number wording, with `{page}` and `{pages}` slots. Pass the
+   * translated template (e.g. "Página {page} de {pages}"); English by default.
+   */
+  pageNumberFormat?: string;
 };
+
+/**
+ * The `content:` value for a page-number template: literal parts become CSS
+ * strings and the slots become counters, so any word order prints correctly.
+ */
+export function pageNumberContent(format: string): string {
+  return format
+    .split(/(\{page\}|\{pages\})/)
+    .filter((part) => part !== "")
+    .map((part) =>
+      part === "{page}"
+        ? "counter(page)"
+        : part === "{pages}"
+          ? "counter(pages)"
+          : cssString(part),
+    )
+    .join(" ");
+}
 
 /**
  * A CSS string literal, safe to embed inside a `content:` declaration.
@@ -69,6 +92,7 @@ export function footerMarginBoxesCss({
   marginBottomMm,
   footerLeft,
   pageNumbers = true,
+  pageNumberFormat = "Page {page} of {pages}",
 }: FooterBoxesRequest): string {
   // The footer sits FOOTER_FROM_EDGE_MM above the paper edge rather than at the
   // foot of the bottom margin, which read as crowding the edge — and that
@@ -99,7 +123,7 @@ export function footerMarginBoxesCss({
       ? `@bottom-left { content: ${cssString(footerLeft)}; width: ${footerWidthMm}mm; text-align: left; ${style} }`
       : "",
     pageNumbers
-      ? `@bottom-right { content: "Page " counter(page) " of " counter(pages); width: ${numberWidthMm}mm; white-space: nowrap; text-align: right; ${style} }`
+      ? `@bottom-right { content: ${pageNumberContent(pageNumberFormat)}; width: ${numberWidthMm}mm; white-space: nowrap; text-align: right; ${style} }`
       : "",
   ]
     .filter(Boolean)

@@ -5,7 +5,11 @@
  * one module is how two screens in the same product come to disagree about what
  * amber means.
  */
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { militaryDate } from "@/lib/building-permits/register";
 import {
   APPROVAL_STATUS_LABEL,
@@ -21,15 +25,18 @@ import {
 } from "@/lib/building-permits/types";
 
 export function PermitStatusBadge({ status }: { status: BuildingPermitStatus }) {
-  return <Badge tone={PERMIT_STATUS_TONE[status]}>{PERMIT_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={PERMIT_STATUS_TONE[status]}>{t(PERMIT_STATUS_LABEL[status])}</Badge>;
 }
 
 export function PermitTypeBadge({ type }: { type: BuildingPermitType }) {
-  return <Badge tone="neutral">{PERMIT_TYPE_LABEL[type]}</Badge>;
+  const t = useT();
+  return <Badge tone="neutral">{t(PERMIT_TYPE_LABEL[type])}</Badge>;
 }
 
 export function ApprovalStatusBadge({ status }: { status: BuildingPermitApprovalStatus }) {
-  return <Badge tone={APPROVAL_STATUS_TONE[status]}>{APPROVAL_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={APPROVAL_STATUS_TONE[status]}>{t(APPROVAL_STATUS_LABEL[status])}</Badge>;
 }
 
 export function DirectionBadge({
@@ -37,9 +44,10 @@ export function DirectionBadge({
 }: {
   direction: BuildingPermitCorrespondenceDirection;
 }) {
+  const t = useT();
   return (
     <Badge tone={direction === "INCOMING" ? "violet" : "slate"}>
-      {CORRESPONDENCE_DIRECTION_LABEL[direction]}
+      {t(CORRESPONDENCE_DIRECTION_LABEL[direction])}
     </Badge>
   );
 }
@@ -58,13 +66,14 @@ export function ResponseDueBadge({
   today: string;
   soonDays?: number;
 }) {
+  const t = useT();
   if (!dueAt) return null;
-  if (dueAt < today) return <Badge tone="red">Reply overdue · {militaryDate(dueAt)}</Badge>;
+  if (dueAt < today) return <Badge tone="red">{fmt(t("Reply overdue · {date}"), { date: militaryDate(dueAt) })}</Badge>;
   const horizon = new Date(`${today}T00:00:00`);
   horizon.setDate(horizon.getDate() + soonDays);
   const soon = `${horizon.getFullYear()}-${String(horizon.getMonth() + 1).padStart(2, "0")}-${String(
     horizon.getDate(),
   ).padStart(2, "0")}`;
-  if (dueAt <= soon) return <Badge tone="amber">Reply due {militaryDate(dueAt)}</Badge>;
-  return <Badge tone="neutral">Reply due {militaryDate(dueAt)}</Badge>;
+  if (dueAt <= soon) return <Badge tone="amber">{fmt(t("Reply due {date}"), { date: militaryDate(dueAt) })}</Badge>;
+  return <Badge tone="neutral">{fmt(t("Reply due {date}"), { date: militaryDate(dueAt) })}</Badge>;
 }

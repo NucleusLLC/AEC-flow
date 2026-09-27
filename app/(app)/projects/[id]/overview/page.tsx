@@ -11,13 +11,16 @@ import { getProjectScheduleSummary } from "@/lib/integrations/schedule/adapter";
 import { ProjectProgrammeStatusCard } from "@/components/projects/project-programme-status";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
-  return { title: project ? `${project.name} · Overview · AEC-flow` : "Project · AEC-flow" };
+  const t = await getServerT();
+  return { title: project ? `${project.name} · ${t("Overview")} · AEC-flow` : `${t("Project")} · AEC-flow` };
 }
 
 const phaseTone: Record<PhaseStatus, "neutral" | "blue" | "green" | "amber" | "slate"> = {
@@ -26,6 +29,14 @@ const phaseTone: Record<PhaseStatus, "neutral" | "blue" | "green" | "amber" | "s
   ON_HOLD: "amber",
   COMPLETED: "green",
   CANCELLED: "slate",
+};
+
+const PHASE_STATUS_LABEL: Record<PhaseStatus, string> = {
+  NOT_STARTED: "Not started",
+  IN_PROGRESS: "In progress",
+  ON_HOLD: "On hold",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
 };
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -41,6 +52,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
+  const t = await getServerT();
   const rollup = await getProjectModulesRollup(id);
   // `ProjectSchedule.projectId` holds the project ROW ID for everything the app
   // saves, but the in-code demo seeds are keyed by project NUMBER — so try the
@@ -53,7 +65,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
     <div className="space-y-6">
       <Card className="p-5">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-fg">Overall progress</span>
+          <span className="text-sm font-medium text-fg">{t("Overall progress")}</span>
           <span className="text-sm font-semibold text-fg">{project.progressPct}%</span>
         </div>
         <ProgressBar value={project.progressPct} className="mt-3" />
@@ -61,8 +73,9 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
         {project.phases.length > 0 ? (
           <div className="mt-5 border-t border-border pt-4">
             <p className="mb-3 text-xs text-muted">
-              This number rolls up the {project.phases.length} project phase
-              {project.phases.length === 1 ? "" : "s"} below:
+              {project.phases.length === 1
+                ? t("This number rolls up the 1 project phase below:")
+                : fmt(t("This number rolls up the {count} project phases below:"), { count: project.phases.length })}
             </p>
             <ul className="space-y-2.5">
               {project.phases.map((ph) => (
@@ -84,17 +97,17 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Phases" subtitle={`${project.phases.length} phases`} />
+            <CardHeader title={t("Phases")} subtitle={fmt(t("{count} phases"), { count: project.phases.length })} />
             <div className="divide-y divide-border">
               {project.phases.map((ph) => (
                 <div key={ph.id} className="flex items-center gap-4 px-5 py-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-sm font-medium text-fg">{ph.name}</span>
-                      {ph.discipline ? <Badge tone="slate">{DISCIPLINE_LABEL[ph.discipline]}</Badge> : null}
+                      {ph.discipline ? <Badge tone="slate">{t(DISCIPLINE_LABEL[ph.discipline])}</Badge> : null}
                     </div>
                   </div>
-                  <Badge tone={phaseTone[ph.status]}>{ph.status.replace(/_/g, " ").toLowerCase()}</Badge>
+                  <Badge tone={phaseTone[ph.status]}>{t(PHASE_STATUS_LABEL[ph.status]).toLowerCase()}</Badge>
                   <div className="hidden w-32 sm:block">
                     <ProgressBar value={ph.progressPct} />
                   </div>
@@ -106,7 +119,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
 
           {project.description ? (
             <Card>
-              <CardHeader title="Description" />
+              <CardHeader title={t("Description")} />
               <CardBody>
                 <p className="text-sm leading-relaxed text-muted">{project.description}</p>
               </CardBody>
@@ -114,7 +127,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
           ) : null}
 
           <Card>
-            <CardHeader title="Recent Activity" />
+            <CardHeader title={t("Recent Activity")} />
             <CardBody>
               <ol className="space-y-4">
                 {project.activity.map((entry) => (
@@ -135,22 +148,22 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <DetailRow label="Manager">{project.manager}</DetailRow>
-              <DetailRow label="Start date">{formatDate(project.startDate)}</DetailRow>
-              <DetailRow label="Target end">{formatDate(project.targetEndDate)}</DetailRow>
-              {project.completedAt ? <DetailRow label="Completed">{formatDate(project.completedAt)}</DetailRow> : null}
-              <DetailRow label="Contract value">{formatCurrency(project.value, project.currency)}</DetailRow>
-              <DetailRow label="Disciplines">
+              <DetailRow label={t("Manager")}>{project.manager}</DetailRow>
+              <DetailRow label={t("Start date")}>{formatDate(project.startDate)}</DetailRow>
+              <DetailRow label={t("Target end")}>{formatDate(project.targetEndDate)}</DetailRow>
+              {project.completedAt ? <DetailRow label={t("Completed")}>{formatDate(project.completedAt)}</DetailRow> : null}
+              <DetailRow label={t("Contract value")}>{formatCurrency(project.value, project.currency)}</DetailRow>
+              <DetailRow label={t("Disciplines")}>
                 <span className="flex flex-wrap justify-end gap-1">
                   {project.disciplines.map((d) => (
-                    <Badge key={d} tone="slate">{DISCIPLINE_LABEL[d]}</Badge>
+                    <Badge key={d} tone="slate">{t(DISCIPLINE_LABEL[d])}</Badge>
                   ))}
                 </span>
               </DetailRow>
               {project.siteAddress ? (
-                <DetailRow label="Site">
+                <DetailRow label={t("Site")}>
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-faint" />
                     {project.siteAddress}
@@ -165,7 +178,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
           <ProjectModulesRollupCard rollup={rollup} projectId={id} />
 
           <Card>
-            <CardHeader title="Project Team" subtitle={`${project.team.length} members`} />
+            <CardHeader title={t("Project Team")} subtitle={fmt(t(project.team.length === 1 ? "1 member" : "{count} members"), { count: project.team.length })} />
             <div className="divide-y divide-border">
               {project.team.map((m) => (
                 <div key={m.name} className="flex items-center gap-3 px-5 py-3">
@@ -176,7 +189,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
                     <div className="truncate text-sm font-medium text-fg">{m.name}</div>
                     <div className="truncate text-xs text-muted">{m.role}</div>
                   </div>
-                  {m.discipline ? <Badge tone="slate">{DISCIPLINE_LABEL[m.discipline]}</Badge> : null}
+                  {m.discipline ? <Badge tone="slate">{t(DISCIPLINE_LABEL[m.discipline])}</Badge> : null}
                 </div>
               ))}
             </div>

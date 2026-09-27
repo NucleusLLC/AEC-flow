@@ -5,6 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { DeliverableForm } from "@/components/design/deliverable-form";
 import { getDeliverable } from "@/lib/data/design";
 import { getProjects } from "@/lib/data/projects";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Edit Deliverable · AEC-flow" };
 
@@ -13,6 +15,7 @@ export default async function EditDeliverablePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getServerT();
   const { id } = await params;
   const [item, projects] = await Promise.all([getDeliverable(id), getProjects()]);
   if (!item) notFound();
@@ -28,7 +31,7 @@ export default async function EditDeliverablePage({
         {item.number}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit {item.number}</h2>
+        <h2 className="text-xl font-semibold text-fg">{fmt(t("Edit {number}"), { number: item.number })}</h2>
       </div>
       <DeliverableForm projects={options} mode="edit" initial={item} />
     </div>

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 import {
   setBetaReportStatus,
   loadBetaReportScreenshot,
@@ -38,6 +39,7 @@ const STATUS_TONE: Record<BetaReportStatus, Parameters<typeof Badge>[0]["tone"]>
 };
 
 export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) {
+  const t = useT();
   const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [query, setQuery] = useState("");
@@ -79,9 +81,9 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
           value={kindFilter}
           onChange={(v) => setKindFilter(v as KindFilter)}
           options={[
-            { value: "ALL", label: "All" },
-            { value: "BUG", label: "Bugs" },
-            { value: "WISH", label: "Wishes" },
+            { value: "ALL", label: t("All") },
+            { value: "BUG", label: t("Bugs") },
+            { value: "WISH", label: t("Wishes") },
           ]}
         />
         <select
@@ -89,10 +91,10 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
           onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
         >
-          <option value="ALL">All statuses</option>
+          <option value="ALL">{t("All statuses")}</option>
           {BETA_REPORT_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {STATUS_LABEL[s]}
+              {t(STATUS_LABEL[s])}
             </option>
           ))}
         </select>
@@ -101,7 +103,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search reports…"
+            placeholder={t("Search reports…")}
             className="h-9 w-56 rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
         </div>
@@ -109,9 +111,9 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
 
       {filtered.length === 0 ? (
         <div className="card-surface rounded-[var(--radius-card)] border border-dashed border-border bg-surface py-16 text-center">
-          <p className="text-sm font-medium text-fg">No reports here yet</p>
+          <p className="text-sm font-medium text-fg">{t("No reports here yet")}</p>
           <p className="mt-1 text-xs text-muted">
-            Beta testers can send Bug/Wish feedback from the “Feedback” button in any screen.
+            {t("Beta testers can send Bug/Wish feedback from the “Feedback” button in any screen.")}
           </p>
         </div>
       ) : (
@@ -129,7 +131,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
                       ? "bg-red-50 text-red-600 ring-red-200"
                       : "bg-violet-50 text-violet-600 ring-violet-200",
                   )}
-                  title={KIND_LABEL[r.kind]}
+                  title={t(KIND_LABEL[r.kind])}
                 >
                   {r.kind === "BUG" ? (
                     <Bug className="h-4 w-4" />
@@ -141,13 +143,13 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-sm font-semibold text-fg">{r.title}</h3>
-                    <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                    <Badge tone={STATUS_TONE[r.status]}>{t(STATUS_LABEL[r.status])}</Badge>
                   </div>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{r.description}</p>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-faint">
                     <span>
-                      {r.reporterName ?? "Anonymous"}
+                      {r.reporterName ?? t("Anonymous")}
                       {r.reporterEmail ? ` · ${r.reporterEmail}` : ""}
                     </span>
                     <span aria-hidden>•</span>
@@ -179,7 +181,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
                   >
                     {BETA_REPORT_STATUSES.map((s) => (
                       <option key={s} value={s}>
-                        {STATUS_LABEL[s]}
+                        {t(STATUS_LABEL[s])}
                       </option>
                     ))}
                   </select>
@@ -190,7 +192,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
                       className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg"
                     >
                       <ImageIcon className="h-3.5 w-3.5" />
-                      Screenshot
+                      {t("Screenshot")}
                     </button>
                   ) : null}
                 </div>
@@ -210,7 +212,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
             type="button"
             className="absolute right-4 top-4 rounded-md bg-white/10 p-2 text-white hover:bg-white/20"
             onClick={() => setLightbox(null)}
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -218,7 +220,7 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={lightbox.src}
-              alt="Report screenshot"
+              alt={t("Report screenshot")}
               className="max-h-[88vh] max-w-[92vw] rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />

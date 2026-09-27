@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, Printer, FileDown, Maximize2 } from "lucide-react";
 import type { LetterheadLogo } from "@/components/print/document-letterhead";
 import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import {
   DISCIPLINE_LABEL,
   computeCpm,
@@ -161,6 +162,7 @@ export function SchedulePrint({
     marginRightMm: MARGIN_MM,
     marginBottomMm: MARGIN_MM,
     footerLeft: footerText,
+    pageNumberFormat: t("Page {page} of {pages}"),
   });
 
   const pageStyle = `@page { size: ${pageWmm}mm ${pageHmm}mm; margin: ${MARGIN_MM}mm; ${footerBoxes} }
@@ -217,7 +219,7 @@ export function SchedulePrint({
 
         <div className="mx-2 h-5 w-px bg-border" />
 
-        <span className="text-xs font-medium text-muted">Paper</span>
+        <span className="text-xs font-medium text-muted">{t("Paper")}</span>
         <div className="inline-flex overflow-hidden rounded-lg border border-border">
           {PAPER_KEYS.map((p) => (
             <button
@@ -245,22 +247,22 @@ export function SchedulePrint({
                 orient === o ? "bg-brand text-brand-fg" : "bg-surface text-muted hover:text-fg",
               )}
             >
-              {o}
+              {t(o)}
             </button>
           ))}
         </div>
 
         {/* Preview zoom */}
         <div className="mx-2 h-5 w-px bg-border" />
-        <span className="text-xs font-medium text-muted">Zoom</span>
+        <span className="text-xs font-medium text-muted">{t("Zoom")}</span>
         <div className="inline-flex items-center overflow-hidden rounded-lg border border-border">
           <button
             type="button"
             onClick={fitWidth}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-muted hover:text-fg"
-            title="Fit to width"
+            title={t("Fit to width")}
           >
-            <Maximize2 className="h-3.5 w-3.5" /> Fit
+            <Maximize2 className="h-3.5 w-3.5" /> {t("Fit")}
           </button>
           {[0.5, 0.75, 1].map((z) => (
             <button
@@ -283,7 +285,7 @@ export function SchedulePrint({
           className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <FileDown className="h-4 w-4" />
-          Save as PDF
+          {t("Save as PDF")}
         </button>
         <button
           type="button"
@@ -291,14 +293,14 @@ export function SchedulePrint({
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
           <Printer className="h-4 w-4" />
-          Print
+          {t("Print")}
         </button>
       </div>
 
       <p className="no-print px-4 pt-3 text-center text-xs text-muted">
-        Previewing <strong>{paper} · {orient}</strong> ({pageWmm} × {pageHmm} mm) ·{" "}
-        <strong>{pageCount}</strong> page{pageCount === 1 ? "" : "s"} · in the print dialog choose{" "}
-        <strong>Save as PDF</strong> (size is preset).
+        {t("Previewing")} <strong>{paper} · {t(orient)}</strong> ({pageWmm} × {pageHmm} mm) ·{" "}
+        <strong>{pageCount}</strong> {pageCount === 1 ? t("page") : t("pages")} · {t("in the print dialog choose")}{" "}
+        <strong>{t("Save as PDF")}</strong> {t("(size is preset).")}
       </p>
 
       {/* The sheet */}
@@ -316,7 +318,7 @@ export function SchedulePrint({
             >
               <div className="border-t-2 border-dashed border-rose-400/70" />
               <span className="absolute right-0 -top-4 rounded bg-rose-500 px-1.5 py-0.5 text-[9px] font-semibold text-white">
-                Page {k + 2}
+                {fmt(t("Page {n}"), { n: k + 2 })}
               </span>
             </div>
           ))}
@@ -336,14 +338,14 @@ export function SchedulePrint({
               )}
               <h1 className="mt-2 text-lg font-bold text-slate-900">{schedule.projectName}</h1>
               <p className="text-xs text-slate-500">
-                {schedule.projectNumber} · {schedule.client} · PM: {schedule.manager}
+                {schedule.projectNumber} · {schedule.client} · {t("PM:")} {schedule.manager}
               </p>
             </div>
             <div className="text-right text-xs text-slate-500">
-              <div className="font-semibold text-slate-700">Project Programme — Gantt</div>
-              <div>Generated {generatedAt}</div>
+              <div className="font-semibold text-slate-700">{t("Project Programme — Gantt")}</div>
+              <div>{fmt(t("Generated {date}"), { date: generatedAt })}</div>
               <div>
-                {schedule.tasks.length} tasks · critical path {cpm.projectDays} days
+                {fmt(t("{tasks} tasks · critical path {days} days"), { tasks: schedule.tasks.length, days: cpm.projectDays })}
               </div>
             </div>
           </div>
@@ -356,7 +358,7 @@ export function SchedulePrint({
                 className="flex items-end border-b border-r border-slate-300 px-2 pb-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400"
                 style={{ height: HEADER_H }}
               >
-                Task
+                {t("Task")}
               </div>
               {ordered.map(({ task, depth }, i) => (
                 <div
@@ -496,11 +498,11 @@ export function SchedulePrint({
             {DISCIPLINES.map((d) => (
               <span key={d} className="inline-flex items-center gap-1">
                 <span className="h-2.5 w-2.5 rounded-sm" style={{ background: DISCIPLINE_COLOR[d] }} />
-                {DISCIPLINE_LABEL[d]}
+                {t(DISCIPLINE_LABEL[d])}
               </span>
             ))}
             <span className="inline-flex items-center gap-1">
-              <span className="h-2.5 w-2.5 rounded-sm border border-red-500" /> critical path
+              <span className="h-2.5 w-2.5 rounded-sm border border-red-500" /> {t("critical path")}
             </span>
           </div>
         </div>

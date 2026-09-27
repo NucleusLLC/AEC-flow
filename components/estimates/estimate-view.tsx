@@ -39,6 +39,8 @@ import { indexedCost, adjustedCost, factorsFor } from "@/lib/data/cost-data/engi
 import { sumGeneralConditions, type GeneralConditionItem } from "@/lib/data/general-conditions";
 import { calcItem, sum, ZERO, pocPct, type Totals } from "@/lib/estimates/calc";
 import { saveEstimateAction, saveTemplatesAction } from "@/app/(app)/estimates/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const nf0 = (n: number) => Math.round(n).toLocaleString("en-US");
 const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -109,6 +111,7 @@ type EstimateViewProps = {
 };
 
 export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, budget, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, coverOn, setCoverOn, coverImage, setCoverImage, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
+  const t = useT();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -208,7 +211,7 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
     setCoverErr(null);
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setCoverErr("Please choose an image file.");
+      setCoverErr(t("Please choose an image file."));
       return;
     }
     const reader = new FileReader();
@@ -224,16 +227,16 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
         canvas.height = h;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          setCoverErr("Could not process this image.");
+          setCoverErr(t("Could not process this image."));
           return;
         }
         ctx.drawImage(img, 0, 0, w, h);
         setCoverImage(canvas.toDataURL("image/jpeg", 0.85));
       };
-      img.onerror = () => setCoverErr("That image couldn't be read.");
+      img.onerror = () => setCoverErr(t("That image couldn't be read."));
       img.src = reader.result as string;
     };
-    reader.onerror = () => setCoverErr("That file couldn't be read.");
+    reader.onerror = () => setCoverErr(t("That file couldn't be read."));
     reader.readAsDataURL(file);
   };
 
@@ -255,7 +258,7 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
     }
   };
   const savePrintTemplate = () => {
-    const name = window.prompt("Save these print settings as a template named:", activePrintTemplate || "");
+    const name = window.prompt(t("Save these print settings as a template named:"), activePrintTemplate || "");
     if (!name) return;
     persistPrintTemplates({ ...printTemplates, [name.trim()]: { printSize, paper, orient, pc, logoScale } });
     setActivePrintTemplate(name.trim());
@@ -422,8 +425,8 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   ].filter(Boolean).join("\n");
   // Page numbering margin boxes are only emitted when Page# is on.
   const pageNumBoxes = pc.pageNum
-    ? `  @top-right { content: "Page " counter(page) " of " counter(pages); font-size: 7.5pt; color: #64748b; }
-  @bottom-center { content: "P" counter(page) " of " counter(pages); font-size: 7.5pt; color: #64748b; }`
+    ? `  @top-right { content: "${fmt(t("Page {page} of {pages}"), { page: '" counter(page) "', pages: '" counter(pages) "' })}"; font-size: 7.5pt; color: #64748b; }
+  @bottom-center { content: "${fmt(t("P{page} of {pages}"), { page: '" counter(page) "', pages: '" counter(pages) "' })}"; font-size: 7.5pt; color: #64748b; }`
     : "";
   // In Preview we print the Smart Page-Break Engine document, which owns its own
   // page margins, running header and footer — so @page must contribute ZERO margin
@@ -610,7 +613,7 @@ ${!preview ? `@media print {
     const tpl = templates.find((x) => x.id === tplId);
     if (!tpl) return;
     const hasContent = est.categories.some((c) => c.items.length > 0);
-    if (hasContent && !window.confirm(`Load template "${tpl.name}"? This replaces the current line items.`)) return;
+    if (hasContent && !window.confirm(fmt(t('Load template "{name}"? This replaces the current line items.'), { name: tpl.name }))) return;
     setSaved(false);
     setActiveTemplate(tpl.name);
     setEst((e) => ({
@@ -624,7 +627,7 @@ ${!preview ? `@media print {
   };
   // Save the current sheet as a reusable template (progress reset to 0).
   const saveAsTemplate = () => {
-    const name = window.prompt("Template name (e.g. AEC.MyVillaType)", "AEC.Custom");
+    const name = window.prompt(t("Template name (e.g. AEC.MyVillaType)"), "AEC.Custom");
     if (!name) return;
     const tpl: EstimateTemplate = {
       id: name,
@@ -681,14 +684,14 @@ ${!preview ? `@media print {
   // When Imported Materials is on, the equipment portion is split out of Direct Cost
   // into its own line so the buildup still sums to the grand total.
   const grandTotalRows: GrandTotalRow[] = [
-    { label: imOn ? "Direct Cost (excl. imported)" : "Direct Cost", value: dualMoney(imOn ? direct - importedAmount : direct) },
-    ...(imOn ? [{ label: "Imported Materials, Equipment & Logistics", value: dualMoney(importedAmount) }] : []),
+    { label: imOn ? t("Direct Cost (excl. imported)") : t("Direct Cost"), value: dualMoney(imOn ? direct - importedAmount : direct) },
+    ...(imOn ? [{ label: t("Imported Materials, Equipment & Logistics"), value: dualMoney(importedAmount) }] : []),
     // The recap GC line follows whether GC is active (it's part of the total buildup),
     // independent of the Print Control "General Conditions" PAGE toggle.
-    ...(gcActive ? [{ label: "General Conditions / Overhead", value: dualMoney(gcAmount) }] : []),
-    { label: `Profit & Risk (${est.profitPct}%)`, value: dualMoney(profit) },
-    { label: `BBO (${est.bboPct}%)`, value: dualMoney(bbo) },
-    { label: "Grand Total", value: dualMoney(grandTotal), emphasize: true },
+    ...(gcActive ? [{ label: t("General Conditions / Overhead"), value: dualMoney(gcAmount) }] : []),
+    { label: fmt(t("Profit & Risk ({pct}%)"), { pct: est.profitPct }), value: dualMoney(profit) },
+    { label: fmt(t("BBO ({pct}%)"), { pct: est.bboPct }), value: dualMoney(bbo) },
+    { label: t("Grand Total"), value: dualMoney(grandTotal), emphasize: true },
   ];
   const printControl: PrintControl = pc;
   /* Do the chosen columns physically fit the chosen page? Same arithmetic the
@@ -700,15 +703,15 @@ ${!preview ? `@media print {
   // use `pctOverride` so their label reads the markup rate (matching the summary),
   // not their share of the grand total.
   const chartData = [
-    { label: "Labor", value: grand.labor, color: "#3b82f6", amount: dualMoney(grand.labor) },
-    { label: "Material", value: grand.mat, color: "#10b981", amount: dualMoney(grand.mat) },
+    { label: t("Labor"), value: grand.labor, color: "#3b82f6", amount: dualMoney(grand.labor) },
+    { label: t("Material"), value: grand.mat, color: "#10b981", amount: dualMoney(grand.mat) },
     imOn
-      ? { label: "Imported Mat., Equip. & Log.", value: importedAmount, color: "#0ea5e9", amount: dualMoney(importedAmount) }
-      : { label: "Equipment", value: grand.equip, color: "#f59e0b", amount: dualMoney(grand.equip) },
-    { label: "Sub-Contractor", value: grand.sub, color: "#8b5cf6", amount: dualMoney(grand.sub) },
-    ...(gcActive ? [{ label: "General Conditions / Overhead", value: gcAmount, color: "#64748b", amount: dualMoney(gcAmount) }] : []),
-    { label: "Profit & Risk", value: profit, color: "#22c55e", pctOverride: est.profitPct, amount: dualMoney(profit) },
-    { label: "BBO", value: bbo, color: "#f43f5e", pctOverride: est.bboPct, amount: dualMoney(bbo) },
+      ? { label: t("Imported Mat., Equip. & Log."), value: importedAmount, color: "#0ea5e9", amount: dualMoney(importedAmount) }
+      : { label: t("Equipment"), value: grand.equip, color: "#f59e0b", amount: dualMoney(grand.equip) },
+    { label: t("Sub-Contractor"), value: grand.sub, color: "#8b5cf6", amount: dualMoney(grand.sub) },
+    ...(gcActive ? [{ label: t("General Conditions / Overhead"), value: gcAmount, color: "#64748b", amount: dualMoney(gcAmount) }] : []),
+    { label: t("Profit & Risk"), value: profit, color: "#22c55e", pctOverride: est.profitPct, amount: dualMoney(profit) },
+    { label: t("BBO"), value: bbo, color: "#f43f5e", pctOverride: est.bboPct, amount: dualMoney(bbo) },
   ].filter((s) => s.value > 0);
   // Built-up area → per-m² metrics; null until an area is entered.
   const area = est.gfa ?? 0;
@@ -799,7 +802,7 @@ ${!preview ? `@media print {
       {/* Preview-only centered project line (single row) — mirrors the per-page print header. */}
       {preview && (
         <div className="only-preview text-center text-xs leading-tight text-muted">
-          <span className="font-semibold text-fg">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · Ver {est.version} · {est.date}
+          <span className="font-semibold text-fg">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · {t("Ver")} {est.version} · {est.date}
         </div>
       )}
       {copyOpen ? (
@@ -833,17 +836,17 @@ ${!preview ? `@media print {
               onChange={(e) => patchMeta({ projectName: e.target.value })}
               title={est.projectName}
               className="w-full max-w-3xl rounded-md bg-transparent text-xl font-semibold text-fg outline-none focus:bg-brand/5"
-              aria-label="Project name"
+              aria-label={t("Project name")}
             />
             <div className="mt-0.5 text-xs text-faint">
-              {saving ? "Saving…" : saved ? "All changes saved" : "Autosaves as you type"}
+              {saving ? t("Saving…") : saved ? t("All changes saved") : t("Autosaves as you type")}
             </div>
           </div>
 
           {/* One primary action (Save). The occasional ones sit behind ⋯ so they stop
               competing with it for attention. */}
           <div className="flex shrink-0 items-center gap-2">
-            {saveError ? <span className="self-center text-xs text-red-600" title={saveError}>Save failed</span> : null}
+            {saveError ? <span className="self-center text-xs text-red-600" title={t(saveError)}>{t("Save failed")}</span> : null}
             {/* COPY2ANOTHER/NEW PROJECT. Always present, so the checkmarks beside
                 each task have a visible purpose, and disabled with the reason
                 until something is ticked — a control that appears only once you
@@ -853,9 +856,9 @@ ${!preview ? `@media print {
                 type="button"
                 onClick={clearSelection}
                 className="no-print self-center text-xs font-medium text-muted underline decoration-dotted hover:text-fg"
-                title="Clear the selection"
+                title={t("Clear the selection")}
               >
-                {selectedTaskCount} selected · clear
+                {fmt(t("{count} selected · clear"), { count: selectedTaskCount })}
               </button>
             ) : null}
             <button
@@ -864,21 +867,23 @@ ${!preview ? `@media print {
               disabled={selectedTaskCount === 0}
               title={
                 selectedTaskCount === 0
-                  ? "Tick the tasks or sections you want to copy, then press this."
-                  : `Copy ${selectedTaskCount} selected ${selectedTaskCount === 1 ? "task" : "tasks"} to another project`
+                  ? t("Tick the tasks or sections you want to copy, then press this.")
+                  : selectedTaskCount === 1
+                    ? t("Copy 1 selected task to another project")
+                    : fmt(t("Copy {count} selected tasks to another project"), { count: selectedTaskCount })
               }
               className={`${ghostBtn} no-print disabled:cursor-not-allowed disabled:opacity-40`}
             >
-              <Copy className="h-4 w-4" /> Copy to project
+              <Copy className="h-4 w-4" /> {t("Copy to project")}
             </button>
-            <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? "Saving…" : "Save"}</button>
+            <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? t("Saving…") : t("Save")}</button>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setMoreOpen((v) => !v)}
                 aria-expanded={moreOpen}
-                aria-label="More actions"
-                title="More actions"
+                aria-label={t("More actions")}
+                title={t("More actions")}
                 className={`${ghostBtn} px-2`}
               >
                 <MoreHorizontal className="h-4 w-4" />
@@ -896,7 +901,7 @@ ${!preview ? `@media print {
                     />
                     <EmailButton subject={`Estimate — ${est.projectName} (${est.version})`} attachment={`${est.projectName} — Estimate ${est.version}.pdf`} />
                     <button onClick={() => { setMoreOpen(false); setPreview(true); }} type="button" className={`${ghostBtn} w-full justify-start`}>
-                      <Eye className="h-4 w-4" /> Preview &amp; Print
+                      <Eye className="h-4 w-4" /> {t("Preview & Print")}
                     </button>
                   </div>
                 </>
@@ -908,22 +913,22 @@ ${!preview ? `@media print {
         {/* Row 2 — project identity. Built-up Area joins the other fields instead of
             floating in the title row: it's a field, so it belongs with the fields. */}
         <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 sm:grid-cols-3 lg:grid-cols-6">
-          <Field label="Project No.">
+          <Field label={t("Project No.")}>
             <input value={est.projectId ?? ""} onChange={(e) => patchMeta({ projectId: e.target.value })} placeholder="—" className={metaInput} />
           </Field>
-          <Field label="Client">
+          <Field label={t("Client")}>
             <input value={est.client ?? ""} onChange={(e) => patchMeta({ client: e.target.value })} placeholder="—" className={metaInput} />
           </Field>
-          <Field label="Version">
+          <Field label={t("Version")}>
             <input value={est.version} onChange={(e) => patchMeta({ version: e.target.value })} className={metaInput} />
           </Field>
-          <Field label="Date">
+          <Field label={t("Date")}>
             <input type="date" value={est.date} onChange={(e) => patchMeta({ date: e.target.value })} className={metaInput} />
           </Field>
-          <Field label="Location">
+          <Field label={t("Location")}>
             <input value={est.location} onChange={(e) => patchMeta({ location: e.target.value })} className={metaInput} />
           </Field>
-          <Field label="Built-up Area (m²)">
+          <Field label={t("Built-up Area (m²)")}>
             <input
               type="number"
               min={0}
@@ -938,40 +943,40 @@ ${!preview ? `@media print {
         {/* Row 3 — settings toolbar: Pricing · Cost Database · View as three equal
             columns on one row (stacks on small screens). */}
         <div className="mt-4 flex flex-nowrap items-stretch gap-3 border-t border-border pt-4">
-          <ToolGroup label="Pricing" className="shrink-0">
+          <ToolGroup label={t("Pricing")} className="shrink-0">
             <span className="inline-flex flex-col">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-xs text-muted">{est.currency}</span>
                 <input type="number" min={0} value={est.avgLaborRate} onChange={(e) => patchMeta({ avgLaborRate: Number(e.target.value) || 0 })} className="w-14 bg-transparent text-base font-semibold text-fg outline-none focus:bg-brand/5" />
-                <span className="text-[11px] text-muted">/hr</span>
+                <span className="text-[11px] text-muted">{t("/hr")}</span>
               </span>
-              <span className="text-[9px] font-medium uppercase tracking-wide text-faint leading-none">Average Labor Rate</span>
+              <span className="text-[9px] font-medium uppercase tracking-wide text-faint leading-none">{t("Average Labor Rate")}</span>
             </span>
             <span className="h-5 w-px bg-border" />
             <select value="" onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (v) applyTemplate(v); }} className="h-7 rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none focus:bg-brand/5">
-              <option value="">Load template…</option>
+              <option value="">{t("Load template…")}</option>
               {templates.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}</option>)}
             </select>
-            <button type="button" onClick={saveAsTemplate} className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg hover:bg-surface-2"><Save className="h-3 w-3" /> Save as…</button>
+            <button type="button" onClick={saveAsTemplate} className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg hover:bg-surface-2"><Save className="h-3 w-3" /> {t("Save as…")}</button>
           </ToolGroup>
 
           {/* Cost Database — four controls you set once per estimate, folded behind one
               button that states the current source. Set-and-forget settings don't earn
               permanent space next to the ones you flip while working. */}
-          <ToolGroup label="Cost Database" className="min-w-0">
+          <ToolGroup label={t("Cost Database")} className="min-w-0">
             <div className="relative min-w-0">
               <button
                 type="button"
                 onClick={() => setCostDbOpen((v) => !v)}
                 aria-expanded={costDbOpen}
-                title="Cost source, indexation and regional adjustment"
+                title={t("Cost source, indexation and regional adjustment")}
                 className={`inline-flex h-7 min-w-0 max-w-[190px] items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors ${costDbOpen ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-fg hover:bg-surface-2"}`}
               >
                 <Database className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{costSources.find((s) => s.id === costSourceId)?.name ?? "Source"}</span>
+                <span className="truncate">{costSources.find((s) => s.id === costSourceId)?.name ?? t("Source")}</span>
                 {applyIndex || applyRegional ? (
                   <span className="shrink-0 rounded bg-brand/15 px-1 text-[10px] font-semibold text-brand">
-                    {[applyIndex && "idx", applyRegional && "adj"].filter(Boolean).join(" ")}
+                    {[applyIndex && t("idx"), applyRegional && t("adj")].filter(Boolean).join(" ")}
                   </span>
                 ) : null}
                 <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
@@ -980,17 +985,17 @@ ${!preview ? `@media print {
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setCostDbOpen(false)} />
                   <div className="absolute left-0 top-9 z-30 w-64 rounded-lg border border-border bg-surface p-2.5 shadow-xl">
-                    <label className="mb-1 block text-[11px] font-medium text-muted">Source</label>
+                    <label className="mb-1 block text-[11px] font-medium text-muted">{t("Source")}</label>
                     <select value={costSourceId} onChange={(e) => setCostSourceId(e.target.value)} className="mb-2 h-8 w-full rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none">
                       {costSources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                     <label className="mb-1.5 flex items-center gap-2 text-xs text-fg">
                       <input type="checkbox" checked={applyIndex} onChange={(e) => setApplyIndex(e.target.checked)} className="accent-brand" />
-                      Apply indexation
+                      {t("Apply indexation")}
                     </label>
                     <label className="mb-1.5 flex items-center gap-2 text-xs text-fg">
                       <input type="checkbox" checked={applyRegional} onChange={(e) => setApplyRegional(e.target.checked)} className="accent-brand" />
-                      Regional adjustment
+                      {t("Regional adjustment")}
                     </label>
                     <select value={regionTarget} onChange={(e) => setRegionTarget(e.target.value)} disabled={!applyRegional} className="h-8 w-full rounded-md border border-border bg-surface px-2 text-xs font-medium text-fg outline-none disabled:opacity-40">
                       {REGION_TARGETS.map((t) => <option key={`${t.country}|${t.region}`} value={`${t.country}|${t.region}`}>{t.region}</option>)}
@@ -1001,8 +1006,8 @@ ${!preview ? `@media print {
             </div>
           </ToolGroup>
 
-          <ToolGroup label="View" className="shrink-0">
-            <Switch on={showProgress} onClick={() => setShowProgress((v) => !v)} label="Progress" tone="green" />
+          <ToolGroup label={t("View")} className="shrink-0">
+            <Switch on={showProgress} onClick={() => setShowProgress((v) => !v)} label={t("Progress")} tone="green" />
             <Switch on={clientVersion} onClick={() => {
               const nv = !clientVersion;
               setClientVersion(nv);
@@ -1020,8 +1025,8 @@ ${!preview ? `@media print {
                 itemTotal: !nv,
                 ...(nv ? { laborNorm: false, laborHrs: false, materialUnit: false, equipmentUnit: false, subUnit: false } : {}),
               }));
-            }} label="Client" tone="brand" />
-            <Switch on={usdSecondary} onClick={() => editUsdSecondary(!usdSecondary)} label="$ USD" tone="brand" />
+            }} label={t("Client")} tone="brand" />
+            <Switch on={usdSecondary} onClick={() => editUsdSecondary(!usdSecondary)} label={t("$ USD")} tone="brand" />
             <div className="relative">
               <button
                 type="button"
@@ -1029,7 +1034,7 @@ ${!preview ? `@media print {
                 aria-expanded={pcOpen}
                 className={`inline-flex h-7 items-center gap-2 rounded-md border px-2.5 text-xs font-medium transition-colors ${pcOpen ? "border-brand/40 bg-brand/10 text-brand" : "border-border bg-surface text-muted hover:bg-surface-2"}`}
               >
-                <Printer className="h-3.5 w-3.5" /> Print Control
+                <Printer className="h-3.5 w-3.5" /> {t("Print Control")}
                 {/* The active print template, shown WITHOUT opening the panel.
                   * Which template is in force changes what the printed sheet
                   * contains, so it belongs where it can be read at a glance —
@@ -1037,29 +1042,29 @@ ${!preview ? `@media print {
                   * should already have answered. "Custom" = settings that match
                   * no saved template. */}
                 <span
-                  title={activePrintTemplate ? `Print template: ${activePrintTemplate}` : "Print settings not saved as a template"}
+                  title={activePrintTemplate ? fmt(t("Print template: {name}"), { name: activePrintTemplate }) : t("Print settings not saved as a template")}
                   className={`max-w-[10rem] truncate rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                     activePrintTemplate ? "bg-brand/10 text-brand" : "bg-surface-2 text-faint"
                   }`}
                 >
-                  {activePrintTemplate || "Custom"}
+                  {activePrintTemplate || t("Custom")}
                 </span>
               </button>
               {pcOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setPcOpen(false)} aria-hidden />
                   <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-border bg-surface p-3 shadow-xl">
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">Print Control</div>
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">{t("Print Control")}</div>
                     <div className="mb-2.5">
-                      <div className="mb-1 text-[11px] font-medium text-muted">Estimation Print Template</div>
+                      <div className="mb-1 text-[11px] font-medium text-muted">{t("Estimation Print Template")}</div>
                       <div className="flex items-center gap-1.5">
                         <select
                           value={activePrintTemplate}
                           onChange={(e) => loadPrintTemplate(e.target.value)}
-                          title="Load a saved print template"
+                          title={t("Load a saved print template")}
                           className="h-7 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-[11px] font-medium text-fg outline-none focus:border-brand"
                         >
-                          <option value="">Load template…</option>
+                          <option value="">{t("Load template…")}</option>
                           {Object.keys(printTemplates).map((n) => (
                             <option key={n} value={n}>{n}</option>
                           ))}
@@ -1069,14 +1074,14 @@ ${!preview ? `@media print {
                           onClick={savePrintTemplate}
                           className="inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[11px] font-medium text-fg hover:bg-surface-2"
                         >
-                          <Save className="h-3 w-3" /> Save
+                          <Save className="h-3 w-3" /> {t("Save")}
                         </button>
                         {activePrintTemplate ? (
                           <button
                             type="button"
                             onClick={() => deletePrintTemplate(activePrintTemplate)}
-                            aria-label="Delete template"
-                            title="Delete this template"
+                            aria-label={t("Delete template")}
+                            title={t("Delete this template")}
                             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface text-faint hover:text-red-600"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -1085,7 +1090,7 @@ ${!preview ? `@media print {
                       </div>
                     </div>
                     <div className="mb-2.5">
-                      <div className="mb-1 text-[11px] font-medium text-muted">Print Text Size</div>
+                      <div className="mb-1 text-[11px] font-medium text-muted">{t("Print Text Size")}</div>
                       <div className="inline-flex w-full overflow-hidden rounded-lg border border-border">
                         {(["normal", "medium", "small"] as const).map((s) => (
                           <button
@@ -1094,7 +1099,7 @@ ${!preview ? `@media print {
                             onClick={() => setPrintSize(s)}
                             className={`flex-1 px-2 py-1 text-[11px] font-medium capitalize transition-colors ${printSize === s ? "bg-brand text-brand-fg" : "bg-surface text-muted hover:text-fg"}`}
                           >
-                            {s}
+                            {t(PRINT_SIZE_LABEL[s])}
                           </button>
                         ))}
                       </div>
@@ -1103,28 +1108,28 @@ ${!preview ? `@media print {
                         and a rendering. Its own block (not just a toggle row) because when
                         it's on it reveals an image uploader. */}
                     <div className="mb-2.5 rounded-lg border border-border p-2">
-                      <PcRow label="Cover Page" on={coverOn} onToggle={() => setCoverOn(!coverOn)} />
+                      <PcRow label={t("Cover Page")} on={coverOn} onToggle={() => setCoverOn(!coverOn)} />
                       {coverOn ? (
                         <div className="mt-1.5 border-t border-border pt-1.5">
                           {coverImage ? (
                             <div className="space-y-1.5">
                               {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview */}
-                              <img src={coverImage} alt="Cover" className="h-20 w-full rounded-md border border-border object-cover" />
+                              <img src={coverImage} alt={t("Cover")} className="h-20 w-full rounded-md border border-border object-cover" />
                               <div className="flex gap-1.5">
                                 <label className="flex-1 cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-center text-[11px] font-medium text-fg hover:bg-surface-2">
-                                  Replace
+                                  {t("Replace")}
                                   <input type="file" accept="image/*" className="hidden" onChange={(e) => onCoverFile(e.target.files?.[0] ?? null)} />
                                 </label>
                                 <button type="button" onClick={() => { setCoverImage(null); setCoverErr(null); }} className="rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-red-500 hover:bg-surface-2">
-                                  Remove
+                                  {t("Remove")}
                                 </button>
                               </div>
                             </div>
                           ) : (
                             <label className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed border-border bg-surface-2/60 px-2 py-3 text-center transition-colors hover:bg-surface-2">
                               <ImagePlus className="h-4 w-4 text-faint" />
-                              <span className="text-[11px] font-medium text-muted">Upload image / rendering</span>
-                              <span className="text-[10px] text-faint">Optional — the page still prints the project facts</span>
+                              <span className="text-[11px] font-medium text-muted">{t("Upload image / rendering")}</span>
+                              <span className="text-[10px] text-faint">{t("Optional — the page still prints the project facts")}</span>
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => onCoverFile(e.target.files?.[0] ?? null)} />
                             </label>
                           )}
@@ -1133,28 +1138,28 @@ ${!preview ? `@media print {
                       ) : null}
                     </div>
 
-                    <div className="mb-1 text-[11px] font-medium text-muted">Include in print</div>
+                    <div className="mb-1 text-[11px] font-medium text-muted">{t("Include in print")}</div>
                     <div className="space-y-0.5">
-                      <PcRow label="Qty & Unit" on={pc.qtyUnit} onToggle={() => setPc((p) => ({ ...p, qtyUnit: !p.qtyUnit }))} />
-                      <PcRow label="Item Total (per line)" on={pc.itemTotal !== false} onToggle={() => setPc((p) => ({ ...p, itemTotal: p.itemTotal === false }))} />
-                      <PcRow label="Labor Norm hrs/unit" on={!!pc.laborNorm} onToggle={() => setPc((p) => ({ ...p, laborNorm: !p.laborNorm }))} />
-                      <PcRow label="Labor Hrs" on={!!pc.laborHrs} onToggle={() => setPc((p) => ({ ...p, laborHrs: !p.laborHrs }))} />
-                      <PcRow label="Labor" on={pc.labor} onToggle={() => setPc((p) => ({ ...p, labor: !p.labor }))} />
-                      <PcRow label="Material Unit Cost" on={!!pc.materialUnit} onToggle={() => setPc((p) => ({ ...p, materialUnit: !p.materialUnit }))} />
-                      <PcRow label="Material" on={pc.material} onToggle={() => setPc((p) => ({ ...p, material: !p.material }))} />
-                      <PcRow label="Equipment Unit Cost" on={!!pc.equipmentUnit} onToggle={() => setPc((p) => ({ ...p, equipmentUnit: !p.equipmentUnit }))} />
-                      <PcRow label="Equipment" on={pc.equipment} onToggle={() => setPc((p) => ({ ...p, equipment: !p.equipment }))} />
-                      <PcRow label="Subcontractor Unit Cost" on={!!pc.subUnit} onToggle={() => setPc((p) => ({ ...p, subUnit: !p.subUnit }))} />
-                      <PcRow label="Subcontractor" on={pc.subcontractor} onToggle={() => setPc((p) => ({ ...p, subcontractor: !p.subcontractor }))} />
-                      <PcRow label="Progress" on={showProgress} onToggle={() => setShowProgress((v) => !v)} />
-                      <PcRow label="Page #" on={pc.pageNum} onToggle={() => setPc((p) => ({ ...p, pageNum: !p.pageNum }))} />
-                      <PcRow label="General Conditions / Overhead" on={gcActive && pc.generalConditions} disabled={!gcActive} onToggle={() => setPc((p) => ({ ...p, generalConditions: !p.generalConditions }))} />
-                      <PcRow label="Zebra Rows" on={pc.zebra} onToggle={() => setPc((p) => ({ ...p, zebra: !p.zebra }))} />
-                      <PcRow label="Shaded Row SubTotal+%" on={pc.rowSubtotal} onToggle={() => setPc((p) => ({ ...p, rowSubtotal: !p.rowSubtotal }))} />
-                      <PcRow label="Logo" on={pc.logo} onToggle={() => setPc((p) => ({ ...p, logo: !p.logo }))} />
+                      <PcRow label={t("Qty & Unit")} on={pc.qtyUnit} onToggle={() => setPc((p) => ({ ...p, qtyUnit: !p.qtyUnit }))} />
+                      <PcRow label={t("Item Total (per line)")} on={pc.itemTotal !== false} onToggle={() => setPc((p) => ({ ...p, itemTotal: p.itemTotal === false }))} />
+                      <PcRow label={t("Labor Norm hrs/unit")} on={!!pc.laborNorm} onToggle={() => setPc((p) => ({ ...p, laborNorm: !p.laborNorm }))} />
+                      <PcRow label={t("Labor Hrs")} on={!!pc.laborHrs} onToggle={() => setPc((p) => ({ ...p, laborHrs: !p.laborHrs }))} />
+                      <PcRow label={t("Labor")} on={pc.labor} onToggle={() => setPc((p) => ({ ...p, labor: !p.labor }))} />
+                      <PcRow label={t("Material Unit Cost")} on={!!pc.materialUnit} onToggle={() => setPc((p) => ({ ...p, materialUnit: !p.materialUnit }))} />
+                      <PcRow label={t("Material")} on={pc.material} onToggle={() => setPc((p) => ({ ...p, material: !p.material }))} />
+                      <PcRow label={t("Equipment Unit Cost")} on={!!pc.equipmentUnit} onToggle={() => setPc((p) => ({ ...p, equipmentUnit: !p.equipmentUnit }))} />
+                      <PcRow label={t("Equipment")} on={pc.equipment} onToggle={() => setPc((p) => ({ ...p, equipment: !p.equipment }))} />
+                      <PcRow label={t("Subcontractor Unit Cost")} on={!!pc.subUnit} onToggle={() => setPc((p) => ({ ...p, subUnit: !p.subUnit }))} />
+                      <PcRow label={t("Subcontractor")} on={pc.subcontractor} onToggle={() => setPc((p) => ({ ...p, subcontractor: !p.subcontractor }))} />
+                      <PcRow label={t("Progress")} on={showProgress} onToggle={() => setShowProgress((v) => !v)} />
+                      <PcRow label={t("Page #")} on={pc.pageNum} onToggle={() => setPc((p) => ({ ...p, pageNum: !p.pageNum }))} />
+                      <PcRow label={t("General Conditions / Overhead")} on={gcActive && pc.generalConditions} disabled={!gcActive} onToggle={() => setPc((p) => ({ ...p, generalConditions: !p.generalConditions }))} />
+                      <PcRow label={t("Zebra Rows")} on={pc.zebra} onToggle={() => setPc((p) => ({ ...p, zebra: !p.zebra }))} />
+                      <PcRow label={t("Shaded Row SubTotal+%")} on={pc.rowSubtotal} onToggle={() => setPc((p) => ({ ...p, rowSubtotal: !p.rowSubtotal }))} />
+                      <PcRow label={t("Logo")} on={pc.logo} onToggle={() => setPc((p) => ({ ...p, logo: !p.logo }))} />
                       {pc.logo ? (
                         <div className="flex items-center gap-2 px-2 py-1">
-                          <span className="shrink-0 text-[11px] text-muted">Logo Scale</span>
+                          <span className="shrink-0 text-[11px] text-muted">{t("Logo Scale")}</span>
                           <input
                             type="range"
                             min={0.4}
@@ -1167,12 +1172,12 @@ ${!preview ? `@media print {
                           <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-fg">{Math.round(logoScale * 100)}%</span>
                         </div>
                       ) : null}
-                      <PcRow label="Timeline" on={pc.timeline} onToggle={() => setPc((p) => ({ ...p, timeline: !p.timeline }))} />
-                      <PcRow label="Phase Disbursement" on={pc.phaseDisbursement} onToggle={() => setPc((p) => ({ ...p, phaseDisbursement: !p.phaseDisbursement }))} />
-                      <PcRow label="Imported Materials, Equipm. & Log." on={pc.importedMaterials} onToggle={() => setPc((p) => ({ ...p, importedMaterials: !p.importedMaterials }))} />
-                      <PcRow label="Memo/Remark" on={pc.memo} onToggle={() => setPc((p) => ({ ...p, memo: !p.memo }))} />
-                      <PcRow label="Chart" on={pc.chart} onToggle={() => setPc((p) => ({ ...p, chart: !p.chart }))} />
-                      <PcRow label="Calc. Method Details" on={!!pc.methodDetail} onToggle={() => setPc((p) => ({ ...p, methodDetail: !p.methodDetail }))} />
+                      <PcRow label={t("Timeline")} on={pc.timeline} onToggle={() => setPc((p) => ({ ...p, timeline: !p.timeline }))} />
+                      <PcRow label={t("Phase Disbursement")} on={pc.phaseDisbursement} onToggle={() => setPc((p) => ({ ...p, phaseDisbursement: !p.phaseDisbursement }))} />
+                      <PcRow label={t("Imported Materials, Equipm. & Log.")} on={pc.importedMaterials} onToggle={() => setPc((p) => ({ ...p, importedMaterials: !p.importedMaterials }))} />
+                      <PcRow label={t("Memo/Remark")} on={pc.memo} onToggle={() => setPc((p) => ({ ...p, memo: !p.memo }))} />
+                      <PcRow label={t("Chart")} on={pc.chart} onToggle={() => setPc((p) => ({ ...p, chart: !p.chart }))} />
+                      <PcRow label={t("Calc. Method Details")} on={!!pc.methodDetail} onToggle={() => setPc((p) => ({ ...p, methodDetail: !p.methodDetail }))} />
 
                       {/* Collapsed Sections — which sections print as a header + subtotal
                           only. Separate from the on-screen red arrows on purpose: folding
@@ -1186,7 +1191,7 @@ ${!preview ? `@media print {
                           className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px] font-medium text-muted hover:bg-surface-2 hover:text-fg"
                         >
                           {pcCollapseOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                          Collapsed Sections
+                          {t("Collapsed Sections")}
                           <span className="ml-auto rounded bg-surface-2 px-1.5 text-[10px] tabular-nums text-faint">
                             {printCollapsed.length}/{est.categories.length}
                           </span>
@@ -1195,10 +1200,10 @@ ${!preview ? `@media print {
                           <div className="mt-0.5 space-y-0.5 pl-2">
                             <div className="flex gap-2 px-2 pb-1">
                               <button type="button" onClick={() => setPc((p) => ({ ...p, collapsedSections: est.categories.map((c) => c.id) }))} className="text-[10px] font-medium text-brand hover:underline">
-                                All
+                                {t("All")}
                               </button>
                               <button type="button" onClick={() => setPc((p) => ({ ...p, collapsedSections: [] }))} className="text-[10px] font-medium text-muted hover:underline">
-                                None
+                                {t("None")}
                               </button>
                             </div>
                             {est.categories.length ? (
@@ -1221,7 +1226,7 @@ ${!preview ? `@media print {
                                 />
                               ))
                             ) : (
-                              <div className="px-2 py-1 text-[11px] text-faint">No sections yet.</div>
+                              <div className="px-2 py-1 text-[11px] text-faint">{t("No sections yet.")}</div>
                             )}
                           </div>
                         ) : null}
@@ -1246,7 +1251,7 @@ ${!preview ? `@media print {
             * under a dollar sign. */}
           <div className="ml-auto flex shrink-0 flex-col justify-center rounded-lg border border-brand/40 bg-brand/10 px-4 py-2 text-right">
             <div className="text-[10px] font-medium uppercase tracking-wide text-brand/80">
-              Total construction cost
+              {t("Total construction cost")}
             </div>
             <div className="whitespace-nowrap text-xl font-bold leading-tight tabular-nums text-fg">
               {est.currency} {nf0(grandTotal)}
@@ -1261,7 +1266,7 @@ ${!preview ? `@media print {
         </div>
         {saved ? (
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
-            <Check className="h-4 w-4" /> Estimate captured locally — persistence goes live with the database (Supabase).
+            <Check className="h-4 w-4" /> {t("Estimate captured locally — persistence goes live with the database (Supabase).")}
           </div>
         ) : null}
       </Card>
@@ -1282,19 +1287,19 @@ ${!preview ? `@media print {
             ))}
           </datalist>
           <datalist id="section-codes">
-            <option value="A10">Substructure — Foundations</option>
-            <option value="A20">Basement Construction</option>
-            <option value="B10">Superstructure (frame · floors)</option>
-            <option value="B20">Exterior Enclosure</option>
-            <option value="B30">Roofing</option>
-            <option value="C10">Interior Construction</option>
-            <option value="C20">Stairs</option>
-            <option value="C30">Interior Finishes</option>
-            <option value="D20">Plumbing</option>
-            <option value="D30">HVAC</option>
-            <option value="D50">Electrical</option>
-            <option value="E10">Equipment & Furnishings</option>
-            <option value="G10">Site Work</option>
+            <option value="A10">{t("Substructure — Foundations")}</option>
+            <option value="A20">{t("Basement Construction")}</option>
+            <option value="B10">{t("Superstructure (frame · floors)")}</option>
+            <option value="B20">{t("Exterior Enclosure")}</option>
+            <option value="B30">{t("Roofing")}</option>
+            <option value="C10">{t("Interior Construction")}</option>
+            <option value="C20">{t("Stairs")}</option>
+            <option value="C30">{t("Interior Finishes")}</option>
+            <option value="D20">{t("Plumbing")}</option>
+            <option value="D30">{t("HVAC")}</option>
+            <option value="D50">{t("Electrical")}</option>
+            <option value="E10">{t("Equipment & Furnishings")}</option>
+            <option value="G10">{t("Site Work")}</option>
           </datalist>
           <table className="w-full table-fixed border-collapse text-sm">
             <colgroup>
@@ -1307,38 +1312,38 @@ ${!preview ? `@media print {
               <tr className="print-page-head hidden">
                 <th colSpan={colCount} className="border-b border-slate-300 bg-white px-1 py-0.5 text-center">
                   <div className="text-center text-[9px] font-normal normal-case leading-tight tracking-normal text-slate-600">
-                    <span className="font-semibold text-slate-800">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · Ver {est.version} · {est.date}
+                    <span className="font-semibold text-slate-800">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · {t("Ver")} {est.version} · {est.date}
                   </div>
                 </th>
               </tr>
               <tr className="text-[10px] uppercase tracking-wide text-slate-200">
-                <th rowSpan={2} className="sticky left-0 z-10 border-b border-r border-slate-700 bg-slate-800 pl-0.5 pr-2 py-1.5 text-left text-slate-100">Code · Task</th>
-                <th rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">Qty</th>
-                <th rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">Unit</th>
-                <th colSpan={3} className="pc-labor border-b-2 border-b-blue-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">Labor</th>
-                <th colSpan={2} className="pc-material border-b-2 border-b-emerald-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">Material</th>
-                <th colSpan={2} className="pc-equipment border-b-2 border-b-amber-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">Equipment</th>
-                <th colSpan={2} className="pc-subcontractor border-b-2 border-b-violet-400 border-l border-slate-600 bg-slate-800 px-1 py-0.5 text-center font-semibold text-white">Subcontractor</th>
-                <th rowSpan={2} className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1 text-center text-slate-100">Item Total</th>
+                <th rowSpan={2} className="sticky left-0 z-10 border-b border-r border-slate-700 bg-slate-800 pl-0.5 pr-2 py-1.5 text-left text-slate-100">{t("Code · Task")}</th>
+                <th rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">{t("Qty")}</th>
+                <th rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">{t("Unit")}</th>
+                <th colSpan={3} className="pc-labor border-b-2 border-b-blue-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Labor")}</th>
+                <th colSpan={2} className="pc-material border-b-2 border-b-emerald-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Material")}</th>
+                <th colSpan={2} className="pc-equipment border-b-2 border-b-amber-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Equipment")}</th>
+                <th colSpan={2} className="pc-subcontractor border-b-2 border-b-violet-400 border-l border-slate-600 bg-slate-800 px-1 py-0.5 text-center font-semibold text-white">{t("Subcontractor")}</th>
+                <th rowSpan={2} className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1 text-center text-slate-100">{t("Item Total")}</th>
                 {showProgress && (
-                  <th colSpan={2} className="border-b-2 border-b-green-300 border-l-2 border-slate-500 bg-green-700 px-1 py-0.5 text-center font-semibold text-white">Progress</th>
+                  <th colSpan={2} className="border-b-2 border-b-green-300 border-l-2 border-slate-500 bg-green-700 px-1 py-0.5 text-center font-semibold text-white">{t("Progress")}</th>
                 )}
                 <th rowSpan={2} className="no-print border-b border-slate-700 bg-slate-800 px-1 py-1" />
               </tr>
               <tr className="text-[9px] uppercase tracking-wide text-muted">
-                <th className="pc-labor border-b border-l border-border bg-blue-500/10 px-1 py-0.5 text-center">Norm hrs/u</th>
-                <th className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">Total Hrs</th>
-                <th className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">Labor Cost</th>
-                <th className="pc-material border-b border-l border-border bg-emerald-500/10 px-1 py-0.5 text-center">Unit Cost</th>
-                <th className="pc-material border-b border-l border-dotted border-black/40 bg-emerald-500/10 px-1 py-0.5 text-center">Total</th>
-                <th className="pc-equipment border-b border-l border-border bg-amber-500/10 px-1 py-0.5 text-center">Unit Cost</th>
-                <th className="pc-equipment border-b border-l border-dotted border-black/40 bg-amber-500/10 px-1 py-0.5 text-center">Total</th>
-                <th className="pc-subcontractor border-b border-l border-border bg-violet-500/10 px-1 py-0.5 text-center">Unit Cost</th>
-                <th className="pc-subcontractor border-b border-l border-dotted border-black/40 bg-violet-500/10 px-1 py-0.5 text-center">Total</th>
+                <th className="pc-labor border-b border-l border-border bg-blue-500/10 px-1 py-0.5 text-center">{t("Norm hrs/u")}</th>
+                <th className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">{t("Total Hrs")}</th>
+                <th className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">{t("Labor Cost")}</th>
+                <th className="pc-material border-b border-l border-border bg-emerald-500/10 px-1 py-0.5 text-center">{t("Unit Cost")}</th>
+                <th className="pc-material border-b border-l border-dotted border-black/40 bg-emerald-500/10 px-1 py-0.5 text-center">{t("Total")}</th>
+                <th className="pc-equipment border-b border-l border-border bg-amber-500/10 px-1 py-0.5 text-center">{t("Unit Cost")}</th>
+                <th className="pc-equipment border-b border-l border-dotted border-black/40 bg-amber-500/10 px-1 py-0.5 text-center">{t("Total")}</th>
+                <th className="pc-subcontractor border-b border-l border-border bg-violet-500/10 px-1 py-0.5 text-center">{t("Unit Cost")}</th>
+                <th className="pc-subcontractor border-b border-l border-dotted border-black/40 bg-violet-500/10 px-1 py-0.5 text-center">{t("Total")}</th>
                 {showProgress && (
                   <>
-                    <th className="border-b border-l-2 border-slate-500 bg-green-500/15 px-1 py-0.5 text-center text-green-400">POC %</th>
-                    <th className="border-b border-l border-dotted border-black/40 bg-green-500/15 px-1 py-0.5 text-center text-green-400">Prog. Amt</th>
+                    <th className="border-b border-l-2 border-slate-500 bg-green-500/15 px-1 py-0.5 text-center text-green-400">{t("POC %")}</th>
+                    <th className="border-b border-l border-dotted border-black/40 bg-green-500/15 px-1 py-0.5 text-center text-green-400">{t("Prog. Amt")}</th>
                   </>
                 )}
               </tr>
@@ -1363,8 +1368,8 @@ ${!preview ? `@media print {
                             if (el) el.indeterminate = sectionState(cat) === "some";
                           }}
                           onChange={() => toggleSection(cat)}
-                          aria-label={`Select section ${cat.name} for copying`}
-                          title="Select this whole section to copy to another project"
+                          aria-label={fmt(t("Select section {name} for copying"), { name: cat.name })}
+                          title={t("Select this whole section to copy to another project")}
                         />
                         {/* Collapse — folds the section down to its header + subtotal, so a
                             long sheet can be read as a list of sections. View-only: it does
@@ -1372,9 +1377,9 @@ ${!preview ? `@media print {
                         <button
                           type="button"
                           onClick={() => toggleCollapse(cat.id)}
-                          aria-label={isCollapsed(cat.id) ? "Expand section" : "Collapse section"}
+                          aria-label={isCollapsed(cat.id) ? t("Expand section") : t("Collapse section")}
                           aria-expanded={!isCollapsed(cat.id)}
-                          title={isCollapsed(cat.id) ? "Expand section" : "Collapse section — show section rows only"}
+                          title={isCollapsed(cat.id) ? t("Expand section") : t("Collapse section — show section rows only")}
                           className="no-print flex h-5 w-4 shrink-0 items-center justify-center text-red-500 hover:text-red-400"
                         >
                           {isCollapsed(cat.id) ? (
@@ -1388,7 +1393,7 @@ ${!preview ? `@media print {
                           onChange={(e) => patchCat(cat.id, { code: e.target.value.toUpperCase() })}
                           list="section-codes"
                           placeholder="—"
-                          title="Section classification code (UniFormat)"
+                          title={t("Section classification code (UniFormat)")}
                           className="w-[60px] shrink-0 rounded bg-transparent px-1 py-0 font-mono text-[11px] font-semibold uppercase tracking-tight text-muted outline-none focus:bg-brand/5"
                         />
                         <input
@@ -1396,23 +1401,23 @@ ${!preview ? `@media print {
                           onChange={(e) => patchCat(cat.id, { name: e.target.value })}
                           className="rounded bg-transparent text-xs font-semibold uppercase tracking-wide text-fg outline-none focus:bg-brand/5"
                         />
-                        <span className="rounded bg-slate-300/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted" title="Share of direct cost">{nf0(direct > 0 ? (ct.total / direct) * 100 : 0)}%</span>
+                        <span className="rounded bg-slate-300/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted" title={t("Share of direct cost")}>{nf0(direct > 0 ? (ct.total / direct) * 100 : 0)}%</span>
                         <span className="no-print ml-auto flex items-center text-faint">
-                          <button type="button" onClick={() => moveCategory(cat.id, -1)} aria-label="Move section up" className="flex h-5 w-4 items-center justify-center hover:text-brand">
+                          <button type="button" onClick={() => moveCategory(cat.id, -1)} aria-label={t("Move section up")} className="flex h-5 w-4 items-center justify-center hover:text-brand">
                             <ChevronUp className="h-3.5 w-3.5" />
                           </button>
-                          <button type="button" onClick={() => moveCategory(cat.id, 1)} aria-label="Move section down" className="flex h-5 w-4 items-center justify-center hover:text-brand">
+                          <button type="button" onClick={() => moveCategory(cat.id, 1)} aria-label={t("Move section down")} className="flex h-5 w-4 items-center justify-center hover:text-brand">
                             <ChevronDown className="h-3.5 w-3.5" />
                           </button>
                         </span>
                         <select
                           value=""
                           onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (v) addItemFromNorm(cat.id, v); }}
-                          aria-label="Add from Norm Set"
-                          title="Add a standard task with its fixed Norm Hrs/Unit"
+                          aria-label={t("Add from Norm Set")}
+                          title={t("Add a standard task with its fixed Norm Hrs/Unit")}
                           className="no-print h-5 rounded border border-green-400 bg-green-500/10 px-1.5 text-[11px] font-medium text-green-400 outline-none focus:bg-green-500/15"
                         >
-                          <option value="">＋ Norm Set…</option>
+                          <option value="">{t("＋ Norm Set…")}</option>
                           {trades.map((trade) => (
                             <optgroup key={trade} label={trade}>
                               {normSet.filter((n) => n.trade === trade).map((n) => (
@@ -1424,11 +1429,11 @@ ${!preview ? `@media print {
                         <select
                           value=""
                           onChange={(e) => { const v = e.target.value; e.currentTarget.value = ""; if (v) addCostItem(cat.id, v); }}
-                          aria-label="Add from Cost Database"
-                          title="Insert a priced item from the Cost Database (indexed / adjusted per the toolbar settings)"
+                          aria-label={t("Add from Cost Database")}
+                          title={t("Insert a priced item from the Cost Database (indexed / adjusted per the toolbar settings)")}
                           className="no-print h-5 rounded border border-blue-500/40 bg-blue-500/10 px-1.5 text-[11px] font-medium text-blue-400 outline-none focus:bg-blue-500/20"
                         >
-                          <option value="">＋ Cost DB…</option>
+                          <option value="">{t("＋ Cost DB…")}</option>
                           {costItemRegions.map((rg) => (
                             <optgroup key={rg} label={rg}>
                               {costItemsForSource.filter((i) => (i.region ?? "—") === rg).map((ci) => (
@@ -1438,9 +1443,9 @@ ${!preview ? `@media print {
                           ))}
                         </select>
                         <button type="button" onClick={() => addItem(cat.id)} className="no-print inline-flex h-5 items-center gap-1 rounded border border-border bg-surface px-1.5 text-[11px] font-medium text-fg hover:bg-surface-2">
-                          <Plus className="h-3 w-3" /> Item
+                          <Plus className="h-3 w-3" /> {t("Item")}
                         </button>
-                        <button type="button" onClick={() => removeCategory(cat.id)} aria-label="Remove section" className="no-print inline-flex h-5 w-5 items-center justify-center rounded text-faint hover:text-red-600">
+                        <button type="button" onClick={() => removeCategory(cat.id)} aria-label={t("Remove section")} className="no-print inline-flex h-5 w-5 items-center justify-center rounded text-faint hover:text-red-600">
                           <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
@@ -1465,14 +1470,14 @@ ${!preview ? `@media print {
                               className="no-print mt-[3px] h-3.5 w-3.5 shrink-0 accent-brand"
                               checked={selSections.has(cat.id) || selItems.has(it.id)}
                               onChange={() => toggleItem(cat, it.id)}
-                              aria-label={`Select task ${it.task || "untitled"} for copying`}
-                              title="Select this task to copy to another project"
+                              aria-label={fmt(t("Select task {name} for copying"), { name: it.task || t("untitled") })}
+                              title={t("Select this task to copy to another project")}
                             />
                             <span className="no-print flex items-center pt-px text-faint">
-                              <button type="button" onClick={() => moveItem(cat.id, it.id, -1)} aria-label="Move row up" className="flex h-4 w-3.5 items-center justify-center hover:text-brand">
+                              <button type="button" onClick={() => moveItem(cat.id, it.id, -1)} aria-label={t("Move row up")} className="flex h-4 w-3.5 items-center justify-center hover:text-brand">
                                 <ChevronUp className="h-3 w-3" />
                               </button>
-                              <button type="button" onClick={() => moveItem(cat.id, it.id, 1)} aria-label="Move row down" className="flex h-4 w-3.5 items-center justify-center hover:text-brand">
+                              <button type="button" onClick={() => moveItem(cat.id, it.id, 1)} aria-label={t("Move row down")} className="flex h-4 w-3.5 items-center justify-center hover:text-brand">
                                 <ChevronDown className="h-3 w-3" />
                               </button>
                             </span>
@@ -1481,12 +1486,12 @@ ${!preview ? `@media print {
                               onChange={(e) => patchItem(cat.id, it.id, { code: e.target.value.toUpperCase() })}
                               list="pricelist-codes"
                               placeholder="CODE"
-                              title="Price-list code"
+                              title={t("Price-list code")}
                               className={`w-[84px] shrink-0 rounded bg-surface-2 px-1 py-0 ${FIELD_H} text-left font-mono text-[10px] uppercase tracking-tight text-muted outline-none focus:bg-brand/5`}
                             />
                           <TaskField
                             value={it.task}
-                            placeholder="Description"
+                            placeholder={t("Description")}
                             title={it.task}
                             onChange={(v) => {
                               const m = normSet.find((n) => n.task.toLowerCase() === v.toLowerCase());
@@ -1507,18 +1512,18 @@ ${!preview ? `@media print {
                           <select
                             value={it.calculationMethod ?? "norm"}
                             onChange={(e) => patchItem(cat.id, it.id, { calculationMethod: e.target.value as CalculationMethod })}
-                            title="Calculation method — Norm (hrs/u × rate), Labor/Rate ($ per unit), or Assembly (typed components)."
+                            title={t("Calculation method — Norm (hrs/u × rate), Labor/Rate ($ per unit), or Assembly (typed components).")}
                             className={`no-print shrink-0 rounded border border-border bg-surface-2 px-0.5 ${FIELD_H} font-mono text-[9px] uppercase tracking-tight text-muted outline-none focus:bg-brand/5`}
                           >
-                            <option value="norm">Norm</option>
+                            <option value="norm">{t("Norm")}</option>
                             <option value="labor_rate">$/u</option>
-                            <option value="assembly">Asm</option>
+                            <option value="assembly">{t("Asm")}</option>
                           </select>
                           {isAsm && (
                             <button
                               type="button"
                               onClick={() => toggleAsm(it.id)}
-                              title="Edit assembly components"
+                              title={t("Edit assembly components")}
                               className="no-print inline-flex shrink-0 items-center gap-0.5 rounded border border-brand/40 bg-brand/5 px-1 text-[9px] font-medium text-brand outline-none hover:bg-brand/10"
                             >
                               {asmOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -1540,14 +1545,14 @@ ${!preview ? `@media print {
                         {/* Labor */}
                         <td className={`pc-labor ${grpDiv} bg-blue-500/10 px-1 py-0`}>
                           {isAsm ? (
-                            <div className="text-center text-[10px] leading-4 text-faint" title="Hours come from the assembly components">—</div>
+                            <div className="text-center text-[10px] leading-4 text-faint" title={t("Hours come from the assembly components")}>—</div>
                           ) : (
                             <input type="number" step={0.05} value={it.laborNorm} onChange={(e) => patchItem(cat.id, it.id, { laborNorm: Number(e.target.value) || 0 })} className={cellInput} />
                           )}
                         </td>
                         <td className={`pc-labor ${calcCls} ${subDiv} bg-blue-500/10 text-muted`}>{nf2(c.hrs)}</td>
                         {isRate ? (
-                          <td className={`pc-labor ${subDiv} bg-blue-500/10 px-1 py-0`} title={`Labor cost per unit · line labor = ${nf0(c.labor)}`}>
+                          <td className={`pc-labor ${subDiv} bg-blue-500/10 px-1 py-0`} title={fmt(t("Labor cost per unit · line labor = {amount}"), { amount: nf0(c.labor) })}>
                             <div className="flex items-center">
                               <input
                                 type="number"
@@ -1564,7 +1569,7 @@ ${!preview ? `@media print {
                         {/* Material */}
                         <td className={`pc-material ${grpDiv} bg-emerald-500/10 px-1 py-0`}>
                           {isAsm ? (
-                            <div className="text-center text-[10px] leading-4 text-faint" title="Driven by assembly components">—</div>
+                            <div className="text-center text-[10px] leading-4 text-faint" title={t("Driven by assembly components")}>—</div>
                           ) : (
                             <input type="number" value={it.materialUnitCost} onChange={(e) => patchItem(cat.id, it.id, { materialUnitCost: Number(e.target.value) || 0 })} className={cellInput} />
                           )}
@@ -1573,7 +1578,7 @@ ${!preview ? `@media print {
                         {/* Equipment */}
                         <td className={`pc-equipment ${grpDiv} bg-amber-500/10 px-1 py-0`}>
                           {isAsm ? (
-                            <div className="text-center text-[10px] leading-4 text-faint" title="Driven by assembly components">—</div>
+                            <div className="text-center text-[10px] leading-4 text-faint" title={t("Driven by assembly components")}>—</div>
                           ) : (
                             <input type="number" value={it.equipmentUnitCost} onChange={(e) => patchItem(cat.id, it.id, { equipmentUnitCost: Number(e.target.value) || 0 })} className={cellInput} />
                           )}
@@ -1582,7 +1587,7 @@ ${!preview ? `@media print {
                         {/* Subcontractor */}
                         <td className={`pc-subcontractor ${grpDiv} bg-violet-500/10 px-1 py-0`}>
                           {isAsm ? (
-                            <div className="text-center text-[10px] leading-4 text-faint" title="Driven by assembly components (incl. ‘other’)">—</div>
+                            <div className="text-center text-[10px] leading-4 text-faint" title={t("Driven by assembly components (incl. ‘other’)")}>—</div>
                           ) : (
                             <input type="number" value={it.subcontractUnitCost} onChange={(e) => patchItem(cat.id, it.id, { subcontractUnitCost: Number(e.target.value) || 0 })} className={cellInput} />
                           )}
@@ -1600,7 +1605,7 @@ ${!preview ? `@media print {
                           </>
                         )}
                         <td className="no-print px-1 py-0 text-center">
-                          <button type="button" onClick={() => removeItem(cat.id, it.id)} aria-label="Remove item" className="inline-flex h-4 w-6 items-center justify-center rounded text-faint hover:text-red-600">
+                          <button type="button" onClick={() => removeItem(cat.id, it.id)} aria-label={t("Remove item")} className="inline-flex h-4 w-6 items-center justify-center rounded text-faint hover:text-red-600">
                             <Trash2 className="h-3 w-3" />
                           </button>
                         </td>
@@ -1623,7 +1628,7 @@ ${!preview ? `@media print {
                   {/* Category subtotal */}
                   <tr className="border-t border-border bg-surface-2/70 font-semibold">
                     <td colSpan={3} className="sticky left-0 z-10 border-r border-border bg-surface-2/70 px-3 py-0.5 text-center text-xs uppercase tracking-wide text-muted">
-                      Subtotal — {cat.name}
+                      {t("Subtotal")} — {cat.name}
                     </td>
                     <td className={`pc-labor ${grpDiv} bg-blue-500/10`} />
                     <td className={`pc-labor ${calcCls} ${subDiv} bg-blue-500/10 text-muted`}>{nf2(ct.hrs)}</td>
@@ -1651,7 +1656,7 @@ ${!preview ? `@media print {
             <tfoot>
               <tr className="border-t-2 border-border bg-surface text-sm font-bold">
                 <td colSpan={3} className="sticky left-0 z-10 border-r border-border bg-surface px-3 py-2 text-right uppercase tracking-wide text-fg">
-                  Direct Cost
+                  {t("Direct Cost")}
                 </td>
                 <td className={`pc-labor ${grpDiv} bg-blue-500/10`} />
                 <td className={`pc-labor ${calcCls} ${subDiv} bg-blue-500/10 text-muted`}>{nf2(grand.hrs)}</td>
@@ -1680,14 +1685,14 @@ ${!preview ? `@media print {
          * always shown. Screen-only: the print document renders its own totals block,
          * so printing this too would state the figure twice. */}
         <div className="no-print flex items-baseline gap-3 border-t-2 border-border bg-surface-2/60 px-4 py-2.5 print:hidden">
-          <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-fg">Total Direct Costs</span>
+          <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-fg">{t("Total Direct Costs")}</span>
           <span aria-hidden className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-faint/60" />
           <span className="shrink-0 tabular-nums text-sm font-bold text-fg">{dualMoney(direct)}</span>
         </div>
 
         <div className="no-print border-t border-border p-3">
           <button type="button" onClick={addCategory} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
-            <Plus className="h-3.5 w-3.5" /> Add section
+            <Plus className="h-3.5 w-3.5" /> {t("Add section")}
           </button>
         </div>
       </Card>
@@ -1711,18 +1716,18 @@ ${!preview ? `@media print {
                 <tr className="print-page-head hidden">
                   <th colSpan={clientCols} className="border-b border-slate-300 bg-white px-1 py-0.5 text-center">
                     <div className="text-center text-[9px] font-normal normal-case leading-tight tracking-normal text-slate-600">
-                      <span className="font-semibold text-slate-800">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · Ver {est.version} · {est.date}
+                      <span className="font-semibold text-slate-800">{est.projectName}</span> · No. {est.projectId ?? "—"} · {est.location} · {t("Ver")} {est.version} · {est.date}
                     </div>
                   </th>
                 </tr>
                 <tr className="text-[10px] uppercase tracking-wide text-slate-100">
-                  <th className="border-b border-r border-slate-700 bg-slate-800 px-2 py-1.5 text-left">Code · Task</th>
-                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">Labor</th>
-                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">Material</th>
-                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">Equipment</th>
-                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">Subcontractor</th>
-                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">Item Total</th>
-                  {showProgress && <th className="border-b border-l border-slate-600 bg-green-700 px-2 py-1.5 text-center text-white">Progress</th>}
+                  <th className="border-b border-r border-slate-700 bg-slate-800 px-2 py-1.5 text-left">{t("Code · Task")}</th>
+                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">{t("Labor")}</th>
+                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">{t("Material")}</th>
+                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">{t("Equipment")}</th>
+                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">{t("Subcontractor")}</th>
+                  <th className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1.5 text-center">{t("Item Total")}</th>
+                  {showProgress && <th className="border-b border-l border-slate-600 bg-green-700 px-2 py-1.5 text-center text-white">{t("Progress")}</th>}
                 </tr>
               </thead>
               {est.categories.map((cat) => {
@@ -1755,7 +1760,7 @@ ${!preview ? `@media print {
                       </tr>
                     ))}
                     <tr className="border-t border-border bg-surface-2/70 text-xs font-semibold">
-                      <td className="px-2 py-1 text-right uppercase tracking-wide text-muted">Subtotal — {cat.name}</td>
+                      <td className="px-2 py-1 text-right uppercase tracking-wide text-muted">{t("Subtotal")} — {cat.name}</td>
                       <td className="border-l border-border px-2 py-1 text-right tabular-nums text-fg">{nf0(ct.labor)}</td>
                       <td className="border-l border-border px-2 py-1 text-right tabular-nums text-fg">{nf0(ct.mat)}</td>
                       <td className="border-l border-border px-2 py-1 text-right tabular-nums text-fg">{nf0(ct.equip)}</td>
@@ -1768,7 +1773,7 @@ ${!preview ? `@media print {
               })}
               <tfoot>
                 <tr className="border-t-2 border-border bg-surface text-sm font-bold">
-                  <td className="px-2 py-2 text-right uppercase tracking-wide text-fg">Direct Cost — {est.currency}</td>
+                  <td className="px-2 py-2 text-right uppercase tracking-wide text-fg">{t("Direct Cost")} — {est.currency}</td>
                   <td className="border-l border-border px-2 py-2 text-right tabular-nums text-blue-400">{nf0(grand.labor)}</td>
                   <td className="border-l border-border px-2 py-2 text-right tabular-nums text-emerald-400">{nf0(grand.mat)}</td>
                   <td className="border-l border-border px-2 py-2 text-right tabular-nums text-amber-400">{nf0(grand.equip)}</td>
@@ -1787,9 +1792,9 @@ ${!preview ? `@media print {
         <Card className="overflow-hidden p-0">
           {/* Header strip */}
           <div className="flex items-center justify-between border-b border-border bg-surface-2/60 px-4 py-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Cost Summary</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">{t("Cost Summary")}</h3>
             <span className="text-[11px] font-medium text-faint">
-              All values in {est.currency}
+              {fmt(t("All values in {currency}"), { currency: est.currency })}
               {usdSecondary ? ` · $ @ 1 ${est.currency} = ${usdRate.toFixed(4)} USD` : ""}
             </span>
           </div>
@@ -1806,11 +1811,11 @@ ${!preview ? `@media print {
               const share = (n: number) => (direct > 0 ? (n / direct) * 100 : 0);
               return (
                 <div className="px-4 py-3">
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">Cost by Section</div>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">{t("Cost by Section")}</div>
                   {/* Composition bar */}
                   <div className="mb-3 flex h-2 w-full overflow-hidden rounded-full bg-surface-2">
                     {sections.map((s) => (
-                      <div key={s.key} className={s.dot} style={{ width: `${share(s.val)}%` }} title={`${s.key} ${nf0(share(s.val))}%`} />
+                      <div key={s.key} className={s.dot} style={{ width: `${share(s.val)}%` }} title={`${t(s.key)} ${nf0(share(s.val))}%`} />
                     ))}
                   </div>
                   {/* Rows */}
@@ -1818,14 +1823,14 @@ ${!preview ? `@media print {
                     {sections.map((s) => (
                       <li key={s.key} className="flex items-center gap-2">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${s.dot}`} />
-                        <span className="min-w-0 flex-1 truncate text-muted">{s.key}</span>
+                        <span className="min-w-0 flex-1 truncate text-muted">{t(s.key)}</span>
                         <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-faint">{nf0(share(s.val))}%</span>
                         <span className={`shrink-0 whitespace-nowrap tabular-nums font-medium ${s.txt}`}>{dualMoney(s.val)}</span>
                       </li>
                     ))}
                   </ul>
                   <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-2 text-sm font-semibold text-fg">
-                    <span>Direct cost</span>
+                    <span>{t("Direct cost")}</span>
                     <span className="whitespace-nowrap tabular-nums">{dualMoney(direct)}</span>
                   </div>
                 </div>
@@ -1834,29 +1839,29 @@ ${!preview ? `@media print {
 
             {/* Mark-ups & Total */}
             <div className="border-t border-border px-4 py-3 lg:border-t-0">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">Mark-ups &amp; Total</div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">{t("Mark-ups & Total")}</div>
               <dl className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted">Direct cost</span>
+                  <span className="text-muted">{t("Direct cost")}</span>
                   <span className="whitespace-nowrap tabular-nums text-fg">{dualMoney(direct)}</span>
                 </div>
                 {/* Optional General Conditions — checkbox to activate; the recap line prints whenever GC is active. */}
                 <div className={`flex items-center justify-between gap-2 ${gcActive ? "" : "no-print"}`}>
                   <label className="flex min-w-0 items-center gap-2 text-muted">
                     <input type="checkbox" checked={gcActive} onChange={(e) => setGcActive(e.target.checked)} className="no-print h-3.5 w-3.5 accent-brand" />
-                    <span className="truncate">General Conditions / Overhead{gcActive ? ` (${generalConditions.filter((g) => g.enabled).length})` : ""}</span>
+                    <span className="truncate">{t("General Conditions / Overhead")}{gcActive ? ` (${generalConditions.filter((g) => g.enabled).length})` : ""}</span>
                   </label>
                   <span className="whitespace-nowrap tabular-nums text-fg">{gcActive ? dualMoney(gcAmount) : "—"}</span>
                 </div>
-                <MarkupRow label="Profit & Risk" pct={est.profitPct} amount={profit} money={dualMoney}
+                <MarkupRow label={t("Profit & Risk")} pct={est.profitPct} amount={profit} money={dualMoney}
                   onPct={(v) => patchMeta({ profitPct: v })} />
-                <MarkupRow label="BBO" pct={est.bboPct} amount={bbo} money={dualMoney}
+                <MarkupRow label={t("BBO")} pct={est.bboPct} amount={bbo} money={dualMoney}
                   onPct={(v) => patchMeta({ bboPct: v })} />
               </dl>
 
               {/* Grand Total — filled accent on screen, bordered for print fidelity */}
               <div className="mt-3 flex items-center justify-between rounded-lg bg-brand px-3.5 py-2.5 text-brand-fg shadow-sm print:border-2 print:border-fg print:bg-transparent print:text-fg print:shadow-none">
-                <span className="text-[11px] font-semibold uppercase tracking-wider">Grand Total</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">{t("Grand Total")}</span>
                 <span className="text-xl font-bold tabular-nums">{money(grandTotal)}</span>
               </div>
 
@@ -1864,7 +1869,7 @@ ${!preview ? `@media print {
               {usdSecondary && (
                 <div className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3.5 py-1.5">
                   <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand">
-                    USD equivalent
+                    {t("USD equivalent")}
                     <span className="no-print inline-flex items-center rounded border border-border bg-surface px-1 text-[10px] normal-case tracking-normal text-faint">
                       1&nbsp;{est.currency}=
                       <input
@@ -1884,11 +1889,11 @@ ${!preview ? `@media print {
               {showProgress && (
                 <div className="mt-2 grid grid-cols-2 overflow-hidden rounded-md border border-border text-xs">
                   <div className="flex flex-col border-r border-border bg-green-500/10 px-3 py-1.5 text-green-400">
-                    <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">Completed · {nf0(grandPocPct)}%</span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{t("Completed")} · {nf0(grandPocPct)}%</span>
                     <span className="tabular-nums font-semibold">{money(grand.prog)}</span>
                   </div>
                   <div className="flex flex-col bg-amber-500/10 px-3 py-1.5 text-amber-400">
-                    <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">Remaining · {nf0(100 - grandPocPct)}%</span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{t("Remaining")} · {nf0(100 - grandPocPct)}%</span>
                     <span className="tabular-nums font-semibold">{money(direct - grand.prog)}</span>
                   </div>
                 </div>
@@ -1910,14 +1915,14 @@ ${!preview ? `@media print {
           {/* Memo / Remark — full-width editable area; printed on the cover page when enabled in Print Control. */}
           <div className="no-print border-t border-border px-4 py-3">
             <label className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-faint">
-              <span>Memo / Remark</span>
-              <span className="normal-case tracking-normal text-faint">{pc.memo ? "shown on cover page" : "hidden in print — enable “Memo/Remark” in Print Control"}</span>
+              <span>{t("Memo / Remark")}</span>
+              <span className="normal-case tracking-normal text-faint">{pc.memo ? t("shown on cover page") : t("hidden in print — enable “Memo/Remark” in Print Control")}</span>
             </label>
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               rows={4}
-              placeholder="A few details about this estimate — assumptions, exclusions, validity, payment terms…"
+              placeholder={t("A few details about this estimate — assumptions, exclusions, validity, payment terms…")}
               className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-xs leading-relaxed text-fg outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
             />
           </div>
@@ -1925,7 +1930,7 @@ ${!preview ? `@media print {
           {/* Cost per m² — compact unit-rate strip (Grand Total ÷ built-up area). */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border bg-surface-2/30 px-4 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">
-              Cost / m²
+              {t("Cost / m²")}
               {area > 0 ? <span className="ml-1 font-normal normal-case text-faint">÷ {nf0(area)} m²</span> : null}
             </span>
             <span className="hidden h-4 w-px bg-border sm:block" />
@@ -1936,7 +1941,7 @@ ${!preview ? `@media print {
               { k: "Total", v: grandTotal, txt: "font-bold text-fg" },
             ].map((m) => (
               <span key={m.k} className="inline-flex items-baseline gap-1.5">
-                <span className="text-[11px] text-muted">{m.k}</span>
+                <span className="text-[11px] text-muted">{t(m.k)}</span>
                 <span className={`text-xs font-semibold tabular-nums ${m.txt}`}>{m2money(m.v)}</span>
                 {usdSecondary && perM2(m.v) !== null ? (
                   <span className="text-[10px] tabular-nums text-brand">(USD {nf2(usdAmt(perM2(m.v) as number))})</span>
@@ -1946,7 +1951,7 @@ ${!preview ? `@media print {
           </div>
 
           <p className="border-t border-border px-4 py-2 text-[11px] leading-relaxed text-faint">
-            Total Hrs = Qty × Norm · Labor Cost = Total Hrs × {est.currency} {nf0(rate)}/hr. Profit &amp; Risk and BBO apply to direct cost + General Conditions / Overhead.
+            {fmt(t("Total Hrs = Qty × Norm · Labor Cost = Total Hrs × {rate}/hr. Profit & Risk and BBO apply to direct cost + General Conditions / Overhead."), { rate: `${est.currency} ${nf0(rate)}` })}
           </p>
         </Card>
       </div>
@@ -1957,17 +1962,16 @@ ${!preview ? `@media print {
     <>
       <style>{pageStyle}</style>
       <div className="est-print-guard">
-        To print or save this estimate as a PDF, use the <b>Print&nbsp;/&nbsp;PDF</b> button (or
-        <b> Preview&nbsp;&amp;&nbsp;Print</b>). That preview is exactly what prints — this editing view is not.
+        {t("To print or save this estimate as a PDF, use the Print / PDF button (or Preview & Print). That preview is exactly what prints — this editing view is not.")}
       </div>
       {!preview && pendingDraft ? (
         <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm">
           <span className="text-amber-900">
-            An <b>unsaved backup</b> of this estimate was found from a previous session. Restore it?
+            {t("An unsaved backup of this estimate was found from a previous session. Restore it?")}
           </span>
           <span className="flex gap-2">
-            <button type="button" onClick={restoreDraft} className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700">Restore</button>
-            <button type="button" onClick={dismissDraft} className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100">Dismiss</button>
+            <button type="button" onClick={restoreDraft} className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700">{t("Restore")}</button>
+            <button type="button" onClick={dismissDraft} className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100">{t("Dismiss")}</button>
           </span>
         </div>
       ) : null}
@@ -1988,9 +1992,9 @@ ${!preview ? `@media print {
           }`}</style>
           {/* Preview controls */}
           <div className="no-print sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-border bg-surface px-4 py-3 shadow-sm">
-            <span className="text-sm font-semibold text-fg">Print preview</span>
+            <span className="text-sm font-semibold text-fg">{t("Print preview")}</span>
             <div className="mx-1 h-5 w-px bg-border" />
-            <span className="text-xs font-medium text-muted">Paper</span>
+            <span className="text-xs font-medium text-muted">{t("Paper")}</span>
             <div className="inline-flex overflow-hidden rounded-lg border border-border">
               {(["A4", "A3"] as const).map((p) => (
                 <button
@@ -2011,7 +2015,7 @@ ${!preview ? `@media print {
                   onClick={() => setOrient(o)}
                   className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${orient === o ? "bg-brand text-brand-fg" : "bg-surface text-muted hover:text-fg"}`}
                 >
-                  {o}
+                  {t(ORIENT_LABEL[o])}
                 </button>
               ))}
             </div>
@@ -2028,24 +2032,24 @@ ${!preview ? `@media print {
               ))}
             </div>
             <div className="mx-1 h-5 w-px bg-border" />
-            <span className="text-xs font-medium text-muted">Size</span>
+            <span className="text-xs font-medium text-muted">{t("Size")}</span>
             <select
               value={printSize}
               onChange={(e) => setPrintSize(e.target.value as "normal" | "medium" | "small")}
-              title="Print text size — Small fits the most rows per page"
+              title={t("Print text size — Small fits the most rows per page")}
               className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-fg outline-none focus:border-brand"
             >
-              <option value="normal">Normal</option>
-              <option value="medium">Medium</option>
-              <option value="small">Small</option>
+              <option value="normal">{t("Normal")}</option>
+              <option value="medium">{t("Medium")}</option>
+              <option value="small">{t("Small")}</option>
             </select>
             <button
               type="button"
               onClick={() => setPcDebug((v) => !v)}
-              title="Show page-break debug overlay (safe boundaries, block heights, continuation markers)"
+              title={t("Show page-break debug overlay (safe boundaries, block heights, continuation markers)")}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${pcDebug ? "border-red-400/50 bg-red-50 text-red-600" : "border-border bg-surface text-muted hover:text-fg"}`}
             >
-              <Bug className="h-3.5 w-3.5" /> Debug
+              <Bug className="h-3.5 w-3.5" /> {t("Debug")}
             </button>
             {/* Do the chosen columns physically fit this page? The fixed columns have
               * hard widths and Description takes what is left, so a wide toggle set on a
@@ -2056,13 +2060,13 @@ ${!preview ? `@media print {
             {!printFitCheck.fits ? (
               <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900">
                 <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
-                These columns need {printFitCheck.required}px and {paper} {orient} gives {printFitCheck.available}px — over by {printFitCheck.overflow}px.
+                {fmt(t("These columns need {required}px and {paper} {orientation} gives {available}px — over by {overflow}px."), { required: printFitCheck.required, paper, orientation: t(ORIENT_LABEL[orient]).toLowerCase(), available: printFitCheck.available, overflow: printFitCheck.overflow })}
                 <button
                   type="button"
                   onClick={() => setOrient(orient === "portrait" ? "landscape" : "portrait")}
                   className="rounded border border-amber-300 bg-white px-1.5 py-0.5 font-semibold hover:bg-amber-100"
                 >
-                  Use {orient === "portrait" ? "landscape" : "portrait"}
+                  {orient === "portrait" ? t("Use landscape") : t("Use portrait")}
                 </button>
                 {paper === "A4" ? (
                   <button
@@ -2070,32 +2074,32 @@ ${!preview ? `@media print {
                     onClick={() => setPaper("A3")}
                     className="rounded border border-amber-300 bg-white px-1.5 py-0.5 font-semibold hover:bg-amber-100"
                   >
-                    Use A3
+                    {t("Use A3")}
                   </button>
                 ) : null}
               </span>
             ) : null}
             <span className="text-[11px] text-muted">
-              {paper} · {orient} · {pageWmm} × {pageHmm} mm
+              {paper} · {t(ORIENT_LABEL[orient]).toLowerCase()} · {pageWmm} × {pageHmm} mm
               {/* Same fact, repeated in the preview toolbar: the Print Control
                 * button is not on screen here, and this is exactly where someone
                 * is about to commit the sheet to paper. */}
               {" · "}
               <span className={activePrintTemplate ? "font-semibold text-brand" : "text-faint"}>
-                {activePrintTemplate || "Custom"}
+                {activePrintTemplate || t("Custom")}
               </span>
             </span>
             <button type="button" onClick={() => window.print()} className={`ml-auto ${brandBtn}`}>
-              <FileDown className="h-4 w-4" /> Save as PDF
+              <FileDown className="h-4 w-4" /> {t("Save as PDF")}
             </button>
             <button type="button" onClick={() => window.print()} className={ghostBtn}>
-              <Printer className="h-4 w-4" /> Print
+              <Printer className="h-4 w-4" /> {t("Print")}
             </button>
             {/* Email the PDF straight from the preview. Compose is live; the browser's
                 "Save as PDF" produces the file to attach until server-side delivery is wired. */}
             <EmailButton
               variant="ghost"
-              label="Email PDF"
+              label={t("Email PDF")}
               className="h-9 px-3 text-sm"
               subject={`Estimate — ${est.projectName} (${est.version})`}
               attachment={`${est.projectName} — Estimate ${est.version}.pdf`}
@@ -2103,7 +2107,7 @@ ${!preview ? `@media print {
               defaultBody={`Dear ${est.client?.trim() || "recipient"},\n\nI am writing to you about our cost estimate for ${est.projectName}${est.projectNumber ? ` (No. ${est.projectNumber})` : ""}, version ${est.version}.\n\nKind regards,\n${firmName()}`}
             />
             <button type="button" onClick={() => setPreview(false)} className={ghostBtn}>
-              <X className="h-4 w-4" /> Close
+              <X className="h-4 w-4" /> {t("Close")}
             </button>
           </div>
 
@@ -2144,7 +2148,7 @@ ${!preview ? `@media print {
               />
             </div>
             <div className="no-print pb-6 pt-3 text-xs text-faint">
-              {enginePages} page{enginePages > 1 ? "s" : ""} · {paper} {orient} · {pageWmm}×{pageHmm} mm
+              {enginePages > 1 ? fmt(t("{count} pages"), { count: enginePages }) : t("1 page")} · {paper} {t(ORIENT_LABEL[orient]).toLowerCase()} · {pageWmm}×{pageHmm} mm
             </div>
           </div>
         </div>
@@ -2228,6 +2232,10 @@ function TaskField({
   );
 }
 
+/** Display labels (translated at render); the keys are the stored values. */
+const PRINT_SIZE_LABEL: Record<"normal" | "medium" | "small", string> = { normal: "normal", medium: "medium", small: "small" };
+const ORIENT_LABEL: Record<"landscape" | "portrait", string> = { landscape: "landscape", portrait: "portrait" };
+
 const metaInput =
   "min-w-0 flex-1 rounded bg-transparent text-sm font-medium text-fg outline-none focus:bg-brand/5";
 const ghostBtn =
@@ -2258,6 +2266,7 @@ function AssemblyEditor({
   currency: string;
   onChange: (assembly: AssemblyComponent[]) => void;
 }) {
+  const t = useT();
   const comps = item.assembly ?? [];
   const units = item.qty || 0;
   const cid = () => `ac-${Math.random().toString(36).slice(2, 9)}`;
@@ -2273,29 +2282,29 @@ function AssemblyEditor({
     <div className="rounded-md border border-brand/30 bg-surface/70 p-2">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Assembly components — priced per unit × {units} unit{units === 1 ? "" : "s"}
+          {units === 1 ? t("Assembly components — priced per unit × 1 unit") : fmt(t("Assembly components — priced per unit × {count} units"), { count: units })}
         </span>
         <button
           type="button"
           onClick={add}
           className="inline-flex h-6 items-center gap-1 rounded border border-brand/40 bg-brand/5 px-2 text-[11px] font-medium text-brand hover:bg-brand/10"
         >
-          <Plus className="h-3 w-3" /> Component
+          <Plus className="h-3 w-3" /> {t("Component")}
         </button>
       </div>
       {comps.length === 0 ? (
         <p className="text-[11px] text-faint">
-          No components yet. Add Labor / Material / Equipment / Subcontract / Other lines — each priced per assembly unit.
+          {t("No components yet. Add Labor / Material / Equipment / Subcontract / Other lines — each priced per assembly unit.")}
         </p>
       ) : (
         <table className="w-full">
           <thead>
             <tr className="text-left text-[10px] uppercase tracking-wide text-faint">
-              <th className="pb-1 font-medium">Component</th>
-              <th className="pb-1 font-medium">Type</th>
-              <th className="pb-1 text-right font-medium">Qty / unit*</th>
-              <th className="pb-1 text-right font-medium">Unit cost</th>
-              <th className="pb-1 text-right font-medium">Amount</th>
+              <th className="pb-1 font-medium">{t("Component")}</th>
+              <th className="pb-1 font-medium">{t("Type")}</th>
+              <th className="pb-1 text-right font-medium">{t("Qty / unit*")}</th>
+              <th className="pb-1 text-right font-medium">{t("Unit cost")}</th>
+              <th className="pb-1 text-right font-medium">{t("Amount")}</th>
               <th className="pb-1" />
             </tr>
           </thead>
@@ -2303,26 +2312,26 @@ function AssemblyEditor({
             {comps.map((c) => (
               <tr key={c.id} className="align-middle">
                 <td className="py-0.5 pr-2" style={{ width: "34%" }}>
-                  <input value={c.name} placeholder="Description" onChange={(e) => upd(c.id, { name: e.target.value })} className={inp} />
+                  <input value={c.name} placeholder={t("Description")} onChange={(e) => upd(c.id, { name: e.target.value })} className={inp} />
                 </td>
                 <td className="py-0.5 pr-2" style={{ width: "16%" }}>
                   <select value={c.type} onChange={(e) => upd(c.id, { type: e.target.value as AssemblyComponentType })} className={inp}>
-                    {ASM_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
+                    {ASM_TYPES.map((at) => (
+                      <option key={at.value} value={at.value}>{t(at.label)}</option>
                     ))}
                   </select>
                 </td>
                 <td className="py-0.5 pr-2">
-                  <input type="number" value={c.qty} title={c.type === "labor" ? "Hours per assembly unit" : "Quantity per assembly unit"} onChange={(e) => upd(c.id, { qty: Number(e.target.value) || 0 })} className={`${inp} text-right`} />
+                  <input type="number" value={c.qty} title={c.type === "labor" ? t("Hours per assembly unit") : t("Quantity per assembly unit")} onChange={(e) => upd(c.id, { qty: Number(e.target.value) || 0 })} className={`${inp} text-right`} />
                 </td>
                 <td className="py-0.5 pr-2">
-                  <input type="number" value={c.unitCost} title={c.type === "labor" ? "Hourly rate" : "Cost per unit"} onChange={(e) => upd(c.id, { unitCost: Number(e.target.value) || 0 })} className={`${inp} text-right`} />
+                  <input type="number" value={c.unitCost} title={c.type === "labor" ? t("Hourly rate") : t("Cost per unit")} onChange={(e) => upd(c.id, { unitCost: Number(e.target.value) || 0 })} className={`${inp} text-right`} />
                 </td>
                 <td className="py-0.5 pr-2 text-right text-[11px] font-medium tabular-nums text-fg">
                   {currency} {nf0(amount(c))}
                 </td>
                 <td className="py-0.5 text-center">
-                  <button type="button" onClick={() => del(c.id)} aria-label="Remove component" className="inline-flex h-5 w-5 items-center justify-center rounded text-faint hover:text-red-600">
+                  <button type="button" onClick={() => del(c.id)} aria-label={t("Remove component")} className="inline-flex h-5 w-5 items-center justify-center rounded text-faint hover:text-red-600">
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </td>
@@ -2332,7 +2341,7 @@ function AssemblyEditor({
         </table>
       )}
       <p className="mt-1.5 text-[10px] leading-snug text-faint">
-        *For <b>Labor</b> components, “Qty / unit” = hours per assembly unit and “Unit cost” = hourly rate (these feed the Schedule Coupler). “Other” folds into the Subcontract column.
+        {t("*For Labor components, “Qty / unit” = hours per assembly unit and “Unit cost” = hourly rate (these feed the Schedule Coupler). “Other” folds into the Subcontract column.")}
       </p>
     </div>
   );
@@ -2374,6 +2383,7 @@ function Switch({ on, onClick, label, tone }: { on: boolean; onClick: () => void
 // Compact toggle row used inside the Print Control popover. Supports a disabled
 // (grayed, forced-off) state — used for General Conditions when it isn't active.
 function PcRow({ label, on, onToggle, disabled }: { label: string; on: boolean; onToggle: () => void; disabled?: boolean }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -2381,7 +2391,7 @@ function PcRow({ label, on, onToggle, disabled }: { label: string; on: boolean; 
       aria-checked={on}
       disabled={disabled}
       onClick={onToggle}
-      title={disabled ? "Enable General Conditions / Overhead in the summary below to print it" : undefined}
+      title={disabled ? t("Enable General Conditions / Overhead in the summary below to print it") : undefined}
       className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${disabled ? "cursor-not-allowed opacity-40" : "hover:bg-surface-2"}`}
     >
       <span className={disabled ? "text-faint" : "text-fg"}>{label}</span>

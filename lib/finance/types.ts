@@ -35,7 +35,7 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   ISSUED: "Issued",
   PART_PAID: "Part paid",
   PAID: "Paid",
-  VOID: "Void",
+  VOID: "Voided",
 };
 
 export const PAYMENT_METHOD_LABEL: Record<InvoicePaymentMethod, string> = {

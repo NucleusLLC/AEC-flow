@@ -7,6 +7,7 @@ import { DocumentFont } from "@/components/print/document-font";
 import { PagedPreview } from "@/components/print/paged-preview";
 import { sheetGeometry, type SheetRequest } from "@/lib/documents/preview-geometry";
 import type { Density } from "@/lib/documents/tokens";
+import { getServerT } from "@/lib/i18n/server";
 
 /**
  * PrintSurface — the print behaviour every AEC-Flow document shares, in one place.
@@ -54,6 +55,7 @@ export async function PrintSurface({
   children: React.ReactNode;
 }) {
   const { documentFontId, footer } = await getPracticeSettings();
+  const t = await getServerT();
   const geo = sheetGeometry({ paper, orientation, margins });
 
   return (
@@ -63,6 +65,7 @@ export async function PrintSurface({
         orientation={geo.orientation}
         margins={geo.margins}
         footerLeft={footer.text}
+        pageNumberFormat={t("Page {page} of {pages}")}
         density={density}
       />
 
@@ -72,7 +75,7 @@ export async function PrintSurface({
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          {backLabel}
+          {t(backLabel)}
         </Link>
         <PrintButton />
       </div>

@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
 import {
   MEETING_TYPE_LABEL,
   ACTION_STATUS_LABEL,
@@ -24,9 +27,11 @@ const statusTone: Record<ActionStatus, Tone> = {
 };
 
 export function MeetingTypeBadge({ type }: { type: MeetingType }) {
-  return <Badge tone={typeTone[type]}>{MEETING_TYPE_LABEL[type]}</Badge>;
+  const t = useT();
+  return <Badge tone={typeTone[type]}>{t(MEETING_TYPE_LABEL[type])}</Badge>;
 }
 
 export function ActionStatusBadge({ status }: { status: ActionStatus }) {
-  return <Badge tone={statusTone[status]}>{ACTION_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={statusTone[status]}>{t(ACTION_STATUS_LABEL[status])}</Badge>;
 }

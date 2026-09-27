@@ -9,6 +9,9 @@ import { PunchStatusBadge } from "@/components/construction-admin/badges";
 import type { PunchListItem, PunchStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { tCa } from "@/lib/ca/labels";
+import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | "OPEN_ANY" | PunchStatus; label: string }> = [
   { key: "ALL", label: "All" },
@@ -25,6 +28,7 @@ const OUTSTANDING: PunchStatus[] = ["OPEN", "IN_PROGRESS"];
 const SUMMARY_STATUSES: PunchStatus[] = ["OPEN", "IN_PROGRESS", "COMPLETED", "VERIFIED", "REJECTED"];
 
 export function PunchListView({ items }: { items: PunchListItem[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | "OPEN_ANY" | PunchStatus>("ALL");
   const [project, setProject] = useState<string>("ALL");
@@ -71,7 +75,7 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
           onClick={() => setFilter("OPEN_ANY")}
           className="rounded-lg border border-border bg-surface p-3 text-left transition-colors hover:border-brand/40 hover:bg-surface-2"
         >
-          <div className="text-xs text-muted">Outstanding</div>
+          <div className="text-xs text-muted">{t("Outstanding")}</div>
           <div className="mt-0.5 text-lg font-semibold tabular-nums text-fg">{outstanding}</div>
         </button>
         {SUMMARY_STATUSES.map((s) => (
@@ -99,7 +103,7 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
                 filter === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {tCa(t, f.label)}
             </button>
           ))}
         </div>
@@ -108,9 +112,9 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
             value={project}
             onChange={(e) => setProject(e.target.value)}
             className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
-            aria-label="Filter by project"
+            aria-label={t("Filter by project")}
           >
-            <option value="ALL">All projects</option>
+            <option value="ALL">{t("All projects")}</option>
             {projects.map(([id, name]) => (
               <option key={id} value={id}>{name}</option>
             ))}
@@ -121,7 +125,7 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search punch items…"
+              placeholder={t("Search punch items…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -133,13 +137,13 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
           <table className="w-full min-w-[920px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Item</th>
-                <th className="px-3 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Location</th>
-                <th className="px-3 py-2.5 font-medium">Trade</th>
-                <th className="px-3 py-2.5 font-medium">Priority</th>
-                <th className="px-3 py-2.5 font-medium">Due</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Item")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Location")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Trade")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Priority")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Due")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -167,14 +171,20 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <ListChecks className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No punch items match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No punch items match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {scoped.length} items
-        {project === "ALL" ? "" : " in this project"} · {outstanding} outstanding
+        {fmt(
+          t(
+            project === "ALL"
+              ? "Showing {count} of {total} items · {outstanding} outstanding"
+              : "Showing {count} of {total} items in this project · {outstanding} outstanding",
+          ),
+          { count: rows.length, total: scoped.length, outstanding },
+        )}
       </p>
     </div>
   );

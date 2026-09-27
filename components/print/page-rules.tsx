@@ -69,6 +69,8 @@ export type PageRulesOptions = {
   whiteBackgroundOnPrint?: boolean;
   /** "Page N of M" in the bottom margin of every page. */
   pageNumbers?: boolean;
+  /** Translated page-number template with `{page}` / `{pages}` slots. */
+  pageNumberFormat?: string;
   /** Small text in the bottom-left margin, e.g. a document reference. */
   footerLeft?: string;
   /** Shared keep-together / repeating-header rules. */
@@ -93,6 +95,7 @@ export function pageRulesCss({
   margins = "standard",
   whiteBackgroundOnPrint = true,
   pageNumbers = true,
+  pageNumberFormat,
   footerLeft,
   breakRules = true,
   density = "compact",
@@ -114,6 +117,7 @@ export function pageRulesCss({
     marginBottomMm: m.bottom,
     footerLeft,
     pageNumbers,
+    pageNumberFormat,
   });
 
   // The on-screen sheet, sized from the same margins. Screen-only: in print the

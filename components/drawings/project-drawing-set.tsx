@@ -22,6 +22,9 @@ import { DrawingStatusBadge, FileTypeChip } from "@/components/drawings/badges";
 import { DISCIPLINE_LABEL, type Drawing, type Discipline } from "@/lib/data/drawings.types";
 import { SHEET_TYPE_LABEL, type SheetType } from "@/lib/drawings/sheet-type";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
+import { sheetTypeText } from "@/components/drawings/t-context";
 
 /** The order a printed set is bound in, not alphabetical. */
 const ORDER: Discipline[] = [
@@ -44,6 +47,7 @@ export function ProjectDrawingSet({
   /** Needed for the review register, which is a per-project document. */
   projectId?: string;
 }) {
+  const t = useT();
   const [showSuperseded, setShowSuperseded] = useState(false);
 
   const supersededCount = drawings.filter((d) => d.status === "SUPERSEDED").length;
@@ -70,9 +74,9 @@ export function ProjectDrawingSet({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="text-muted">
-          {visible.length} sheet{visible.length === 1 ? "" : "s"}
+          {visible.length === 1 ? t("1 sheet") : fmt(t("{count} sheets"), { count: visible.length })}
         </span>
-        {openTotal > 0 ? <Badge tone="amber">{openTotal} comments open</Badge> : null}
+        {openTotal > 0 ? <Badge tone="amber">{fmt(t("{count} comments open"), { count: openTotal })}</Badge> : null}
 
         {projectId ? (
           // Open items by default: the register is a worklist, and printing
@@ -82,7 +86,7 @@ export function ProjectDrawingSet({
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <ClipboardList className="h-3.5 w-3.5" />
-            Review register
+            {t("Review register")}
           </Link>
         ) : null}
 
@@ -94,7 +98,7 @@ export function ProjectDrawingSet({
               onChange={(e) => setShowSuperseded(e.target.checked)}
               className="h-4 w-4 rounded border-border"
             />
-            Show {supersededCount} superseded
+            {fmt(t("Show {count} superseded"), { count: supersededCount })}
           </label>
         ) : null}
       </div>
@@ -102,7 +106,7 @@ export function ProjectDrawingSet({
       {groups.map(([discipline, sheets]) => (
         <Card key={discipline} className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 py-2">
-            <h4 className="text-sm font-semibold text-fg">{DISCIPLINE_LABEL[discipline]}</h4>
+            <h4 className="text-sm font-semibold text-fg">{t(DISCIPLINE_LABEL[discipline])}</h4>
             <span className="text-xs text-faint">{sheets.length}</span>
           </div>
           <ul className="divide-y divide-border">
@@ -117,25 +121,25 @@ export function ProjectDrawingSet({
                     <Link href={`/drawings/${d.id}`} className="truncate font-medium text-fg hover:text-brand">
                       {d.title}
                     </Link>
-                    {d.openComments > 0 ? <Badge tone="amber">{d.openComments} open</Badge> : null}
+                    {d.openComments > 0 ? <Badge tone="amber">{fmt(t("{count} open"), { count: d.openComments })}</Badge> : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-faint">
-                    {d.sheetType ? <span>{SHEET_TYPE_LABEL[d.sheetType as SheetType] ?? d.sheetType}</span> : null}
+                    {d.sheetType ? <span>{SHEET_TYPE_LABEL[d.sheetType as SheetType] ? sheetTypeText(t, SHEET_TYPE_LABEL[d.sheetType as SheetType]) : d.sheetType}</span> : null}
                     {d.paperSize ? <span>· {d.paperSize}</span> : null}
-                    {d.pageCount && d.pageCount > 1 ? <span>· {d.pageCount} pages</span> : null}
+                    {d.pageCount && d.pageCount > 1 ? <span>· {fmt(t("{count} pages"), { count: d.pageCount })}</span> : null}
                     <span>· {formatDate(d.uploadedAt)}</span>
                     <span>· {d.uploadedBy}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge tone="neutral">Rev {d.revision}</Badge>
+                  <Badge tone="neutral">{fmt(t("Rev {rev}"), { rev: d.revision })}</Badge>
                   <DrawingStatusBadge status={d.status} />
                   <FileTypeChip type={d.fileType} />
                   <Link
                     href={`/drawings/${d.id}`}
                     className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
                   >
-                    <PenLine className="h-3.5 w-3.5" /> Review
+                    <PenLine className="h-3.5 w-3.5" /> {t("Review")}
                   </Link>
                 </div>
               </li>

@@ -15,6 +15,7 @@
  * right fit here (next/image needs known sizes and doesn't help in print).
  */
 import { firmName } from "@/lib/firm-identity";
+import { TranslatedText } from "@/components/ui/translated-text";
 
 export function BrandMark({
   logoDataUrl,
@@ -40,7 +41,9 @@ export function BrandMark({
   return (
     <div>
       <div className="text-2xl font-bold tracking-tight text-gray-900">{firm}</div>
-      <div className="mt-0.5 text-xs uppercase tracking-[0.18em] text-gray-500">{tagline}</div>
+      <div className="mt-0.5 text-xs uppercase tracking-[0.18em] text-gray-500">
+        <TranslatedText text={tagline} />
+      </div>
     </div>
   );
 }

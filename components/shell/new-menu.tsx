@@ -13,6 +13,7 @@ import {
   CalendarDays,
   NotebookPen,
 } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
 
 // Only create routes that actually exist are listed.
 const ACTIONS = [
@@ -27,6 +28,7 @@ const ACTIONS = [
 ];
 
 export function NewMenu() {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -37,7 +39,7 @@ export function NewMenu() {
         className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
       >
         <Plus className="h-4 w-4" />
-        New
+        {t("New")}
       </button>
 
       {open ? (
@@ -54,7 +56,7 @@ export function NewMenu() {
                   className="flex items-center gap-2.5 px-3 py-2 text-sm text-fg transition-colors hover:bg-surface-2"
                 >
                   <Icon className="h-4 w-4 text-faint" />
-                  {a.label}
+                  {t(a.label)}
                 </Link>
               );
             })}
