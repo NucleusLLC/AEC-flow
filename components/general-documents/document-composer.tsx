@@ -18,7 +18,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, FileText, Pencil, RotateCcw, Wand2 } from "lucide-react";
+import { AlertTriangle, FileText, Loader2, Pencil, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { catalogueByCategory, catalogueEntry } from "@/lib/general-documents/catalogue";
 import { compose } from "@/lib/general-documents/render";
@@ -31,9 +31,27 @@ import {
 } from "@/lib/general-documents/types";
 import {
   createDocumentAction,
+  draftWithAiAction,
   updateDocumentAction,
 } from "@/app/(app)/documents/general/actions";
-import { useT } from "@/components/i18n/language-provider";
+import {
+  AI_DRAFT_KINDS,
+  AI_DRAFT_KIND_LABEL,
+  AI_DRAFT_LANGUAGES,
+  AI_DRAFT_LANGUAGE_LABEL,
+  AI_DRAFT_STYLES,
+  AI_DRAFT_STYLE_BLURB,
+  AI_DRAFT_STYLE_LABEL,
+  AI_DRAFT_TYPE,
+  SUMMARY_MAX,
+  SUMMARY_MIN,
+  isAiDraftKind,
+  type AiDraftKind,
+  type AiDraftLanguage,
+  type AiDraftRequest,
+  type AiDraftStyle,
+} from "@/lib/general-documents/ai-draft";
+import { useLanguage, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const field =
@@ -87,7 +105,32 @@ export function DocumentComposer({
     mode === "edit" ? (initial?.body ?? []).join("\n\n") : null,
   );
 
+  // ── Write it with AI ─────────────────────────────────────────────────────
+  // What the draft was asked for is kept on the row's values, so an AI document
+  // reopened for editing shows the same summary and can be rewritten.
+  const { lang } = useLanguage();
+  const saved = initial?.values ?? {};
+  const [aiSummary, setAiSummary] = useState(saved.aiSummary ?? "");
+  const [aiKind, setAiKind] = useState<AiDraftKind>(
+    isAiDraftKind(saved.aiKind) ? saved.aiKind : "LETTER",
+  );
+  const [aiStyle, setAiStyle] = useState<AiDraftStyle>(
+    (AI_DRAFT_STYLES as string[]).includes(saved.aiStyle ?? "")
+      ? (saved.aiStyle as AiDraftStyle)
+      : "MILITARY",
+  );
+  const [aiLanguage, setAiLanguage] = useState<AiDraftLanguage | "">(
+    (AI_DRAFT_LANGUAGES as string[]).includes(saved.aiLanguage ?? "")
+      ? (saved.aiLanguage as AiDraftLanguage)
+      : "",
+  );
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMissing, setAiMissing] = useState<string[]>([]);
+  /** Until the user picks one, the document is written in the language they are using. */
+  const draftLanguage: AiDraftLanguage = aiLanguage || lang;
+
   const entry = docType ? catalogueEntry(docType) : null;
+  const isAi = entry?.key === AI_DRAFT_TYPE;
   const client = clients.find((c) => c.id === clientId);
   const project = projects.find((p) => p.id === projectId);
 
@@ -149,10 +192,56 @@ export function DocumentComposer({
     setValues((v) => ({ ...v, [key]: value }));
   }
 
+  async function writeWithAi() {
+    setError(null);
+    if (aiSummary.trim().length < SUMMARY_MIN) {
+      setError(`Describe the document in at least ${SUMMARY_MIN} characters.`);
+      return;
+    }
+    const request: AiDraftRequest = {
+      summary: aiSummary,
+      kind: aiKind,
+      style: aiStyle,
+      language: draftLanguage,
+      context: {
+        firmName,
+        clientName: client?.name ?? initial?.clientName ?? null,
+        projectName: project?.name ?? initial?.projectName ?? null,
+        counterpartyName: counterpartyName || null,
+        counterpartyAddress: counterpartyAddress || null,
+        contactName: contactName || null,
+        subject: subject || null,
+        reference: reference || null,
+        date: issueDate ? militaryDate(issueDate) : null,
+      },
+    };
+    setAiBusy(true);
+    try {
+      const res = await draftWithAiAction(request);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setTitleOverride(res.draft.title);
+      if (!subject.trim() && res.draft.subject) setSubject(res.draft.subject);
+      setBodyOverride(res.draft.paragraphs.join("\n\n"));
+      setValues(res.values);
+      setAiMissing(res.draft.missing);
+    } catch {
+      setError("The document could not be written. Try again.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
   function save() {
     setError(null);
     if (!entry) {
       setError("Choose a document type first.");
+      return;
+    }
+    if (isAi && paragraphs.length === 0) {
+      setError("Write the document first: describe it and click Write it with AI.");
       return;
     }
     const payload: GeneralDocumentInput = {
@@ -171,7 +260,10 @@ export function DocumentComposer({
       issueDate: issueDate || null,
       effectiveDate: effectiveDate || null,
       expiryDate: expiryDate || null,
-      values,
+      // An AI document keeps what it was asked for, as the form reads now.
+      values: isAi
+        ? { ...values, aiSummary, aiKind, aiStyle, aiLanguage: draftLanguage }
+        : values,
       body: paragraphs,
       notes: notes || null,
     };
@@ -193,6 +285,21 @@ export function DocumentComposer({
   if (!entry) {
     return (
       <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => setDocType(AI_DRAFT_TYPE)}
+          className="flex w-full items-start gap-3 rounded-xl border border-brand/40 bg-brand/5 px-4 py-3 text-left transition-colors hover:border-brand hover:bg-brand/10"
+        >
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+          <span>
+            <span className="block text-sm font-semibold text-fg">{t("Write anything with AI")}</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              {t(
+                "Any letter, memo, notice or request: type a short summary, click Write it with AI, and the complete document is written for you to read and edit.",
+              )}
+            </span>
+          </span>
+        </button>
         <TemplateNotice />
         {catalogueByCategory().map((group) => (
           <Card key={group.category}>
@@ -258,8 +365,124 @@ export function DocumentComposer({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
+          {isAi ? (
+            <Card>
+              <CardHeader
+                title={t("Describe it")}
+                subtitle={t("A sentence or two is enough. The AI uses the particulars below as well.")}
+              />
+              <CardBody className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={label}>{t("Kind of document")}</label>
+                    <select
+                      value={aiKind}
+                      onChange={(e) => setAiKind(e.target.value as AiDraftKind)}
+                      className={input}
+                    >
+                      {AI_DRAFT_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {t(AI_DRAFT_KIND_LABEL[k])}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={label}>{t("Language of the document")}</label>
+                    <select
+                      value={draftLanguage}
+                      onChange={(e) => setAiLanguage(e.target.value as AiDraftLanguage)}
+                      className={input}
+                    >
+                      {AI_DRAFT_LANGUAGES.map((l) => (
+                        <option key={l} value={l}>
+                          {t(AI_DRAFT_LANGUAGE_LABEL[l])}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <fieldset>
+                  <legend className={label}>{t("Style")}</legend>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {AI_DRAFT_STYLES.map((s) => (
+                      <label
+                        key={s}
+                        className={`cursor-pointer rounded-lg border px-3 py-2 text-left transition-colors ${
+                          aiStyle === s ? "border-brand bg-brand/5" : "border-border hover:bg-surface-2"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="ai-style"
+                          value={s}
+                          checked={aiStyle === s}
+                          onChange={() => setAiStyle(s)}
+                          className="sr-only"
+                        />
+                        <span className="block text-sm font-medium text-fg">{t(AI_DRAFT_STYLE_LABEL[s])}</span>
+                        <span className="block text-[11px] text-muted">{t(AI_DRAFT_STYLE_BLURB[s])}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div>
+                  <label className={label} htmlFor="ai-summary">
+                    {t("What should it say?")}
+                  </label>
+                  <textarea
+                    id="ai-summary"
+                    rows={5}
+                    maxLength={SUMMARY_MAX}
+                    value={aiSummary}
+                    onChange={(e) => setAiSummary(e.target.value)}
+                    placeholder={t(
+                      "e.g. Tell the contractor the roof slab pour is postponed until the engineer approves the revised rebar drawings, and ask for a new date within five working days.",
+                    )}
+                    className={field}
+                  />
+                  <p className="mt-1 text-right text-[11px] tabular-nums text-faint">
+                    {aiSummary.length} / {SUMMARY_MAX}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={writeWithAi}
+                    disabled={aiBusy || pending}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
+                  >
+                    {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {aiBusy
+                      ? t("Writing…")
+                      : bodyOverride === null
+                        ? t("Write it with AI")
+                        : t("Write it again")}
+                  </button>
+                  <span className="text-xs text-muted" aria-live="polite">
+                    {aiBusy
+                      ? t("This usually takes ten to thirty seconds.")
+                      : bodyOverride !== null
+                        ? t("Writing it again replaces the wording, including your edits.")
+                        : null}
+                  </span>
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
           <Card>
-            <CardHeader title={t("Who and what")} subtitle={t("Filled into the letter as you type.")} />
+            <CardHeader
+              title={t("Who and what")}
+              subtitle={
+                isAi
+                  ? t("The AI writes with these; the sheet prints the addressee, date and reference.")
+                  : t("Filled into the letter as you type.")
+              }
+            />
             <CardBody className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className={label}>{t("Client")}</label>
@@ -353,6 +576,7 @@ export function DocumentComposer({
             </CardBody>
           </Card>
 
+          {entry.fields.length > 0 ? (
           <Card>
             <CardHeader
               title={t("The particulars")}
@@ -400,6 +624,7 @@ export function DocumentComposer({
               ))}
             </CardBody>
           </Card>
+          ) : null}
 
           <Card>
             <CardHeader title={t("Internal notes")} subtitle={t("Never printed on the document.")} />
@@ -415,12 +640,16 @@ export function DocumentComposer({
             <CardHeader
               title={t("The document")}
               subtitle={
-                bodyOverride === null
-                  ? t("Written from the template as you fill the fields.")
-                  : t("You are editing the wording — the fields no longer rewrite it.")
+                isAi
+                  ? bodyOverride === null
+                    ? t("Describe it on the left and click Write it with AI.")
+                    : t("Written by AI. Read every line and edit anything here.")
+                  : bodyOverride === null
+                    ? t("Written from the template as you fill the fields.")
+                    : t("You are editing the wording — the fields no longer rewrite it.")
               }
               action={
-                bodyOverride === null ? (
+                isAi ? null : bodyOverride === null ? (
                   <button
                     type="button"
                     onClick={() => setBodyOverride(paragraphs.join("\n\n"))}
@@ -446,15 +675,23 @@ export function DocumentComposer({
                 <input
                   value={titleOverride}
                   onChange={(e) => setTitleOverride(e.target.value)}
-                  placeholder={composed?.title ?? entry.label}
+                  placeholder={composed?.title || t(entry.label)}
                   className={input}
                 />
               </div>
 
               {bodyOverride === null ? (
                 <div className="space-y-2 rounded-lg border border-border bg-surface-2/40 p-3 text-sm leading-relaxed text-fg">
-                  {paragraphs.length === 0 ? (
-                    <p className="text-muted">{t("Fill the particulars and the letter appears here.")}</p>
+                  {aiBusy ? (
+                    <p className="flex items-center gap-2 text-muted">
+                      <Loader2 className="h-4 w-4 animate-spin" /> {t("Writing…")}
+                    </p>
+                  ) : paragraphs.length === 0 ? (
+                    <p className="text-muted">
+                      {isAi
+                        ? t("The document appears here once the AI has written it.")
+                        : t("Fill the particulars and the letter appears here.")}
+                    </p>
                   ) : (
                     paragraphs.map((p, i) => <p key={i}>{p}</p>)
                   )}
@@ -468,6 +705,23 @@ export function DocumentComposer({
                   placeholder={t("One paragraph per block, separated by a blank line.")}
                 />
               )}
+
+              {isAi && bodyOverride !== null && bodyOverride.includes("_____") ? (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-fg">
+                  <p className="font-medium">
+                    {aiMissing.length > 0
+                      ? t("Fill in the blanks (__________) before you issue it. The AI was not told:")
+                      : t("Fill in the blanks (__________) before you issue it.")}
+                  </p>
+                  {aiMissing.length > 0 ? (
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted">
+                      {aiMissing.map((m) => (
+                        <li key={m}>{m}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
 
               {composed && composed.missing.length > 0 ? (
                 <p className="text-xs text-amber-700 dark:text-amber-500">
