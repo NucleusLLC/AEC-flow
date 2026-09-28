@@ -31,6 +31,8 @@ import {
   removeCommentAction,
   setCommentStatusAction,
 } from "@/app/(app)/drawings/studio/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const CONTROL =
   "w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-sm text-fg placeholder:text-faint " +
@@ -61,6 +63,7 @@ export function CommentPanel({
   onChanged: () => void | Promise<void>;
   currentUserId: string;
 }) {
+  const t = useT();
   const [filter, setFilter] = useState<"OPEN" | "ALL">("OPEN");
   const [body, setBody] = useState("");
   const [assignee, setAssignee] = useState("");
@@ -85,8 +88,11 @@ export function CommentPanel({
   return (
     <Card className="flex max-h-[calc(100vh-14rem)] flex-col">
       <CardHeader
-        title="Review"
-        subtitle={`${openOnThisPage} open on this page · ${comments.filter((c) => c.status === "OPEN").length} on the sheet`}
+        title={t("Review")}
+        subtitle={fmt(t("{page} open on this page · {sheet} on the sheet"), {
+          page: openOnThisPage,
+          sheet: comments.filter((c) => c.status === "OPEN").length,
+        })}
         action={
           <div className="flex items-center gap-1 text-xs">
             {(["OPEN", "ALL"] as const).map((f) => (
@@ -99,7 +105,7 @@ export function CommentPanel({
                   filter === f ? "bg-brand/10 text-brand" : "text-muted hover:bg-surface-2",
                 )}
               >
-                {f === "OPEN" ? "Open" : "All"}
+                {f === "OPEN" ? t("Open") : t("All")}
               </button>
             ))}
           </div>
@@ -109,9 +115,9 @@ export function CommentPanel({
       <CardBody className="space-y-3 border-b border-border">
         {pendingPin ? (
           <p className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700">
-            <MapPin className="h-3.5 w-3.5" /> Pinned to a point on page {page}.
+            <MapPin className="h-3.5 w-3.5" /> {fmt(t("Pinned to a point on page {page}."), { page })}
             <button type="button" onClick={onCancelPin} className="ml-auto underline">
-              unpin
+              {t("unpin")}
             </button>
           </p>
         ) : null}
@@ -122,8 +128,8 @@ export function CommentPanel({
           rows={3}
           placeholder={
             pendingPin
-              ? "What is wrong here?"
-              : "A note about the whole sheet — or use the pin tool to put it somewhere."
+              ? t("What is wrong here?")
+              : t("A note about the whole sheet — or use the pin tool to put it somewhere.")
           }
           className={CONTROL}
         />
@@ -132,13 +138,13 @@ export function CommentPanel({
           <select
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
-            aria-label="Assign to"
+            aria-label={t("Assign to")}
             className="h-9 flex-1 rounded-lg border border-border bg-surface px-2 text-sm text-fg"
           >
-            <option value="">Nobody in particular</option>
-            {team.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            <option value="">{t("Nobody in particular")}</option>
+            {team.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
               </option>
             ))}
           </select>
@@ -156,7 +162,7 @@ export function CommentPanel({
             }
             className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
           >
-            Comment
+            {t("Comment")}
           </button>
         </div>
       </CardBody>
@@ -164,7 +170,7 @@ export function CommentPanel({
       <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {threads.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted">
-            {filter === "OPEN" ? "Nothing open on this drawing." : "No comments yet."}
+            {filter === "OPEN" ? t("Nothing open on this drawing.") : t("No comments yet.")}
           </p>
         ) : (
           threads.map((c) => (
@@ -179,15 +185,15 @@ export function CommentPanel({
                 <div className="min-w-0">
                   <p className="text-sm text-fg">{c.body}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-faint">
-                    {c.authorName} · {formatDate(c.createdAt.slice(0, 10))} · page {c.page}
+                    {c.authorName} · {formatDate(c.createdAt.slice(0, 10))} · {fmt(t("page {page}"), { page: c.page })}
                     {c.x !== null ? (
                       <span className="inline-flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3" /> pinned
+                        <MapPin className="h-3 w-3" /> {t("pinned")}
                       </span>
                     ) : null}
                     {c.assignedToName ? <Badge tone="blue">{c.assignedToName}</Badge> : null}
                     {c.status === "RESOLVED" ? (
-                      <Badge tone="green">resolved{c.resolvedByName ? ` · ${c.resolvedByName}` : ""}</Badge>
+                      <Badge tone="green">{t("resolved")}{c.resolvedByName ? ` · ${c.resolvedByName}` : ""}</Badge>
                     ) : null}
                   </p>
                 </div>
@@ -196,8 +202,8 @@ export function CommentPanel({
                     type="button"
                     disabled={pending}
                     onClick={() => run(() => setCommentStatusAction(c.id, c.status === "OPEN"))}
-                    aria-label={c.status === "OPEN" ? "Resolve" : "Reopen"}
-                    title={c.status === "OPEN" ? "Resolve" : "Reopen"}
+                    aria-label={c.status === "OPEN" ? t("Resolve") : t("Reopen")}
+                    title={c.status === "OPEN" ? t("Resolve") : t("Reopen")}
                     className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-surface-2 hover:text-green-600"
                   >
                     {c.status === "OPEN" ? <Check className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
@@ -207,8 +213,8 @@ export function CommentPanel({
                       type="button"
                       disabled={pending}
                       onClick={() => run(() => removeCommentAction(c.id))}
-                      aria-label="Delete comment"
-                      title="Delete"
+                      aria-label={t("Delete comment")}
+                      title={t("Delete")}
                       className="grid h-7 w-7 place-items-center rounded-lg text-faint hover:bg-surface-2 hover:text-red-600"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -233,7 +239,7 @@ export function CommentPanel({
                   <input
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}
-                    placeholder="Reply"
+                    placeholder={t("Reply")}
                     className={CONTROL}
                   />
                   <button
@@ -253,7 +259,7 @@ export function CommentPanel({
                     }
                     className="h-9 shrink-0 rounded-lg border border-border px-3 text-xs text-muted hover:bg-surface-2"
                   >
-                    Send
+                    {t("Send")}
                   </button>
                 </div>
               ) : (
@@ -263,7 +269,7 @@ export function CommentPanel({
                     onClick={() => setReplyTo(c.id)}
                     className="inline-flex items-center gap-1 text-muted hover:text-fg"
                   >
-                    <CornerDownRight className="h-3 w-3" /> Reply
+                    <CornerDownRight className="h-3 w-3" /> {t("Reply")}
                   </button>
                   <label className="inline-flex items-center gap-1 text-muted">
                     <UserPlus className="h-3 w-3" />
@@ -273,10 +279,10 @@ export function CommentPanel({
                       onChange={(e) => run(() => assignCommentAction(c.id, e.target.value || null))}
                       className="bg-transparent text-[11px] text-muted focus:outline-none"
                     >
-                      <option value="">assign…</option>
-                      {team.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
+                      <option value="">{t("assign…")}</option>
+                      {team.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
                         </option>
                       ))}
                     </select>

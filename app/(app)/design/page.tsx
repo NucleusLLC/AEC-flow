@@ -5,6 +5,7 @@ import { DeliverableList } from "@/components/design/deliverable-list";
 import { ProjectFilterBanner } from "@/components/projects/project-filter-banner";
 import { getProject } from "@/lib/data/projects";
 import { DISCIPLINE_LABEL, DISCIPLINE_SLUG, DISCIPLINES } from "@/lib/design/types";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Design Register · AEC-flow" };
 
@@ -13,6 +14,7 @@ export default async function DesignPage({
 }: {
   searchParams: Promise<{ project?: string }>;
 }) {
+  const t = await getServerT();
   const { project } = await searchParams;
   const proj = project ? await getProject(project) : null;
   const items = await listDeliverables(proj ? { projectId: project } : {});
@@ -24,15 +26,15 @@ export default async function DesignPage({
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Design Register</h2>
-          <p className="text-sm text-muted">Drawings &amp; design documents across all disciplines.</p>
+          <h2 className="text-xl font-semibold text-fg">{t("Design Register")}</h2>
+          <p className="text-sm text-muted">{t("Drawings & design documents across all disciplines.")}</p>
         </div>
         <Link
           href="/design/new"
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          Add deliverable
+          {t("Add deliverable")}
         </Link>
       </div>
 
@@ -41,9 +43,9 @@ export default async function DesignPage({
       ) : summary ? (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Tile icon={FileStack} label="Deliverables" value={String(summary.total)} />
-            <Tile icon={Send} label="Issued / approved" value={String(summary.issued)} />
-            <Tile icon={Clock} label="In review" value={String(summary.inReview)} />
+            <Tile icon={FileStack} label={t("Deliverables")} value={String(summary.total)} />
+            <Tile icon={Send} label={t("Issued / approved")} value={String(summary.issued)} />
+            <Tile icon={Clock} label={t("In review")} value={String(summary.inReview)} />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -56,13 +58,13 @@ export default async function DesignPage({
                   className="card-surface group rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-fg">{DISCIPLINE_LABEL[d]}</span>
+                    <span className="text-sm font-semibold text-fg">{t(DISCIPLINE_LABEL[d])}</span>
                     <ArrowRight className="h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5" />
                   </div>
                   <div className="mt-2 flex gap-4 text-xs text-muted">
-                    <span><span className="font-semibold text-fg">{s.total}</span> total</span>
-                    <span><span className="font-semibold text-fg">{s.issued}</span> issued</span>
-                    <span><span className="font-semibold text-fg">{s.draft}</span> draft</span>
+                    <span><span className="font-semibold text-fg">{s.total}</span> {t("total")}</span>
+                    <span><span className="font-semibold text-fg">{s.issued}</span> {t("issued")}</span>
+                    <span><span className="font-semibold text-fg">{s.draft}</span> {t("draft")}</span>
                   </div>
                 </Link>
               );

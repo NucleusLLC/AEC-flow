@@ -16,6 +16,8 @@ import {
 } from "recharts";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { formatCurrencyCompact, getSystemCurrency } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export type NameValue = { name: string; value: number };
 export type MonthValue = { month: string; value: number };
@@ -41,11 +43,12 @@ export function ReportsCharts({
   projectsByDiscipline: NameValue[];
   monthlyPipeline: MonthValue[];
 }) {
+  const t = useT();
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Pipeline value by status */}
       <Card>
-        <CardHeader title="Pipeline Value by Status" subtitle={`Proposal fee value (${getSystemCurrency()})`} />
+        <CardHeader title={t("Pipeline Value by Status")} subtitle={fmt(t("Proposal fee value ({currency})"), { currency: getSystemCurrency() })} />
         <CardBody>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -54,7 +57,7 @@ export function ReportsCharts({
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} />
                 <YAxis tickFormatter={(v) => formatCurrencyCompact(Number(v))} tick={{ fontSize: 11, fill: "#9aa1ab" }} tickLine={false} axisLine={false} width={64} />
                 <Tooltip formatter={(v) => formatCurrencyCompact(Number(v))} contentStyle={tooltipStyle} cursor={{ fill: "rgba(29,78,216,0.06)" }} />
-                <Bar dataKey="value" fill={BRAND} radius={[6, 6, 0, 0]} maxBarSize={48} />
+                <Bar dataKey="value" name={t("value")} fill={BRAND} radius={[6, 6, 0, 0]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -63,7 +66,7 @@ export function ReportsCharts({
 
       {/* Projects by status (donut) */}
       <Card>
-        <CardHeader title="Projects by Status" subtitle="Active portfolio breakdown" />
+        <CardHeader title={t("Projects by Status")} subtitle={t("Active portfolio breakdown")} />
         <CardBody>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -92,7 +95,7 @@ export function ReportsCharts({
 
       {/* Projects by discipline */}
       <Card>
-        <CardHeader title="Projects by Discipline" subtitle="Discipline coverage across the portfolio" />
+        <CardHeader title={t("Projects by Discipline")} subtitle={t("Discipline coverage across the portfolio")} />
         <CardBody>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -105,7 +108,7 @@ export function ReportsCharts({
                 <XAxis type="number" tick={{ fontSize: 11, fill: "#9aa1ab" }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} width={90} />
                 <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(29,78,216,0.06)" }} />
-                <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]} maxBarSize={28} />
+                <Bar dataKey="value" name={t("value")} fill="#10b981" radius={[0, 6, 6, 0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -114,7 +117,7 @@ export function ReportsCharts({
 
       {/* Monthly pipeline trend */}
       <Card>
-        <CardHeader title="Proposal Value by Month" subtitle={`When proposals were raised (${getSystemCurrency()})`} />
+        <CardHeader title={t("Proposal Value by Month")} subtitle={fmt(t("When proposals were raised ({currency})"), { currency: getSystemCurrency() })} />
         <CardBody>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -123,7 +126,7 @@ export function ReportsCharts({
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} />
                 <YAxis tickFormatter={(v) => formatCurrencyCompact(Number(v))} tick={{ fontSize: 11, fill: "#9aa1ab" }} tickLine={false} axisLine={false} width={64} />
                 <Tooltip formatter={(v) => formatCurrencyCompact(Number(v))} contentStyle={tooltipStyle} />
-                <Line type="monotone" dataKey="value" stroke={BRAND} strokeWidth={2.5} dot={{ r: 3, fill: BRAND }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="value" name={t("value")} stroke={BRAND} strokeWidth={2.5} dot={{ r: 3, fill: BRAND }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>

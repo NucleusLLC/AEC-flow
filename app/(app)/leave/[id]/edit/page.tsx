@@ -8,6 +8,7 @@ import {
 } from "@/components/leave/leave-request-form";
 import { getLeaveRequest } from "@/lib/data/leave";
 import { getTeam } from "@/lib/data/team";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,7 @@ export default async function EditLeavePage({ params }: PageProps) {
   const { id } = await params;
   const [request, team] = await Promise.all([getLeaveRequest(id), getTeam()]);
   if (!request) notFound();
+  const t = await getServerT();
 
   const members = team.map((m) => m.name);
 
@@ -43,11 +45,11 @@ export default async function EditLeavePage({ params }: PageProps) {
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Leave
+        {t("Leave")}
       </Link>
 
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit Leave Request</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit Leave Request")}</h2>
         <p className="text-sm text-muted">
           {request.userName} · {request.startDate} → {request.endDate}
         </p>

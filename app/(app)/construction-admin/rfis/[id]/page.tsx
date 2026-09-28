@@ -7,6 +7,8 @@ import { RfiStatusBadge, RfiPriorityBadge, DisciplineBadge } from "@/components/
 import { RfiRespond } from "@/components/construction-admin/rfi-respond";
 import { getRfi } from "@/lib/data/ca/rfis";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -26,6 +28,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export default async function RfiDetailPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const rfi = await getRfi(id);
   if (!rfi) notFound();
@@ -34,7 +37,7 @@ export default async function RfiDetailPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/rfis" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        RFIs
+        {t("RFIs")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -56,14 +59,14 @@ export default async function RfiDetailPage({ params }: PageProps) {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
           <FileDown className="h-4 w-4" />
-          Print / PDF
+          {t("Print / PDF")}
         </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Question" />
+            <CardHeader title={t("Question")} />
             <CardBody>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{rfi.question ?? "—"}</p>
             </CardBody>
@@ -71,7 +74,7 @@ export default async function RfiDetailPage({ params }: PageProps) {
 
           {rfi.response ? (
             <Card>
-              <CardHeader title="Response" subtitle={rfi.responseBy ? `By ${rfi.responseBy}` : undefined} />
+              <CardHeader title={t("Response")} subtitle={rfi.responseBy ? fmt(t("By {name}"), { name: rfi.responseBy }) : undefined} />
               <CardBody>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{rfi.response}</p>
               </CardBody>
@@ -83,15 +86,15 @@ export default async function RfiDetailPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label="Submitted by">{rfi.submittedBy ?? "—"}</Row>
-              <Row label="Assigned to">{rfi.assignedTo ?? "—"}</Row>
-              <Row label="Submitted">{formatDate(rfi.dateSubmitted)}</Row>
-              <Row label="Required by">{formatDate(rfi.dateRequired)}</Row>
-              <Row label="Responded">{formatDate(rfi.dateResponded)}</Row>
+              <Row label={t("Submitted by")}>{rfi.submittedBy ?? "—"}</Row>
+              <Row label={t("Assigned to")}>{rfi.assignedTo ?? "—"}</Row>
+              <Row label={t("Submitted")}>{formatDate(rfi.dateSubmitted)}</Row>
+              <Row label={t("Required by")}>{formatDate(rfi.dateRequired)}</Row>
+              <Row label={t("Responded")}>{formatDate(rfi.dateResponded)}</Row>
               {rfi.linkedChangeOrderId ? (
-                <Row label="Linked CO">
+                <Row label={t("Linked CO")}>
                   <Link href={`/construction-admin/change-orders/${rfi.linkedChangeOrderId}`} className="inline-flex items-center gap-1 text-brand hover:underline">
                     <Link2 className="h-3.5 w-3.5" />
                     {rfi.linkedChangeOrderId}

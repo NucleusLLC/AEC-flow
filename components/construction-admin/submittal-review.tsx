@@ -6,6 +6,8 @@ import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { SUBMITTAL_STATUS_LABEL } from "@/lib/ca/labels";
 import type { SubmittalStatus } from "@/lib/ca/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -32,6 +34,7 @@ export function SubmittalReview({
   currentReviewedBy: string | null;
   currentComments: string | null;
 }) {
+  const t = useT();
   const router = useRouter();
   const [status, setStatus] = useState<SubmittalStatus>(currentStatus);
   const [reviewedBy, setReviewedBy] = useState(currentReviewedBy ?? "");
@@ -49,9 +52,9 @@ export function SubmittalReview({
         body: JSON.stringify({ status, reviewedBy: reviewedBy || undefined, reviewerComments: comments || undefined }),
       });
       const json = await res.json();
-      if (!res.ok) setMsg({ ok: false, text: json.error ?? `Failed (${res.status})` });
+      if (!res.ok) setMsg({ ok: false, text: json.error ?? fmt(t("Failed ({status})"), { status: res.status }) });
       else {
-        setMsg({ ok: true, text: "Submittal updated." });
+        setMsg({ ok: true, text: t("Submittal updated.") });
         router.refresh();
       }
     } catch (err) {
@@ -63,7 +66,7 @@ export function SubmittalReview({
 
   return (
     <Card>
-      <CardHeader title="Review" subtitle="Record the review outcome and reviewer comments" />
+      <CardHeader title={t("Review")} subtitle={t("Record the review outcome and reviewer comments")} />
       <CardBody className="space-y-3">
         {msg ? (
           <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
@@ -73,24 +76,24 @@ export function SubmittalReview({
         ) : null}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Status</label>
+            <label className={labelCls}>{t("Status")}</label>
             <select className={inputCls} value={status} onChange={(e) => setStatus(e.target.value as SubmittalStatus)}>
               {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>{SUBMITTAL_STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{t(SUBMITTAL_STATUS_LABEL[s])}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={labelCls}>Reviewed by</label>
-            <input className={inputCls} value={reviewedBy} onChange={(e) => setReviewedBy(e.target.value)} placeholder="Reviewer" />
+            <label className={labelCls}>{t("Reviewed by")}</label>
+            <input className={inputCls} value={reviewedBy} onChange={(e) => setReviewedBy(e.target.value)} placeholder={t("Reviewer")} />
           </div>
         </div>
         <div>
-          <label className={labelCls}>Reviewer comments</label>
+          <label className={labelCls}>{t("Reviewer comments")}</label>
           <textarea className={`${inputCls} h-auto min-h-[80px] py-2`} value={comments} onChange={(e) => setComments(e.target.value)} />
         </div>
         <button type="button" onClick={submit} disabled={saving} className="inline-flex h-9 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-          {saving ? "Saving…" : "Save review"}
+          {saving ? t("Saving…") : t("Save review")}
         </button>
       </CardBody>
     </Card>

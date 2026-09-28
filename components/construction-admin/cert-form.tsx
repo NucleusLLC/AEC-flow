@@ -10,6 +10,8 @@ import { progressPayment } from "@/lib/ca/calc";
 import { CERT_STATUS_LABEL } from "@/lib/ca/labels";
 import type { ProgressCertification, CertificationStatus } from "@/lib/ca/types";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string; value: number };
 
@@ -47,6 +49,7 @@ function MoneyLine({ label, value, currency, strong }: { label: string; value: n
 }
 
 export function CertForm({ projects: projectProp, initial, certId }: { projects: ProjectOption[]; initial?: ProgressCertification; certId?: string }) {
+  const t = useT();
   const editing = !!certId;
   // Grown when a project is created from the picker below; `projects.find` in
   // the submit handler must read this, not the prop.
@@ -97,7 +100,7 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
         },
       );
       const json = await res.json();
-      if (!res.ok) setResult({ ok: false, error: json.error ?? `Request failed (${res.status})` });
+      if (!res.ok) setResult({ ok: false, error: json.error ?? fmt(t("Request failed ({status})"), { status: res.status }) });
       else setResult({ ok: true, cert: json.data });
     } catch (err) {
       setResult({ ok: false, error: (err as Error).message });
@@ -113,8 +116,8 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 px-5 py-4">
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" /></span>
           <p className="text-sm text-emerald-800">
-            Certification {result.cert?.certificationNumber} {editing ? "updated" : "created"}.{" "}
-            {result.cert ? <Link href={`/construction-admin/certifications/${result.cert.id}`} className="font-medium underline">Open certification</Link> : null}
+            {fmt(t(editing ? "Certification {number} updated." : "Certification {number} created."), { number: result.cert?.certificationNumber ?? "" })}{" "}
+            {result.cert ? <Link href={`/construction-admin/certifications/${result.cert.id}`} className="font-medium underline">{t("Open certification")}</Link> : null}
           </p>
         </div>
       ) : result?.error ? (
@@ -127,7 +130,7 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Progress Certification" subtitle="Voortgangsverklaring — lender/owner draw certification" />
+            <CardHeader title={t("Progress Certification")} subtitle={t("Voortgangsverklaring — lender/owner draw certification")} />
             <CardBody className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Was a required select over a list that is empty on a fresh
@@ -141,7 +144,7 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
                   rules={{ required: true }}
                   render={({ field }) => (
                     <ProjectSelect
-                      label="Project *"
+                      label={t("Project *")}
                       projects={projects}
                       value={field.value ?? ""}
                       onChange={(next) => {
@@ -157,23 +160,23 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
                   )}
                 />
                 <div>
-                  <label className={labelCls}>Inspection date</label>
+                  <label className={labelCls}>{t("Inspection date")}</label>
                   <input type="date" className={inputCls} {...register("inspectionDate")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Certified by</label>
+                  <label className={labelCls}>{t("Certified by")}</label>
                   <input className={inputCls} {...register("certifiedBy")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Lender / bank</label>
+                  <label className={labelCls}>{t("Lender / bank")}</label>
                   <input className={inputCls} {...register("lenderName")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Contractor</label>
+                  <label className={labelCls}>{t("Contractor")}</label>
                   <input className={inputCls} {...register("contractorName")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Currency</label>
+                  <label className={labelCls}>{t("Currency")}</label>
                   <select className={inputCls} {...register("currency")}>
                     {currencyOptions(OTHER_CURRENCIES).map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -185,40 +188,40 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
           </Card>
 
           <Card>
-            <CardHeader title="Valuation" />
+            <CardHeader title={t("Valuation")} />
             <CardBody className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div>
-                <label className={labelCls}>Contract value</label>
+                <label className={labelCls}>{t("Contract value")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("contractValue", { valueAsNumber: true })} />
               </div>
               <div>
-                <label className={labelCls}>Previous %</label>
+                <label className={labelCls}>{t("Previous %")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("previousPercentComplete", { valueAsNumber: true })} />
               </div>
               <div>
-                <label className={labelCls}>Current %</label>
+                <label className={labelCls}>{t("Current %")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("currentPercentComplete", { valueAsNumber: true })} />
               </div>
               <div>
-                <label className={labelCls}>Retention %</label>
+                <label className={labelCls}>{t("Retention %")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("retentionPercentage", { valueAsNumber: true })} />
               </div>
               <div className="sm:col-span-2">
-                <label className={labelCls}>Previous payments</label>
+                <label className={labelCls}>{t("Previous payments")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("previousPaymentsValue", { valueAsNumber: true })} />
               </div>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Findings" />
+            <CardHeader title={t("Findings")} />
             <CardBody className="space-y-4">
               <div>
-                <label className={labelCls}>Deficiencies</label>
+                <label className={labelCls}>{t("Deficiencies")}</label>
                 <textarea className={`${inputCls} h-auto min-h-[72px] py-2`} {...register("deficiencies")} />
               </div>
               <div>
-                <label className={labelCls}>Recommendation</label>
+                <label className={labelCls}>{t("Recommendation")}</label>
                 <textarea className={`${inputCls} h-auto min-h-[72px] py-2`} {...register("recommendation")} />
               </div>
             </CardBody>
@@ -227,23 +230,23 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Payment Calculation" />
+            <CardHeader title={t("Payment Calculation")} />
             <CardBody className="space-y-2">
-              <MoneyLine currency={currency} label="Work completed value" value={calc.workCompletedValue} />
-              <MoneyLine currency={currency} label="Retention" value={calc.retentionAmount} />
+              <MoneyLine currency={currency} label={t("Work completed value")} value={calc.workCompletedValue} />
+              <MoneyLine currency={currency} label={t("Retention")} value={calc.retentionAmount} />
               <div className="border-t border-border pt-2">
-                <MoneyLine currency={currency} label="Recommended payment" value={calc.amountRecommendedForPayment} strong />
+                <MoneyLine currency={currency} label={t("Recommended payment")} value={calc.amountRecommendedForPayment} strong />
               </div>
-              <p className="pt-1 text-[11px] text-faint">Work completed × %, less retention and previous payments.</p>
+              <p className="pt-1 text-[11px] text-faint">{t("Work completed × %, less retention and previous payments.")}</p>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Status" />
+            <CardHeader title={t("Status")} />
             <CardBody>
               <select className={inputCls} {...register("status")}>
                 {(Object.keys(CERT_STATUS_LABEL) as CertificationStatus[]).map((s) => (
-                  <option key={s} value={s}>{CERT_STATUS_LABEL[s]}</option>
+                  <option key={s} value={s}>{t(CERT_STATUS_LABEL[s])}</option>
                 ))}
               </select>
             </CardBody>
@@ -251,10 +254,10 @@ export function CertForm({ projects: projectProp, initial, certId }: { projects:
 
           <div className="flex items-center gap-2">
             <button type="submit" disabled={saving} className="inline-flex h-10 flex-1 items-center justify-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50">
-              {saving ? "Saving…" : editing ? "Save changes" : "Create certification"}
+              {saving ? t("Saving…") : editing ? t("Save changes") : t("Create certification")}
             </button>
             <Link href="/construction-admin/certifications" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2">
-              Cancel
+              {t("Cancel")}
             </Link>
           </div>
         </div>

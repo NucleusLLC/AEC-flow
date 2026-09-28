@@ -8,6 +8,8 @@ import { CertStatusBadge } from "@/components/construction-admin/badges";
 import type { ProgressCertification, CertificationStatus } from "@/lib/ca/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | CertificationStatus; label: string }> = [
   { key: "ALL", label: "All" },
@@ -17,6 +19,7 @@ const FILTERS: Array<{ key: "ALL" | CertificationStatus; label: string }> = [
 ];
 
 export function CertList({ certifications }: { certifications: ProgressCertification[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | CertificationStatus>("ALL");
 
@@ -43,7 +46,7 @@ export function CertList({ certifications }: { certifications: ProgressCertifica
                 status === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -53,7 +56,7 @@ export function CertList({ certifications }: { certifications: ProgressCertifica
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Search certifications…"
+            placeholder={t("Search certifications…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-64"
           />
         </div>
@@ -64,11 +67,11 @@ export function CertList({ certifications }: { certifications: ProgressCertifica
           <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Certification</th>
-                <th className="px-3 py-2.5 font-medium">Lender</th>
-                <th className="px-3 py-2.5 font-medium text-right">% Complete</th>
-                <th className="px-3 py-2.5 font-medium text-right">Recommended</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Certification")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Lender")}</th>
+                <th className="px-3 py-2.5 font-medium text-right">{t("% Complete")}</th>
+                <th className="px-3 py-2.5 font-medium text-right">{t("Recommended")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -94,12 +97,12 @@ export function CertList({ certifications }: { certifications: ProgressCertifica
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <BadgeCheck className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No certifications match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No certifications match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
-      <p className="px-1 text-xs text-faint">Showing {rows.length} of {certifications.length} certifications</p>
+      <p className="px-1 text-xs text-faint">{fmt(t("Showing {count} of {total} certifications"), { count: rows.length, total: certifications.length })}</p>
     </div>
   );
 }

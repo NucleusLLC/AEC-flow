@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Eye, X, Printer } from "lucide-react";
 import type { ProposalRecord } from "@/lib/data/proposals.types";
 import { ProposalDocument } from "./proposal-document";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * In-app preview of the rendered Fee Proposal document. Available from every
@@ -21,6 +23,7 @@ export function ProposalPreviewModal({
   onClose: () => void;
   printHref?: string;
 }) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -42,7 +45,7 @@ export function ProposalPreviewModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview ${proposal.refNumber}`}
+      aria-label={fmt(t("Preview {ref}"), { ref: proposal.refNumber })}
     >
       {/* Toolbar */}
       <div
@@ -51,9 +54,9 @@ export function ProposalPreviewModal({
       >
         <Eye className="h-5 w-5 text-white/80" />
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">{proposal.title || "Untitled proposal"}</div>
+          <div className="truncate text-sm font-semibold">{proposal.title || t("Untitled proposal")}</div>
           <div className="truncate text-[11px] text-white/60">
-            {proposal.refNumber} · Fee Proposal{proposal.revision > 1 ? ` · Rev ${proposal.revision}` : ""}
+            {proposal.refNumber} · {t("Fee Proposal")}{proposal.revision > 1 ? ` · ${fmt(t("Rev {n}"), { n: proposal.revision })}` : ""}
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -65,13 +68,13 @@ export function ProposalPreviewModal({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/10 px-3 text-sm font-medium text-white transition-colors hover:bg-white/20"
             >
               <Printer className="h-4 w-4" />
-              <span className="hidden sm:inline">Print / PDF</span>
+              <span className="hidden sm:inline">{t("Print / PDF")}</span>
             </a>
           ) : null}
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close preview"
+            aria-label={t("Close preview")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white transition-colors hover:bg-white/20"
           >
             <X className="h-5 w-5" />
@@ -85,7 +88,7 @@ export function ProposalPreviewModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-fit rounded-md shadow-2xl">
-          <ProposalDocument proposal={proposal} />
+          <ProposalDocument proposal={proposal} t={t} />
         </div>
       </div>
 
@@ -93,7 +96,7 @@ export function ProposalPreviewModal({
         className="shrink-0 border-t border-white/10 px-4 py-2.5 text-center text-[11px] text-white/50"
         onClick={(e) => e.stopPropagation()}
       >
-        Live preview — this is the document the client receives. Esc to close.
+        {t("Live preview — this is the document the client receives. Esc to close.")}
       </div>
     </div>
   );
@@ -103,7 +106,7 @@ export function ProposalPreviewModal({
 export function ProposalPreviewButton({
   proposal,
   printHref,
-  label = "Preview",
+  label,
   variant = "outline",
   iconOnly = false,
   className = "",
@@ -115,6 +118,7 @@ export function ProposalPreviewButton({
   iconOnly?: boolean;
   className?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const base =
     variant === "ghost"
@@ -131,12 +135,12 @@ export function ProposalPreviewButton({
           e.preventDefault();
           setOpen(true);
         }}
-        aria-label={`Preview ${proposal.refNumber}`}
-        title="Preview proposal"
+        aria-label={fmt(t("Preview {ref}"), { ref: proposal.refNumber })}
+        title={t("Preview proposal")}
         className={`${base} ${size} ${className}`}
       >
         <Eye className={iconOnly ? "h-4 w-4" : "h-4 w-4"} />
-        {iconOnly ? null : label}
+        {iconOnly ? null : (label ?? t("Preview"))}
       </button>
       <ProposalPreviewModal proposal={proposal} open={open} onClose={() => setOpen(false)} printHref={printHref} />
     </>

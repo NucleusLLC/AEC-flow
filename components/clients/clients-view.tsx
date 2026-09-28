@@ -14,6 +14,7 @@ import {
 import { formatCurrencyCompact, formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
 import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "recent" | "name" | "pipeline";
 
@@ -174,13 +175,13 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
               <Building2 className="h-5 w-5" />
             </div>
             <p className="text-sm font-medium text-fg">{tr("No clients match your filters")}</p>
-            <p className="text-xs text-muted">Try a different search term or clear the filters.</p>
+            <p className="text-xs text-muted">{tr("Try a different search term or clear the filters.")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {clients.length} clients
+        {fmt(tr("Showing {shown} of {total} clients"), { shown: rows.length, total: clients.length })}
       </p>
     </div>
   );

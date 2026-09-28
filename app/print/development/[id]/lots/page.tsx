@@ -4,6 +4,8 @@ import { DevPrintShell, PrintSection } from "@/components/development/print-shel
 import { getDevelopmentProject, projectCostPerNetM2 } from "@/lib/data/development";
 import { computeLot, rollupLots } from "@/lib/development/calc";
 import { LOT_STATUS_LABEL } from "@/lib/data/development.types";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -11,13 +13,15 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const p = await getDevelopmentProject(id);
-  return { title: p ? `${p.projectNumber} — Lot Sales Report` : "Lot Sales Report" };
+  const t = await getServerT();
+  return { title: p ? `${p.projectNumber} — ${t("Lot Sales Report")}` : t("Lot Sales Report") };
 }
 
 export default async function LotsPrintPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getDevelopmentProject(id);
   if (!project) notFound();
+  const t = await getServerT();
   const cur = project.currency;
   const costPerM2 = projectCostPerNetM2(project);
   const totals = rollupLots(project.lots.map((l) => ({ areaM2: l.areaM2, baseLandPricePerM2: l.baseLandPricePerM2, premiumAdjustmentPerM2: l.premiumAdjustmentPerM2, allocatedCostPerM2: costPerM2 })));
@@ -25,26 +29,26 @@ export default async function LotsPrintPage({ params }: PageProps) {
   return (
     <DevPrintShell
       backHref={`/development/${project.id}/reports`}
-      docTitle="Lot Sales Report"
+      docTitle={t("Lot Sales Report")}
       refNumber={project.projectNumber}
       projectName={project.name}
       meta={[
-        { label: "Location", value: project.location ?? "—" },
-        { label: "Lots", value: String(project.lots.length) },
-        { label: "Cost / net m²", value: `${formatCurrency(costPerM2, cur)}` },
-        { label: "Issued", value: formatDate(project.updatedAt) },
+        { label: t("Location"), value: project.location ?? "—" },
+        { label: t("Lots"), value: String(project.lots.length) },
+        { label: t("Cost / net m²"), value: `${formatCurrency(costPerM2, cur)}` },
+        { label: t("Issued"), value: formatDate(project.updatedAt) },
       ]}
     >
-      <h1 className="mt-6 text-lg font-bold text-gray-900">Lot Sales Report</h1>
-      <PrintSection title="Inventory">
+      <h1 className="mt-6 text-lg font-bold text-gray-900">{t("Lot Sales Report")}</h1>
+      <PrintSection title={t("Inventory")}>
         <table className="w-full text-[10px]">
           <thead>
             <tr className="border-b border-gray-300 text-left text-gray-500">
-              <th className="py-1">Lot</th><th className="py-1">Phase</th>
-              <th className="py-1 text-right">Area m²</th><th className="py-1 text-right">Price/m²</th>
-              <th className="py-1 text-right">Sales</th><th className="py-1 text-right">Cost</th>
-              <th className="py-1 text-right">Profit</th><th className="py-1 text-right">Margin</th>
-              <th className="py-1">Status</th><th className="py-1">Buyer</th>
+              <th className="py-1">{t("Lot")}</th><th className="py-1">{t("Phase")}</th>
+              <th className="py-1 text-right">{t("Area m²")}</th><th className="py-1 text-right">{t("Price/m²")}</th>
+              <th className="py-1 text-right">{t("Sales")}</th><th className="py-1 text-right">{t("Cost")}</th>
+              <th className="py-1 text-right">{t("Profit")}</th><th className="py-1 text-right">{t("Margin")}</th>
+              <th className="py-1">{t("Status")}</th><th className="py-1">{t("Buyer")}</th>
             </tr>
           </thead>
           <tbody>
@@ -60,13 +64,13 @@ export default async function LotsPrintPage({ params }: PageProps) {
                   <td className="py-1 text-right tabular-nums text-gray-500">{formatCurrency(c.totalAllocatedCost, cur)}</td>
                   <td className="py-1 text-right tabular-nums">{formatCurrency(c.grossProfit, cur)}</td>
                   <td className="py-1 text-right tabular-nums">{c.grossMarginPct.toFixed(0)}%</td>
-                  <td className="py-1 text-gray-600">{LOT_STATUS_LABEL[l.status]}</td>
+                  <td className="py-1 text-gray-600">{t(LOT_STATUS_LABEL[l.status])}</td>
                   <td className="py-1 text-gray-600">{l.buyerName ?? "—"}</td>
                 </tr>
               );
             })}
             <tr className="border-t border-gray-400 font-semibold">
-              <td className="py-1.5" colSpan={2}>Totals · {totals.count} lots</td>
+              <td className="py-1.5" colSpan={2}>{fmt(t("Totals · {count} lots"), { count: totals.count })}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(totals.totalArea)}</td>
               <td className="py-1.5 text-right tabular-nums">{formatNumber(totals.weightedAvgSalesPricePerM2)}</td>
               <td className="py-1.5 text-right tabular-nums">{formatCurrency(totals.totalRevenue, cur)}</td>

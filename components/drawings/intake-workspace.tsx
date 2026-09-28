@@ -22,6 +22,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { DrawingIntake } from "./drawing-intake";
 import { serverIntakeRepository } from "./intake-repository";
+import { useT } from "@/components/i18n/language-provider";
 
 export type IntakeProjectOption = {
   id: string;
@@ -38,6 +39,7 @@ export function DrawingIntakeWorkspace({
   initialProjectId?: string;
   storageConnected: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [projectList, setProjectList] = useState(projects);
   const [projectId, setProjectId] = useState(initialProjectId ?? projects[0]?.id ?? "");
@@ -45,14 +47,14 @@ export function DrawingIntakeWorkspace({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader title="Project" subtitle="Every sheet in this batch is filed against it." />
+        <CardHeader title={t("Project")} subtitle={t("Every sheet in this batch is filed against it.")} />
         <CardBody>
           <ProjectSelect
             id="intake-project"
             projects={projectList}
             value={projectId}
             onChange={setProjectId}
-            submitLabel="Create project & file drawings to it"
+            submitLabel={t("Create project & file drawings to it")}
             onCreated={(p) =>
               setProjectList((prev) => [
                 ...prev,
@@ -64,8 +66,7 @@ export function DrawingIntakeWorkspace({
 
           {!storageConnected ? (
             <p className="mt-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-              File storage is not connected on this deployment, so uploads are disabled. Set
-              SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and create the private bucket.
+              {t("File storage is not connected on this deployment, so uploads are disabled. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and create the private bucket.")}
             </p>
           ) : null}
         </CardBody>

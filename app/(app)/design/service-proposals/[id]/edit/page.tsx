@@ -7,6 +7,8 @@ import { isLocked } from "@/lib/proposals/engine/status";
 import { ServiceProposalForm } from "@/components/service-proposals/service-proposal-form";
 import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Edit Service Proposal · AEC-flow" };
 
@@ -15,6 +17,7 @@ export default async function EditServiceProposalPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getServerT();
   const { id } = await params;
   const p = await getServiceProposal(id);
   if (!p) notFound();
@@ -29,8 +32,8 @@ export default async function EditServiceProposalPage({
         <ArrowLeft className="h-4 w-4" /> {p.number}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit {p.number}</h2>
-        <p className="text-sm text-muted">Fees and the payment schedule recalculate live as you edit.</p>
+        <h2 className="text-xl font-semibold text-fg">{fmt(t("Edit {number}"), { number: p.number })}</h2>
+        <p className="text-sm text-muted">{t("Fees and the payment schedule recalculate live as you edit.")}</p>
       </div>
       <ServiceProposalForm
         clients={clients.map((c) => ({ id: c.id, name: c.name }))}

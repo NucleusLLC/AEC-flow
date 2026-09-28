@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { parseCsv } from "@/lib/development/csv";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Reusable "Import CSV" control. Reads a chosen .csv file, parses it, and hands
@@ -10,6 +12,7 @@ import { parseCsv } from "@/lib/development/csv";
  * how many were imported. Shows an inline result.
  */
 export function CsvImport({ onRows, hint }: { onRows: (rows: string[][]) => number; hint?: string }) {
+  const t = useT();
   const ref = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -20,7 +23,7 @@ export function CsvImport({ onRows, hint }: { onRows: (rows: string[][]) => numb
       const text = await file.text();
       const rows = parseCsv(text);
       const n = onRows(rows);
-      setMsg({ ok: true, text: `Imported ${n} row${n === 1 ? "" : "s"}.` });
+      setMsg({ ok: true, text: n === 1 ? t("Imported 1 row.") : fmt(t("Imported {count} rows."), { count: n }) });
     } catch (err) {
       setMsg({ ok: false, text: (err as Error).message });
     } finally {
@@ -38,7 +41,7 @@ export function CsvImport({ onRows, hint }: { onRows: (rows: string[][]) => numb
         title={hint}
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-2"
       >
-        <Upload className="h-4 w-4" /> Import CSV
+        <Upload className="h-4 w-4" /> {t("Import CSV")}
       </button>
     </div>
   );

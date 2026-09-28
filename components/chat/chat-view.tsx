@@ -8,8 +8,11 @@ import {
   type Channel,
 } from "@/lib/data/chat";
 import { cn, initials } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export function ChatView({ data }: { data: ChatData }) {
+  const t = useT();
   const usersById = useMemo(
     () => Object.fromEntries(data.users.map((u) => [u.id, u])),
     [data.users],
@@ -108,7 +111,7 @@ export function ChatView({ data }: { data: ChatData }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search channels…"
+              placeholder={t("Search channels…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             />
           </div>
@@ -116,27 +119,27 @@ export function ChatView({ data }: { data: ChatData }) {
         <div className="flex-1 space-y-4 overflow-y-auto p-2">
           <div>
             <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-faint">
-              Channels
+              {t("Channels")}
             </div>
             <div className="space-y-0.5">
               {channelsGroup.map((c) => (
                 <ChannelButton key={c.id} c={c} />
               ))}
               {channelsGroup.length === 0 ? (
-                <p className="px-2.5 py-2 text-xs text-faint">No channels match.</p>
+                <p className="px-2.5 py-2 text-xs text-faint">{t("No channels match.")}</p>
               ) : null}
             </div>
           </div>
           <div>
             <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-faint">
-              Direct Messages
+              {t("Direct Messages")}
             </div>
             <div className="space-y-0.5">
               {dmGroup.map((c) => (
                 <ChannelButton key={c.id} c={c} />
               ))}
               {dmGroup.length === 0 ? (
-                <p className="px-2.5 py-2 text-xs text-faint">No direct messages.</p>
+                <p className="px-2.5 py-2 text-xs text-faint">{t("No direct messages.")}</p>
               ) : null}
             </div>
           </div>
@@ -182,7 +185,7 @@ export function ChatView({ data }: { data: ChatData }) {
                   <div className="my-3 flex items-center gap-3">
                     <div className="h-px flex-1 bg-border" />
                     <span className="text-[10px] font-medium uppercase tracking-wide text-faint">
-                      {m.day}
+                      {t(m.day)}
                     </span>
                     <div className="h-px flex-1 bg-border" />
                   </div>
@@ -199,10 +202,10 @@ export function ChatView({ data }: { data: ChatData }) {
                     {grouped ? null : (
                       <div className="flex items-baseline gap-2">
                         <span className="text-sm font-semibold text-fg">
-                          {author?.name ?? "Unknown"}
-                          {isMe ? <span className="ml-1 text-[10px] font-normal text-faint">you</span> : null}
+                          {author?.name ?? t("Unknown")}
+                          {isMe ? <span className="ml-1 text-[10px] font-normal text-faint">{t("you")}</span> : null}
                         </span>
-                        <span className="text-[11px] text-faint">{m.at}</span>
+                        <span className="text-[11px] text-faint">{t(m.at)}</span>
                       </div>
                     )}
                     <p className="whitespace-pre-wrap break-words text-sm text-fg/90">{m.body}</p>
@@ -213,8 +216,8 @@ export function ChatView({ data }: { data: ChatData }) {
           })}
           {thread.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-              <p className="text-sm font-medium text-fg">No messages yet</p>
-              <p className="text-xs text-muted">Be the first to say something.</p>
+              <p className="text-sm font-medium text-fg">{t("No messages yet")}</p>
+              <p className="text-xs text-muted">{t("Be the first to say something.")}</p>
             </div>
           ) : null}
           <div ref={bottomRef} />
@@ -233,7 +236,7 @@ export function ChatView({ data }: { data: ChatData }) {
                 }
               }}
               rows={1}
-              placeholder={channel?.kind === "dm" ? `Message ${channel.name}…` : `Message #${channel?.name ?? ""}…`}
+              placeholder={channel?.kind === "dm" ? fmt(t("Message {name}…"), { name: channel.name }) : fmt(t("Message #{name}…"), { name: channel?.name ?? "" })}
               className="max-h-32 min-h-[24px] flex-1 resize-none bg-transparent text-sm text-fg placeholder:text-faint focus:outline-none"
             />
             <button
@@ -243,11 +246,11 @@ export function ChatView({ data }: { data: ChatData }) {
               className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-40"
             >
               <Send className="h-3.5 w-3.5" />
-              Send
+              {t("Send")}
             </button>
           </div>
           <p className="mt-1 px-1 text-[11px] text-faint">
-            Enter to send · Shift+Enter for a new line · messages are local until the database is connected
+            {t("Enter to send · Shift+Enter for a new line · messages are local until the database is connected")}
           </p>
         </div>
       </section>

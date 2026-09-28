@@ -19,6 +19,8 @@ import {
   createPurchaseOrderAction,
   updatePurchaseOrderAction,
 } from "@/app/(app)/procurement/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string };
 
@@ -39,6 +41,7 @@ export function PurchaseOrderForm({
   mode: "new" | "edit";
   initial?: PurchaseOrderDTO;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -117,49 +120,49 @@ export function PurchaseOrderForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <Card>
-        <CardHeader title="Supplier" />
+        <CardHeader title={t("Supplier")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div className="sm:col-span-1">
-            <label className={label}>Vendor / supplier *</label>
+            <label className={label}>{t("Vendor / supplier")} *</label>
             <input value={vendorName} onChange={(e) => setVendorName(e.target.value)} className={field} placeholder="Acme Building Supplies" />
           </div>
           <div>
-            <label className={label}>Contact</label>
+            <label className={label}>{t("Contact")}</label>
             <input value={vendorContact} onChange={(e) => setVendorContact(e.target.value)} className={field} placeholder="Jane Doe" />
           </div>
           <div>
-            <label className={label}>Email</label>
+            <label className={label}>{t("Email")}</label>
             <input type="email" value={vendorEmail} onChange={(e) => setVendorEmail(e.target.value)} className={field} placeholder="orders@acme.com" />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Order" />
+        <CardHeader title={t("Order")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           {/* Optional — a purchase order need not belong to a project — so "— None —"
               stays a real choice. It is still creatable: wanting to file this
               against a project that does not exist yet is the common case, and
               leaving is the only thing the old select allowed. */}
           <ProjectSelect
-            label="Project (optional)"
+            label={t("Project (optional)")}
             projects={projects}
             value={projectId}
             onChange={setProjectId}
             onCreated={(p) => setProjects((prev) => [...prev, { id: p.id, name: p.projectName }])}
             allowEmpty
-            placeholder="— None —"
+            placeholder={t("— None —")}
           />
           <div>
-            <label className={label}>Status</label>
+            <label className={label}>{t("Status")}</label>
             <select value={status} onChange={(e) => setStatus(e.target.value as PurchaseOrderStatus)} className={field}>
               {PO_STATUSES.map((s) => (
-                <option key={s} value={s}>{PO_STATUS_LABEL[s]}</option>
+                <option key={s} value={s}>{t(PO_STATUS_LABEL[s])}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Currency</label>
+            <label className={label}>{t("Currency")}</label>
             <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={field}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -167,29 +170,29 @@ export function PurchaseOrderForm({
             </select>
           </div>
           <div>
-            <label className={label}>Order date</label>
+            <label className={label}>{t("Order date")}</label>
             <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Expected delivery</label>
+            <label className={label}>{t("Expected delivery")}</label>
             <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Received date</label>
+            <label className={label}>{t("Received date")}</label>
             <input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} className={field} />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Line items" subtitle="Quantity × unit price" />
+        <CardHeader title={t("Line items")} subtitle={t("Quantity × unit price")} />
         <CardBody className="space-y-2">
           <div className="hidden gap-2 px-1 text-[11px] font-medium uppercase tracking-wide text-faint sm:grid sm:grid-cols-[1fr_80px_80px_110px_110px_32px]">
-            <span>Description</span>
-            <span className="text-right">Qty</span>
-            <span>Unit</span>
-            <span className="text-right">Unit price</span>
-            <span className="text-right">Amount</span>
+            <span>{t("Description")}</span>
+            <span className="text-right">{t("Qty")}</span>
+            <span>{t("Unit")}</span>
+            <span className="text-right">{t("Unit price")}</span>
+            <span className="text-right">{t("Amount")}</span>
             <span />
           </div>
           {lines.map((l, i) => (
@@ -198,7 +201,7 @@ export function PurchaseOrderForm({
                 value={l.description}
                 onChange={(e) => setLine(i, { description: e.target.value })}
                 className={field}
-                placeholder="Portland cement, 42.5N"
+                placeholder={t("Portland cement, 42.5N")}
               />
               <input
                 type="number"
@@ -211,7 +214,7 @@ export function PurchaseOrderForm({
                 value={l.unit}
                 onChange={(e) => setLine(i, { unit: e.target.value })}
                 className={field}
-                placeholder="bag"
+                placeholder={t("bag")}
               />
               <input
                 type="number"
@@ -228,7 +231,7 @@ export function PurchaseOrderForm({
                 onClick={() => removeLine(i)}
                 disabled={lines.length === 1}
                 className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30"
-                aria-label="Remove line"
+                aria-label={t("Remove line")}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -239,40 +242,40 @@ export function PurchaseOrderForm({
             onClick={addLine}
             className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg"
           >
-            <Plus className="h-4 w-4" /> Add line
+            <Plus className="h-4 w-4" /> {t("Add line")}
           </button>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Totals & terms" />
+        <CardHeader title={t("Totals & terms")} />
         <CardBody className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={label}>Tax %</label>
+                <label className={label}>{t("Tax %")}</label>
                 <input type="number" step="any" value={taxPercentage} onChange={(e) => setTaxPercentage(e.target.value)} className={`${field} text-right`} />
               </div>
               <div>
-                <label className={label}>Shipping</label>
+                <label className={label}>{t("Shipping")}</label>
                 <input type="number" step="any" value={shipping} onChange={(e) => setShipping(e.target.value)} className={`${field} text-right`} />
               </div>
             </div>
             <div>
-              <label className={label}>Payment terms</label>
-              <input value={terms} onChange={(e) => setTerms(e.target.value)} className={field} placeholder="Net 30" />
+              <label className={label}>{t("Payment terms")}</label>
+              <input value={terms} onChange={(e) => setTerms(e.target.value)} className={field} placeholder={t("Net 30")} />
             </div>
             <div>
-              <label className={label}>Notes</label>
+              <label className={label}>{t("Notes")}</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${field} h-auto py-2`} />
             </div>
           </div>
           <dl className="space-y-2 self-start rounded-lg border border-border bg-surface-2/40 p-4 text-sm">
-            <Row k="Subtotal" v={money(totals.subtotal)} />
-            <Row k={`Tax (${Number(taxPercentage) || 0}%)`} v={money(totals.tax)} />
-            <Row k="Shipping" v={money(totals.shipping)} />
+            <Row k={t("Subtotal")} v={money(totals.subtotal)} />
+            <Row k={fmt(t("Tax ({percent}%)"), { percent: Number(taxPercentage) || 0 })} v={money(totals.tax)} />
+            <Row k={t("Shipping")} v={money(totals.shipping)} />
             <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-semibold text-fg">
-              <dt>Total</dt>
+              <dt>{t("Total")}</dt>
               <dd className="tabular-nums">{money(totals.total)}</dd>
             </div>
           </dl>
@@ -281,7 +284,7 @@ export function PurchaseOrderForm({
 
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
-          <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+          <AlertTriangle className="h-4 w-4 shrink-0" /> {t(error)}
         </div>
       ) : null}
 
@@ -291,14 +294,14 @@ export function PurchaseOrderForm({
           disabled={pending}
           className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Create purchase order"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Create purchase order")}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-muted hover:text-fg"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </form>

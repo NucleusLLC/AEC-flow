@@ -12,6 +12,8 @@ import {
 } from "@/lib/data/meetings.types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const TYPE_FILTERS: Array<{ key: "ALL" | MeetingType; label: string }> = [
   { key: "ALL", label: "All" },
@@ -25,6 +27,7 @@ const TYPE_FILTERS: Array<{ key: "ALL" | MeetingType; label: string }> = [
 export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"ALL" | MeetingType>("ALL");
+  const t = useT();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -57,7 +60,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -69,13 +72,13 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search minutes…"
+              placeholder={t("Search minutes…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
           <div className="hidden items-center gap-1.5 text-xs text-faint sm:flex">
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            Newest first
+            {t("Newest first")}
           </div>
         </div>
       </div>
@@ -86,12 +89,12 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
           <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-2/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
-                <th className="px-5 py-2.5">Date</th>
-                <th className="px-3 py-2.5">Title</th>
-                <th className="px-3 py-2.5">Project</th>
-                <th className="px-3 py-2.5">Type</th>
-                <th className="px-3 py-2.5">Author</th>
-                <th className="px-5 py-2.5 text-right">Actions</th>
+                <th className="px-5 py-2.5">{t("Date")}</th>
+                <th className="px-3 py-2.5">{t("Title")}</th>
+                <th className="px-3 py-2.5">{t("Project")}</th>
+                <th className="px-3 py-2.5">{t("Type")}</th>
+                <th className="px-3 py-2.5">{t("Author")}</th>
+                <th className="px-5 py-2.5 text-right">{t("Actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -123,7 +126,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
                       <span>
                         {m.actionItemsCount}
                         {m.openActionsCount > 0 ? (
-                          <span className="text-amber-600"> · {m.openActionsCount} open</span>
+                          <span className="text-amber-600"> · {fmt(t("{count} open"), { count: m.openActionsCount })}</span>
                         ) : null}
                       </span>
                     ) : (
@@ -141,15 +144,15 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <NotebookPen className="h-5 w-5" />
             </div>
-            <p className="text-sm font-semibold text-fg">No minutes match your filters</p>
-            <p className="text-xs text-muted">Try a different search term or clear the filters.</p>
+            <p className="text-sm font-semibold text-fg">{t("No minutes match your filters")}</p>
+            <p className="text-xs text-muted">{t("Try a different search term or clear the filters.")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {meetings.length} meetings
-        {type !== "ALL" ? ` · ${MEETING_TYPE_LABEL[type]}` : ""}
+        {fmt(t("Showing {count} of {total} meetings"), { count: rows.length, total: meetings.length })}
+        {type !== "ALL" ? ` · ${t(MEETING_TYPE_LABEL[type])}` : ""}
       </p>
     </div>
   );

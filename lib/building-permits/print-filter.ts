@@ -73,12 +73,16 @@ export function parsePermitPrintQuery(query: PermitPrintQuery = {}): PermitPrint
  * a desk says what it is a register OF. "Every permit" when nothing is filtered:
  * a header that says "All · All types · All authorities" says nothing.
  */
-export function describePermitPrintScope(request: PermitPrintRequest): string {
+export function describePermitPrintScope(
+  request: PermitPrintRequest,
+  /** Optional UI translator for the fixed words; user-typed values pass through untouched. */
+  t: (text: string) => string = (text) => text,
+): string {
   const parts: string[] = [];
-  if (request.status === "OPEN") parts.push("Open files");
-  else if (request.status !== "ALL") parts.push(PERMIT_STATUS_LABEL[request.status]);
-  if (request.permitType !== "ALL") parts.push(PERMIT_TYPE_LABEL[request.permitType]);
+  if (request.status === "OPEN") parts.push(t("Open files"));
+  else if (request.status !== "ALL") parts.push(t(PERMIT_STATUS_LABEL[request.status]));
+  if (request.permitType !== "ALL") parts.push(t(PERMIT_TYPE_LABEL[request.permitType]));
   if (request.authority) parts.push(request.authority);
-  if (request.q) parts.push(`matching “${request.q}”`);
-  return parts.length ? parts.join(" · ") : "Every permit";
+  if (request.q) parts.push(t("matching “{q}”").replace("{q}", request.q));
+  return parts.length ? parts.join(" · ") : t("Every permit");
 }

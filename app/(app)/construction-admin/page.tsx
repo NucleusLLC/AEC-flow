@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import {
   FileSignature,
   MessageSquareWarning,
@@ -29,6 +30,7 @@ import { formatCurrencyCompact, formatCurrency } from "@/lib/format";
 export const metadata = { title: "Construction Admin · AEC-flow" };
 
 const RISK_TONE = { LOW: "green", MEDIUM: "amber", HIGH: "red" } as const;
+const RISK_LABEL = { LOW: "Low", MEDIUM: "Medium", HIGH: "High" } as const;
 
 function ToneIcon({ tone }: { tone?: "up" | "down" | "flat" }) {
   if (tone === "up") return <TrendingUp className="h-4 w-4 text-emerald-500" />;
@@ -50,10 +52,10 @@ export default async function ConstructionAdminPage() {
   const money = (v: number) => formatCurrencyCompact(v, dash.currency);
   const schedule =
     dash.scheduleStatusDays === 0
-      ? "On schedule"
+      ? tr("On schedule")
       : dash.scheduleStatusDays > 0
-        ? `+${dash.scheduleStatusDays}d slip`
-        : `${dash.scheduleStatusDays}d ahead`;
+        ? fmt(tr("+{days}d slip"), { days: dash.scheduleStatusDays })
+        : fmt(tr("{days}d ahead"), { days: dash.scheduleStatusDays });
 
   const tiles: Array<{ label: string; value: string; hint?: string; tone?: "up" | "down" | "flat" }> = [
     { label: "Original Contract", value: money(dash.originalContractValue) },
@@ -96,16 +98,16 @@ export default async function ConstructionAdminPage() {
         {tiles.map((t) => (
           <Card key={t.label} className="p-4">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-muted">{t.label}</div>
+              <div className="text-xs text-muted">{tr(t.label)}</div>
               <ToneIcon tone={t.tone} />
             </div>
             <div className="mt-1.5 text-lg font-semibold tracking-tight text-fg">{t.value}</div>
           </Card>
         ))}
         <Card className="p-4">
-          <div className="text-xs text-muted">Current Risk Level</div>
+          <div className="text-xs text-muted">{tr("Current Risk Level")}</div>
           <div className="mt-2">
-            <Badge tone={RISK_TONE[dash.riskLevel]}>{dash.riskLevel}</Badge>
+            <Badge tone={RISK_TONE[dash.riskLevel]}>{tr(RISK_LABEL[dash.riskLevel])}</Badge>
           </div>
         </Card>
       </div>
@@ -119,7 +121,7 @@ export default async function ConstructionAdminPage() {
               <Card className="flex items-center justify-between p-4 transition-colors hover:border-brand/40 hover:bg-surface-2">
                 <span className="inline-flex items-center gap-2.5 text-sm font-medium text-fg">
                   <Icon className="h-4 w-4 text-faint" />
-                  {q.label}
+                  {tr(q.label)}
                   {q.count !== null ? <span className="text-xs text-faint">({q.count})</span> : null}
                 </span>
                 <ArrowRight className="h-4 w-4 text-faint transition-transform group-hover:translate-x-0.5" />
@@ -133,9 +135,9 @@ export default async function ConstructionAdminPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <h3 className="text-sm font-semibold text-fg">Recent Change Orders</h3>
+            <h3 className="text-sm font-semibold text-fg">{tr("Recent Change Orders")}</h3>
             <Link href="/construction-admin/change-orders" className="text-xs text-brand hover:underline">
-              View all
+              {tr("View all")}
             </Link>
           </div>
           <ul className="divide-y divide-border">
@@ -158,9 +160,9 @@ export default async function ConstructionAdminPage() {
 
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <h3 className="text-sm font-semibold text-fg">Open RFIs &amp; Certifications</h3>
+            <h3 className="text-sm font-semibold text-fg">{tr("Open RFIs & Certifications")}</h3>
             <Link href="/construction-admin/rfis" className="text-xs text-brand hover:underline">
-              View all
+              {tr("View all")}
             </Link>
           </div>
           <ul className="divide-y divide-border">

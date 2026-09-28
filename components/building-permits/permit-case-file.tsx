@@ -27,6 +27,7 @@ import { PermitVersions } from "@/components/building-permits/permit-versions";
 import { lapsedMonths, militaryDate, permitVersion } from "@/lib/building-permits/register";
 import type { BuildingPermitDTO } from "@/lib/building-permits/types";
 import { permitSnapshotAction } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
 
 export function PermitCaseFile({
   initial,
@@ -35,6 +36,7 @@ export function PermitCaseFile({
   initial: BuildingPermitDTO;
   today: string;
 }) {
+  const t = useT();
   const [permit, setPermit] = useState(initial);
   const [staleError, setStaleError] = useState<string | null>(null);
 
@@ -46,9 +48,9 @@ export function PermitCaseFile({
     } else {
       // The write itself already succeeded; say what is actually wrong rather
       // than leaving a stale screen that looks like nothing happened.
-      setStaleError(`${res.error} Reload the page to see the current file.`);
+      setStaleError(`${t(res.error)} ${t("Reload the page to see the current file.")}`);
     }
-  }, [permit.id]);
+  }, [permit.id, t]);
 
   const version = permitVersion(permit);
   const lapsed = lapsedMonths(permit, today);
@@ -56,15 +58,15 @@ export function PermitCaseFile({
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-4">
-        <Stat label="Version #" value={version ? `V${version.version}` : "—"} />
-        <Stat label="Submittal date" value={militaryDate(permit.submittedAt)} />
+        <Stat label={t("Version #")} value={version ? `V${version.version}` : "—"} />
+        <Stat label={t("Submittal date")} value={militaryDate(permit.submittedAt)} />
         <Stat
-          label="Lapsed (months)"
+          label={t("Lapsed (months)")}
           value={lapsed ? lapsed.months.toFixed(1) : "—"}
-          note={lapsed ? (lapsed.running ? "running" : "final") : undefined}
+          note={lapsed ? (lapsed.running ? t("running") : t("final")) : undefined}
         />
         <Stat
-          label="Permit ready date"
+          label={t("Permit ready date")}
           value={militaryDate(permit.issuedAt)}
           tone={permit.issuedAt ? "green" : undefined}
         />
@@ -76,7 +78,7 @@ export function PermitCaseFile({
         <EmailButton
           subject={`Building permit ${permit.permitNumber ?? permit.reference} — ${permit.title}`}
           attachment={`${permit.permitNumber ?? permit.reference} — Permit file`}
-          label="Email this file"
+          label={t("Email this file")}
           relatedType="building-permit"
           relatedId={permit.id}
           linkPath={`/print/design/building-permits/${permit.id}`}
@@ -97,8 +99,8 @@ export function PermitCaseFile({
 
       <Card>
         <CardHeader
-          title="Versions"
-          subtitle="V1 is the first submittal; each resubmission is the next version."
+          title={t("Versions")}
+          subtitle={t("V1 is the first submittal; each resubmission is the next version.")}
         />
         <CardBody>
           <PermitVersions
@@ -113,8 +115,8 @@ export function PermitCaseFile({
       <div id="correspondence" className="scroll-mt-6">
         <Card>
           <CardHeader
-            title="Correspondence"
-            subtitle="Every letter to and from the authority, with its PDF."
+            title={t("Correspondence")}
+            subtitle={t("Every letter to and from the authority, with its PDF.")}
           />
           <CardBody>
             <PermitCorrespondence
@@ -129,8 +131,8 @@ export function PermitCaseFile({
       <div id="approvals" className="scroll-mt-6">
         <Card>
           <CardHeader
-            title="Approvals"
-            subtitle="Concept first, then the stages the authority signs off one at a time."
+            title={t("Approvals")}
+            subtitle={t("Concept first, then the stages the authority signs off one at a time.")}
           />
           <CardBody>
             <PermitApprovals
@@ -146,8 +148,8 @@ export function PermitCaseFile({
       <div id="meetings" className="scroll-mt-6">
         <Card>
           <CardHeader
-            title="Meetings"
-            subtitle="Minutes of meetings about this permit — not the client meeting register."
+            title={t("Meetings")}
+            subtitle={t("Minutes of meetings about this permit — not the client meeting register.")}
           />
           <CardBody>
             <PermitMeetings
@@ -163,8 +165,8 @@ export function PermitCaseFile({
       <div id="documents" className="scroll-mt-6">
         <Card>
           <CardHeader
-            title="Files"
-            subtitle="The stamped form, receipts, photos — anything on the case that is not a letter."
+            title={t("Files")}
+            subtitle={t("The stamped form, receipts, photos — anything on the case that is not a letter.")}
           />
           <CardBody>
             <PermitDocuments
@@ -178,14 +180,14 @@ export function PermitCaseFile({
       </div>
 
       <Card>
-        <CardHeader title="Case file" />
+        <CardHeader title={t("Case file")} />
         <CardBody className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {facts(permit).map((f) => (
             <div
               key={f.label}
               className="flex items-baseline justify-between gap-3 border-b border-border/60 pb-2 text-sm"
             >
-              <span className="text-muted">{f.label}</span>
+              <span className="text-muted">{t(f.label)}</span>
               <span className={`text-right text-fg ${f.mono ? "font-mono text-xs" : ""}`}>
                 {f.value}
               </span>

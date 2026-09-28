@@ -2,6 +2,7 @@ import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
 
 /**
  * Shared A4 print surface for Land Development reports — practice letterhead
@@ -41,6 +42,7 @@ export async function DevPrintShell({
 }) {
   const { logoDataUrl, logo } = await getPracticeSettings();
   const firm = await getFirmIdentity();
+  const t = await getServerT();
   const companyName = firm.name;
   return (
     <PrintSurface backHref={backHref}>
@@ -48,7 +50,7 @@ export async function DevPrintShell({
       <DocumentLetterhead
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
         name={companyName}
-        tagline="Development · Land · Project Management"
+        tagline={t("Development · Land · Project Management")}
         borderClass="border-b-2 border-gray-900 pb-4"
         details={
           <div className="text-right">
@@ -72,10 +74,8 @@ export async function DevPrintShell({
       {children}
 
       <p className="mt-8 text-[9px] leading-relaxed text-gray-400">
-        Disclaimer: This development pro-forma is issued for planning and feasibility purposes.
-        Figures are based on information available at the date of issue and remain subject to
-        verification, market conditions, permit outcomes and final account. Not an offer or a
-        guarantee of returns. © {companyName}.
+        {t("Disclaimer: This development pro-forma is issued for planning and feasibility purposes. Figures are based on information available at the date of issue and remain subject to verification, market conditions, permit outcomes and final account. Not an offer or a guarantee of returns.")}{" "}
+        © {companyName}.
       </p>
       <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
         {companyName} · {refNumber} · {docTitle}

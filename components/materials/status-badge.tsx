@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useT } from "@/components/i18n/language-provider";
 import { MATERIAL_STATUS_LABEL, type MaterialSelectionStatus } from "@/lib/materials/types";
 
 const TONE: Record<
@@ -14,5 +17,6 @@ const TONE: Record<
 };
 
 export function MaterialStatusBadge({ status }: { status: MaterialSelectionStatus }) {
-  return <Badge tone={TONE[status]}>{MATERIAL_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={TONE[status]}>{t(MATERIAL_STATUS_LABEL[status])}</Badge>;
 }

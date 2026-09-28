@@ -7,6 +7,7 @@ import { SaveControl } from "@/components/development/save-control";
 import { computeCashFlow, type CashFlowMonthInput } from "@/lib/development/calc";
 import type { CashFlowMonth } from "@/lib/data/development.types";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
 
 const cell = "border-b border-border px-2 py-1.5";
 const numInput = "h-8 w-24 rounded border border-transparent bg-transparent px-1.5 text-right text-sm tabular-nums text-fg hover:border-border focus:border-brand focus:bg-surface focus:outline-none";
@@ -26,6 +27,7 @@ const COLS: Array<{ key: Field; label: string }> = [
 ];
 
 export function CashFlowPlanner({ projectId, months: initial, currency }: { projectId: string; months: CashFlowMonth[]; currency: string }) {
+  const t = useT();
   const [months, setMonths] = useState(initial);
   const set = (id: string, k: Field, v: number) => setMonths((p) => p.map((m) => (m.id === id ? { ...m, [k]: v } : m)));
 
@@ -42,10 +44,10 @@ export function CashFlowPlanner({ projectId, months: initial, currency }: { proj
   const chartData = result.months.map((m) => ({ month: m.month, closing: m.closingCash }));
 
   const metrics = [
-    { label: "Peak capital requirement", value: formatCurrency(result.peakCapitalRequirement, currency), hint: result.peakNegativeMonth ?? "—" },
-    { label: "Break-even month", value: result.breakEvenMonth ?? "—" },
-    { label: "Payback month", value: result.paybackMonth ?? "—" },
-    { label: "Final cash position", value: formatCurrency(result.months.at(-1)?.closingCash ?? 0, currency) },
+    { label: t("Peak capital requirement"), value: formatCurrency(result.peakCapitalRequirement, currency), hint: result.peakNegativeMonth ?? "—" },
+    { label: t("Break-even month"), value: result.breakEvenMonth ?? "—" },
+    { label: t("Payback month"), value: result.paybackMonth ?? "—" },
+    { label: t("Final cash position"), value: formatCurrency(result.months.at(-1)?.closingCash ?? 0, currency) },
   ];
 
   return (
@@ -61,7 +63,7 @@ export function CashFlowPlanner({ projectId, months: initial, currency }: { proj
       </div>
 
       <Card>
-        <CardHeader title="Cumulative cash position" subtitle="The trough is the peak capital you must fund" />
+        <CardHeader title={t("Cumulative cash position")} subtitle={t("The trough is the peak capital you must fund")} />
         <CardBody>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={chartData}>
@@ -83,14 +85,14 @@ export function CashFlowPlanner({ projectId, months: initial, currency }: { proj
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader title="Monthly cash-flow planner" action={<SaveControl url={`/api/development/${projectId}/cash-flow`} build={() => ({ months })} label="Save cash flow" />} />
+        <CardHeader title={t("Monthly cash-flow planner")} action={<SaveControl url={`/api/development/${projectId}/cash-flow`} build={() => ({ months })} label={t("Save cash flow")} />} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-2 py-2 font-medium">Month</th>
-                {COLS.map((c) => <th key={c.key} className="px-2 py-2 text-right font-medium">{c.label}</th>)}
-                <th className="px-2 py-2 text-right font-medium">Closing</th>
+                <th className="px-2 py-2 font-medium">{t("Month")}</th>
+                {COLS.map((c) => <th key={c.key} className="px-2 py-2 text-right font-medium">{t(c.label)}</th>)}
+                <th className="px-2 py-2 text-right font-medium">{t("Closing cash")}</th>
               </tr>
             </thead>
             <tbody>
@@ -106,7 +108,7 @@ export function CashFlowPlanner({ projectId, months: initial, currency }: { proj
             </tbody>
           </table>
         </div>
-        <p className="px-4 py-2 text-[11px] text-faint">Closing cash, peak capital and break-even recalculate instantly as you edit.</p>
+        <p className="px-4 py-2 text-[11px] text-faint">{t("Closing cash, peak capital and break-even recalculate instantly as you edit.")}</p>
       </Card>
     </div>
   );

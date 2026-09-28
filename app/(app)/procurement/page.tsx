@@ -5,14 +5,19 @@ import { PurchaseOrderList } from "@/components/procurement/purchase-order-list"
 import { ProjectFilterBanner } from "@/components/projects/project-filter-banner";
 import { getProject } from "@/lib/data/projects";
 import { formatCurrency } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Procurement · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Procurement")} · AEC-flow` };
+}
 
 export default async function ProcurementPage({
   searchParams,
 }: {
   searchParams: Promise<{ project?: string }>;
 }) {
+  const t = await getServerT();
   const { project } = await searchParams;
   const proj = project ? await getProject(project) : null;
   const allOrders = await listPurchaseOrders();
@@ -24,8 +29,8 @@ export default async function ProcurementPage({
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Procurement</h2>
-          <p className="text-sm text-muted">Purchase orders issued to suppliers — track ordering through delivery.</p>
+          <h2 className="text-xl font-semibold text-fg">{t("Procurement")}</h2>
+          <p className="text-sm text-muted">{t("Purchase orders issued to suppliers — track ordering through delivery.")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
@@ -33,14 +38,14 @@ export default async function ProcurementPage({
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <PackagePlus className="h-4 w-4" />
-            From selections
+            {t("From selections")}
           </Link>
           <Link
             href="/procurement/new"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
-            New Purchase Order
+            {t("New Purchase Order")}
           </Link>
         </div>
       </div>
@@ -49,10 +54,10 @@ export default async function ProcurementPage({
         <ProjectFilterBanner projectName={proj.name} clearHref="/procurement" />
       ) : summary ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile icon={ClipboardList} label="Purchase orders" value={String(summary.total)} />
-          <Tile icon={ShoppingCart} label="Open" value={String(summary.open)} />
-          <Tile icon={CircleDollarSign} label="Open value" value={money(summary.openValue)} />
-          <Tile icon={PackageCheck} label="Received value" value={money(summary.receivedValue)} />
+          <Tile icon={ClipboardList} label={t("Purchase orders")} value={String(summary.total)} />
+          <Tile icon={ShoppingCart} label={t("Open")} value={String(summary.open)} />
+          <Tile icon={CircleDollarSign} label={t("Open value")} value={money(summary.openValue)} />
+          <Tile icon={PackageCheck} label={t("Received value")} value={money(summary.receivedValue)} />
         </div>
       ) : null}
 

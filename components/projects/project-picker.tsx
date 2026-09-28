@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { Search, ArrowLeft, ChevronUp, ChevronDown, ChevronsUpDown, FolderKanban } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export type ProjectPickerRow = {
   key: string;
@@ -27,6 +29,7 @@ export function ProjectPicker({
   onSelect: (key: string) => void;
 }) {
   const [q, setQ] = useState("");
+  const t = useT();
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "projectNumber", dir: 1 });
 
   const list = useMemo(() => {
@@ -46,12 +49,12 @@ export function ProjectPicker({
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/50 px-4 py-3">
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-          <FolderKanban className="h-4 w-4 text-brand" /> {title}
-          <span className="text-xs font-normal text-faint">· {rows.length} projects</span>
+          <FolderKanban className="h-4 w-4 text-brand" /> {t(title)}
+          <span className="text-xs font-normal text-faint">· {fmt(t(rows.length === 1 ? "1 project" : "{count} projects"), { count: rows.length })}</span>
         </div>
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search number, name, location, client…" className="h-8 w-72 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search number, name, location, client…")} className="h-8 w-72 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
         </div>
       </div>
 
@@ -59,11 +62,11 @@ export function ProjectPicker({
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-slate-200">
-              <Th label="Project No." k="projectNumber" sort={sort} onSort={toggleSort} />
-              <Th label="Project Name" k="projectName" sort={sort} onSort={toggleSort} />
-              <Th label="Location" k="location" sort={sort} onSort={toggleSort} />
-              <Th label="Client" k="client" sort={sort} onSort={toggleSort} />
-              <Th label={countLabel} k="count" sort={sort} onSort={toggleSort} align="right" />
+              <Th label={t("Project No.")} k="projectNumber" sort={sort} onSort={toggleSort} />
+              <Th label={t("Project Name")} k="projectName" sort={sort} onSort={toggleSort} />
+              <Th label={t("Location")} k="location" sort={sort} onSort={toggleSort} />
+              <Th label={t("Client")} k="client" sort={sort} onSort={toggleSort} />
+              <Th label={t(countLabel)} k="count" sort={sort} onSort={toggleSort} align="right" />
             </tr>
           </thead>
           <tbody>
@@ -77,12 +80,12 @@ export function ProjectPicker({
               </tr>
             ))}
             {!list.length ? (
-              <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-muted">No projects match “{q}”.</td></tr>
+              <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-muted">{fmt(t("No projects match “{query}”."), { query: q })}</td></tr>
             ) : null}
           </tbody>
         </table>
       </div>
-      <p className="border-t border-border px-4 py-2 text-[11px] text-faint">Click a project to open its {title.toLowerCase()}. Click a column header to sort.</p>
+      <p className="border-t border-border px-4 py-2 text-[11px] text-faint">{fmt(t("Click a project to open its {what}. Click a column header to sort."), { what: t(title).toLowerCase() })}</p>
     </Card>
   );
 }
@@ -118,10 +121,11 @@ export function ProjectCrumb({
   onBack: () => void;
   emphasizeNumber?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg">
-        <ArrowLeft className="h-4 w-4" /> All projects
+        <ArrowLeft className="h-4 w-4" /> {t("All projects")}
       </button>
       <span className="text-sm text-faint">/</span>
       <span className={emphasizeNumber ? "font-mono text-sm font-medium text-fg" : "font-mono text-xs text-faint"}>{row.projectNumber}</span>

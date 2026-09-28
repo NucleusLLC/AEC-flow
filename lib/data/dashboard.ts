@@ -24,7 +24,11 @@ export type DashboardStat = {
   key: string;
   label: string;
   value: string;
+  /** English hint, kept for callers that do not translate. */
   hint: string;
+  /** The hint as a translatable template with {slots}, and the values to fill. */
+  hintTemplate?: string;
+  hintVars?: Record<string, string | number>;
   trend?: Trend;
 };
 
@@ -99,6 +103,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       label: "Active Projects",
       value: String(projSummary.active),
       hint: `${projSummary.atRisk} at risk`,
+      hintTemplate: "{count} at risk",
+      hintVars: { count: projSummary.atRisk },
       trend: { value: 12, direction: "up" },
     },
     {
@@ -106,6 +112,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       label: "Pipeline Value",
       value: formatCurrencyCompact(propSummary.openValue),
       hint: `across ${propSummary.openCount} open proposals`,
+      hintTemplate: "across {count} open proposals",
+      hintVars: { count: propSummary.openCount },
       trend: { value: 8, direction: "up" },
     },
     {
@@ -113,6 +121,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       label: "Awaiting Approval",
       value: String(propSummary.awaitingCount),
       hint: `${formatCurrencyCompact(propSummary.awaitingValue)} pending`,
+      hintTemplate: "{amount} pending",
+      hintVars: { amount: formatCurrencyCompact(propSummary.awaitingValue) },
       trend: { value: 2, direction: "down" },
     },
     {
@@ -120,6 +130,8 @@ export async function getDashboardData(): Promise<DashboardData> {
       label: "Team Utilisation",
       value: `${teamSummary.avgUtilisation}%`,
       hint: `${teamSummary.onLeave} of ${teamSummary.total} on leave`,
+      hintTemplate: "{count} of {total} on leave",
+      hintVars: { count: teamSummary.onLeave, total: teamSummary.total },
       trend: { value: 3, direction: "up" },
     },
   ];

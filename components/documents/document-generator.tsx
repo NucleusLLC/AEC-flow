@@ -8,6 +8,8 @@ import { useModule } from "@/components/shell/module-provider";
 import { recordGeneratedDocument } from "@/app/(app)/documents/actions";
 import { docsFor, docLabel, SOURCE_LABEL, type SourceSystem } from "@/lib/documents/catalog";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 interface RecordOption {
   id: string;
@@ -33,6 +35,7 @@ export function DocumentGenerator({
   initialSource: SourceSystem;
   initialRecordId: string;
 }) {
+  const t = useT();
   const { moduleKey, module } = useModule();
   const [source, setSource] = useState<SourceSystem>(initialSource);
   const records = source === "estimates" ? estimateRecords : scheduleRecords;
@@ -95,15 +98,16 @@ export function DocumentGenerator({
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-fg">Document Generator</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-fg">{t("Document Generator")}</h1>
         <p className="mt-1 text-sm text-muted">
-          Generate documents from Estimates or Schedule. The source data is read as-is — nothing is
-          recalculated or modified here.
+          {t(
+            "Generate documents from Estimates or Schedule. The source data is read as-is — nothing is recalculated or modified here.",
+          )}
         </p>
       </div>
 
       <Card>
-        <CardHeader title="1 · Source system" />
+        <CardHeader title={t("1 · Source system")} />
         <CardBody className="flex gap-3">
           {(["estimates", "schedule"] as SourceSystem[]).map((s) => (
             <button
@@ -117,17 +121,22 @@ export function DocumentGenerator({
                   : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg",
               )}
             >
-              {SOURCE_LABEL[s]}
+              {t(SOURCE_LABEL[s])}
             </button>
           ))}
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="2 · Source record" subtitle={`${records.length} available`} />
+        <CardHeader
+          title={t("2 · Source record")}
+          subtitle={fmt(t("{count} available"), { count: records.length })}
+        />
         <CardBody>
           {records.length === 0 ? (
-            <p className="text-sm text-muted">No {SOURCE_LABEL[source].toLowerCase()} records yet.</p>
+            <p className="text-sm text-muted">
+              {source === "estimates" ? t("No estimate records yet.") : t("No schedule records yet.")}
+            </p>
           ) : (
             <select
               value={recordId}
@@ -148,7 +157,7 @@ export function DocumentGenerator({
       </Card>
 
       <Card>
-        <CardHeader title="3 · Document type" />
+        <CardHeader title={t("3 · Document type")} />
         <CardBody>
           <div className="grid gap-2 sm:grid-cols-2">
             {docs.map((d) => (
@@ -166,10 +175,10 @@ export function DocumentGenerator({
                     : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg",
                 )}
               >
-                <span>{d.label}</span>
+                <span>{t(d.label)}</span>
                 {!d.backed ? (
                   <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
-                    Soon
+                    {t("Soon")}
                   </span>
                 ) : null}
               </button>
@@ -180,19 +189,22 @@ export function DocumentGenerator({
 
       {/* Source-version block (spec §12/§13) */}
       <Card>
-        <CardHeader title="Document identity" subtitle="Stamped on every generated document" />
+        <CardHeader title={t("Document identity")} subtitle={t("Stamped on every generated document")} />
         <CardBody>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 font-mono text-xs sm:grid-cols-2">
-            <Row k="Source System" v={SOURCE_LABEL[source]} />
-            <Row k={`${SOURCE_LABEL[source]} Record`} v={record?.id ?? "—"} />
+            <Row k={t("Source System")} v={t(SOURCE_LABEL[source])} />
             <Row
-              k={`${SOURCE_LABEL[source]} Version`}
-              v={record?.version ?? "n/a (no version mechanism)"}
+              k={source === "estimates" ? t("Estimates Record") : t("Schedule Record")}
+              v={record?.id ?? "—"}
             />
-            <Row k="Generated Through" v="AEC-Flow Document Generator" />
-            <Row k="Active Module" v={`Module ${module.number}`} />
-            <Row k="Module Version" v={module.version} />
-            <Row k="Generation Date" v={today} />
+            <Row
+              k={source === "estimates" ? t("Estimates Version") : t("Schedule Version")}
+              v={record?.version ?? t("n/a (no version mechanism)")}
+            />
+            <Row k={t("Generated Through")} v="AEC-Flow Document Generator" />
+            <Row k={t("Active Module")} v={fmt(t("Module {number}"), { number: module.number })} />
+            <Row k={t("Module Version")} v={module.version} />
+            <Row k={t("Generation Date")} v={today} />
           </dl>
         </CardBody>
       </Card>
@@ -201,8 +213,13 @@ export function DocumentGenerator({
         <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            <strong>{doc.label}</strong> doesn&apos;t have a dedicated renderer yet. You can still
-            record the intent, but the printable output isn&apos;t available for this type.
+            {t(
+              "{type} doesn't have a dedicated renderer yet. You can still record the intent, but the printable output isn't available for this type.",
+            )
+              .split(/(\{type\})/)
+              .map((part, i) =>
+                part === "{type}" ? <strong key={i}>{t(doc.label)}</strong> : part,
+              )}
           </span>
         </div>
       ) : null}
@@ -214,7 +231,7 @@ export function DocumentGenerator({
           disabled={!backed}
           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Printer className="h-4 w-4" /> Open &amp; print
+          <Printer className="h-4 w-4" /> {t("Open & print")}
         </button>
         <button
           type="button"
@@ -222,13 +239,13 @@ export function DocumentGenerator({
           disabled={!record || pending}
           className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Save className="h-4 w-4" /> {pending ? "Recording…" : "Record in register"}
+          <Save className="h-4 w-4" /> {pending ? t("Recording…") : t("Record in register")}
         </button>
         <Link
           href="/documents/register"
           className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-fg"
         >
-          <FolderArchive className="h-4 w-4" /> View register
+          <FolderArchive className="h-4 w-4" /> {t("View register")}
         </Link>
       </div>
 
@@ -247,7 +264,7 @@ export function DocumentGenerator({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           )}
           <span>
-            {result.msg}
+            {t(result.msg)}
             {result.migration ? (
               <span className="mt-1 block font-mono text-xs opacity-80">prisma db push</span>
             ) : null}

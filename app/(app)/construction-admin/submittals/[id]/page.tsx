@@ -7,6 +7,7 @@ import { SubmittalStatusBadge, DisciplineBadge } from "@/components/construction
 import { SubmittalReview } from "@/components/construction-admin/submittal-review";
 import { getSubmittal } from "@/lib/data/ca/submittals";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -26,6 +27,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export default async function SubmittalDetailPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const sub = await getSubmittal(id);
   if (!sub) notFound();
@@ -34,7 +36,7 @@ export default async function SubmittalDetailPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/submittals" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Submittals
+        {t("Submittals")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -55,7 +57,7 @@ export default async function SubmittalDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Description" />
+            <CardHeader title={t("Description")} />
             <CardBody>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{sub.description ?? "—"}</p>
             </CardBody>
@@ -63,7 +65,7 @@ export default async function SubmittalDetailPage({ params }: PageProps) {
 
           {sub.reviewerComments ? (
             <Card>
-              <CardHeader title="Reviewer comments" subtitle={sub.reviewedBy ? `By ${sub.reviewedBy}` : undefined} />
+              <CardHeader title={t("Reviewer comments")} subtitle={sub.reviewedBy ? `By ${sub.reviewedBy}` : undefined} />
               <CardBody>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{sub.reviewerComments}</p>
               </CardBody>
@@ -80,13 +82,13 @@ export default async function SubmittalDetailPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label="Submitted by">{sub.submittedBy ?? "—"}</Row>
-              <Row label="Reviewed by">{sub.reviewedBy ?? "—"}</Row>
-              <Row label="Required by">{formatDate(sub.dateRequired)}</Row>
-              <Row label="Submitted">{formatDate(sub.dateSubmitted)}</Row>
-              <Row label="Reviewed">{formatDate(sub.dateReviewed)}</Row>
+              <Row label={t("Submitted by")}>{sub.submittedBy ?? "—"}</Row>
+              <Row label={t("Reviewed by")}>{sub.reviewedBy ?? "—"}</Row>
+              <Row label={t("Required by")}>{formatDate(sub.dateRequired)}</Row>
+              <Row label={t("Submitted")}>{formatDate(sub.dateSubmitted)}</Row>
+              <Row label={t("Reviewed")}>{formatDate(sub.dateReviewed)}</Row>
             </CardBody>
           </Card>
         </div>

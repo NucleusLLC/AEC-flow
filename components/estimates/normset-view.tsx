@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { ESTIMATE_UNITS } from "@/lib/data/estimates.types";
 import { normTrades, type NormSetTask } from "@/lib/data/estimate-presets";
 import { saveNormSetAction } from "@/app/(app)/estimates/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const numCls =
   "w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-right text-xs tabular-nums text-fg outline-none hover:border-border focus:border-border focus:ring-1 focus:ring-brand/30";
@@ -19,6 +21,7 @@ export function NormSetView({
   normSet: NormSetTask[];
   setNormSet: React.Dispatch<React.SetStateAction<NormSetTask[]>>;
 }) {
+  const t = useT();
   const seq = useRef(1);
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState(false);
@@ -54,27 +57,27 @@ export function NormSetView({
     <div className="space-y-4">
       <Card className="flex flex-wrap items-center gap-3 px-4 py-3">
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-          <ListChecks className="h-4 w-4 text-brand" /> Norm Set List
+          <ListChecks className="h-4 w-4 text-brand" /> {t("Norm Set List")}
         </div>
         <p className="text-xs text-muted">
-          Standard tasks with fixed Norm Hrs/Unit & costs. Edit freely — changes feed the “＋ Norm Set” picker, the Take-Off and the sheet.
+          {t("Standard tasks with fixed Norm Hrs/Unit & costs. Edit freely — changes feed the “＋ Norm Set” picker, the Take-Off and the sheet.")}
         </p>
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search tasks…"
+            placeholder={t("Search tasks…")}
             className="h-8 w-56 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30"
           />
         </div>
         <button type="button" onClick={() => add("General")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
-          <Plus className="h-4 w-4" /> Add task
+          <Plus className="h-4 w-4" /> {t("Add task")}
         </button>
         <button type="button" onClick={onSave} disabled={saving} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-          <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
+          <Save className="h-3.5 w-3.5" /> {saving ? t("Saving…") : t("Save")}
         </button>
-        {saveMsg === "saved" ? <span className="text-[11px] font-medium text-green-600">Saved ✓</span> : saveMsg ? <span className="text-[11px] text-red-600" title={saveMsg}>Save failed</span> : null}
+        {saveMsg === "saved" ? <span className="text-[11px] font-medium text-green-600">{t("Saved ✓")}</span> : saveMsg ? <span className="text-[11px] text-red-600" title={t(saveMsg)}>{t("Save failed")}</span> : null}
       </Card>
 
       <Card className="overflow-hidden">
@@ -82,14 +85,14 @@ export function NormSetView({
           <table className="w-full min-w-[860px] border-collapse text-sm">
             <thead>
               <tr className="text-[10px] uppercase tracking-wide text-faint">
-                <th className="border-b border-border px-2 py-1.5 text-left text-faint">Trade</th>
-                <th className="border-b border-border px-2 py-1.5 text-left text-faint">Code</th>
-                <th className="border-b border-border px-2 py-1.5 text-left text-faint">Task</th>
-                <th className="border-b border-border px-2 py-1.5 text-center text-faint">Unit</th>
-                <th className="border-b border-l border-border px-2 py-1.5 text-right text-faint">Norm hr/u</th>
-                <th className="border-b border-border px-2 py-1.5 text-right text-faint">Material</th>
-                <th className="border-b border-border px-2 py-1.5 text-right text-faint">Equipment</th>
-                <th className="border-b border-border px-2 py-1.5 text-right text-faint">Subcontract</th>
+                <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Trade")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Code")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-left text-faint">{t("Task")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-center text-faint">{t("Unit")}</th>
+                <th className="border-b border-l border-border px-2 py-1.5 text-right text-faint">{t("Norm hr/u")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-right text-faint">{t("Material")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-right text-faint">{t("Equipment")}</th>
+                <th className="border-b border-border px-2 py-1.5 text-right text-faint">{t("Subcontract")}</th>
                 <th className="border-b border-border px-1 py-1.5" />
               </tr>
             </thead>
@@ -103,7 +106,7 @@ export function NormSetView({
                     <input value={n.code ?? ""} onChange={(e) => patch(n.id, { code: e.target.value.toUpperCase() })} className={`${txtCls} min-w-[80px] font-mono text-[11px] uppercase text-muted`} placeholder="CODE" />
                   </td>
                   <td className="px-2 py-1">
-                    <input value={n.task} onChange={(e) => patch(n.id, { task: e.target.value })} className={`${txtCls} min-w-[200px]`} placeholder="Task description" />
+                    <input value={n.task} onChange={(e) => patch(n.id, { task: e.target.value })} className={`${txtCls} min-w-[200px]`} placeholder={t("Task description")} />
                   </td>
                   <td className="px-2 py-1 text-center">
                     <select value={n.unit} onChange={(e) => patch(n.id, { unit: e.target.value })} className="rounded border border-transparent bg-transparent px-1 py-0.5 text-xs text-fg outline-none hover:border-border focus:ring-1 focus:ring-brand/30">
@@ -125,7 +128,7 @@ export function NormSetView({
                     <input type="number" value={n.subcontractUnitCost ?? 0} onChange={(e) => patch(n.id, { subcontractUnitCost: Number(e.target.value) || 0 })} className={numCls} />
                   </td>
                   <td className="px-1 py-1 text-center">
-                    <button type="button" onClick={() => remove(n.id)} aria-label="Remove task" className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600">
+                    <button type="button" onClick={() => remove(n.id)} aria-label={t("Remove task")} className="inline-flex h-6 w-6 items-center justify-center rounded text-faint hover:text-red-600">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </td>
@@ -133,19 +136,19 @@ export function NormSetView({
               ))}
               {!filtered.length ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted">No tasks match “{q}”.</td>
+                  <td colSpan={9} className="px-3 py-8 text-center text-sm text-muted">{fmt(t("No tasks match “{query}”."), { query: q })}</td>
                 </tr>
               ) : null}
             </tbody>
           </table>
         </div>
         <datalist id="norm-trades">
-          {trades.map((t) => (
-            <option key={t} value={t} />
+          {trades.map((tr) => (
+            <option key={tr} value={tr} />
           ))}
         </datalist>
         <p className="border-t border-border px-4 py-2 text-[11px] text-faint">
-          {normSet.length} tasks · Save persists the Norm Set to the database (it feeds the “＋ Norm Set” picker, Take-Off and the sheet).
+          {fmt(t("{count} tasks · Save persists the Norm Set to the database (it feeds the “＋ Norm Set” picker, Take-Off and the sheet)."), { count: normSet.length })}
         </p>
       </Card>
     </div>

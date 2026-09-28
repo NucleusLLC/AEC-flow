@@ -32,6 +32,8 @@
 
 import { useEffect, useId, useRef, useState, useTransition, type ReactNode } from "react";
 import { AlertTriangle, Plus } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /** Sentinel `<option>` value. Not a possible record id, so it cannot collide. */
 const ADD_NEW = "__creatable_select_add_new__";
@@ -90,7 +92,7 @@ export function CreatableSelect({
   create,
   renderCreate,
   addLabel,
-  placeholder = "Select…",
+  placeholder: placeholderProp,
   allowEmpty = false,
   hint,
   disabled,
@@ -141,6 +143,8 @@ export function CreatableSelect({
    */
   onCreateOpen?: () => void;
 }) {
+  const t = useT();
+  const placeholder = placeholderProp ?? t("Select…");
   const autoId = useId();
   const selectId = id ?? `creatable-${autoId}`;
   const panelId = `${selectId}-create`;
@@ -197,7 +201,9 @@ export function CreatableSelect({
   // record is listed twice.
   const mine = created.filter((c) => !options.some((o) => o.value === c.value));
   const all = [...orphan, ...options, ...mine];
-  const addText = addLabel ?? `＋ Add a new ${(create?.title ?? "record").replace(/^new\s+/i, "")}`;
+  const addText =
+    addLabel ??
+    `＋ ${fmt(t("Add a new {thing}"), { thing: (create?.title ?? t("record")).replace(/^new\s+/i, "") })}`;
 
   function accept(option: CreatableOption) {
     setCreated((prev) => [...prev, option]);
@@ -222,7 +228,7 @@ export function CreatableSelect({
     if (!create) return;
     const missing = create.fields.find((f) => f.required && !draft[f.name]?.trim());
     if (missing) {
-      setError(`${missing.label} is required.`);
+      setError(fmt(t("{field} is required."), { field: missing.label }));
       return;
     }
     setError(null);
@@ -257,7 +263,7 @@ export function CreatableSelect({
         className={selectClass}
       >
         <option value="" disabled={!allowEmpty}>
-          {allowEmpty ? placeholder : all.length === 0 ? "Nothing on file yet" : placeholder}
+          {allowEmpty ? placeholder : all.length === 0 ? t("Nothing on file yet") : placeholder}
         </option>
         {all.map((o) => (
           <option key={o.value} value={o.value}>
@@ -301,7 +307,7 @@ export function CreatableSelect({
                     className={`block text-xs text-muted${f.wide ? " sm:col-span-2" : ""}`}
                   >
                     {f.label}
-                    {f.required ? null : <span className="text-faint"> (optional)</span>}
+                    {f.required ? null : <span className="text-faint"> {t("(optional)")}</span>}
                     <input
                       type={f.type ?? "text"}
                       value={draft[f.name] ?? ""}
@@ -329,7 +335,7 @@ export function CreatableSelect({
                   className="mt-2 flex items-start gap-1.5 text-xs text-red-500"
                 >
                   <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-                  {error}
+                  {t(error)}
                 </p>
               ) : null}
 
@@ -340,7 +346,7 @@ export function CreatableSelect({
                   disabled={pending}
                   className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50"
                 >
-                  {pending ? "Saving…" : (create.submitLabel ?? create.title)}
+                  {pending ? t("Saving…") : (create.submitLabel ?? create.title)}
                 </button>
                 <button
                   type="button"
@@ -351,7 +357,7 @@ export function CreatableSelect({
                   disabled={pending}
                   className="inline-flex h-8 items-center rounded-lg border border-border bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
               </div>
             </>

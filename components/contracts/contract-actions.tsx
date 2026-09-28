@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Ban, FileCheck2, PenLine, Printer, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 import type { ContractStatus } from "@/lib/contracts/types";
 import {
   deleteContractAction,
@@ -33,6 +34,7 @@ export function ContractActions({
   editing: boolean;
   onToggleEdit: () => void;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function ContractActions({
     setError(null);
     startTransition(async () => {
       const result = await work();
-      if (!result.ok) setError(result.error ?? "That did not work.");
+      if (!result.ok) setError(t(result.error ?? "That did not work."));
       else {
         after?.();
         router.refresh();
@@ -56,7 +58,7 @@ export function ContractActions({
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/print/documents/contracts/${id}`} className={button}>
-          <Printer className="h-4 w-4" /> Print
+          <Printer className="h-4 w-4" /> {t("Print")}
         </Link>
 
         {status === "DRAFT" ? (
@@ -66,30 +68,30 @@ export function ContractActions({
               onClick={onToggleEdit}
               className={cn(button, editing && "border-brand text-brand")}
             >
-              <PenLine className="h-4 w-4" /> {editing ? "Stop editing" : "Edit"}
+              <PenLine className="h-4 w-4" /> {editing ? t("Stop editing") : t("Edit")}
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => {
-                if (!window.confirm("Issue this contract? After that it can only be signed or voided."))
+                if (!window.confirm(t("Issue this contract? After that it can only be signed or voided.")))
                   return;
                 run(() => issueContractAction(id));
               }}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
             >
-              <Send className="h-4 w-4" /> Issue
+              <Send className="h-4 w-4" /> {t("Issue")}
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => {
-                if (!window.confirm("Delete this draft?")) return;
+                if (!window.confirm(t("Delete this draft?"))) return;
                 run(() => deleteContractAction(id), () => router.push("/documents/contracts"));
               }}
               className={cn(button, "text-muted hover:text-red-600")}
             >
-              <Trash2 className="h-4 w-4" /> Delete
+              <Trash2 className="h-4 w-4" /> {t("Delete")}
             </button>
           </>
         ) : null}
@@ -100,24 +102,24 @@ export function ContractActions({
               type="button"
               disabled={pending}
               onClick={() => {
-                const on = window.prompt("Signed on which date? (YYYY-MM-DD, blank for today)")?.trim();
+                const on = window.prompt(t("Signed on which date? (YYYY-MM-DD, blank for today)"))?.trim();
                 run(() => markSignedAction(id, on || null));
               }}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
             >
-              <FileCheck2 className="h-4 w-4" /> Mark as signed
+              <FileCheck2 className="h-4 w-4" /> {t("Mark as signed")}
             </button>
             <button
               type="button"
               disabled={pending}
               onClick={() => {
-                const why = window.prompt("Why is this contract being voided?")?.trim();
+                const why = window.prompt(t("Why is this contract being voided?"))?.trim();
                 if (!why) return;
                 run(() => voidContractAction(id, why));
               }}
               className={cn(button, "text-muted hover:text-red-600")}
             >
-              <Ban className="h-4 w-4" /> Void
+              <Ban className="h-4 w-4" /> {t("Void")}
             </button>
           </>
         ) : null}

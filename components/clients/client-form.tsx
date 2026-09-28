@@ -11,6 +11,7 @@ import {
   type ClientWriteInput,
 } from "@/lib/data/clients.types";
 import { saveClient } from "@/app/(app)/clients/actions";
+import { useT } from "@/components/i18n/language-provider";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -54,6 +55,7 @@ export function ClientForm({
   clientId?: string;
   initial?: ClientFormValues;
 } = {}) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function ClientForm({
       status: (fd.get("status") as ClientStatus) || "ACTIVE",
       tags: String(fd.get("tags") ?? "")
         .split(",")
-        .map((t) => t.trim())
+        .map((tag) => tag.trim())
         .filter(Boolean),
       notes: (fd.get("notes") as string) || null,
       addresses: [
@@ -111,7 +113,7 @@ export function ClientForm({
             <AlertTriangle className="h-3.5 w-3.5" />
           </div>
           <div className="text-sm">
-            <p className="font-medium text-red-800">Could not save client.</p>
+            <p className="font-medium text-red-800">{t("Could not save client.")}</p>
             <p className="mt-0.5 text-red-700">{error}</p>
           </div>
         </div>
@@ -119,29 +121,29 @@ export function ClientForm({
 
       {/* Core */}
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg">Client details</h3>
+        <h3 className="mb-4 text-sm font-semibold text-fg">{t("Client details")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="name">
-              Client name *
+              {t("Client name *")}
             </label>
-            <input id="name" name="name" required className={inputClass} placeholder="e.g. Emaar Developments" defaultValue={initial?.name} />
+            <input id="name" name="name" required className={inputClass} placeholder={t("e.g. Emaar Developments")} defaultValue={initial?.name} />
           </div>
           <div>
             <label className={labelClass} htmlFor="companyName">
-              Legal / company name
+              {t("Legal / company name")}
             </label>
-            <input id="companyName" name="companyName" className={inputClass} placeholder="e.g. Emaar Properties PJSC" defaultValue={initial?.companyName} />
+            <input id="companyName" name="companyName" className={inputClass} placeholder={t("e.g. Emaar Properties PJSC")} defaultValue={initial?.companyName} />
           </div>
           <div>
             <label className={labelClass} htmlFor="contactPerson">
-              Primary contact
+              {t("Primary contact")}
             </label>
-            <input id="contactPerson" name="contactPerson" className={inputClass} placeholder="e.g. Layla Hassan" defaultValue={initial?.contactPerson} />
+            <input id="contactPerson" name="contactPerson" className={inputClass} placeholder={t("e.g. Layla Hassan")} defaultValue={initial?.contactPerson} />
           </div>
           <div>
             <label className={labelClass} htmlFor="email">
-              Email
+              {t("Email")}
             </label>
             <input
               id="email"
@@ -155,73 +157,73 @@ export function ClientForm({
               defaultValue={initial?.email}
             />
             <p className="mt-1 text-xs text-faint">
-              More than one? Separate them with a comma.
+              {t("More than one? Separate them with a comma.")}
             </p>
           </div>
           <div>
             <label className={labelClass} htmlFor="phone">
-              Phone
+              {t("Phone")}
             </label>
             <input id="phone" name="phone" className={inputClass} placeholder="+971 4 000 0000" defaultValue={initial?.phone} />
           </div>
           <div>
             <label className={labelClass} htmlFor="mobile">
-              Cell phone
+              {t("Cell phone")}
             </label>
             <input id="mobile" name="mobile" type="tel" autoComplete="tel" className={inputClass} placeholder="+297 560 0000" defaultValue={initial?.mobile} />
           </div>
           <div>
             <label className={labelClass} htmlFor="website">
-              Website
+              {t("Website")}
             </label>
             <input id="website" name="website" className={inputClass} placeholder="client.com" defaultValue={initial?.website} />
           </div>
           <div>
             <label className={labelClass} htmlFor="taxNumber">
-              Tax number (TRN)
+              {t("Tax number (TRN)")}
             </label>
             <input id="taxNumber" name="taxNumber" className={inputClass} placeholder="1001234567000XX" defaultValue={initial?.taxNumber} />
           </div>
           <div>
             <label className={labelClass} htmlFor="type">
-              Type
+              {t("Type")}
             </label>
             <select id="type" name="type" className={inputClass} defaultValue={initial?.type ?? "PRIVATE"}>
-              {TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {CLIENT_TYPE_LABEL[t]}
+              {TYPES.map((ty) => (
+                <option key={ty} value={ty}>
+                  {t(CLIENT_TYPE_LABEL[ty])}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className={labelClass} htmlFor="status">
-              Status
+              {t("Status")}
             </label>
             <select id="status" name="status" className={inputClass} defaultValue={initial?.status ?? "ACTIVE"}>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
+                  {t(STATUS_LABEL[s])}
                 </option>
               ))}
             </select>
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="tags">
-              Tags
+              {t("Tags")}
             </label>
-            <input id="tags" name="tags" className={inputClass} placeholder="Comma-separated, e.g. Key Account, Developer" defaultValue={initial?.tags} />
+            <input id="tags" name="tags" className={inputClass} placeholder={t("Comma-separated, e.g. Key Account, Developer")} defaultValue={initial?.tags} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="notes">
-              Notes
+              {t("Notes")}
             </label>
             <textarea
               id="notes"
               name="notes"
               rows={3}
               className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15"
-              placeholder="Relationship notes, preferences, etc."
+              placeholder={t("Relationship notes, preferences, etc.")}
               defaultValue={initial?.notes}
             />
           </div>
@@ -230,35 +232,35 @@ export function ClientForm({
 
       {/* Primary address */}
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg">Primary address</h3>
+        <h3 className="mb-4 text-sm font-semibold text-fg">{t("Primary address")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className={labelClass} htmlFor="addressLabel">
-              Label
+              {t("Label")}
             </label>
-            <input id="addressLabel" name="addressLabel" className={inputClass} placeholder="e.g. Head Office" defaultValue={initial?.addressLabel} />
+            <input id="addressLabel" name="addressLabel" className={inputClass} placeholder={t("e.g. Head Office")} defaultValue={initial?.addressLabel} />
           </div>
           <div>
             <label className={labelClass} htmlFor="line1">
-              Address line
+              {t("Address line")}
             </label>
-            <input id="line1" name="line1" className={inputClass} placeholder="Building, street" defaultValue={initial?.line1} />
+            <input id="line1" name="line1" className={inputClass} placeholder={t("Building, street")} defaultValue={initial?.line1} />
           </div>
           <div>
             <label className={labelClass} htmlFor="city">
-              City
+              {t("City")}
             </label>
             <input id="city" name="city" className={inputClass} placeholder="Dubai" defaultValue={initial?.city} />
           </div>
           <div>
             <label className={labelClass} htmlFor="emirate">
-              State
+              {t("State")}
             </label>
-            <input id="emirate" name="emirate" className={inputClass} placeholder="State / Province" defaultValue={initial?.emirate} />
+            <input id="emirate" name="emirate" className={inputClass} placeholder={t("State / Province")} defaultValue={initial?.emirate} />
           </div>
           <div>
             <label className={labelClass} htmlFor="country">
-              Country
+              {t("Country")}
             </label>
             <input id="country" name="country" className={inputClass} defaultValue={initial?.country ?? "UAE"} />
           </div>
@@ -270,14 +272,14 @@ export function ClientForm({
           href="/clients"
           className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          Cancel
+          {t("Cancel")}
         </Link>
         <button
           type="submit"
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Saving…" : mode === "new" ? "Create client" : "Save changes"}
+          {pending ? t("Saving…") : mode === "new" ? t("Create client") : t("Save changes")}
         </button>
       </div>
     </form>

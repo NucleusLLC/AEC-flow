@@ -18,6 +18,8 @@ import {
   type DisplayPrefs,
 } from "@/lib/schedule/display-prefs";
 import type { ScheduleHealth, TaskHealth } from "@/lib/data/schedule";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 // Light mode keeps the original soft tints; dark mode uses deep tints (the
 // critical state is a burgundy red) so the strip isn't a washed-out light box.
@@ -89,6 +91,7 @@ export function StatusBoard({
   onStatusDate: (iso: string) => void;
   display?: DisplayPrefs;
 }) {
+  const t = useT();
   const show = display ?? defaultDisplayPrefs();
   const visibleTiles = countVisibleTiles(show);
   const o = OVERALL[health.overall];
@@ -100,14 +103,20 @@ export function StatusBoard({
 
   const headline =
     health.overall === "at-risk"
-      ? `Forecast finish slips ${health.finishSlipDays} day${health.finishSlipDays === 1 ? "" : "s"}${
-          culprit ? ` · ${culprit.name}` : ""
-        }`
+      ? `${fmt(
+          t(health.finishSlipDays === 1 ? "Forecast finish slips 1 day" : "Forecast finish slips {count} days"),
+          { count: health.finishSlipDays },
+        )}${culprit ? ` · ${culprit.name}` : ""}`
       : health.overall === "watch"
-        ? `${health.behindCount + health.overdueCount} task${
-            health.behindCount + health.overdueCount === 1 ? "" : "s"
-          } behind plan — critical path still nominal`
-        : `Critical path nominal · ${Math.round(health.pctActual)}% complete`;
+        ? fmt(
+            t(
+              health.behindCount + health.overdueCount === 1
+                ? "1 task behind plan — critical path still nominal"
+                : "{count} tasks behind plan — critical path still nominal",
+            ),
+            { count: health.behindCount + health.overdueCount },
+          )
+        : fmt(t("Critical path nominal · {pct}% complete"), { pct: Math.round(health.pctActual) });
 
   return (
     <Card className="overflow-hidden">
@@ -118,14 +127,14 @@ export function StatusBoard({
         </span>
         <div className="min-w-0">
           <div className={cn("font-mono text-sm font-bold tracking-wide", o.text)}>
-            {o.label}
+            {t(o.label)}
           </div>
           <div className="text-xs text-fg">{headline}</div>
         </div>
 
         <div className="ml-auto flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-muted" />
-          <span className="text-[11px] font-medium text-muted">Status date</span>
+          <span className="text-[11px] font-medium text-muted">{t("Status date")}</span>
           <input
             type="date"
             value={statusDate}
@@ -137,7 +146,7 @@ export function StatusBoard({
             onClick={() => onStatusDate(new Date().toISOString().slice(0, 10))}
             className="h-8 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-fg hover:bg-surface-2"
           >
-            Today
+            {t("Today")}
           </button>
         </div>
       </div>
@@ -150,43 +159,43 @@ export function StatusBoard({
         <div className={cn("grid gap-3 p-4", tileGridClass(visibleTiles))}>
           {show.actualPlanned ? (
             <Tile
-              label="Actual / Planned"
+              label={t("Actual / Planned")}
               value={`${Math.round(health.pctActual)}% / ${Math.round(health.pctPlanned)}%`}
-              sub="duration-weighted"
+              sub={t("duration-weighted")}
             />
           ) : null}
           {show.spi ? (
-            <Tile label="SPI" value={health.spi.toFixed(2)} sub="earned ÷ planned" tone={spiTone} />
+            <Tile label="SPI" value={health.spi.toFixed(2)} sub={t("earned ÷ planned")} tone={spiTone} />
           ) : null}
           {show.scheduleVariance ? (
             <Tile
-              label="Schedule variance"
+              label={t("Schedule variance")}
               value={`${health.varianceDays >= 0 ? "+" : ""}${health.varianceDays}d`}
-              sub={health.varianceDays >= 0 ? "ahead of plan" : "behind plan"}
+              sub={health.varianceDays >= 0 ? t("ahead of plan") : t("behind plan")}
               tone={varTone}
             />
           ) : null}
           {show.behindOverdue ? (
             <Tile
-              label="Behind / Overdue"
+              label={t("Behind / Overdue")}
               value={`${health.behindCount} / ${health.overdueCount}`}
-              sub={`${health.doneCount}/${health.total} done`}
+              sub={fmt(t("{done}/{total} done"), { done: health.doneCount, total: health.total })}
               tone={health.behindCount + health.overdueCount > 0 ? "text-red-600" : "text-fg"}
             />
           ) : null}
           {show.baselineFinish ? (
             <Tile
-              label="Baseline finish"
+              label={t("Baseline finish")}
               value={formatDate(health.baselineFinish)}
-              sub="planned completion"
+              sub={t("planned completion")}
             />
           ) : null}
           {show.forecast ? (
             <Tile
-              label="Forecast finish"
+              label={t("Forecast finish")}
               value={formatDate(health.forecastFinish)}
               sub={
-                health.finishSlipDays > 0 ? `+${health.finishSlipDays}d slip` : "on baseline"
+                health.finishSlipDays > 0 ? fmt(t("+{count}d slip"), { count: health.finishSlipDays }) : t("on baseline")
               }
               tone={health.finishSlipDays > 0 ? "text-red-600" : "text-emerald-600"}
             />
@@ -203,7 +212,7 @@ export function StatusBoard({
         {show.criticalPathSlipping ? (
           <div className="mb-2 flex items-center gap-2">
             <Crosshair className={cn("h-4 w-4", health.criticalSlipDays > 0 ? "text-red-600" : "text-emerald-600")} />
-            <span className="text-sm font-semibold text-fg">Critical Path Status</span>
+            <span className="text-sm font-semibold text-fg">{t("Critical Path Status")}</span>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
@@ -212,13 +221,13 @@ export function StatusBoard({
                   : "bg-emerald-100 text-emerald-700",
               )}
             >
-              {health.criticalSlipDays > 0 ? `Slipping ${health.finishSlipDays}d` : "Nominal"}
+              {health.criticalSlipDays > 0 ? fmt(t("Slipping {count}d"), { count: health.finishSlipDays }) : t("Nominal")}
             </span>
           </div>
         ) : null}
 
         {health.attention.length === 0 ? (
-          <p className="text-xs text-muted">All tasks at or ahead of plan as of {formatDate(statusDate)}. ✅</p>
+          <p className="text-xs text-muted">{fmt(t("All tasks at or ahead of plan as of {date}."), { date: formatDate(statusDate) })} ✅</p>
         ) : (
           <ul className="space-y-1">
             {health.attention.slice(0, 6).map((h) => (
@@ -226,7 +235,7 @@ export function StatusBoard({
             ))}
             {health.attention.length > 6 ? (
               <li className="pt-1 text-[11px] text-faint">
-                +{health.attention.length - 6} more behind / overdue
+                {fmt(t("+{count} more behind / overdue"), { count: health.attention.length - 6 })}
               </li>
             ) : null}
           </ul>
@@ -237,6 +246,7 @@ export function StatusBoard({
 }
 
 function AttentionRow({ h }: { h: TaskHealth }) {
+  const t = useT();
   const overdue = h.state === "overdue";
   return (
     <li className="flex items-center gap-2 text-xs">
@@ -249,7 +259,7 @@ function AttentionRow({ h }: { h: TaskHealth }) {
         {h.actualPct}% / {h.expectedPct}%
       </span>
       <span className={cn("w-20 text-right font-mono text-[11px]", overdue ? "text-red-600" : "text-amber-600")}>
-        {overdue ? `${h.daysOverdue}d overdue` : `${h.daysBehind}d behind`}
+        {overdue ? fmt(t("{count}d overdue"), { count: h.daysOverdue }) : fmt(t("{count}d behind"), { count: h.daysBehind })}
       </span>
     </li>
   );

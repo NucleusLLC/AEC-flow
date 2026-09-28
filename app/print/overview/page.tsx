@@ -9,8 +9,13 @@ import { getSystemCurrency, getPracticeSettings } from "@/lib/server/practice-co
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Practice Overview · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Practice Overview")} · AEC-flow` };
+}
 
 const OPEN_PROPOSAL = ["DRAFT", "SENT", "PENDING", "ON_HOLD"];
 
@@ -65,6 +70,7 @@ export default async function PracticeOverview() {
   ]);
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const tr = await getServerT();
 
   const activeClients = clients.filter((c) => c.status === "ACTIVE").length;
   const prospects = clients.filter((c) => c.status === "PROSPECT").length;
@@ -83,14 +89,14 @@ export default async function PracticeOverview() {
   const avgUtil = team.length ? Math.round(team.reduce((n, t) => n + t.utilisation, 0) / team.length) : 0;
 
   return (
-    <PrintSurface backHref="/exports" backLabel="Back to Data">
+    <PrintSurface backHref="/exports" backLabel={tr("Back to Data")}>
       <DocumentLetterhead
         logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
         name={companyName}
         borderClass="border-b-2 border-gray-900 pb-4"
         details={
           <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">Practice Overview</div>
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{tr("Practice Overview")}</div>
             <div className="mt-1 text-xs text-gray-500">{formatDate(new Date())}</div>
           </div>
         }
@@ -98,30 +104,30 @@ export default async function PracticeOverview() {
 
       {/* KPI grid */}
       <div className="mt-5 grid grid-cols-4 gap-3">
-        <Kpi label="Clients" value={String(clients.length)} sub={`${activeClients} active · ${prospects} prospect`} />
-        <Kpi label="Active Projects" value={String(activeProjects)} sub={`${projects.length} total · ${overdue} overdue`} />
-        <Kpi label="Avg Progress" value={`${avgProgress}%`} sub="across all projects" />
-        <Kpi label="Team" value={String(team.length)} sub={`${teamActive} active · ${avgUtil}% utilisation`} />
-        <Kpi label="Open Proposals" value={String(openProposals.length)} sub={`${proposals.length} total`} />
-        <Kpi label="Pipeline Value" value={formatCurrency(pipeline, currency)} sub="open proposals" />
-        <Kpi label="Won Value" value={formatCurrency(won, currency)} sub="approved proposals" />
-        <Kpi label="Order Book" value={formatCurrency(orderValue, currency)} sub={`${orders.length} orders`} />
+        <Kpi label={tr("Clients")} value={String(clients.length)} sub={fmt(tr("{active} active · {prospects} prospect"), { active: activeClients, prospects })} />
+        <Kpi label={tr("Active Projects")} value={String(activeProjects)} sub={fmt(tr("{total} total · {overdue} overdue"), { total: projects.length, overdue })} />
+        <Kpi label={tr("Avg Progress")} value={`${avgProgress}%`} sub={tr("across all projects")} />
+        <Kpi label={tr("Team")} value={String(team.length)} sub={fmt(tr("{active} active · {pct}% utilisation"), { active: teamActive, pct: avgUtil })} />
+        <Kpi label={tr("Open Proposals")} value={String(openProposals.length)} sub={fmt(tr("{count} total"), { count: proposals.length })} />
+        <Kpi label={tr("Pipeline Value")} value={formatCurrency(pipeline, currency)} sub={tr("open proposals")} />
+        <Kpi label={tr("Won Value")} value={formatCurrency(won, currency)} sub={tr("approved proposals")} />
+        <Kpi label={tr("Order Book")} value={formatCurrency(orderValue, currency)} sub={fmt(tr("{count} orders"), { count: orders.length })} />
       </div>
 
       {/* Breakdowns */}
       <div className="mt-7 grid grid-cols-3 gap-8">
-        <Breakdown title="Projects by status" data={countBy(projects, (p) => p.status)} />
-        <Breakdown title="Proposals by status" data={countBy(proposals, (p) => p.status)} />
-        <Breakdown title="Orders by status" data={countBy(orders, (o) => o.status)} />
+        <Breakdown title={tr("Projects by status")} data={countBy(projects, (p) => p.status)} />
+        <Breakdown title={tr("Proposals by status")} data={countBy(proposals, (p) => p.status)} />
+        <Breakdown title={tr("Orders by status")} data={countBy(orders, (o) => o.status)} />
       </div>
 
       <div className="mt-7 grid grid-cols-2 gap-8">
-        <Breakdown title="Clients by type" data={countBy(clients, (c) => c.type)} />
-        <Breakdown title="Team by department" data={countBy(team, (t) => t.department)} />
+        <Breakdown title={tr("Clients by type")} data={countBy(clients, (c) => c.type)} />
+        <Breakdown title={tr("Team by department")} data={countBy(team, (t) => t.department)} />
       </div>
 
       <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {companyName} · Practice Overview · Generated {formatDate(new Date())} · Figures from live data
+        {companyName} · {tr("Practice Overview")} · {fmt(tr("Generated {date}"), { date: formatDate(new Date()) })} · {tr("Figures from live data")}
       </div>
     </PrintSurface>
   );

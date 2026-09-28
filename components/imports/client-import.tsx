@@ -6,8 +6,11 @@ import { Upload, FileSpreadsheet, Check, AlertTriangle, Loader2, X } from "lucid
 import { Card } from "@/components/ui/card";
 import { parseCsv } from "@/lib/csv";
 import { importClientsAction, type ImportResult } from "@/app/(app)/imports/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export function ClientImport() {
+  const t = useT();
   const [fileName, setFileName] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
   const [rows, setRows] = useState<Record<string, string>[]>([]);
@@ -53,32 +56,32 @@ export function ClientImport() {
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90">
             <Upload className="h-4 w-4" />
-            Choose CSV file
+            {t("Choose CSV file")}
             <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
           </label>
           {fileName ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-muted">
               <FileSpreadsheet className="h-4 w-4 text-faint" />
-              {fileName} · {rows.length} rows
-              <button type="button" onClick={reset} className="ml-1 text-faint hover:text-fg" aria-label="Clear">
+              {fileName} · {fmt(t("{count} rows"), { count: rows.length })}
+              <button type="button" onClick={reset} className="ml-1 text-faint hover:text-fg" aria-label={t("Clear")}>
                 <X className="h-4 w-4" />
               </button>
             </span>
           ) : (
-            <span className="text-sm text-faint">A header row with a <code className="text-fg">name</code> column is required.</span>
+            <span className="text-sm text-faint">{t("A header row with a “name” column is required.")}</span>
           )}
         </div>
 
         {parseError ? (
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> {parseError}
+            <AlertTriangle className="h-4 w-4 shrink-0" /> {t(parseError)}
           </div>
         ) : null}
 
         {/* Preview */}
         {rows.length && !result ? (
           <div className="mt-4">
-            <div className="mb-2 text-xs font-medium text-muted">Preview — first {Math.min(5, rows.length)} of {rows.length} rows</div>
+            <div className="mb-2 text-xs font-medium text-muted">{fmt(t("Preview — first {shown} of {total} rows"), { shown: Math.min(5, rows.length), total: rows.length })}</div>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full border-collapse text-xs">
                 <thead>
@@ -103,7 +106,7 @@ export function ClientImport() {
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {pending ? "Importing…" : `Import ${rows.length} client${rows.length === 1 ? "" : "s"}`}
+                {pending ? t("Importing…") : rows.length === 1 ? t("Import 1 client") : fmt(t("Import {count} clients"), { count: rows.length })}
               </button>
             </div>
           </div>
@@ -114,21 +117,21 @@ export function ClientImport() {
           <div className="mt-4 space-y-3">
             <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
               <Check className="h-4 w-4 shrink-0" />
-              Imported {result.created} of {result.total} clients.{" "}
-              <Link href="/clients" className="font-medium underline hover:text-emerald-900">View clients</Link>
+              {fmt(t("Imported {created} of {total} clients."), { created: result.created, total: result.total })}{" "}
+              <Link href="/clients" className="font-medium underline hover:text-emerald-900">{t("View clients")}</Link>
             </div>
             {result.failures.length ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                <div className="font-medium">{result.failures.length} row{result.failures.length === 1 ? "" : "s"} skipped:</div>
+                <div className="font-medium">{result.failures.length === 1 ? t("1 row skipped:") : fmt(t("{count} rows skipped:"), { count: result.failures.length })}</div>
                 <ul className="mt-1 list-inside list-disc">
                   {result.failures.slice(0, 10).map((f, i) => (
-                    <li key={i}>Row {f.row} ({f.name}): {f.error}</li>
+                    <li key={i}>{fmt(t("Row {row} ({name}): {error}"), { row: f.row, name: f.name, error: t(f.error) })}</li>
                   ))}
-                  {result.failures.length > 10 ? <li>…and {result.failures.length - 10} more</li> : null}
+                  {result.failures.length > 10 ? <li>{fmt(t("…and {count} more"), { count: result.failures.length - 10 })}</li> : null}
                 </ul>
               </div>
             ) : null}
-            <button type="button" onClick={reset} className="text-sm text-muted underline hover:text-fg">Import another file</button>
+            <button type="button" onClick={reset} className="text-sm text-muted underline hover:text-fg">{t("Import another file")}</button>
           </div>
         ) : null}
       </Card>

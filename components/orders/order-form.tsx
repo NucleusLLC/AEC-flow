@@ -12,6 +12,8 @@ import {
 import { saveOrder } from "@/app/(app)/orders/actions";
 import { getSystemCurrency } from "@/lib/format";
 import { ClientSelect } from "@/components/clients/client-select";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -48,6 +50,7 @@ export function OrderForm({
   mode?: "new" | "edit";
   initial?: OrderFormValues;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -100,26 +103,26 @@ export function OrderForm({
           </div>
           <div className="text-sm">
             <p className="font-medium text-red-800">
-              Could not {mode === "edit" ? "update" : "save"} order.
+              {mode === "edit" ? t("Could not update order.") : t("Could not save order.")}
             </p>
-            <p className="mt-0.5 text-red-700">{error}</p>
+            <p className="mt-0.5 text-red-700">{t(error)}</p>
           </div>
         </div>
       ) : null}
 
       <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5">
-        <h3 className="mb-4 text-sm font-semibold text-fg">Order details</h3>
+        <h3 className="mb-4 text-sm font-semibold text-fg">{t("Order details")}</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="title">
-              Title *
+              {t("Title")} *
             </label>
-            <input id="title" name="title" required className={inputClass} placeholder="e.g. Marina Heights Tower — Phase 3" defaultValue={initial?.title ?? ""} />
+            <input id="title" name="title" required className={inputClass} placeholder={t("e.g. Marina Heights Tower — Phase 3")} defaultValue={initial?.title ?? ""} />
           </div>
           {/* `saveOrder` resolves the client by NAME, hence `by="name"`. */}
           <ClientSelect
             id="clientName"
-            label="Client"
+            label={t("Client")}
             by="name"
             clients={clients.map((c) => ({ id: c, name: c }))}
             value={clientName}
@@ -129,62 +132,62 @@ export function OrderForm({
           />
           <div>
             <label className={labelClass} htmlFor="serviceType">
-              Service type
+              {t("Service type")}
             </label>
-            <input id="serviceType" name="serviceType" className={inputClass} placeholder="e.g. Full Design Services" defaultValue={initial?.serviceType ?? ""} />
+            <input id="serviceType" name="serviceType" className={inputClass} placeholder={t("e.g. Full Design Services")} defaultValue={initial?.serviceType ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="fee">
-              Fee ({getSystemCurrency()})
+              {t("Fee")} ({getSystemCurrency()})
             </label>
             <input id="fee" name="fee" type="number" min="0" step="1000" className={inputClass} placeholder="0" defaultValue={initial?.fee ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="status">
-              Status
+              {t("Status")}
             </label>
             <select id="status" name="status" className={inputClass} defaultValue={initial?.status ?? "DRAFT"}>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {ORDER_STATUS_LABEL[s]}
+                  {t(ORDER_STATUS_LABEL[s])}
                 </option>
               ))}
             </select>
           </div>
           <div>
             <label className={labelClass} htmlFor="proposalRef">
-              Source proposal ref
+              {t("Source proposal ref")}
             </label>
-            <input id="proposalRef" name="proposalRef" className={inputClass} placeholder="e.g. PRO-2026-040" defaultValue={initial?.proposalRef ?? ""} />
+            <input id="proposalRef" name="proposalRef" className={inputClass} placeholder={fmt(t("e.g. {example}"), { example: "PRO-2026-040" })} defaultValue={initial?.proposalRef ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="expectedStartDate">
-              Expected start
+              {t("Expected start")}
             </label>
             <input id="expectedStartDate" name="expectedStartDate" type="date" className={inputClass} defaultValue={initial?.expectedStartDate ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="expectedEndDate">
-              Expected end
+              {t("Expected end")}
             </label>
             <input id="expectedEndDate" name="expectedEndDate" type="date" className={inputClass} defaultValue={initial?.expectedEndDate ?? ""} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="siteAddress">
-              Site address
+              {t("Site address")}
             </label>
-            <input id="siteAddress" name="siteAddress" className={inputClass} placeholder="e.g. Dubai Marina, Plot D2, Dubai" defaultValue={initial?.siteAddress ?? ""} />
+            <input id="siteAddress" name="siteAddress" className={inputClass} placeholder={t("e.g. Dubai Marina, Plot D2, Dubai")} defaultValue={initial?.siteAddress ?? ""} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="scopeSummary">
-              Scope summary
+              {t("Scope summary")}
             </label>
             <textarea
               id="scopeSummary"
               name="scopeSummary"
               rows={3}
               className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15"
-              placeholder="Scope of services for this engagement…"
+              placeholder={t("Scope of services for this engagement…")}
               defaultValue={initial?.scopeSummary ?? ""}
             />
           </div>
@@ -196,14 +199,14 @@ export function OrderForm({
           href={mode === "edit" && initial?.id ? `/orders/${initial.id}` : "/orders"}
           className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          Cancel
+          {t("Cancel")}
         </Link>
         <button
           type="submit"
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Create order"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Create order")}
         </button>
       </div>
     </form>

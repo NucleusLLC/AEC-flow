@@ -5,13 +5,15 @@ import { getOrder } from "@/lib/data/orders";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const order = await getOrder(id);
-  return { title: order ? `${order.orderNumber} — Order Confirmation` : "Order Confirmation" };
+  const t = await getServerT();
+  return { title: order ? `${order.orderNumber} — ${t("Order Confirmation")}` : t("Order Confirmation") };
 }
 
 export default async function OrderPrintPage({ params }: PageProps) {
@@ -21,6 +23,7 @@ export default async function OrderPrintPage({ params }: PageProps) {
   const { logoDataUrl, logo } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const t = await getServerT();
 
   return (
     // See the note on the meetings route: the document is the content, the surface
@@ -28,7 +31,7 @@ export default async function OrderPrintPage({ params }: PageProps) {
     // `data-keep-together`, but that rule only exists inside `.aec-doc`, which this
     // route was never inside — so a signature could be cut from the name it
     // belongs to, which is precisely what that attribute was added to prevent.
-    <PrintSurface backHref={`/orders/${order.id}`} backLabel="Back to order">
+    <PrintSurface backHref={`/orders/${order.id}`} backLabel={t("Back to order")}>
       <OrderDocument
         order={order}
         logoDataUrl={logoDataUrl}
@@ -36,6 +39,7 @@ export default async function OrderPrintPage({ params }: PageProps) {
         companyName={companyName}
         companyLocation={firm.location}
         sheet={false}
+        t={t}
       />
     </PrintSurface>
   );

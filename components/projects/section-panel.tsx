@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Landing panel for a project section whose data lives in a global module
  * (Documents, Drawings, Estimates, Proposals). Until those modules are
  * project-scoped, this gives the workspace a consistent tab and a clear jump-off.
  */
-export function ProjectSectionPanel({
+export async function ProjectSectionPanel({
   icon,
   title,
   description,
@@ -20,6 +22,7 @@ export function ProjectSectionPanel({
   moduleLabel: string;
   href: string;
 }) {
+  const t = await getServerT();
   return (
     <Card className="p-8 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2 text-faint">
@@ -31,7 +34,7 @@ export function ProjectSectionPanel({
         href={href}
         className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
       >
-        Open {moduleLabel}
+        {fmt(t("Open {module}"), { module: moduleLabel })}
         <ArrowRight className="h-4 w-4" />
       </Link>
     </Card>

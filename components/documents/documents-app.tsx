@@ -7,6 +7,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { ProjectPicker, ProjectCrumb, type ProjectPickerRow } from "@/components/projects/project-picker";
 import { DocumentsView } from "./documents-view";
 import type { DocumentItem } from "@/lib/data/documents";
+import { useT } from "@/components/i18n/language-provider";
 
 export function DocumentsApp({
   documents,
@@ -15,6 +16,7 @@ export function DocumentsApp({
   documents: DocumentItem[];
   directory: Record<string, { location: string; client: string }>;
 }) {
+  const t = useT();
   const [sel, setSel] = useState<string | null>(null);
 
   const rows: ProjectPickerRow[] = useMemo(() => {
@@ -27,14 +29,14 @@ export function DocumentsApp({
         acc[pid] = {
           key: pid,
           projectNumber: d.projectId ?? "—",
-          projectName: d.projectName ?? "Unassigned",
+          projectName: d.projectName ?? t("Unassigned"),
           location: d.projectId ? directory[d.projectId]?.location ?? "—" : "—",
           client: d.projectId ? directory[d.projectId]?.client ?? "—" : "—",
           count: 1,
         };
     }
     return Object.values(acc);
-  }, [documents, directory]);
+  }, [documents, directory, t]);
 
   // A project picker with nothing in it is a dead end — the same reasoning as
   // `drawings-app.tsx`, which already guards this. Documents are not created by
@@ -48,9 +50,9 @@ export function DocumentsApp({
             <FileStack className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
-            <p className="text-sm font-medium text-fg">No documents yet</p>
+            <p className="text-sm font-medium text-fg">{t("No documents yet")}</p>
             <p className="mt-0.5 text-xs text-muted">
-              Generate one from an estimate or a schedule and it is filed here against its project.
+              {t("Generate one from an estimate or a schedule and it is filed here against its project.")}
             </p>
           </div>
           <Link
@@ -58,18 +60,18 @@ export function DocumentsApp({
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Wand2 className="h-4 w-4" aria-hidden="true" />
-            Generate a document
+            {t("Generate a document")}
           </Link>
         </CardBody>
       </Card>
     );
   }
 
-  if (!sel) return <ProjectPicker title="Documents" countLabel="Files" rows={rows} onSelect={setSel} />;
+  if (!sel) return <ProjectPicker title={t("Documents")} countLabel={t("Files")} rows={rows} onSelect={setSel} />;
 
   const row = rows.find((r) => r.key === sel);
   const filtered = documents.filter((d) => (d.projectId ?? "—unassigned—") === sel);
-  if (!row) return <ProjectPicker title="Documents" countLabel="Files" rows={rows} onSelect={setSel} />;
+  if (!row) return <ProjectPicker title={t("Documents")} countLabel={t("Files")} rows={rows} onSelect={setSel} />;
 
   return (
     <div className="space-y-4">

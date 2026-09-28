@@ -7,6 +7,8 @@ import { getTeam, summarizeTeam } from "@/lib/data/team";
 import { getSeatUsage, listInvitations } from "@/lib/data/invitations";
 import { requireActor } from "@/lib/server/actor";
 import { canChangeMemberAccess } from "@/lib/team/member-write-policy";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Team · AEC-flow" };
 
@@ -14,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TeamPage() {
   const actor = await requireActor().catch(() => null);
+  const t = await getServerT();
   const canInvite = actor ? canChangeMemberAccess(actor) : false;
   const [members, seatUsage, invitations] = await Promise.all([
     getTeam(),
@@ -26,13 +29,13 @@ export default async function TeamPage() {
   const summary = summarizeTeam(members);
 
   const tiles = [
-    { label: "Team Members", value: String(summary.total), hint: `${summary.active} active` },
-    { label: "On Leave", value: String(summary.onLeave), hint: "this week" },
-    { label: "Avg Utilisation", value: `${summary.avgUtilisation}%`, hint: "across the studio" },
+    { label: t("Team Members"), value: String(summary.total), hint: fmt(t("{count} active"), { count: summary.active }) },
+    { label: t("On Leave"), value: String(summary.onLeave), hint: t("this week") },
+    { label: t("Avg Utilisation"), value: `${summary.avgUtilisation}%`, hint: t("across the studio") },
     {
-      label: "Over-allocated",
+      label: t("Over-allocated"),
       value: String(summary.overAllocated),
-      hint: "above 100% capacity",
+      hint: t("above 100% capacity"),
     },
   ];
 
@@ -40,9 +43,9 @@ export default async function TeamPage() {
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Team</h2>
+          <h2 className="text-xl font-semibold text-fg">{t("Team")}</h2>
           <p className="text-sm text-muted">
-            Staff across disciplines and departments — roles, capacity, and current allocation.
+            {t("Staff across disciplines and departments — roles, capacity, and current allocation.")}
           </p>
         </div>
         <Link
@@ -50,16 +53,16 @@ export default async function TeamPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <UserPlus className="h-4 w-4" />
-          Add Member
+          {t("Add Member")}
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <Card key={t.label} className="p-5">
-            <div className="text-sm text-muted">{t.label}</div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{t.value}</div>
-            <div className="mt-1 text-xs text-faint">{t.hint}</div>
+        {tiles.map((tile) => (
+          <Card key={tile.label} className="p-5">
+            <div className="text-sm text-muted">{tile.label}</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{tile.value}</div>
+            <div className="mt-1 text-xs text-faint">{tile.hint}</div>
           </Card>
         ))}
       </div>

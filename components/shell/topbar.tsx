@@ -45,7 +45,7 @@ export function Topbar({
           <button
             type="button"
             onClick={onToggleSidebar}
-            aria-label="Open menu"
+            aria-label={t("Open menu")}
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-fg"
           >
             <Menu className="h-5 w-5" />
@@ -70,7 +70,7 @@ export function Topbar({
           <button
             type="button"
             onClick={onToggleSidebar}
-            title={collapsed ? "Exit full screen" : "Full screen"}
+            title={collapsed ? t("Exit full screen") : t("Full screen")}
             className="hidden h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg md:inline-flex"
           >
             {collapsed ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

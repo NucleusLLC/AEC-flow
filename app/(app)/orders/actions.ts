@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createOrder, updateOrder } from "@/lib/data/orders";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { OrderWriteInput } from "@/lib/data/orders.types";
+import { getServerT } from "@/lib/i18n/server";
 
 export type SaveOrderResult =
   | { ok: true; id: string; orderNumber: string }
@@ -34,7 +35,8 @@ export async function saveOrder(
     }
     return { ok: true, id: res.id, orderNumber: res.orderNumber };
   } catch (e) {
-    const error = e instanceof Error ? e.message : "Failed to save order.";
+    const t = await getServerT();
+    const error = e instanceof Error ? e.message : t("Failed to save order.");
     return { ok: false, error };
   }
 }

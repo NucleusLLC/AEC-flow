@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { listContracts } from "@/lib/data/contracts";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE, type ContractStatus } from "@/lib/contracts/types";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Contracts · AEC-flow" };
 
@@ -14,21 +15,22 @@ const money = (n: number, currency: string) =>
 
 export default async function ContractsPage() {
   const contracts = await listContracts();
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Construction contracts</h2>
+          <h2 className="text-xl font-semibold text-fg">{t("Construction contracts")}</h2>
           <p className="text-sm text-muted">
-            The practice&apos;s own contract, filled in for a job — and what has been issued and signed.
+            {t("The practice's own contract, filled in for a job — and what has been issued and signed.")}
           </p>
         </div>
         <Link
           href="/documents/contracts/new"
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
-          <Plus className="h-4 w-4" /> New contract
+          <Plus className="h-4 w-4" /> {t("New contract")}
         </Link>
       </div>
 
@@ -38,17 +40,17 @@ export default async function ContractsPage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <FileSignature className="h-6 w-6" />
             </div>
-            <p className="mt-4 text-sm font-medium text-fg">No contracts yet.</p>
+            <p className="mt-4 text-sm font-medium text-fg">{t("No contracts yet.")}</p>
             <p className="mx-auto mt-1 max-w-xl text-sm text-muted">
-              Upload the contract this practice uses, enter a job&apos;s particulars, and the same
-              contract comes back filled in — the wording untouched, the figures exact, typeset on
-              your letterhead.
+              {t(
+                "Upload the contract this practice uses, enter a job's particulars, and the same contract comes back filled in — the wording untouched, the figures exact, typeset on your letterhead.",
+              )}
             </p>
             <Link
               href="/documents/contracts/new"
               className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
             >
-              <Plus className="h-4 w-4" /> Make the first one
+              <Plus className="h-4 w-4" /> {t("Make the first one")}
             </Link>
           </CardBody>
         </Card>
@@ -57,12 +59,12 @@ export default async function ContractsPage() {
           <table className="w-full min-w-[920px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-4 pb-1.5 font-medium">Contract</th>
-                <th className="px-3 pb-1.5 font-medium">Project</th>
-                <th className="px-3 pb-1.5 font-medium">Parties</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Sum</th>
-                <th className="px-3 pb-1.5 font-medium">Dated</th>
-                <th className="px-4 pb-1.5 font-medium">Status</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Contract")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Project")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Parties")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Sum")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Dated")}</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -100,7 +102,7 @@ export default async function ContractsPage() {
                   </td>
                   <td className="px-4 py-2.5 align-top">
                     <Badge tone={CONTRACT_STATUS_TONE[c.status as ContractStatus]}>
-                      {CONTRACT_STATUS_LABEL[c.status as ContractStatus]}
+                      {t(CONTRACT_STATUS_LABEL[c.status as ContractStatus] ?? c.status)}
                     </Badge>
                   </td>
                 </tr>

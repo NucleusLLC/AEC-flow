@@ -6,8 +6,13 @@ import { MaterialForm } from "@/components/materials/material-form";
 import { getMaterialSelection } from "@/lib/data/materials";
 import { getProjects } from "@/lib/data/projects";
 import { listPurchaseOrders } from "@/lib/data/procurement";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Edit Selection · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Edit Selection")} · AEC-flow` };
+}
 
 export default async function EditMaterialPage({
   params,
@@ -21,6 +26,7 @@ export default async function EditMaterialPage({
     listPurchaseOrders(),
   ]);
   if (!item) notFound();
+  const t = await getServerT();
   const projectOptions = projects.map((p) => ({ id: p.id, name: p.name }));
   const poOptions = pos.map((p) => ({ id: p.id, poNumber: p.poNumber, vendorName: p.vendorName }));
 
@@ -34,8 +40,8 @@ export default async function EditMaterialPage({
         {item.tag}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit {item.tag}</h2>
-        <p className="text-sm text-muted">Extended cost recalculates on save.</p>
+        <h2 className="text-xl font-semibold text-fg">{fmt(t("Edit {number}"), { number: item.tag })}</h2>
+        <p className="text-sm text-muted">{t("Extended cost recalculates on save.")}</p>
       </div>
       <MaterialForm projects={projectOptions} purchaseOrders={poOptions} mode="edit" initial={item} />
     </div>

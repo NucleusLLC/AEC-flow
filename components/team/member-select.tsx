@@ -21,6 +21,8 @@
 import { saveTeamMember } from "@/app/(app)/team/actions";
 import { CreatableSelect } from "@/components/forms/creatable-select";
 import type { UserRole } from "@/lib/data/team.types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export type MemberOption = { id: string; name: string };
 
@@ -29,7 +31,7 @@ export function MemberSelect({
   value,
   onChange,
   by = "id",
-  label = "Team member",
+  label,
   hint,
   allowEmpty,
   placeholder,
@@ -59,10 +61,11 @@ export function MemberSelect({
   labelClassName?: string;
   onCreated?: (member: MemberOption) => void;
 }) {
+  const t = useT();
   return (
     <CreatableSelect
       id={id}
-      label={label}
+      label={label ?? t("Team member")}
       hint={hint}
       allowEmpty={allowEmpty}
       placeholder={placeholder}
@@ -71,14 +74,14 @@ export function MemberSelect({
       value={value}
       onChange={onChange}
       options={members.map((m) => ({ value: by === "id" ? m.id : m.name, label: m.name }))}
-      addLabel="＋ Add a new team member"
+      addLabel={`＋ ${t("Add a new team member")}`}
       create={{
-        title: "New team member",
-        hint: "Added as active staff on the design team — adjust role and capacity on the team page.",
-        submitLabel: "Add member",
+        title: t("New team member"),
+        hint: t("Added as active staff on the design team — adjust role and capacity on the team page."),
+        submitLabel: t("Add member"),
         fields: [
-          { name: "name", label: "Full name", placeholder: "e.g. Mariam Al Suwaidi", required: true },
-          { name: "email", label: "Email", type: "email", placeholder: "name@zenarch.net", required: true },
+          { name: "name", label: t("Full name"), placeholder: fmt(t("e.g. {example}"), { example: "Mariam Al Suwaidi" }), required: true },
+          { name: "email", label: t("Email"), type: "email", placeholder: "name@zenarch.net", required: true },
         ],
         submit: async (draft) => {
           const res = await saveTeamMember("new", {

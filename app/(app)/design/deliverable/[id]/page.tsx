@@ -11,6 +11,8 @@ import {
 import { Card, CardBody } from "@/components/ui/card";
 import { DeliverableStatusBadge } from "@/components/design/status-badge";
 import { DeliverableDeleteButton } from "@/components/design/deliverable-delete-button";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Deliverable · AEC-flow" };
 
@@ -19,6 +21,7 @@ export default async function DeliverableDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getServerT();
   const { id } = await params;
   const d = await getDeliverable(id);
   if (!d) notFound();
@@ -30,19 +33,19 @@ export default async function DeliverableDetailPage({
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        {DISCIPLINE_LABEL[d.discipline]}
+        {t(DISCIPLINE_LABEL[d.discipline])}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-lg font-semibold text-fg">{d.number}</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-muted">Rev {d.revision}</span>
+            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-muted">{fmt(t("Rev {rev}"), { rev: d.revision })}</span>
             <DeliverableStatusBadge status={d.status} />
           </div>
           <h2 className="mt-1 text-xl font-semibold text-fg">{d.title}</h2>
           <p className="text-sm text-muted">
-            {DISCIPLINE_LABEL[d.discipline]} · {DELIVERABLE_TYPE_LABEL[d.type]}
+            {t(DISCIPLINE_LABEL[d.discipline])} · {t(DELIVERABLE_TYPE_LABEL[d.type])}
             {d.projectName ? ` · ${d.projectName}` : ""}
           </p>
         </div>
@@ -51,7 +54,7 @@ export default async function DeliverableDetailPage({
             href={`/design/deliverable/${d.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <Pencil className="h-4 w-4" /> Edit
+            <Pencil className="h-4 w-4" /> {t("Edit")}
           </Link>
           <DeliverableDeleteButton id={d.id} number={d.number} discipline={DISCIPLINE_SLUG[d.discipline]} />
         </div>
@@ -59,19 +62,19 @@ export default async function DeliverableDetailPage({
 
       <Card>
         <CardBody className="grid gap-4 sm:grid-cols-3">
-          <Field label="Type" value={DELIVERABLE_TYPE_LABEL[d.type]} />
-          <Field label="Revision" value={d.revision} />
-          <Field label="Scale" value={d.scale ?? "—"} />
-          <Field label="Sheet size" value={d.sheetSize ?? "—"} />
-          <Field label="Issued to" value={d.issuedTo ?? "—"} />
-          <Field label="Issued date" value={d.issuedDate ?? "—"} />
-          <Field label="Due date" value={d.dueDate ?? "—"} />
+          <Field label={t("Type")} value={t(DELIVERABLE_TYPE_LABEL[d.type])} />
+          <Field label={t("Revision")} value={d.revision} />
+          <Field label={t("Scale")} value={d.scale ?? "—"} />
+          <Field label={t("Sheet size")} value={d.sheetSize ?? "—"} />
+          <Field label={t("Issued to")} value={d.issuedTo ?? "—"} />
+          <Field label={t("Issued date")} value={d.issuedDate ?? "—"} />
+          <Field label={t("Due date")} value={d.dueDate ?? "—"} />
           <div>
-            <div className="text-xs font-medium uppercase tracking-wide text-muted">File</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted">{t("File")}</div>
             <div className="mt-0.5 text-sm">
               {d.fileLink ? (
                 <a href={d.fileLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-brand hover:underline">
-                  Open <ExternalLink className="h-3.5 w-3.5" />
+                  {t("Open")} <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               ) : (
                 <span className="text-fg">—</span>
@@ -84,7 +87,7 @@ export default async function DeliverableDetailPage({
       {d.notes ? (
         <Card>
           <CardBody>
-            <div className="text-xs font-medium uppercase tracking-wide text-muted">Notes</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted">{t("Notes")}</div>
             <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{d.notes}</p>
           </CardBody>
         </Card>

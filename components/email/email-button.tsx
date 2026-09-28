@@ -12,6 +12,8 @@ import {
 } from "@/lib/email/attachments";
 import { sendDocumentEmailAction, listEmailHistoryAction, type EmailHistory } from "@/app/(app)/email/actions";
 import type { SendDocumentEmailResult } from "@/lib/server/document-email";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Reusable "Email …" button + compose dialog. Drop into any module to email an
@@ -87,6 +89,7 @@ export function EmailButton({
    */
   linkPath?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   const base =
@@ -98,9 +101,9 @@ export function EmailButton({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={`${base} ${className}`} aria-label={`Email ${attachment}`} title={`Email ${attachment}`}>
+      <button type="button" onClick={() => setOpen(true)} className={`${base} ${className}`} aria-label={fmt(t("Email {document}"), { document: attachment })} title={fmt(t("Email {document}"), { document: attachment })}>
         <Mail className="h-4 w-4" />
-        {variant !== "icon" ? label : null}
+        {variant !== "icon" ? t(label) : null}
       </button>
       {open ? (
         <EmailDialog
@@ -142,6 +145,7 @@ function EmailDialog({
   notice?: string;
   onClose: () => void;
 }) {
+  const t = useT();
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [subj, setSubj] = useState(subject);
@@ -215,25 +219,29 @@ function EmailDialog({
     try {
       for (const file of Array.from(chosen)) {
         if (next.length >= MAX_ATTACHMENTS) {
-          setFileError(`Attach at most ${MAX_ATTACHMENTS} files.`);
+          setFileError(fmt(t("Attach at most {count} files."), { count: MAX_ATTACHMENTS }));
           break;
         }
         const extension = extensionOf(file.name);
         if (!["pdf", "png", "jpg", "jpeg"].includes(extension)) {
           setFileError(
-            `"${file.name}" cannot be attached. Print the document to PDF and attach that.`,
+            fmt(t("“{file}” cannot be attached. Print the document to PDF and attach that."), { file: file.name }),
           );
           continue;
         }
         if (file.size > MAX_ATTACHMENT_BYTES) {
           setFileError(
-            `"${file.name}" is ${formatBytes(file.size)}. The limit for one file is ${formatBytes(MAX_ATTACHMENT_BYTES)}.`,
+            fmt(t("“{file}” is {size}. The limit for one file is {limit}."), {
+              file: file.name,
+              size: formatBytes(file.size),
+              limit: formatBytes(MAX_ATTACHMENT_BYTES),
+            }),
           );
           continue;
         }
         const content = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onerror = () => reject(reader.error ?? new Error("The file could not be read."));
+          reader.onerror = () => reject(reader.error ?? new Error(t("The file could not be read.")));
           reader.onload = () => {
             const result = String(reader.result ?? "");
             const comma = result.indexOf(",");
@@ -250,7 +258,7 @@ function EmailDialog({
       }
       setFiles(next);
     } catch (e) {
-      setFileError(e instanceof Error ? e.message : "The file could not be read.");
+      setFileError(e instanceof Error ? e.message : t("The file could not be read."));
     } finally {
       setReading(false);
     }
@@ -278,8 +286,8 @@ function EmailDialog({
       // do not know whether anything was sent, so we must not say either way.
       setFailure(
         e instanceof Error && e.message
-          ? `The send could not be completed: ${e.message}`
-          : "The send could not be completed — the server did not answer.",
+          ? fmt(t("The send could not be completed: {reason}"), { reason: e.message })
+          : t("The send could not be completed — the server did not answer."),
       );
       setFailureLogId(null);
       setPhase("compose");
@@ -349,8 +357,8 @@ function EmailDialog({
     >
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="inline-flex items-center gap-2 text-sm font-semibold text-fg"><Mail className="h-4 w-4 text-brand" /> Email document</div>
-          <button type="button" onClick={onClose} disabled={busy} aria-label="Close" className="inline-flex h-7 w-7 items-center justify-center rounded-md text-faint hover:text-fg disabled:opacity-40"><X className="h-4 w-4" /></button>
+          <div className="inline-flex items-center gap-2 text-sm font-semibold text-fg"><Mail className="h-4 w-4 text-brand" /> {t("Email document")}</div>
+          <button type="button" onClick={onClose} disabled={busy} aria-label={t("Close")} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-faint hover:text-fg disabled:opacity-40"><X className="h-4 w-4" /></button>
         </div>
 
         {phase === "sent" && confirmed ? (
@@ -358,34 +366,33 @@ function EmailDialog({
              provider returned a message id. There is no other path to this panel. */
           <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Check className="h-6 w-6" /></span>
-            <div className="text-sm font-semibold text-fg">Sent to {confirmed.to}</div>
+            <div className="text-sm font-semibold text-fg">{fmt(t("Sent to {to}"), { to: confirmed.to })}</div>
             {confirmed.cc.length > 0 ? (
-              <div className="text-xs text-muted">Copied to {confirmed.cc.join(", ")}</div>
+              <div className="text-xs text-muted">{fmt(t("Copied to {cc}"), { cc: confirmed.cc.join(", ") })}</div>
             ) : null}
             {confirmed.attachments.length > 0 ? (
               <div className="text-xs text-muted">
-                Enclosed: <span className="font-medium text-fg">{confirmed.attachments.join(", ")}</span>
+                {t("Enclosed:")} <span className="font-medium text-fg">{confirmed.attachments.join(", ")}</span>
               </div>
             ) : null}
             <div className="text-xs text-muted">
-              The email provider accepted it and returned reference{" "}
+              {t("The email provider accepted it and returned reference")}{" "}
               <span className="font-mono text-[11px] text-fg">{confirmed.messageId}</span>.
               <br />
               {confirmed.attachments.length > 0 ? (
-                <>The files above went with it.</>
+                <>{t("The files above went with it.")}</>
               ) : (
                 <>
-                  <span className="font-medium text-fg">{attachment}</span> was named in the message
-                  but not attached.
+                  {fmt(t("{document} was named in the message but not attached."), { document: attachment })}
                 </>
               )}
             </div>
             {confirmed.logId === null ? (
               <div className="mt-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                The message went out, but it could not be written to the email log.
+                {t("The message went out, but it could not be written to the email log.")}
               </div>
             ) : null}
-            <button type="button" onClick={onClose} className="mt-3 inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-2">Close</button>
+            <button type="button" onClick={onClose} className="mt-3 inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg hover:bg-surface-2">{t("Close")}</button>
           </div>
         ) : (
           <>
@@ -394,14 +401,13 @@ function EmailDialog({
                 <div className="flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
-                    <div className="font-semibold">Not sent.</div>
-                    <div className="mt-0.5">{failure}</div>
+                    <div className="font-semibold">{t("Not sent.")}</div>
+                    <div className="mt-0.5">{t(failure)}</div>
                     <div className="mt-1 text-rose-700">
-                      Your message is still here — nothing was lost. Fix the problem and send again, or use one of
-                      the mailbox buttons below.{" "}
+                      {t("Your message is still here — nothing was lost. Fix the problem and send again, or use one of the mailbox buttons below.")}{" "}
                       {failureLogId
-                        ? "The attempt has been recorded in the email log."
-                        : "This attempt is NOT in the email log — there will be no trace of it once you close this."}
+                        ? t("The attempt has been recorded in the email log.")
+                        : t("This attempt is NOT in the email log — there will be no trace of it once you close this.")}
                     </div>
                   </div>
                 </div>
@@ -414,7 +420,7 @@ function EmailDialog({
                 </div>
               ) : null}
 
-              <Row label="To">
+              <Row label={t("To")}>
                 <input
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
@@ -427,13 +433,13 @@ function EmailDialog({
                   className={inp}
                 />
               </Row>
-              <Row label="Cc">
-                <input value={cc} onChange={(e) => setCc(e.target.value)} disabled={busy} placeholder="optional — comma separated" className={inp} />
+              <Row label={t("Cc")}>
+                <input value={cc} onChange={(e) => setCc(e.target.value)} disabled={busy} placeholder={t("optional — comma separated")} className={inp} />
               </Row>
-              <Row label="Subject">
+              <Row label={t("Subject")}>
                 <input value={subj} onChange={(e) => setSubj(e.target.value)} disabled={busy} className={inp} />
               </Row>
-              <Row label="Message">
+              <Row label={t("Message")}>
                 <textarea value={msg} onChange={(e) => setMsg(e.target.value)} disabled={busy} rows={5} className={`${inp} resize-y`} />
               </Row>
 
@@ -446,14 +452,16 @@ function EmailDialog({
                 <div className="flex items-start gap-2">
                   <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0 text-faint" />
                   <span>
-                    <span className="font-medium text-fg">Sent:</span> your message above, naming{" "}
-                    <span className="font-medium text-fg">{attachment}</span>
-                    {linkPath ? ", plus a link to it in AEC-flow (the recipient must be able to sign in)" : ""}
+                    <span className="font-medium text-fg">{t("Sent:")}</span>{" "}
+                    {fmt(t("your message above, naming {document}"), { document: attachment })}
+                    {linkPath ? t(", plus a link to it in AEC-flow (the recipient must be able to sign in)") : ""}
                     {files.length > 0 ? (
                       <>
-                        , plus{" "}
+                        {t(", plus")}{" "}
                         <span className="font-medium text-fg">
-                          {files.length === 1 ? "1 attached file" : `${files.length} attached files`}
+                          {files.length === 1
+                            ? t("1 attached file")
+                            : fmt(t("{count} attached files"), { count: files.length })}
                         </span>
                       </>
                     ) : null}
@@ -461,7 +469,7 @@ function EmailDialog({
                     {files.length === 0 ? (
                       <>
                         <br />
-                        <span className="font-medium text-fg">Not sent:</span> {NOT_ATTACHED}
+                        <span className="font-medium text-fg">{t("Not sent:")}</span> {t(NOT_ATTACHED)}
                       </>
                     ) : null}
                   </span>
@@ -483,7 +491,7 @@ function EmailDialog({
                           type="button"
                           onClick={() => setFiles(files.filter((_, j) => j !== i))}
                           disabled={busy}
-                          aria-label={`Remove ${f.filename}`}
+                          aria-label={fmt(t("Remove {file}"), { file: f.filename })}
                           className="shrink-0 text-faint hover:text-rose-600 disabled:opacity-40"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -498,7 +506,7 @@ function EmailDialog({
                 <div className="flex flex-wrap items-center gap-2">
                   <label className={`${hatch} ${busy || reading ? "opacity-40" : "cursor-pointer"}`}>
                     <Paperclip className="h-3.5 w-3.5" />
-                    {reading ? "Reading…" : files.length > 0 ? "Attach another" : "Attach a file"}
+                    {reading ? t("Reading…") : files.length > 0 ? t("Attach another") : t("Attach a file")}
                     <input
                       type="file"
                       className="hidden"
@@ -513,8 +521,10 @@ function EmailDialog({
                     />
                   </label>
                   <span className="text-[11px] leading-snug text-faint">
-                    PDF or image, up to {formatBytes(MAX_ATTACHMENT_BYTES)} each. Print the document
-                    to PDF from its Print / Preview screen first.
+                    {fmt(
+                      t("PDF or image, up to {size} each. Print the document to PDF from its Print / Preview screen first."),
+                      { size: formatBytes(MAX_ATTACHMENT_BYTES) },
+                    )}
                   </span>
                 </div>
               </div>
@@ -527,22 +537,22 @@ function EmailDialog({
                 * owner saw. Gmail and Outlook cover the web mailboxes; Copy covers
                 * every other one. */}
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2/50 px-3 py-2">
-                <span className="text-xs font-medium text-muted">Or send it from your own mailbox:</span>
-                <button type="button" onClick={openInGmail} className={hatch} title="Opens a Gmail compose window with this message already filled in.">
+                <span className="text-xs font-medium text-muted">{t("Or send it from your own mailbox:")}</span>
+                <button type="button" onClick={openInGmail} className={hatch} title={t("Opens a Gmail compose window with this message already filled in.")}>
                   <ExternalLink className="h-3.5 w-3.5" /> Gmail
                 </button>
-                <button type="button" onClick={openInOutlook} className={hatch} title="Opens an Outlook on the web compose window with this message already filled in.">
+                <button type="button" onClick={openInOutlook} className={hatch} title={t("Opens an Outlook on the web compose window with this message already filled in.")}>
                   <ExternalLink className="h-3.5 w-3.5" /> Outlook
                 </button>
-                <button type="button" onClick={openInMailClient} className={hatch} title="Hands the message to a desktop mail client. Does nothing if none is installed.">
-                  <Mail className="h-3.5 w-3.5" /> Mail app
+                <button type="button" onClick={openInMailClient} className={hatch} title={t("Hands the message to a desktop mail client. Does nothing if none is installed.")}>
+                  <Mail className="h-3.5 w-3.5" /> {t("Mail app")}
                 </button>
-                <button type="button" onClick={copyMessage} className={hatch} title="Copies the recipients, subject and message so you can paste them anywhere.">
+                <button type="button" onClick={copyMessage} className={hatch} title={t("Copies the recipients, subject and message so you can paste them anywhere.")}>
                   {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? t("Copied") : t("Copy")}
                 </button>
                 <span className="w-full text-[11px] leading-snug text-faint">
-                  Attach {attachment} yourself — print it to PDF from its Print/Preview screen first.
+                  {fmt(t("Attach {document} yourself — print it to PDF from its Print/Preview screen first."), { document: attachment })}
                 </span>
               </div>
 
@@ -555,10 +565,10 @@ function EmailDialog({
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3">
-              <button type="button" onClick={onClose} disabled={busy} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted hover:text-fg disabled:opacity-40">Cancel</button>
+              <button type="button" onClick={onClose} disabled={busy} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-muted hover:text-fg disabled:opacity-40">{t("Cancel")}</button>
               <button type="button" onClick={send} disabled={!valid || busy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-40">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                {busy ? "Sending…" : failure ? "Send again" : "Send"}
+                {busy ? t("Sending…") : failure ? t("Send again") : t("Send")}
               </button>
             </div>
           </>
@@ -585,6 +595,7 @@ function EmailHistoryPanel({
   onToggle: () => void;
   attachment: string;
 }) {
+  const t = useT();
   const count = history?.entries.length ?? 0;
   return (
     <div className="rounded-lg border border-border">
@@ -594,29 +605,29 @@ function EmailHistoryPanel({
         className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-muted hover:text-fg"
       >
         <History className="h-3.5 w-3.5 text-faint" />
-        Sent history for {attachment}
-        <span className="ml-auto text-faint">{history === null ? "…" : count === 0 ? "none yet" : `${count}`}</span>
+        {fmt(t("Sent history for {document}"), { document: attachment })}
+        <span className="ml-auto text-faint">{history === null ? "…" : count === 0 ? t("none yet") : `${count}`}</span>
       </button>
       {open ? (
         <div className="border-t border-border px-3 py-2">
           {history === null ? (
-            <div className="py-1 text-xs text-faint">Loading…</div>
+            <div className="py-1 text-xs text-faint">{t("Loading…")}</div>
           ) : count === 0 ? (
-            <div className="py-1 text-xs text-faint">Nothing has been emailed for this document yet.</div>
+            <div className="py-1 text-xs text-faint">{t("Nothing has been emailed for this document yet.")}</div>
           ) : (
             <ul className="space-y-2">
               {history.entries.map((e) => (
                 <li key={e.id} className="flex items-start gap-2 text-xs">
                   <span
-                    className={`mt-0.5 inline-flex h-4 shrink-0 items-center rounded px-1.5 text-[10px] font-semibold ${
+                    className={`mt-0.5 inline-flex h-4 shrink-0 items-center rounded px-1.5 text-[10px] font-semibold uppercase ${
                       e.status === "SENT" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
                     }`}
                   >
-                    {e.status}
+                    {e.status === "SENT" ? t("Sent") : e.status === "FAILED" ? t("Failed") : e.status}
                   </span>
                   <span className="min-w-0">
                     <span className="text-fg">{e.to}</span>
-                    {e.cc.length > 0 ? <span className="text-faint"> +{e.cc.length} cc</span> : null}
+                    {e.cc.length > 0 ? <span className="text-faint"> +{e.cc.length} {t("cc")}</span> : null}
                     <span className="text-faint"> · {new Date(e.createdAt).toLocaleString()}</span>
                     {e.status === "FAILED" && e.error ? (
                       <span className="block text-rose-700">{e.error}</span>
@@ -627,7 +638,7 @@ function EmailHistoryPanel({
             </ul>
           )}
           <a href="/email" className="mt-2 inline-block text-xs font-medium text-brand hover:underline">
-            All sent email →
+            {t("All sent email →")}
           </a>
         </div>
       ) : null}

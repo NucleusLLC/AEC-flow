@@ -6,8 +6,12 @@ import { PageHeading } from "@/components/proposals/ui";
 import { ProposalsApp } from "@/components/proposals/proposals-app";
 import { getProposalRecords, summarizeProposals } from "@/lib/data/proposals";
 import { formatCurrencyCompact } from "@/lib/format";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata = { title: "Proposals · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Proposals")} · AEC-flow` };
+}
 
 export default async function ProposalsPage() {
   const tr = await getServerT();
@@ -16,27 +20,27 @@ export default async function ProposalsPage() {
 
   const tiles = [
     {
-      label: "Open Pipeline",
+      label: tr("Open Pipeline"),
       value: formatCurrencyCompact(summary.openValue),
-      hint: `${summary.openCount} live proposals`,
+      hint: fmt(tr(summary.openCount === 1 ? "1 live proposal" : "{count} live proposals"), { count: summary.openCount }),
       icon: TrendingUp,
       accent: "text-brand",
     },
     {
-      label: "Awaiting Approval",
+      label: tr("Awaiting Approval"),
       value: formatCurrencyCompact(summary.awaitingValue),
-      hint: `${summary.awaitingCount} pending decision`,
+      hint: fmt(tr("{count} pending decision"), { count: summary.awaitingCount }),
       icon: Clock3,
       accent: "text-amber-600",
     },
     {
-      label: "Won to Date",
+      label: tr("Won to Date"),
       value: formatCurrencyCompact(summary.wonValue),
-      hint: "approved fee value",
+      hint: tr("approved fee value"),
       icon: Trophy,
       accent: "text-emerald-600",
     },
-    { label: "Win Rate", value: `${summary.winRate}%`, hint: "approved vs decided", icon: Percent, accent: "text-violet-600" },
+    { label: tr("Win Rate"), value: `${summary.winRate}%`, hint: tr("approved vs decided"), icon: Percent, accent: "text-violet-600" },
   ];
 
   return (
@@ -50,7 +54,7 @@ export default async function ProposalsPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          New Proposal
+          {tr("New Proposal")}
         </Link>
       </PageHeading>
 

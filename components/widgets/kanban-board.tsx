@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { KanbanSquare, Plus, X } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
 
 const KEY = "aecflow:kanban";
 
@@ -19,6 +20,7 @@ const newId = () => `c${++counter}-${Math.floor(performance.now())}`;
 
 /** A simple personal Kanban board (To Do / In Progress / Done) with drag-and-drop. */
 export function KanbanBoard() {
+  const t = useT();
   const [cards, setCards] = useState<Card[]>([]);
   const [drafts, setDrafts] = useState<Record<ColId, string>>({ todo: "", doing: "", done: "" });
   const [dragId, setDragId] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function KanbanBoard() {
     // that the glass hairline would erase, and a second blur if it were glass.
     <div className="card-surface rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
-        <KanbanSquare className="h-4 w-4 text-brand" /> Kanban Board
+        <KanbanSquare className="h-4 w-4 text-brand" /> {t("Kanban Board")}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -82,7 +84,7 @@ export function KanbanBoard() {
               className={`flex min-h-[140px] flex-col rounded-lg border border-t-2 border-border bg-surface-2/40 p-2 ${col.accent}`}
             >
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-xs font-semibold text-fg">{col.label}</span>
+                <span className="text-xs font-semibold text-fg">{t(col.label)}</span>
                 <span className="rounded-full bg-surface px-1.5 text-[10px] text-muted ring-1 ring-border">{colCards.length}</span>
               </div>
 
@@ -100,7 +102,7 @@ export function KanbanBoard() {
                       type="button"
                       onClick={() => removeCard(card.id)}
                       className="shrink-0 rounded p-0.5 text-faint opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
-                      aria-label="Delete card"
+                      aria-label={t("Delete card")}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -113,14 +115,14 @@ export function KanbanBoard() {
                   value={drafts[col.id]}
                   onChange={(e) => setDrafts((d) => ({ ...d, [col.id]: e.target.value }))}
                   onKeyDown={(e) => { if (e.key === "Enter") addCard(col.id); }}
-                  placeholder="Add a card…"
+                  placeholder={t("Add a card…")}
                   className="h-7 w-full rounded-md border border-border bg-surface px-2 text-xs text-fg outline-none placeholder:text-faint focus:ring-1 focus:ring-brand/30"
                 />
                 <button
                   type="button"
                   onClick={() => addCard(col.id)}
                   className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand text-white hover:bg-brand/90"
-                  aria-label="Add card"
+                  aria-label={t("Add card")}
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
@@ -129,7 +131,7 @@ export function KanbanBoard() {
           );
         })}
       </div>
-      <p className="mt-3 text-[11px] text-faint">Drag cards between columns. Saved in this browser.</p>
+      <p className="mt-3 text-[11px] text-faint">{t("Drag cards between columns. Saved in this browser.")}</p>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { listCertifications } from "@/lib/data/ca/certifications";
 import { listRfis } from "@/lib/data/ca/rfis";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
 import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Export Center · AEC-flow" };
 
@@ -31,6 +33,7 @@ function ExportRow({ href, title, sub }: { href: string; title: string; sub: str
 }
 
 export default async function ExportCenterPage() {
+  const t = await getServerT();
   const [changeOrders, reports, certs, rfis, punchItems] = await Promise.all([
     listChangeOrders(),
     listReports(),
@@ -51,17 +54,16 @@ export default async function ExportCenterPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Report Export Center</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Report Export Center")}</h2>
         <p className="text-sm text-muted">
-          Generate print-ready A4 PDFs for any document. Word export and bulk distribution are on the
-          Phase 2 roadmap.
+          {t("Generate print-ready A4 PDFs for any document. Word export and bulk distribution are on the Phase 2 roadmap.")}
         </p>
       </div>
       <CaSubNav />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="overflow-hidden">
-          <CardHeader title="Change Orders" action={<FileSignature className="h-4 w-4 text-faint" />} />
+          <CardHeader title={t("Change Orders")} action={<FileSignature className="h-4 w-4 text-faint" />} />
           <div className="divide-y divide-border">
             {changeOrders.map((c) => (
               <ExportRow key={c.id} href={`/print/construction-admin/change-orders/${c.id}`} title={c.title} sub={c.changeOrderNumber} />
@@ -70,16 +72,16 @@ export default async function ExportCenterPage() {
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader title="Reports" action={<FileText className="h-4 w-4 text-faint" />} />
+          <CardHeader title={t("Reports")} action={<FileText className="h-4 w-4 text-faint" />} />
           <div className="divide-y divide-border">
             {reports.map((r) => (
-              <ExportRow key={r.id} href={`/print/construction-admin/reports/${r.id}`} title={`${CA_REPORT_TYPE_LABEL[r.reportType]} — ${r.projectName}`} sub={r.reportNumber} />
+              <ExportRow key={r.id} href={`/print/construction-admin/reports/${r.id}`} title={`${t(CA_REPORT_TYPE_LABEL[r.reportType])} — ${r.projectName}`} sub={r.reportNumber} />
             ))}
           </div>
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader title="RFIs" action={<MessageSquareWarning className="h-4 w-4 text-faint" />} />
+          <CardHeader title={t("RFIs")} action={<MessageSquareWarning className="h-4 w-4 text-faint" />} />
           <div className="divide-y divide-border">
             {rfis.map((r) => (
               <ExportRow key={r.id} href={`/print/construction-admin/rfis/${r.id}`} title={r.subject} sub={r.rfiNumber} />
@@ -88,7 +90,7 @@ export default async function ExportCenterPage() {
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader title="Certifications" action={<BadgeCheck className="h-4 w-4 text-faint" />} />
+          <CardHeader title={t("Certifications")} action={<BadgeCheck className="h-4 w-4 text-faint" />} />
           <div className="divide-y divide-border">
             {certs.map((c) => (
               <ExportRow key={c.id} href={`/print/construction-admin/certifications/${c.id}`} title={c.projectName} sub={c.certificationNumber} />
@@ -97,13 +99,13 @@ export default async function ExportCenterPage() {
         </Card>
 
         <Card className="overflow-hidden">
-          <CardHeader title="Punch List" action={<ListChecks className="h-4 w-4 text-faint" />} />
+          <CardHeader title={t("Punch List")} action={<ListChecks className="h-4 w-4 text-faint" />} />
           <div className="divide-y divide-border">
             {punchItems.length > 0 ? (
-              <ExportRow href="/print/construction-admin/punch-list/all" title="Portfolio snag register" sub={`All projects · ${punchItems.length} items`} />
+              <ExportRow href="/print/construction-admin/punch-list/all" title={t("Portfolio snag register")} sub={fmt(t("All projects · {count} items"), { count: punchItems.length })} />
             ) : null}
             {punchProjects.map(([projectId, { name, count }]) => (
-              <ExportRow key={projectId} href={`/print/construction-admin/punch-list/${projectId}`} title={name} sub={`Snag register · ${count} item${count === 1 ? "" : "s"}`} />
+              <ExportRow key={projectId} href={`/print/construction-admin/punch-list/${projectId}`} title={name} sub={count === 1 ? t("Snag register · 1 item") : fmt(t("Snag register · {count} items"), { count })} />
             ))}
           </div>
         </Card>

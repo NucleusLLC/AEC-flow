@@ -7,6 +7,7 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { getServerT } from "@/lib/i18n/server";
 import {
   decideExpenses,
   deleteExpense,
@@ -33,6 +34,12 @@ function revalidateExpenses(id?: string): void {
   revalidatePath("/finance/invoices");
 }
 
+/** The zod messages are English keys; translate each one before joining them. */
+async function issuesError(issues: { path: string; message: string }[]): Promise<string> {
+  const t = await getServerT();
+  return issuesToMessage(issues.map((i) => ({ ...i, message: t(i.message) })));
+}
+
 function failure(e: unknown, fallback: string): { ok: false; error: string } {
   if (
     e instanceof ExpenseForbiddenError ||
@@ -46,7 +53,7 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
 
 export async function recordExpenseAction(input: ExpenseInput): Promise<ExpenseActionResult> {
   const parsed = parseExpenseInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const expense = await recordExpense(parsed.value as ExpenseInput);
     revalidateExpenses(expense.id);
@@ -61,7 +68,7 @@ export async function updateExpenseAction(
   input: ExpenseInput,
 ): Promise<ExpenseActionResult> {
   const parsed = parseExpenseInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const expense = await updateExpense(id, parsed.value as ExpenseInput);
     revalidateExpenses(expense.id);
@@ -96,7 +103,7 @@ export async function decideExpensesAction(
   decision: { approve: boolean; reason?: string | null },
 ): Promise<ExpenseActionResult> {
   const parsed = parseApprovalDecision(decision);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const count = await decideExpenses(ids, parsed.value);
     revalidateExpenses();

@@ -11,8 +11,10 @@ import {
   type PurchaseOrderDTO,
   type PurchaseOrderStatus,
 } from "@/lib/procurement/types";
+import { useT } from "@/components/i18n/language-provider";
 
 export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<PurchaseOrderStatus | "ALL">("ALL");
 
@@ -33,8 +35,8 @@ export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
         <ShoppingCart className="h-8 w-8 text-faint" />
-        <p className="mt-3 text-sm font-medium text-fg">No purchase orders yet</p>
-        <p className="mt-1 text-sm text-muted">Create your first PO to start tracking supplier orders.</p>
+        <p className="mt-3 text-sm font-medium text-fg">{t("No purchase orders yet")}</p>
+        <p className="mt-1 text-sm text-muted">{t("Create your first PO to start tracking supplier orders.")}</p>
       </div>
     );
   }
@@ -47,7 +49,7 @@ export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search PO #, vendor, project…"
+            placeholder={t("Search PO #, vendor, project…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
         </div>
@@ -56,9 +58,9 @@ export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
           onChange={(e) => setStatus(e.target.value as PurchaseOrderStatus | "ALL")}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
         >
-          <option value="ALL">All statuses</option>
+          <option value="ALL">{t("All statuses")}</option>
           {PO_STATUSES.map((s) => (
-            <option key={s} value={s}>{PO_STATUS_LABEL[s]}</option>
+            <option key={s} value={s}>{t(PO_STATUS_LABEL[s])}</option>
           ))}
         </select>
       </div>
@@ -67,12 +69,12 @@ export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-2.5 font-medium">PO #</th>
-              <th className="px-4 py-2.5 font-medium">Vendor</th>
-              <th className="px-4 py-2.5 font-medium">Project</th>
-              <th className="px-4 py-2.5 font-medium">Status</th>
-              <th className="px-4 py-2.5 font-medium">Expected</th>
-              <th className="px-4 py-2.5 text-right font-medium">Total</th>
+              <th className="px-4 py-2.5 font-medium">{t("PO #")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Vendor")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Project")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Status")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Expected")}</th>
+              <th className="px-4 py-2.5 text-right font-medium">{t("Total")}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +97,7 @@ export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
-                  No purchase orders match your filters.
+                  {t("No purchase orders match your filters.")}
                 </td>
               </tr>
             ) : null}

@@ -6,6 +6,7 @@ import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { ymd } from "@/lib/building-permits/register";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "New document · AEC-flow" };
 
@@ -20,6 +21,7 @@ export default async function NewGeneralDocumentPage({
     getProjects(),
     getFirmIdentity(),
   ]);
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
@@ -28,13 +30,14 @@ export default async function NewGeneralDocumentPage({
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        General Documents
+        {t("General Documents")}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">New document</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("New document")}</h2>
         <p className="text-sm text-muted">
-          Pick what you are writing, fill in the particulars, and read it before it is saved. The
-          number is assigned when you create the draft.
+          {t(
+            "Pick what you are writing, fill in the particulars, and read it before it is saved. The number is assigned when you create the draft.",
+          )}
         </p>
       </div>
       <DocumentComposer

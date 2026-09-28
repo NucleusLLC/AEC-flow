@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Eye, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DISPLAY_ITEMS, type DisplayKey, type DisplayPrefs } from "@/lib/schedule/display-prefs";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * Display Control — which schedule readouts are painted.
@@ -38,6 +40,7 @@ export function DisplayControl({
   onShowAll: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -91,13 +94,13 @@ export function DisplayControl({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        title="Choose which schedule readouts are shown"
+        title={t("Choose which schedule readouts are shown")}
       >
         <SlidersHorizontal className="h-3.5 w-3.5" />
-        Display Control
+        {t("Display Control")}
         {hidden > 0 ? (
           <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-faint">
-            {hidden} hidden
+            {fmt(t("{count} hidden"), { count: hidden })}
           </span>
         ) : null}
       </button>
@@ -108,11 +111,11 @@ export function DisplayControl({
           <div
             ref={menuRef}
             role="menu"
-            aria-label="Display control"
+            aria-label={t("Display control")}
             className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-border bg-surface p-2 shadow-lg"
           >
             <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">
-              Show on the board
+              {t("Show on the board")}
             </div>
             <div className="max-h-64 space-y-0.5 overflow-y-auto">
               {DISPLAY_ITEMS.map((item) => {
@@ -136,7 +139,7 @@ export function DisplayControl({
                       {on ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
                     </span>
                     <span className={cn("min-w-0 flex-1 text-sm", on ? "text-fg" : "text-muted")}>
-                      {item.label}
+                      {t(item.label)}
                     </span>
                   </button>
                 );
@@ -148,7 +151,7 @@ export function DisplayControl({
               disabled={hidden === 0}
               className="mt-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-brand hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-default disabled:text-faint disabled:hover:bg-transparent"
             >
-              <Eye className="h-3.5 w-3.5" /> Show all
+              <Eye className="h-3.5 w-3.5" /> {t("Show all")}
             </button>
           </div>
         </>

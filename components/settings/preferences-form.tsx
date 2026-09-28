@@ -7,6 +7,7 @@ import { savePreferencesAction } from "@/app/(app)/settings/actions";
 import { BACKGROUND_INTERVALS } from "@/lib/dashboard/backgrounds";
 import { CARD_OPACITY_LEVELS } from "@/lib/dashboard/glass";
 import type { Preferences } from "@/lib/data/settings";
+import { useT } from "@/components/i18n/language-provider";
 
 /** Both Appearance dropdowns store a plain number, so they share one field
  *  component. Mapped at module scope rather than on every render. */
@@ -69,6 +70,7 @@ function SelectField({
   options: ReadonlyArray<{ value: number; label: string }>;
   onChange: (v: number) => void; disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <label className="flex items-start justify-between gap-4 py-3">
       <span className="min-w-0">
@@ -82,7 +84,7 @@ function SelectField({
         className="h-9 shrink-0 rounded-lg border border-border bg-surface px-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60"
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
+          <option key={o.value} value={o.value}>{t(o.label)}</option>
         ))}
       </select>
     </label>
@@ -102,6 +104,7 @@ export function PreferencesForm({
   preferences: Preferences;
   canSave: boolean;
 }) {
+  const t = useT();
   const [prefs, setPrefs] = useState<Preferences>(preferences);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -130,31 +133,31 @@ export function PreferencesForm({
       {!canSave ? (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <Lock className="h-4 w-4 shrink-0" />
-          Sign in to save your preferences. These are stored per user.
+          {t("Sign in to save your preferences. These are stored per user.")}
         </div>
       ) : null}
 
       <Card>
-        <CardHeader title="Defaults" subtitle="Applied to new proposals, projects, and documents." />
+        <CardHeader title={t("Defaults")} subtitle={t("Applied to new proposals, projects, and documents.")} />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField label="Default currency" value={prefs.defaultCurrency} onChange={(v) => set("defaultCurrency", v)} disabled={disabled} />
-          <TextField label="Locale" value={prefs.locale} onChange={(v) => set("locale", v)} disabled={disabled} />
-          <TextField label="Fiscal year start" value={prefs.fiscalYearStart} onChange={(v) => set("fiscalYearStart", v)} disabled={disabled} />
-          <TextField label="VAT / Tax (%)" type="number" value={prefs.vatPercent} onChange={(v) => set("vatPercent", num(v))} disabled={disabled} />
-          <TextField label="Proposal validity (days)" type="number" value={prefs.proposalValidityDays} onChange={(v) => set("proposalValidityDays", num(v))} disabled={disabled} />
-          <TextField label="Project number format" value={prefs.projectNumberFormat} onChange={(v) => set("projectNumberFormat", v)} hint="Tokens: {YYYY} year · {seq} sequence" disabled={disabled} />
-          <TextField label="Week starts on" value={prefs.weekStart} onChange={(v) => set("weekStart", v)} disabled={disabled} />
+          <TextField label={t("Default currency")} value={prefs.defaultCurrency} onChange={(v) => set("defaultCurrency", v)} disabled={disabled} />
+          <TextField label={t("Locale")} value={prefs.locale} onChange={(v) => set("locale", v)} disabled={disabled} />
+          <TextField label={t("Fiscal year start")} value={prefs.fiscalYearStart} onChange={(v) => set("fiscalYearStart", v)} disabled={disabled} />
+          <TextField label={t("VAT / Tax (%)")} type="number" value={prefs.vatPercent} onChange={(v) => set("vatPercent", num(v))} disabled={disabled} />
+          <TextField label={t("Proposal validity (days)")} type="number" value={prefs.proposalValidityDays} onChange={(v) => set("proposalValidityDays", num(v))} disabled={disabled} />
+          <TextField label={t("Project number format")} value={prefs.projectNumberFormat} onChange={(v) => set("projectNumberFormat", v)} hint={t("Tokens: {YYYY} year · {seq} sequence")} disabled={disabled} />
+          <TextField label={t("Week starts on")} value={prefs.weekStart} onChange={(v) => set("weekStart", v)} disabled={disabled} />
         </CardBody>
 
         <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3">
           {saved ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600">
-              <Check className="h-4 w-4" /> Saved
+              <Check className="h-4 w-4" /> {t("Saved")}
             </span>
           ) : null}
           {error ? (
             <span className="inline-flex items-center gap-1.5 text-sm text-red-600">
-              <AlertTriangle className="h-4 w-4" /> {error}
+              <AlertTriangle className="h-4 w-4" /> {t(error)}
             </span>
           ) : null}
           <button
@@ -164,30 +167,30 @@ export function PreferencesForm({
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {pending ? "Saving…" : "Save changes"}
+            {pending ? t("Saving…") : t("Save changes")}
           </button>
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Appearance" subtitle="How the app looks for you." />
+        <CardHeader title={t("Appearance")} subtitle={t("How the app looks for you.")} />
         <CardBody className="divide-y divide-border py-0">
-          <ToggleField label="Dashboard background" hint="Show a full-bleed architectural photo behind the dashboard; its cards turn translucent over it and the photo rotates on its own." checked={prefs.dashboardBackground} onChange={(v) => set("dashboardBackground", v)} disabled={disabled} />
+          <ToggleField label={t("Dashboard background")} hint={t("Show a full-bleed architectural photo behind the dashboard; its cards turn translucent over it and the photo rotates on its own.")} checked={prefs.dashboardBackground} onChange={(v) => set("dashboardBackground", v)} disabled={disabled} />
           {/* Both greyed out with the background off — a rotation speed, or a
               transparency, for something that is not running is a control that
               lies. */}
-          <SelectField label="Change background every" hint="How long each photo is held before it cross-fades to the next." value={prefs.dashboardBackgroundIntervalSeconds} options={INTERVAL_OPTIONS} onChange={(v) => set("dashboardBackgroundIntervalSeconds", v)} disabled={disabled || !prefs.dashboardBackground} />
-          <SelectField label="Card transparency" hint="How much of the photo shows through the cards. Every step stays legible — the range is bounded at both ends on purpose." value={prefs.dashboardCardOpacityPercent} options={CARD_OPACITY_OPTIONS} onChange={(v) => set("dashboardCardOpacityPercent", v)} disabled={disabled || !prefs.dashboardBackground} />
+          <SelectField label={t("Change background every")} hint={t("How long each photo is held before it cross-fades to the next.")} value={prefs.dashboardBackgroundIntervalSeconds} options={INTERVAL_OPTIONS} onChange={(v) => set("dashboardBackgroundIntervalSeconds", v)} disabled={disabled || !prefs.dashboardBackground} />
+          <SelectField label={t("Card transparency")} hint={t("How much of the photo shows through the cards. Every step stays legible — the range is bounded at both ends on purpose.")} value={prefs.dashboardCardOpacityPercent} options={CARD_OPACITY_OPTIONS} onChange={(v) => set("dashboardCardOpacityPercent", v)} disabled={disabled || !prefs.dashboardBackground} />
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Notifications" subtitle="Email alerts for your account." />
+        <CardHeader title={t("Notifications")} subtitle={t("Email alerts for your account.")} />
         <CardBody className="divide-y divide-border py-0">
-          <ToggleField label="Proposal approved" hint="Notify the owner when a client approves a proposal." checked={prefs.notifyProposalApproved} onChange={(v) => set("notifyProposalApproved", v)} disabled={disabled} />
-          <ToggleField label="Phase overdue" hint="Alert the project manager when a phase passes its end date." checked={prefs.notifyPhaseOverdue} onChange={(v) => set("notifyPhaseOverdue", v)} disabled={disabled} />
-          <ToggleField label="Leave requests" hint="Notify approvers when staff submit leave requests." checked={prefs.notifyLeaveRequest} onChange={(v) => set("notifyLeaveRequest", v)} disabled={disabled} />
-          <ToggleField label="Weekly digest" hint="Monday summary of pipeline, deadlines, and utilisation." checked={prefs.weeklyDigest} onChange={(v) => set("weeklyDigest", v)} disabled={disabled} />
+          <ToggleField label={t("Proposal approved")} hint={t("Notify the owner when a client approves a proposal.")} checked={prefs.notifyProposalApproved} onChange={(v) => set("notifyProposalApproved", v)} disabled={disabled} />
+          <ToggleField label={t("Phase overdue")} hint={t("Alert the project manager when a phase passes its end date.")} checked={prefs.notifyPhaseOverdue} onChange={(v) => set("notifyPhaseOverdue", v)} disabled={disabled} />
+          <ToggleField label={t("Leave requests")} hint={t("Notify approvers when staff submit leave requests.")} checked={prefs.notifyLeaveRequest} onChange={(v) => set("notifyLeaveRequest", v)} disabled={disabled} />
+          <ToggleField label={t("Weekly digest")} hint={t("Monday summary of pipeline, deadlines, and utilisation.")} checked={prefs.weeklyDigest} onChange={(v) => set("weeklyDigest", v)} disabled={disabled} />
         </CardBody>
       </Card>
     </div>

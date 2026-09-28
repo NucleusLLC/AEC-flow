@@ -9,8 +9,13 @@ import { Card, CardBody } from "@/components/ui/card";
 import { PoStatusBadge } from "@/components/procurement/status-badge";
 import { PoDeleteButton } from "@/components/procurement/po-delete-button";
 import { PoReceivePanel } from "@/components/procurement/po-receive-panel";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Purchase Order · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Purchase Order")} · AEC-flow` };
+}
 
 export default async function PurchaseOrderDetailPage({
   params,
@@ -20,6 +25,7 @@ export default async function PurchaseOrderDetailPage({
   const { id } = await params;
   const po = await getPurchaseOrder(id);
   if (!po) notFound();
+  const t = await getServerT();
 
   const money = (n: number) => formatCurrency(n, po.currency, { maximumFractionDigits: 2 });
   const progress = receiptProgress(po.lineItems);
@@ -29,7 +35,7 @@ export default async function PurchaseOrderDetailPage({
     <div className="w-full max-w-4xl space-y-6">
       <Link href="/procurement" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Procurement
+        {t("Procurement")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -39,7 +45,7 @@ export default async function PurchaseOrderDetailPage({
             <PoStatusBadge status={po.status} />
             {progress.anyReceived ? (
               <span className="text-xs text-muted">
-                {progress.receivedLines}/{progress.totalLines} lines received
+                {fmt(t("{received}/{total} lines received"), { received: progress.receivedLines, total: progress.totalLines })}
               </span>
             ) : null}
           </div>
@@ -53,13 +59,13 @@ export default async function PurchaseOrderDetailPage({
             href={`/print/procurement/${po.id}`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <Printer className="h-4 w-4" /> Print
+            <Printer className="h-4 w-4" /> {t("Print")}
           </Link>
           <Link
             href={`/procurement/${po.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <Pencil className="h-4 w-4" /> Edit
+            <Pencil className="h-4 w-4" /> {t("Edit")}
           </Link>
           <PoDeleteButton id={po.id} poNumber={po.poNumber} />
         </div>
@@ -67,14 +73,14 @@ export default async function PurchaseOrderDetailPage({
 
       <Card>
         <CardBody className="grid gap-4 sm:grid-cols-4">
-          <Field label="Supplier" value={po.vendorName} />
-          <Field label="Contact" value={po.vendorContact ?? "—"} />
-          <Field label="Email" value={po.vendorEmail ?? "—"} />
-          <Field label="Currency" value={po.currency} />
-          <Field label="Order date" value={po.orderDate ?? "—"} />
-          <Field label="Expected" value={po.expectedDate ?? "—"} />
-          <Field label="Received" value={po.receivedDate ?? "—"} />
-          <Field label="Terms" value={po.terms ?? "—"} />
+          <Field label={t("Supplier")} value={po.vendorName} />
+          <Field label={t("Contact")} value={po.vendorContact ?? "—"} />
+          <Field label={t("Email")} value={po.vendorEmail ?? "—"} />
+          <Field label={t("Currency")} value={po.currency} />
+          <Field label={t("Order date")} value={po.orderDate ?? "—"} />
+          <Field label={t("Expected")} value={po.expectedDate ?? "—"} />
+          <Field label={t("Received")} value={po.receivedDate ?? "—"} />
+          <Field label={t("Terms")} value={po.terms ?? "—"} />
         </CardBody>
       </Card>
 
@@ -83,12 +89,12 @@ export default async function PurchaseOrderDetailPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-                <th className="px-4 py-2.5 font-medium">Description</th>
-                <th className="px-4 py-2.5 text-right font-medium">Qty</th>
-                <th className="px-4 py-2.5 font-medium">Unit</th>
-                <th className="px-4 py-2.5 text-right font-medium">Received</th>
-                <th className="px-4 py-2.5 text-right font-medium">Unit price</th>
-                <th className="px-4 py-2.5 text-right font-medium">Amount</th>
+                <th className="px-4 py-2.5 font-medium">{t("Description")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{t("Qty")}</th>
+                <th className="px-4 py-2.5 font-medium">{t("Unit")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{t("Received")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{t("Unit price")}</th>
+                <th className="px-4 py-2.5 text-right font-medium">{t("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -112,11 +118,11 @@ export default async function PurchaseOrderDetailPage({
           </table>
           <div className="flex justify-end border-t border-border px-4 py-3">
             <dl className="w-56 space-y-1.5 text-sm">
-              <Row k="Subtotal" v={money(po.subtotal)} />
-              <Row k={`Tax (${po.taxPercentage}%)`} v={money(po.subtotal * (po.taxPercentage / 100))} />
-              <Row k="Shipping" v={money(po.shipping)} />
+              <Row k={t("Subtotal")} v={money(po.subtotal)} />
+              <Row k={fmt(t("Tax ({percent}%)"), { percent: po.taxPercentage })} v={money(po.subtotal * (po.taxPercentage / 100))} />
+              <Row k={t("Shipping")} v={money(po.shipping)} />
               <div className="flex justify-between border-t border-border pt-1.5 text-base font-semibold text-fg">
-                <dt>Total</dt>
+                <dt>{t("Total")}</dt>
                 <dd className="tabular-nums">{money(po.total)}</dd>
               </div>
             </dl>
@@ -129,7 +135,7 @@ export default async function PurchaseOrderDetailPage({
       {po.notes ? (
         <Card>
           <CardBody>
-            <div className="text-xs font-medium uppercase tracking-wide text-muted">Notes</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted">{t("Notes")}</div>
             <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{po.notes}</p>
           </CardBody>
         </Card>

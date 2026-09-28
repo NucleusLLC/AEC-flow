@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { DELIVERABLE_STATUS_LABEL, type DeliverableStatus } from "@/lib/design/types";
 
@@ -10,5 +13,6 @@ const TONE: Record<DeliverableStatus, "neutral" | "blue" | "green" | "amber" | "
 };
 
 export function DeliverableStatusBadge({ status }: { status: DeliverableStatus }) {
-  return <Badge tone={TONE[status]}>{DELIVERABLE_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={TONE[status]}>{t(DELIVERABLE_STATUS_LABEL[status])}</Badge>;
 }

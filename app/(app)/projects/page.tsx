@@ -5,8 +5,12 @@ import { Card } from "@/components/ui/card";
 import { ProjectsView } from "@/components/projects/projects-view";
 import { getProjects, summarizeProjects } from "@/lib/data/projects";
 import { formatCurrencyCompact } from "@/lib/format";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata = { title: "Projects · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Projects")} · AEC-flow` };
+}
 
 export default async function ProjectsPage() {
   const tr = await getServerT();
@@ -14,13 +18,13 @@ export default async function ProjectsPage() {
   const summary = summarizeProjects(projects);
 
   const tiles = [
-    { label: "Active Projects", value: String(summary.active), hint: `${summary.onHold} on hold` },
-    { label: "At Risk", value: String(summary.atRisk), hint: "overdue or critical" },
-    { label: "Avg Progress", value: `${summary.avgProgress}%`, hint: "across active projects" },
+    { label: tr("Active Projects"), value: String(summary.active), hint: fmt(tr("{count} on hold"), { count: summary.onHold }) },
+    { label: tr("At Risk"), value: String(summary.atRisk), hint: tr("overdue or critical") },
+    { label: tr("Avg Progress"), value: `${summary.avgProgress}%`, hint: tr("across active projects") },
     {
-      label: "Portfolio Value",
+      label: tr("Portfolio Value"),
       value: formatCurrencyCompact(summary.portfolioValue),
-      hint: "active contract value",
+      hint: tr("active contract value"),
     },
   ];
 
@@ -38,7 +42,7 @@ export default async function ProjectsPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          New Project
+          {tr("New Project")}
         </Link>
       </div>
 

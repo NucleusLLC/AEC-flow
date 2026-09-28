@@ -1,19 +1,21 @@
 import { Plus } from "lucide-react";
 import { FormsView } from "@/components/forms/forms-view";
 import { getForms } from "@/lib/data/forms";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Forms · AEC-flow" };
 
 export default async function FormsPage() {
   const forms = await getForms();
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Forms</h2>
+          <h2 className="text-xl font-semibold text-fg">{t("Forms")}</h2>
           <p className="text-sm text-muted">
-            Standard site & administration form templates — RFIs, instructions, inspections, variations. Preview any form.
+            {t("Standard site & administration form templates — RFIs, instructions, inspections, variations. Preview any form.")}
           </p>
         </div>
         <button
@@ -21,7 +23,7 @@ export default async function FormsPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          New form
+          {t("New form")}
         </button>
       </div>
 

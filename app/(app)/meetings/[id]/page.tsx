@@ -23,14 +23,17 @@ import {
 import { minutesEmailBody, minutesSubject, unreachableNotice } from "@/lib/meetings/recipients";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const meeting = await getMeeting(id);
+  const t = await getServerT();
   return {
-    title: meeting ? `${meeting.title} · Minutes · AEC-flow` : "Minutes · AEC-flow",
+    title: meeting ? `${meeting.title} · ${t("Minutes")} · AEC-flow` : `${t("Minutes")} · AEC-flow`,
   };
 }
 
@@ -68,6 +71,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
   const { id } = await params;
   const meeting = await getMeeting(id);
   if (!meeting) notFound();
+  const t = await getServerT();
 
   /**
    * Emailing the minutes. The addresses are resolved server-side from the team
@@ -108,9 +112,9 @@ export default async function MeetingDetailPage({ params }: PageProps) {
     [
       unreachableNotice(recipients?.attendees ?? []),
       recipients?.assignees.length
-        ? `Also addressed, as they carry an action item: ${recipients.assignees
-            .map((a) => a.name)
-            .join(", ")}.`
+        ? fmt(t("Also addressed, as they carry an action item: {names}."), {
+            names: recipients.assignees.map((a) => a.name).join(", "),
+          })
         : null,
     ]
       .filter(Boolean)
@@ -123,7 +127,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Meeting Minutes
+        {t("Meeting Minutes")}
       </Link>
 
       {/* Header */}
@@ -147,7 +151,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <EmailButton
-            label="Email minutes"
+            label={t("Email minutes")}
             subject={minutesSubject({ title: meeting.title, meetingDate: formatDate(meeting.meetingDate) })}
             attachment={`${meeting.title} — Minutes`}
             defaultTo={(recipients?.to ?? []).join(", ")}
@@ -164,14 +168,14 @@ export default async function MeetingDetailPage({ params }: PageProps) {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Printer className="h-4 w-4" />
-            Print / PDF
+            {t("Print / PDF")}
           </a>
           <Link
             href={`/meetings/${meeting.id}/edit`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("Edit")}
           </Link>
         </div>
       </div>
@@ -179,24 +183,24 @@ export default async function MeetingDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Left: notes + action items */}
         <div className="space-y-5 lg:col-span-2">
-          <TextCard title="Summary" body={meeting.summary} />
-          <TextCard title="Discussion" body={meeting.discussion} />
-          <TextCard title="Decisions" body={meeting.decisions} />
+          <TextCard title={t("Summary")} body={meeting.summary} />
+          <TextCard title={t("Discussion")} body={meeting.discussion} />
+          <TextCard title={t("Decisions")} body={meeting.decisions} />
 
           <Card>
             <SectionHeader
-              title="Action Items"
-              subtitle={`${meeting.actionItemsCount} item${meeting.actionItemsCount === 1 ? "" : "s"} · ${meeting.openActionsCount} open`}
+              title={t("Action Items")}
+              subtitle={`${fmt(t(meeting.actionItemsCount === 1 ? "1 action item" : "{count} action items"), { count: meeting.actionItemsCount })} · ${fmt(t("{count} open"), { count: meeting.openActionsCount })}`}
             />
             {meeting.actionItems.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
-                      <th className="px-5 py-2">Action</th>
-                      <th className="px-3 py-2">Assignee</th>
-                      <th className="px-3 py-2">Due</th>
-                      <th className="px-5 py-2 text-right">Status</th>
+                      <th className="px-5 py-2">{t("Action")}</th>
+                      <th className="px-3 py-2">{t("Assignee")}</th>
+                      <th className="px-3 py-2">{t("Due")}</th>
+                      <th className="px-5 py-2 text-right">{t("Status")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -218,7 +222,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
             ) : (
               <CardBody className="flex items-center gap-2 text-sm text-muted">
                 <ListChecks className="h-4 w-4 text-faint" />
-                No action items recorded.
+                {t("No action items recorded.")}
               </CardBody>
             )}
           </Card>
@@ -227,14 +231,14 @@ export default async function MeetingDetailPage({ params }: PageProps) {
         {/* Right: details + participants */}
         <div className="space-y-5">
           <Card>
-            <SectionHeader title="Details" />
+            <SectionHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <DetailRow label="Type">
+              <DetailRow label={t("Type")}>
                 <MeetingTypeBadge type={meeting.type} />
               </DetailRow>
-              <DetailRow label="Date">{formatDate(meeting.meetingDate)}</DetailRow>
-              <DetailRow label="Author">{meeting.author}</DetailRow>
-              <DetailRow label="Location">
+              <DetailRow label={t("Date")}>{formatDate(meeting.meetingDate)}</DetailRow>
+              <DetailRow label={t("Author")}>{meeting.author}</DetailRow>
+              <DetailRow label={t("Location")}>
                 {meeting.location ? (
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-faint" />
@@ -244,14 +248,14 @@ export default async function MeetingDetailPage({ params }: PageProps) {
                   <span className="text-faint">—</span>
                 )}
               </DetailRow>
-              <DetailRow label="Follow-up">
+              <DetailRow label={t("Follow-up")}>
                 {meeting.followUpDate ? formatDate(meeting.followUpDate) : <span className="text-faint">—</span>}
               </DetailRow>
             </CardBody>
           </Card>
 
           <Card>
-            <SectionHeader title="Participants" subtitle={`${meeting.participantCount}`} />
+            <SectionHeader title={t("Participants")} subtitle={`${meeting.participantCount}`} />
             <CardBody>
               {meeting.participants.length ? (
                 <ul className="space-y-1.5">
@@ -263,7 +267,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted">No participants recorded.</p>
+                <p className="text-sm text-muted">{t("No participants recorded.")}</p>
               )}
             </CardBody>
           </Card>

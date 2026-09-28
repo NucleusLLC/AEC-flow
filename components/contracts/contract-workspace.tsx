@@ -29,6 +29,8 @@ import { ContractDocument } from "@/components/contracts/contract-document";
 import { ContractActions } from "@/components/contracts/contract-actions";
 import { saveContractBodyAction } from "@/app/(app)/documents/contracts/actions";
 import type { ContractBody, ContractStatus } from "@/lib/contracts/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export function ContractWorkspace({
   id,
@@ -47,6 +49,7 @@ export function ContractWorkspace({
   names: string[];
   initialBody: ContractBody;
 }) {
+  const t = useT();
   const router = useRouter();
   const [body, setBody] = useState<ContractBody>(initialBody);
   const [editing, setEditing] = useState(false);
@@ -61,7 +64,7 @@ export function ContractWorkspace({
     setSaved(false);
     startTransition(async () => {
       const result = await saveContractBodyAction(id, body);
-      if (!result.ok) setError(result.error);
+      if (!result.ok) setError(t(result.error));
       else {
         setSaved(true);
         router.refresh();
@@ -92,14 +95,14 @@ export function ContractWorkspace({
       {(body.changes.length > 0 || body.check.length > 0) && !editing ? (
         <Card className="border-amber-500/40">
           <CardHeader
-            title="Before you issue this"
-            subtitle="What the model filled in, and what it could not. Never printed."
+            title={t("Before you issue this")}
+            subtitle={t("What the model filled in, and what it could not. Never printed.")}
           />
           <CardBody className="grid gap-4 sm:grid-cols-2">
             {body.check.length > 0 ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-amber-600">
-                  <CircleAlert className="h-3.5 w-3.5" /> Needs a human
+                  <CircleAlert className="h-3.5 w-3.5" /> {t("Needs a human")}
                 </div>
                 <ul className="space-y-1 text-sm text-fg">
                   {body.check.map((c, i) => (
@@ -111,7 +114,7 @@ export function ContractWorkspace({
             {body.changes.length > 0 ? (
               <div>
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-faint">
-                  <ListChecks className="h-3.5 w-3.5" /> Filled in
+                  <ListChecks className="h-3.5 w-3.5" /> {t("Filled in")}
                 </div>
                 <ul className="space-y-1 text-sm text-muted">
                   {body.changes.map((c, i) => (
@@ -127,8 +130,8 @@ export function ContractWorkspace({
       {editing && editable ? (
         <Card>
           <CardHeader
-            title="Correcting the contract"
-            subtitle="Edit the wording. The instalment amounts are recomputed from the contract sum on save."
+            title={t("Correcting the contract")}
+            subtitle={t("Edit the wording. The instalment amounts are recomputed from the contract sum on save.")}
             action={
               <button
                 type="button"
@@ -136,7 +139,7 @@ export function ContractWorkspace({
                 disabled={pending}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
               >
-                <Save className="h-3.5 w-3.5" /> {pending ? "Saving…" : saved ? "Saved" : "Save"}
+                <Save className="h-3.5 w-3.5" /> {pending ? t("Saving…") : saved ? t("Saved") : t("Save")}
               </button>
             }
           />
@@ -149,7 +152,7 @@ export function ContractWorkspace({
 
             <div>
               <label className="mb-1 block text-xs font-medium text-muted" htmlFor="contract-title">
-                Title
+                {t("Title")}
               </label>
               <input
                 id="contract-title"
@@ -172,7 +175,7 @@ export function ContractWorkspace({
                         ),
                       }))
                     }
-                    aria-label={`Article ${i + 1} number`}
+                    aria-label={fmt(t("Article {n} number"), { n: i + 1 })}
                     className="h-8 w-16 rounded-lg border border-border bg-surface px-2 text-center font-mono text-xs text-fg"
                   />
                   <input
@@ -185,7 +188,7 @@ export function ContractWorkspace({
                         ),
                       }))
                     }
-                    aria-label={`Article ${i + 1} heading`}
+                    aria-label={fmt(t("Article {n} heading"), { n: i + 1 })}
                     className="h-8 flex-1 rounded-lg border border-border bg-surface px-2 text-sm font-medium text-fg"
                   />
                 </div>
@@ -196,7 +199,7 @@ export function ContractWorkspace({
                       value={p}
                       onChange={(e) => editParagraph(i, j, e.target.value)}
                       rows={Math.min(10, Math.max(2, Math.ceil(p.length / 110)))}
-                      aria-label={`Article ${article.number} paragraph ${j + 1}`}
+                      aria-label={fmt(t("Article {n} paragraph {p}"), { n: article.number, p: j + 1 })}
                       className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm leading-relaxed text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
                     />
                   ))}

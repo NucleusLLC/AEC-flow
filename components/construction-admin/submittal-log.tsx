@@ -8,6 +8,8 @@ import { SubmittalStatusBadge, DisciplineBadge } from "@/components/construction
 import type { Submittal, SubmittalStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | SubmittalStatus; label: string }> = [
   { key: "ALL", label: "All" },
@@ -19,6 +21,7 @@ const FILTERS: Array<{ key: "ALL" | SubmittalStatus; label: string }> = [
 ];
 
 export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | SubmittalStatus>("ALL");
 
@@ -45,7 +48,7 @@ export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
                 status === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -55,7 +58,7 @@ export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Search submittals…"
+            placeholder={t("Search submittals…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-64"
           />
         </div>
@@ -66,12 +69,12 @@ export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
           <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Submittal</th>
-                <th className="px-3 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Discipline</th>
-                <th className="px-3 py-2.5 font-medium">Required</th>
-                <th className="px-3 py-2.5 font-medium">Submitted</th>
-                <th className="px-5 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Submittal")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Discipline")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Required")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Submitted")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -98,12 +101,12 @@ export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <FileCheck2 className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No submittals match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No submittals match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
-      <p className="px-1 text-xs text-faint">Showing {rows.length} of {submittals.length} submittals</p>
+      <p className="px-1 text-xs text-faint">{fmt(t("Showing {count} of {total} submittals"), { count: rows.length, total: submittals.length })}</p>
     </div>
   );
 }

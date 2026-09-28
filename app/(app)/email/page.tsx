@@ -2,8 +2,12 @@ import { Mail, Lock } from "lucide-react";
 import { listEmailLog } from "@/lib/data/email-log";
 import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Sent Email · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Sent Email")} · AEC-flow` };
+}
 
 /**
  * Every email this practice has attempted to send, newest first — successes and
@@ -26,6 +30,7 @@ export default async function EmailLogPage() {
    * the route is guessable. ADMIN, DIRECTOR or the founder — the same set that
    * administers members, and the owner's own account is a DIRECTOR, so a gate on
    * ADMIN alone would lock him out of his own audit trail. */
+  const t = await getServerT();
   let allowed = false;
   try {
     const actor = await requireActor();
@@ -38,17 +43,16 @@ export default async function EmailLogPage() {
     return (
       <div className="w-full space-y-6">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Sent Email</h2>
-          <p className="text-sm text-muted">The practice's email record.</p>
+          <h2 className="text-xl font-semibold text-fg">{t("Sent Email")}</h2>
+          <p className="text-sm text-muted">{t("The practice's email record.")}</p>
         </div>
         <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface py-16 text-center">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface-2 text-faint">
             <Lock className="h-5 w-5" aria-hidden="true" />
           </span>
-          <p className="text-sm font-medium text-fg">Administrators only</p>
+          <p className="text-sm font-medium text-fg">{t("Administrators only")}</p>
           <p className="max-w-md text-xs text-muted">
-            This record includes the contents of messages sent on the practice's behalf. Ask an administrator or
-            director if you need to check whether something was delivered.
+            {t("This record includes the contents of messages sent on the practice's behalf. Ask an administrator or director if you need to check whether something was delivered.")}
           </p>
         </div>
       </div>
@@ -60,20 +64,18 @@ export default async function EmailLogPage() {
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Sent Email</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Sent Email")}</h2>
         <p className="text-sm text-muted">
-          Every message AEC-flow has attempted to send for this practice, including the ones that failed.
-          Documents are never attached — see the note in the compose panel.
+          {t("Every message AEC-flow has attempted to send for this practice, including the ones that failed. Documents are never attached — see the note in the compose panel.")}
         </p>
       </div>
 
       {entries.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface px-6 py-16 text-center">
           <Mail className="h-6 w-6 text-faint" />
-          <div className="text-sm font-medium text-fg">No email has been sent yet</div>
+          <div className="text-sm font-medium text-fg">{t("No email has been sent yet")}</div>
           <div className="max-w-md text-xs text-muted">
-            Use the Email button on an estimate, programme, drawing or report. Whatever happens — delivered or
-            refused — it is recorded here.
+            {t("Use the Email button on an estimate, programme, drawing or report. Whatever happens — delivered or refused — it is recorded here.")}
           </div>
         </div>
       ) : (
@@ -81,12 +83,12 @@ export default async function EmailLogPage() {
           <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-faint">
-                <th className="px-3 py-2 font-medium">When</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">To</th>
-                <th className="px-3 py-2 font-medium">Subject</th>
-                <th className="px-3 py-2 font-medium">Document</th>
-                <th className="px-3 py-2 font-medium">Sent by</th>
+                <th className="px-3 py-2 font-medium">{t("When")}</th>
+                <th className="px-3 py-2 font-medium">{t("Status")}</th>
+                <th className="px-3 py-2 font-medium">{t("To")}</th>
+                <th className="px-3 py-2 font-medium">{t("Subject")}</th>
+                <th className="px-3 py-2 font-medium">{t("Document")}</th>
+                <th className="px-3 py-2 font-medium">{t("Sent by")}</th>
               </tr>
             </thead>
             <tbody>
@@ -97,16 +99,16 @@ export default async function EmailLogPage() {
                   </td>
                   <td className="px-3 py-2">
                     <span
-                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
                         e.status === "SENT" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
                       }`}
                     >
-                      {e.status}
+                      {e.status === "SENT" ? t("Sent") : e.status === "FAILED" ? t("Failed") : e.status}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-xs text-fg">
                     {e.to}
-                    {e.cc.length > 0 ? <span className="block text-faint">cc {e.cc.join(", ")}</span> : null}
+                    {e.cc.length > 0 ? <span className="block text-faint">{t("cc")} {e.cc.join(", ")}</span> : null}
                   </td>
                   <td className="px-3 py-2 text-xs text-fg">
                     {e.subject}

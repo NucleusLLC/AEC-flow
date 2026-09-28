@@ -5,10 +5,12 @@ import { ArrowLeft } from "lucide-react";
 import { CertForm } from "@/components/construction-admin/cert-form";
 import { getProjects } from "@/lib/data/projects";
 import { getCertification } from "@/lib/data/ca/certifications";
+import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Edit Certification · AEC-flow" };
 
 export default async function EditCertificationPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getServerT();
   const { id } = await params;
   const [cert, projects] = await Promise.all([getCertification(id), getProjects()]);
   if (!cert) notFound();
@@ -21,8 +23,8 @@ export default async function EditCertificationPage({ params }: { params: Promis
         {cert.certificationNumber}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit Progress Certification</h2>
-        <p className="text-sm text-muted">Correct the certification — the payment recommendation recalculates live and saves through the API.</p>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit Progress Certification")}</h2>
+        <p className="text-sm text-muted">{t("Correct the certification — the payment recommendation recalculates live and saves through the API.")}</p>
       </div>
       <CertForm projects={options} initial={cert} certId={cert.id} />
     </div>

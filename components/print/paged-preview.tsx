@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { BREAK_RULES, TABLE_TOKENS, UNUSED_AREA_WARN } from "@/lib/documents/tokens";
 import {
   headingRequiredSpace,
@@ -470,6 +472,7 @@ export function PagedPreview({
   footerText?: string;
   children: React.ReactNode;
 }) {
+  const t = useT();
   // The gap opened between two pages: the bottom margin of the page ending, the
   // visible break between two sheets, then the top margin of the page beginning.
   // Content resumes only after all three. The arithmetic lives in
@@ -784,7 +787,7 @@ export function PagedPreview({
             <div className="flex items-end justify-between gap-4 border-t border-gray-200 pt-1 text-[9px] leading-snug text-gray-400">
               <span className="min-w-0">{footerText}</span>
               <span className="shrink-0 tabular-nums">
-                Page {b.page} of {total}
+                {fmt(t("Page {page} of {pages}"), { page: b.page, pages: total })}
               </span>
             </div>
           </div>
@@ -813,8 +816,8 @@ export function PagedPreview({
         className="mt-4 border-t border-dashed border-gray-200 pt-2 text-right text-[10px] font-medium text-gray-400 print:hidden"
       >
         {narrow
-          ? "Widen the window to preview page breaks at true paper size"
-          : `Page ${total} of ${total} · end of document`}
+          ? t("Widen the window to preview page breaks at true paper size")
+          : fmt(t("Page {n} of {total} · end of document"), { n: total, total })}
       </div>
     </div>
   );

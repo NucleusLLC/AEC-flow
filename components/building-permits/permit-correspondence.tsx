@@ -31,6 +31,8 @@ import {
   createLetterUploadTicketAction,
   deleteCorrespondenceAction,
 } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const field =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -74,6 +76,7 @@ export function PermitCorrespondence({
   /** Re-read the case file. See the note in permit-case-file.tsx. */
   onChanged: () => Promise<void>;
 }) {
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,14 +126,14 @@ export function PermitCorrespondence({
           pdf,
         );
         if (!res.ok) {
-          setError(res.error);
+          setError(t(res.error));
           return;
         }
         reset();
         setOpen(false);
         await onChanged();
       } catch (err) {
-        setError(errorText(err, "The letter was not saved."));
+        setError(t(errorText(err, "The letter was not saved.")));
       } finally {
         setPending(false);
       }
@@ -146,10 +149,10 @@ export function PermitCorrespondence({
       try {
         const pdf = await uploadLetterPdf(permitId, picked);
         const res = await attachLetterPdfAction(letterId, pdf);
-        if (!res.ok) setError(res.error);
+        if (!res.ok) setError(t(res.error));
         await onChanged();
       } catch (err) {
-        setError(errorText(err, "The PDF was not attached."));
+        setError(t(errorText(err, "The PDF was not attached.")));
       } finally {
         setBusyId(null);
         setPending(false);
@@ -162,7 +165,7 @@ export function PermitCorrespondence({
     setPending(true);
     void (async () => {
       const res = await deleteCorrespondenceAction(permitId, id);
-      if (!res.ok) setError(res.error);
+      if (!res.ok) setError(t(res.error));
       setConfirmId(null);
       await onChanged();
       setPending(false);
@@ -172,17 +175,17 @@ export function PermitCorrespondence({
   return (
     <div className="space-y-3">
       {letters.length === 0 ? (
-        <p className="text-sm text-muted">No letters on this file yet.</p>
+        <p className="text-sm text-muted">{t("No letters on this file yet.")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-3 pb-1.5 font-medium">Date</th>
-                <th className="px-3 pb-1.5 font-medium">Ref.</th>
-                <th className="px-3 pb-1.5 font-medium">Subject</th>
-                <th className="px-3 pb-1.5 font-medium">Reply</th>
-                <th className="px-3 pb-1.5 font-medium">PDF</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Date")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Ref.")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Subject")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Reply")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("PDF")}</th>
                 <th className="px-3 pb-1.5" />
               </tr>
             </thead>
@@ -195,7 +198,7 @@ export function PermitCorrespondence({
                       <span className="inline-flex items-center gap-1">
                         <Direction
                           className={`h-3.5 w-3.5 ${l.direction === "INCOMING" ? "text-violet-600" : "text-faint"}`}
-                          aria-label={CORRESPONDENCE_DIRECTION_LABEL[l.direction]}
+                          aria-label={t(CORRESPONDENCE_DIRECTION_LABEL[l.direction])}
                         />
                         {militaryDate(l.letterDate ?? l.receivedAt)}
                       </span>
@@ -207,7 +210,7 @@ export function PermitCorrespondence({
                     </td>
                     <td className="px-3 py-2">
                       {l.respondedAt ? (
-                        <span className="font-mono text-xs text-muted">Answered {militaryDate(l.respondedAt)}</span>
+                        <span className="font-mono text-xs text-muted">{fmt(t("Answered {date}"), { date: militaryDate(l.respondedAt) })}</span>
                       ) : l.requiresResponse ? (
                         <ResponseDueBadge dueAt={l.responseDueAt} today={today} />
                       ) : (
@@ -221,9 +224,9 @@ export function PermitCorrespondence({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-medium text-fg hover:text-brand hover:underline"
-                          title={l.pdf.filename ?? "Open PDF"}
+                          title={l.pdf.filename ?? t("Open PDF")}
                         >
-                          <FileText className="h-4 w-4 text-red-600" /> Open PDF
+                          <FileText className="h-4 w-4 text-red-600" /> {t("Open PDF")}
                         </a>
                       ) : (
                         <label
@@ -232,7 +235,7 @@ export function PermitCorrespondence({
                           }`}
                         >
                           <Paperclip className="h-3.5 w-3.5" />
-                          {busyId === l.id ? "Uploading…" : "Attach PDF"}
+                          {busyId === l.id ? t("Uploading…") : t("Attach PDF")}
                           <input
                             type="file"
                             accept="application/pdf,.pdf"
@@ -251,17 +254,17 @@ export function PermitCorrespondence({
                             onClick={() => remove(l.id)}
                             className="font-medium text-red-600 hover:underline"
                           >
-                            Delete letter{l.pdf ? " + PDF" : ""}
+                            {l.pdf ? t("Delete letter + PDF") : t("Delete letter")}
                           </button>
                           <button type="button" onClick={() => setConfirmId(null)} className="text-muted hover:underline">
-                            Keep
+                            {t("Keep")}
                           </button>
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => setConfirmId(l.id)}
-                          aria-label="Delete letter"
+                          aria-label={t("Delete letter")}
                           className="text-faint transition-colors hover:text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -279,7 +282,7 @@ export function PermitCorrespondence({
       {open ? (
         <form onSubmit={add} className="grid gap-3 rounded-lg border border-border bg-surface-2/40 p-3 sm:grid-cols-4">
           <div>
-            <label className={label}>Direction</label>
+            <label className={label}>{t("Direction")}</label>
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value as BuildingPermitCorrespondenceDirection)}
@@ -287,34 +290,34 @@ export function PermitCorrespondence({
             >
               {CORRESPONDENCE_DIRECTIONS.map((d) => (
                 <option key={d} value={d}>
-                  {CORRESPONDENCE_DIRECTION_LABEL[d]}
+                  {t(CORRESPONDENCE_DIRECTION_LABEL[d])}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Letter date</label>
+            <label className={label}>{t("Letter date")}</label>
             <input type="date" value={letterDate} onChange={(e) => setLetterDate(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Letter ref.</label>
+            <label className={label}>{t("Letter ref.")}</label>
             <input value={letterRef} onChange={(e) => setLetterRef(e.target.value)} className={`${field} font-mono`} />
           </div>
           <div>
-            <label className={label}>{direction === "INCOMING" ? "From" : "To"}</label>
+            <label className={label}>{direction === "INCOMING" ? t("From") : t("To")}</label>
             <input
               value={party}
               onChange={(e) => setParty(e.target.value)}
-              placeholder="e.g. DOW / Public Works"
+              placeholder={t("e.g. DOW / Public Works")}
               className={field}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Subject</label>
+            <label className={label}>{t("Subject")}</label>
             <input required value={subject} onChange={(e) => setSubject(e.target.value)} className={field} />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Letter (PDF)</label>
+            <label className={label}>{t("Letter (PDF)")}</label>
             <input
               ref={fileInput}
               type="file"
@@ -331,11 +334,11 @@ export function PermitCorrespondence({
                   checked={requiresResponse}
                   onChange={(e) => setRequiresResponse(e.target.checked)}
                 />
-                Needs a reply
+                {t("Needs a reply")}
               </label>
               {requiresResponse ? (
                 <div className="sm:col-span-2">
-                  <label className={label}>Reply due</label>
+                  <label className={label}>{t("Reply due")}</label>
                   <input type="date" value={responseDueAt} onChange={(e) => setResponseDueAt(e.target.value)} className={field} />
                 </div>
               ) : null}
@@ -347,7 +350,7 @@ export function PermitCorrespondence({
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {pending ? (file ? "Uploading…" : "Saving…") : "Save letter"}
+              {pending ? (file ? t("Uploading…") : t("Saving…")) : t("Save letter")}
             </button>
             <button
               type="button"
@@ -357,7 +360,7 @@ export function PermitCorrespondence({
               }}
               className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -367,7 +370,7 @@ export function PermitCorrespondence({
           onClick={() => setOpen(true)}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> Add letter
+          <Plus className="h-4 w-4" /> {t("Add letter")}
         </button>
       )}
 

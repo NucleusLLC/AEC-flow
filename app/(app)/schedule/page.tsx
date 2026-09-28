@@ -2,8 +2,12 @@ import { ScheduleApp } from "@/components/schedule/schedule-app";
 import { getSchedules } from "@/lib/data/schedule-db";
 import { getProjectDirectory, getProjects } from "@/lib/data/projects";
 import { getClients } from "@/lib/data/clients";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Schedule · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Schedule")} · AEC-flow` };
+}
 
 export default async function SchedulePage({
   searchParams,

@@ -20,6 +20,8 @@ import {
 } from "@/lib/data/proposals.types";
 import { saveProposal } from "@/app/(app)/proposals/actions";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type LineItemForm = {
   description: string;
@@ -89,6 +91,7 @@ export function ProposalForm({
   initial?: ProposalFormValues;
   backHref: string;
 }) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   /* The reference is a SUGGESTION, not a decree. It is derived from the proposals
    * THIS company can see, so a hidden or externally-issued number collides with it —
@@ -129,7 +132,7 @@ export function ProposalForm({
       id: "preview",
       refNumber: refValue,
       title: v.title,
-      clientName: clients.find((c) => c.id === v.clientId)?.name ?? "Client to be selected",
+      clientName: clients.find((c) => c.id === v.clientId)?.name ?? t("Client to be selected"),
       owner: v.owner,
       status: v.status,
       revision: 1,
@@ -226,7 +229,7 @@ export function ProposalForm({
           </div>
           <div className="text-sm">
             <p className="font-medium text-red-800">
-              Couldn’t {mode === "new" ? "create" : "update"} the proposal.
+              {mode === "new" ? t("Couldn’t create the proposal.") : t("Couldn’t update the proposal.")}
             </p>
             <p className="mt-0.5 text-red-700">{error}</p>
           </div>
@@ -237,10 +240,10 @@ export function ProposalForm({
         {/* Main column */}
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <SectionHeader title="Proposal" subtitle="Reference, title and client" />
+            <SectionHeader title={t("Proposal")} subtitle={t("Reference, title and client")} />
             <div className="mb-4 max-w-xs">
               <label htmlFor="proposal-ref" className="mb-1 block text-xs font-medium text-muted">
-                Reference number
+                {t("Reference number")}
               </label>
               <input
                 id="proposal-ref"
@@ -250,16 +253,16 @@ export function ProposalForm({
                 className="h-9 w-full rounded-lg border border-border bg-surface px-2.5 font-mono text-sm text-fg outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
               />
               <p className="mt-1 text-[11px] text-faint">
-                Suggested from your existing proposals. Change it to use your own numbering — it must be unique.
+                {t("Suggested from your existing proposals. Change it to use your own numbering — it must be unique.")}
               </p>
             </div>
             <CardBody className="space-y-4">
               <div>
-                <label className={labelCls}>Title</label>
+                <label className={labelCls}>{t("Title")}</label>
                 <input
                   className={inputCls}
-                  placeholder="e.g. Marina Heights Tower — Phase 2 Design"
-                  {...register("title", { required: "Title is required", minLength: { value: 3, message: "Too short" } })}
+                  placeholder={t("e.g. Marina Heights Tower — Phase 2 Design")}
+                  {...register("title", { required: t("Title is required"), minLength: { value: 3, message: t("Too short") } })}
                 />
                 {errors.title ? <p className={errCls}>{errors.title.message}</p> : null}
               </div>
@@ -275,10 +278,10 @@ export function ProposalForm({
                   <Controller
                     control={control}
                     name="clientId"
-                    rules={{ required: "Select a client, or add one" }}
+                    rules={{ required: t("Select a client, or add one") }}
                     render={({ field }) => (
                       <ClientSelect
-                        label="Client"
+                        label={t("Client")}
                         clients={clients}
                         value={field.value}
                         onChange={field.onChange}
@@ -295,7 +298,7 @@ export function ProposalForm({
                   rules={{ required: true }}
                   render={({ field }) => (
                     <MemberSelect
-                      label="Owner"
+                      label={t("Owner")}
                       by="name"
                       members={owners.map((o) => ({ id: o.name, name: o.name }))}
                       value={field.value}
@@ -307,10 +310,10 @@ export function ProposalForm({
                 />
               </div>
               <div>
-                <label className={labelCls}>Scope summary</label>
+                <label className={labelCls}>{t("Scope summary")}</label>
                 <textarea
                   className={`${inputCls} h-auto min-h-[88px] py-2`}
-                  placeholder="What the fee covers…"
+                  placeholder={t("What the fee covers…")}
                   {...register("scopeSummary")}
                 />
               </div>
@@ -320,8 +323,8 @@ export function ProposalForm({
           {/* Line items */}
           <Card>
             <SectionHeader
-              title="Line Items"
-              subtitle={`Committed ${formatCurrency(committed, currency)}${optional > 0 ? ` · +${formatCurrency(optional, currency)} optional` : ""}`}
+              title={t("Line Items")}
+              subtitle={`${fmt(t("Committed {amount}"), { amount: formatCurrency(committed, currency) })}${optional > 0 ? ` · ${fmt(t("+{amount} optional"), { amount: formatCurrency(optional, currency) })}` : ""}`}
               action={
                 <button
                   type="button"
@@ -329,7 +332,7 @@ export function ProposalForm({
                   className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg hover:bg-surface-2"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add item
+                  {t("Add item")}
                 </button>
               }
             />
@@ -338,17 +341,17 @@ export function ProposalForm({
                 <div key={field.id} className="grid grid-cols-12 items-center gap-2">
                   <input
                     className={`${inputCls} col-span-12 sm:col-span-4`}
-                    placeholder="Description"
+                    placeholder={t("Description")}
                     {...register(`lineItems.${i}.description` as const, { required: true })}
                   />
                   <select
                     className={`${inputCls} col-span-5 sm:col-span-3`}
                     {...register(`lineItems.${i}.discipline` as const)}
                   >
-                    <option value="">Discipline…</option>
+                    <option value="">{t("Discipline…")}</option>
                     {(Object.keys(DISCIPLINE_LABEL) as Discipline[]).map((d) => (
                       <option key={d} value={d}>
-                        {DISCIPLINE_LABEL[d]}
+                        {t(DISCIPLINE_LABEL[d])}
                       </option>
                     ))}
                   </select>
@@ -362,7 +365,7 @@ export function ProposalForm({
                   />
                   <label className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1 text-[11px] text-muted">
                     <input type="checkbox" {...register(`lineItems.${i}.isOptional` as const)} />
-                    opt
+                    {t("opt")}
                   </label>
                   <div className="col-span-1 flex flex-col items-center justify-center">
                     <button
@@ -370,8 +373,8 @@ export function ProposalForm({
                       onClick={() => lineItems.move(i, i - 1)}
                       disabled={i === 0}
                       className="flex h-4 w-5 items-center justify-center rounded text-faint hover:text-fg disabled:opacity-30"
-                      aria-label="Move line item up"
-                      title="Move up"
+                      aria-label={t("Move line item up")}
+                      title={t("Move up")}
                     >
                       <ChevronUp className="h-3.5 w-3.5" />
                     </button>
@@ -380,8 +383,8 @@ export function ProposalForm({
                       onClick={() => lineItems.move(i, i + 1)}
                       disabled={i === lineItems.fields.length - 1}
                       className="flex h-4 w-5 items-center justify-center rounded text-faint hover:text-fg disabled:opacity-30"
-                      aria-label="Move line item down"
-                      title="Move down"
+                      aria-label={t("Move line item down")}
+                      title={t("Move down")}
                     >
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
@@ -391,7 +394,7 @@ export function ProposalForm({
                     onClick={() => lineItems.remove(i)}
                     disabled={lineItems.fields.length === 1}
                     className="col-span-1 inline-flex h-9 items-center justify-center rounded-lg text-faint hover:text-red-600 disabled:opacity-30"
-                    aria-label="Remove line item"
+                    aria-label={t("Remove line item")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -403,8 +406,8 @@ export function ProposalForm({
           {/* Milestones */}
           <Card>
             <SectionHeader
-              title="Payment Milestones"
-              subtitle={milestoneTotal === 100 ? "100% allocated" : `${milestoneTotal}% allocated`}
+              title={t("Payment Milestones")}
+              subtitle={fmt(t("{pct}% allocated"), { pct: milestoneTotal })}
               action={
                 <button
                   type="button"
@@ -412,7 +415,7 @@ export function ProposalForm({
                   className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg hover:bg-surface-2"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  Add milestone
+                  {t("Add milestone")}
                 </button>
               }
             />
@@ -421,7 +424,7 @@ export function ProposalForm({
                 <div key={field.id} className="grid grid-cols-12 items-center gap-2">
                   <input
                     className={`${inputCls} col-span-7 sm:col-span-8`}
-                    placeholder="Milestone name"
+                    placeholder={t("Milestone name")}
                     {...register(`milestones.${i}.name` as const, { required: true })}
                   />
                   <div className="col-span-4 sm:col-span-3 flex items-center gap-1">
@@ -439,7 +442,7 @@ export function ProposalForm({
                     type="button"
                     onClick={() => milestones.remove(i)}
                     className="col-span-1 inline-flex h-9 items-center justify-center rounded-lg text-faint hover:text-red-600"
-                    aria-label="Remove milestone"
+                    aria-label={t("Remove milestone")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -447,7 +450,7 @@ export function ProposalForm({
               ))}
               {milestoneTotal !== 100 ? (
                 <p className="text-xs text-amber-600">
-                  Milestones add up to {milestoneTotal}% — they usually total 100% of the fee.
+                  {fmt(t("Milestones add up to {pct}% — they usually total 100% of the fee."), { pct: milestoneTotal })}
                 </p>
               ) : null}
             </CardBody>
@@ -457,21 +460,21 @@ export function ProposalForm({
         {/* Sidebar */}
         <div className="space-y-6">
           <Card>
-            <SectionHeader title="Commercials" />
+            <SectionHeader title={t("Commercials")} />
             <CardBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Status</label>
+                  <label className={labelCls}>{t("Status")}</label>
                   <select className={inputCls} {...register("status", { required: true })}>
                     {(Object.keys(PROPOSAL_STATUS_LABEL) as ProposalStatus[]).map((s) => (
                       <option key={s} value={s}>
-                        {PROPOSAL_STATUS_LABEL[s]}
+                        {t(PROPOSAL_STATUS_LABEL[s])}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Currency</label>
+                  <label className={labelCls}>{t("Currency")}</label>
                   <select className={inputCls} {...register("currency", { required: true })}>
                     {currencyOptions(OTHER_CURRENCIES).map((c) => (
                       <option key={c} value={c}>
@@ -482,21 +485,21 @@ export function ProposalForm({
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Valid until</label>
+                <label className={labelCls}>{t("Valid until")}</label>
                 <input type="date" className={inputCls} {...register("validUntil")} />
               </div>
               <div>
-                <label className={labelCls}>Estimated duration (weeks)</label>
-                <input type="number" min={0} className={inputCls} placeholder="e.g. 24" {...register("estimatedDuration")} />
+                <label className={labelCls}>{t("Estimated duration (weeks)")}</label>
+                <input type="number" min={0} className={inputCls} placeholder={t("e.g. 24")} {...register("estimatedDuration")} />
               </div>
               <div className="rounded-lg bg-surface-2 p-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">Total fee</span>
+                  <span className="text-muted">{t("Total fee")}</span>
                   <span className="font-semibold text-fg">{formatCurrency(committed, currency)}</span>
                 </div>
                 {optional > 0 ? (
                   <div className="mt-1 flex items-center justify-between text-xs">
-                    <span className="text-muted">+ optional add-ons</span>
+                    <span className="text-muted">{t("+ optional add-ons")}</span>
                     <span className="text-fg">{formatCurrency(optional, currency)}</span>
                   </div>
                 ) : null}
@@ -505,14 +508,14 @@ export function ProposalForm({
           </Card>
 
           <Card>
-            <SectionHeader title="Terms & Exclusions" />
+            <SectionHeader title={t("Terms & Exclusions")} />
             <CardBody className="space-y-4">
               <div>
-                <label className={labelCls}>Exclusions</label>
+                <label className={labelCls}>{t("Exclusions")}</label>
                 <textarea className={`${inputCls} h-auto min-h-[64px] py-2`} {...register("exclusions")} />
               </div>
               <div>
-                <label className={labelCls}>Payment terms</label>
+                <label className={labelCls}>{t("Payment terms")}</label>
                 <textarea className={`${inputCls} h-auto min-h-[64px] py-2`} {...register("terms")} />
               </div>
             </CardBody>
@@ -525,10 +528,10 @@ export function ProposalForm({
               className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending
-                ? "Saving…"
+                ? t("Saving…")
                 : mode === "new"
-                  ? "Create proposal"
-                  : "Save changes"}
+                  ? t("Create proposal")
+                  : t("Save changes")}
             </button>
             <button
               type="button"
@@ -536,13 +539,13 @@ export function ProposalForm({
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
             >
               <Eye className="h-4 w-4" />
-              Preview
+              {t("Preview")}
             </button>
             <Link
               href={backHref}
               className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </Link>
           </div>
         </div>

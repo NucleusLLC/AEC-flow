@@ -13,6 +13,8 @@ import { DEPARTMENT_LABEL } from "@/lib/data/team.types";
 import {
   ROLE_LABEL, type Member, type RoleInfo, type UserRole, type Department,
 } from "@/lib/data/settings";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type Tone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";
 
@@ -26,6 +28,13 @@ const statusTone: Record<Member["status"], Tone> = {
 const ROLES: UserRole[] = ["ADMIN", "DIRECTOR", "MANAGER", "STAFF", "VIEWER"];
 const STATUSES: Member["status"][] = ["ACTIVE", "ON_LEAVE", "INACTIVE"];
 const DEPARTMENTS: Department[] = ["DESIGN", "ENGINEERING", "MANAGEMENT", "ADMIN", "FINANCE"];
+
+/** "ON_LEAVE" -> "On leave": the English label, which is also the i18n key. */
+const STATUS_LABEL: Record<Member["status"], string> = {
+  ACTIVE: "Active",
+  ON_LEAVE: "On leave",
+  INACTIVE: "Inactive",
+};
 
 const selectCls =
   "h-8 rounded-lg border border-border bg-surface px-2 text-xs font-medium text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:opacity-60";
@@ -46,6 +55,7 @@ export function MembersManager({
    */
   canManagePasswords?: boolean;
 }) {
+  const t = useT();
   const [members, setMembers] = useState<Member[]>(initial);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -95,18 +105,18 @@ export function MembersManager({
         {roles.map((r) => (
           <Card key={r.role} className="p-4">
             <div className="flex items-center justify-between">
-              <Badge tone={roleTone[r.role]}>{r.label}</Badge>
-              <span className="text-xs text-faint">{r.memberCount} {r.memberCount === 1 ? "member" : "members"}</span>
+              <Badge tone={roleTone[r.role]}>{t(r.label)}</Badge>
+              <span className="text-xs text-faint">{r.memberCount === 1 ? t("1 member") : fmt(t("{count} members"), { count: r.memberCount })}</span>
             </div>
-            <p className="mt-2 text-xs text-muted">{r.description}</p>
+            <p className="mt-2 text-xs text-muted">{t(r.description)}</p>
           </Card>
         ))}
       </div>
 
       <Card>
         <CardHeader
-          title="Members"
-          subtitle={`${members.length} people`}
+          title={t("Members")}
+          subtitle={fmt(t("{count} people"), { count: members.length })}
           action={
             <button
               type="button"
@@ -114,25 +124,25 @@ export function MembersManager({
               disabled={!canSave}
               className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-2.5 text-xs font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Plus className="h-3.5 w-3.5" /> Invite member
+              <Plus className="h-3.5 w-3.5" /> {t("Invite member")}
             </button>
           }
         />
 
         {!canSave ? (
           <div className="mx-5 mb-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            <Lock className="h-3.5 w-3.5 shrink-0" /> Sign in to manage members.
+            <Lock className="h-3.5 w-3.5 shrink-0" /> {t("Sign in to manage members.")}
           </div>
         ) : null}
         {error ? (
           <div className="mx-5 mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {error}
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {t(error)}
           </div>
         ) : null}
         {pwDone ? (
           <div className="mx-5 mb-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
             <Check className="h-3.5 w-3.5 shrink-0" />
-            New password set for {pwDone}. They can sign in with it now — existing sessions elsewhere are unaffected.
+            {fmt(t("New password set for {name}. They can sign in with it now — existing sessions elsewhere are unaffected."), { name: pwDone })}
           </div>
         ) : null}
 
@@ -140,11 +150,11 @@ export function MembersManager({
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Member</th>
-                <th className="px-3 py-2.5 font-medium">Role</th>
-                <th className="px-3 py-2.5 font-medium">Department</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                {canManagePasswords ? <th className="px-5 py-2.5 font-medium">Password</th> : null}
+                <th className="px-5 py-2.5 font-medium">{t("Member")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Role")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Department")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+                {canManagePasswords ? <th className="px-5 py-2.5 font-medium">{t("Password")}</th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -164,22 +174,22 @@ export function MembersManager({
                   <td className="px-3 py-3">
                     {canSave ? (
                       <select value={m.role} disabled={pending} onChange={(e) => changeRole(m.id, e.target.value as UserRole)} className={selectCls}>
-                        {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                        {ROLES.map((r) => <option key={r} value={r}>{t(ROLE_LABEL[r])}</option>)}
                       </select>
                     ) : (
-                      <Badge tone={roleTone[m.role]}>{ROLE_LABEL[m.role]}</Badge>
+                      <Badge tone={roleTone[m.role]}>{t(ROLE_LABEL[m.role])}</Badge>
                     )}
                   </td>
                   <td className="px-3 py-3 text-muted">
-                    {m.department ? DEPARTMENT_LABEL[m.department] : "—"}
+                    {m.department ? t(DEPARTMENT_LABEL[m.department]) : "—"}
                   </td>
                   <td className="px-3 py-3">
                     {canSave ? (
                       <select value={m.status} disabled={pending} onChange={(e) => changeStatus(m.id, e.target.value as Member["status"])} className={selectCls}>
-                        {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ").toLowerCase()}</option>)}
+                        {STATUSES.map((s) => <option key={s} value={s}>{t(STATUS_LABEL[s])}</option>)}
                       </select>
                     ) : (
-                      <Badge tone={statusTone[m.status]}>{m.status.replace(/_/g, " ").toLowerCase()}</Badge>
+                      <Badge tone={statusTone[m.status]}>{t(STATUS_LABEL[m.status])}</Badge>
                     )}
                   </td>
                   {canManagePasswords ? (
@@ -189,7 +199,7 @@ export function MembersManager({
                         onClick={() => { setError(null); setPwDone(null); setPwMember(m); }}
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
                       >
-                        <KeyRound className="h-3.5 w-3.5" /> Set password
+                        <KeyRound className="h-3.5 w-3.5" /> {t("Set password")}
                       </button>
                     </td>
                   ) : null}
@@ -220,6 +230,7 @@ function InviteDialog({
   onClose: () => void;
   onInvited: (m: Member) => void;
 }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("STAFF");
@@ -243,39 +254,39 @@ function InviteDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-xl border border-border bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <h3 className="text-sm font-semibold text-fg">Invite member</h3>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-muted hover:text-fg"><X className="h-4 w-4" /></button>
+          <h3 className="text-sm font-semibold text-fg">{t("Invite member")}</h3>
+          <button type="button" onClick={onClose} aria-label={t("Close")} className="text-muted hover:text-fg"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-4 px-5 py-4">
           <label className="block">
-            <span className="text-xs font-medium text-muted">Full name</span>
+            <span className="text-xs font-medium text-muted">{t("Full name")}</span>
             <input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Jane Doe" className={inputCls} />
           </label>
           <label className="block">
-            <span className="text-xs font-medium text-muted">Email</span>
+            <span className="text-xs font-medium text-muted">{t("Email")}</span>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@zenarch.ae" className={inputCls} />
           </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
-              <span className="text-xs font-medium text-muted">Role</span>
+              <span className="text-xs font-medium text-muted">{t("Role")}</span>
               <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} className={`${inputCls} px-2`}>
-                {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                {ROLES.map((r) => <option key={r} value={r}>{t(ROLE_LABEL[r])}</option>)}
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-muted">Department</span>
+              <span className="text-xs font-medium text-muted">{t("Department")}</span>
               <select value={department} onChange={(e) => setDepartment(e.target.value as Department)} className={`${inputCls} px-2`}>
-                {DEPARTMENTS.map((d) => <option key={d} value={d}>{DEPARTMENT_LABEL[d]}</option>)}
+                {DEPARTMENTS.map((d) => <option key={d} value={d}>{t(DEPARTMENT_LABEL[d])}</option>)}
               </select>
             </label>
           </div>
-          <p className="text-[11px] text-faint">Creates a user with no password set — they sign in once an admin sets a password.</p>
-          {error ? <p className="flex items-center gap-1.5 text-sm text-red-600"><AlertTriangle className="h-4 w-4" /> {error}</p> : null}
+          <p className="text-[11px] text-faint">{t("Creates a user with no password set — they sign in once an admin sets a password.")}</p>
+          {error ? <p className="flex items-center gap-1.5 text-sm text-red-600"><AlertTriangle className="h-4 w-4" /> {t(error)}</p> : null}
         </div>
         <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-          <button type="button" onClick={onClose} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2">Cancel</button>
+          <button type="button" onClick={onClose} className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2">{t("Cancel")}</button>
           <button type="button" onClick={submit} disabled={pending} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60">
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Invite
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {t("Invite")}
           </button>
         </div>
       </div>

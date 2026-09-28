@@ -6,6 +6,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { CertStatusBadge } from "@/components/construction-admin/badges";
 import { getCertification } from "@/lib/data/ca/certifications";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -34,6 +36,7 @@ function MoneyRow({ label, value, currency, strong }: { label: string; value: nu
 }
 
 export default async function CertificationDetailPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const c = await getCertification(id);
   if (!c) notFound();
@@ -42,7 +45,7 @@ export default async function CertificationDetailPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/certifications" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Certifications
+        {t("Certifications")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -51,7 +54,7 @@ export default async function CertificationDetailPage({ params }: PageProps) {
             <span className="font-mono text-xs text-faint">{c.certificationNumber}</span>
             <CertStatusBadge status={c.status} />
           </div>
-          <h2 className="mt-1 text-xl font-semibold text-fg">Progress Certification</h2>
+          <h2 className="mt-1 text-xl font-semibold text-fg">{t("Progress Certification")}</h2>
           <span className="inline-flex items-center gap-1.5 text-sm text-muted">
             <Building2 className="h-3.5 w-3.5" />
             {c.projectName}
@@ -63,7 +66,7 @@ export default async function CertificationDetailPage({ params }: PageProps) {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            {t("Edit")}
           </Link>
           <a
             href={`/print/construction-admin/certifications/${c.id}`}
@@ -72,7 +75,7 @@ export default async function CertificationDetailPage({ params }: PageProps) {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Printer className="h-4 w-4" />
-            Print / PDF
+            {t("Print / PDF")}
           </a>
         </div>
       </div>
@@ -80,16 +83,16 @@ export default async function CertificationDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Payment Recommendation" />
+            <CardHeader title={t("Payment Recommendation")} />
             <CardBody className="space-y-2">
-              <MoneyRow label="Contract value" value={c.contractValue} currency={c.currency} />
-              <Row label="Percent complete">{c.previousPercentComplete}% → {c.currentPercentComplete}%</Row>
+              <MoneyRow label={t("Contract value")} value={c.contractValue} currency={c.currency} />
+              <Row label={t("Percent complete")}>{c.previousPercentComplete}% → {c.currentPercentComplete}%</Row>
               <div className="border-t border-border pt-2">
-                <MoneyRow label="Work completed value" value={c.workCompletedValue} currency={c.currency} />
-                <MoneyRow label={`Retention (${c.retentionPercentage}%)`} value={c.retentionAmount} currency={c.currency} />
-                <MoneyRow label="Previous payments" value={c.previousPaymentsValue} currency={c.currency} />
+                <MoneyRow label={t("Work completed value")} value={c.workCompletedValue} currency={c.currency} />
+                <MoneyRow label={fmt(t("Retention ({pct}%)"), { pct: c.retentionPercentage })} value={c.retentionAmount} currency={c.currency} />
+                <MoneyRow label={t("Previous payments")} value={c.previousPaymentsValue} currency={c.currency} />
                 <div className="border-t border-border pt-2">
-                  <MoneyRow label="Recommended for payment" value={c.amountRecommendedForPayment} currency={c.currency} strong />
+                  <MoneyRow label={t("Recommended for payment")} value={c.amountRecommendedForPayment} currency={c.currency} strong />
                 </div>
               </div>
             </CardBody>
@@ -97,17 +100,17 @@ export default async function CertificationDetailPage({ params }: PageProps) {
 
           {c.deficiencies || c.recommendation ? (
             <Card>
-              <CardHeader title="Findings" />
+              <CardHeader title={t("Findings")} />
               <CardBody className="space-y-3">
                 {c.deficiencies ? (
                   <div>
-                    <div className="text-xs text-muted">Deficiencies</div>
+                    <div className="text-xs text-muted">{t("Deficiencies")}</div>
                     <p className="mt-0.5 text-sm text-fg">{c.deficiencies}</p>
                   </div>
                 ) : null}
                 {c.recommendation ? (
                   <div>
-                    <div className="text-xs text-muted">Recommendation</div>
+                    <div className="text-xs text-muted">{t("Recommendation")}</div>
                     <p className="mt-0.5 text-sm text-fg">{c.recommendation}</p>
                   </div>
                 ) : null}
@@ -118,13 +121,13 @@ export default async function CertificationDetailPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label="Inspection date">{formatDate(c.inspectionDate)}</Row>
-              <Row label="Certified by">{c.certifiedBy ?? "—"}</Row>
-              <Row label="Lender / bank">{c.lenderName ?? "—"}</Row>
-              <Row label="Contractor">{c.contractorName ?? "—"}</Row>
-              <Row label="Updated">{formatDate(c.updatedAt)}</Row>
+              <Row label={t("Inspection date")}>{formatDate(c.inspectionDate)}</Row>
+              <Row label={t("Certified by")}>{c.certifiedBy ?? "—"}</Row>
+              <Row label={t("Lender / bank")}>{c.lenderName ?? "—"}</Row>
+              <Row label={t("Contractor")}>{c.contractorName ?? "—"}</Row>
+              <Row label={t("Updated")}>{formatDate(c.updatedAt)}</Row>
             </CardBody>
           </Card>
         </div>

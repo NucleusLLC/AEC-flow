@@ -28,6 +28,8 @@ import {
   createDocumentUploadTicketAction,
   deleteDocumentAction,
 } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const field =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -52,6 +54,7 @@ export function PermitDocuments({
   today: string;
   onChanged: () => Promise<void>;
 }) {
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,14 +113,14 @@ export function PermitDocuments({
           upload,
         );
         if (!res.ok) {
-          setError(res.error);
+          setError(t(res.error));
           return;
         }
         reset();
         setOpen(false);
         await onChanged();
       } catch (err) {
-        setError(err instanceof Error && err.message ? err.message : "The file was not saved.");
+        setError(err instanceof Error && err.message ? t(err.message) : t("The file was not saved."));
       } finally {
         setPending(false);
       }
@@ -129,7 +132,7 @@ export function PermitDocuments({
     setPending(true);
     void (async () => {
       const res = await deleteDocumentAction(permitId, id);
-      if (!res.ok) setError(res.error);
+      if (!res.ok) setError(t(res.error));
       setConfirmId(null);
       await onChanged();
       setPending(false);
@@ -140,7 +143,7 @@ export function PermitDocuments({
     <div className="space-y-3">
       {loose.length === 0 ? (
         <p className="text-sm text-muted">
-          No file on the case yet — the stamped form, the fee receipt, a photo of the site notice.
+          {t("No file on the case yet — the stamped form, the fee receipt, a photo of the site notice.")}
         </p>
       ) : (
         <ul className="divide-y divide-border/60">
@@ -154,7 +157,7 @@ export function PermitDocuments({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex min-w-0 items-center gap-1.5 text-sm font-medium text-fg hover:text-brand hover:underline"
-                      title={d.filename ?? "Open"}
+                      title={d.filename ?? t("Open file")}
                     >
                       <FileText className="h-4 w-4 shrink-0 text-brand" />
                       <span className="truncate">{d.name}</span>
@@ -176,7 +179,7 @@ export function PermitDocuments({
                 </div>
                 <div className="mt-0.5 text-[11px] text-faint">
                   {[
-                    DOCUMENT_CATEGORY_LABEL[d.category],
+                    t(DOCUMENT_CATEGORY_LABEL[d.category]),
                     d.documentDate ? militaryDate(d.documentDate) : null,
                     fileSize(d.sizeBytes) || null,
                     d.uploadedByName,
@@ -193,21 +196,21 @@ export function PermitDocuments({
                     onClick={() => remove(d.id)}
                     className="font-medium text-red-600 hover:underline"
                   >
-                    Delete{d.storageKey ? " + file" : ""}
+                    {d.storageKey ? t("Delete + file") : t("Delete")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmId(null)}
                     className="text-muted hover:underline"
                   >
-                    Keep
+                    {t("Keep")}
                   </button>
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={() => setConfirmId(d.id)}
-                  aria-label={`Delete ${d.name}`}
+                  aria-label={fmt(t("Delete {name}"), { name: d.name })}
                   className="shrink-0 text-faint transition-colors hover:text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -224,7 +227,7 @@ export function PermitDocuments({
           className="grid gap-3 rounded-lg border border-border bg-surface-2/40 p-3 sm:grid-cols-3"
         >
           <div>
-            <label className={label}>Category</label>
+            <label className={label}>{t("Category")}</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as BuildingPermitDocumentCategory)}
@@ -232,22 +235,22 @@ export function PermitDocuments({
             >
               {DOCUMENT_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {DOCUMENT_CATEGORY_LABEL[c]}
+                  {t(DOCUMENT_CATEGORY_LABEL[c])}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Name</label>
+            <label className={label}>{t("Name")}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Defaults to the file's name"
+              placeholder={t("Defaults to the file's name")}
               className={field}
             />
           </div>
           <div>
-            <label className={label}>Document date</label>
+            <label className={label}>{t("Document date")}</label>
             <input
               type="date"
               value={documentDate}
@@ -256,7 +259,7 @@ export function PermitDocuments({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>File</label>
+            <label className={label}>{t("File")}</label>
             <input
               ref={fileInput}
               type="file"
@@ -265,7 +268,7 @@ export function PermitDocuments({
             />
           </div>
           <div>
-            <label className={label}>…or a link</label>
+            <label className={label}>{t("…or a link")}</label>
             <input
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
@@ -280,7 +283,7 @@ export function PermitDocuments({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
               <Paperclip className="h-4 w-4" />
-              {pending ? (file ? "Uploading…" : "Saving…") : "Add to the case"}
+              {pending ? (file ? t("Uploading…") : t("Saving…")) : t("Add to the case")}
             </button>
             <button
               type="button"
@@ -290,7 +293,7 @@ export function PermitDocuments({
               }}
               className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -300,7 +303,7 @@ export function PermitDocuments({
           onClick={() => setOpen(true)}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> Add a file
+          <Plus className="h-4 w-4" /> {t("Add a file")}
         </button>
       )}
 

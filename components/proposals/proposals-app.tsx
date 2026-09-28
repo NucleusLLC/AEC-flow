@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { ProposalsView } from "./proposals-view";
 import type { ProposalRecord, ProposalStatus } from "@/lib/data/proposals.types";
 import { formatCurrencyCompact } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const OPEN: ProposalStatus[] = ["DRAFT", "SENT", "PENDING", "ON_HOLD"];
 
@@ -13,6 +15,7 @@ type ClientRow = { client: string; count: number; open: number; won: number; cur
 type SortKey = keyof Pick<ClientRow, "client" | "count" | "open" | "won" | "latest">;
 
 export function ProposalsApp({ proposals }: { proposals: ProposalRecord[] }) {
+  const t = useT();
   const [sel, setSel] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "open", dir: -1 });
@@ -49,11 +52,11 @@ export function ProposalsApp({ proposals }: { proposals: ProposalRecord[] }) {
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => setSel(null)} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg">
-            <ArrowLeft className="h-4 w-4" /> All clients
+            <ArrowLeft className="h-4 w-4" /> {t("All clients")}
           </button>
           <span className="text-sm text-faint">/</span>
           <span className="text-sm font-semibold text-fg">{sel}</span>
-          {c ? <span className="text-xs text-muted">· {c.count} proposals · {formatCurrencyCompact(c.open)} open</span> : null}
+          {c ? <span className="text-xs text-muted">· {fmt(t(c.count === 1 ? "1 proposal" : "{count} proposals"), { count: c.count })} · {fmt(t("{amount} open"), { amount: formatCurrencyCompact(c.open) })}</span> : null}
         </div>
         <ProposalsView proposals={filtered} />
       </div>
@@ -64,12 +67,12 @@ export function ProposalsApp({ proposals }: { proposals: ProposalRecord[] }) {
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/50 px-4 py-3">
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-          <Users className="h-4 w-4 text-brand" /> Proposals by client
-          <span className="text-xs font-normal text-faint">· {clients.length} clients</span>
+          <Users className="h-4 w-4 text-brand" /> {t("Proposals by client")}
+          <span className="text-xs font-normal text-faint">· {fmt(t(clients.length === 1 ? "1 client" : "{count} clients"), { count: clients.length })}</span>
         </div>
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search client…" className="h-8 w-64 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search client…")} className="h-8 w-64 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
         </div>
       </div>
 
@@ -77,11 +80,11 @@ export function ProposalsApp({ proposals }: { proposals: ProposalRecord[] }) {
         <table className="w-full min-w-[680px] border-collapse text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-slate-200">
-              <Th label="Client" k="client" sort={sort} onSort={toggleSort} />
-              <Th label="Proposals" k="count" sort={sort} onSort={toggleSort} align="right" />
-              <Th label="Open Pipeline" k="open" sort={sort} onSort={toggleSort} align="right" />
-              <Th label="Won" k="won" sort={sort} onSort={toggleSort} align="right" />
-              <Th label="Latest" k="latest" sort={sort} onSort={toggleSort} align="center" />
+              <Th label={t("Client")} k="client" sort={sort} onSort={toggleSort} />
+              <Th label={t("Proposals")} k="count" sort={sort} onSort={toggleSort} align="right" />
+              <Th label={t("Open Pipeline")} k="open" sort={sort} onSort={toggleSort} align="right" />
+              <Th label={t("Won")} k="won" sort={sort} onSort={toggleSort} align="right" />
+              <Th label={t("Latest")} k="latest" sort={sort} onSort={toggleSort} align="center" />
             </tr>
           </thead>
           <tbody>
@@ -95,12 +98,12 @@ export function ProposalsApp({ proposals }: { proposals: ProposalRecord[] }) {
               </tr>
             ))}
             {!rows.length ? (
-              <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-muted">No clients match “{q}”.</td></tr>
+              <tr><td colSpan={5} className="px-3 py-10 text-center text-sm text-muted">{fmt(t("No clients match “{query}”."), { query: q })}</td></tr>
             ) : null}
           </tbody>
         </table>
       </div>
-      <p className="border-t border-border px-4 py-2 text-[11px] text-faint">Click a client to see their proposals. Click a column header to sort.</p>
+      <p className="border-t border-border px-4 py-2 text-[11px] text-faint">{t("Click a client to see their proposals. Click a column header to sort.")}</p>
     </Card>
   );
 }

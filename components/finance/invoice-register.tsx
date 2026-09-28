@@ -13,6 +13,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Inbox, Search } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { InvoiceStatusBadge, OverdueBadge } from "@/components/finance/badges";
 import { ageingBucket, daysOverdue, receivablesSummary } from "@/lib/finance/calc";
 import { militaryDate } from "@/lib/building-permits/register";
@@ -41,6 +43,7 @@ export function InvoiceRegister({
   invoices: InvoiceSummaryDTO[];
   today: string;
 }) {
+  const t = useT();
   const currencies = useMemo(
     () => [...new Set(invoices.map((i) => i.currency))].sort(),
     [invoices],
@@ -81,13 +84,23 @@ export function InvoiceRegister({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Billed" value={money(summary.billed)} note={`${summary.count} issued`} />
-        <Tile label="Received" value={money(summary.paid)} />
-        <Tile label="Outstanding" value={money(summary.outstanding)} />
         <Tile
-          label="Overdue"
+          label={t("Billed")}
+          value={money(summary.billed)}
+          note={fmt(t("{count} issued"), { count: summary.count })}
+        />
+        <Tile label={t("Received")} value={money(summary.paid)} />
+        <Tile label={t("Outstanding")} value={money(summary.outstanding)} />
+        <Tile
+          label={t("Overdue")}
           value={money(summary.overdue)}
-          note={summary.drafts > 0 ? `${summary.drafts} draft${summary.drafts === 1 ? "" : "s"} not counted` : undefined}
+          note={
+            summary.drafts > 0
+              ? summary.drafts === 1
+                ? t("1 draft not counted")
+                : fmt(t("{count} drafts not counted"), { count: summary.drafts })
+              : undefined
+          }
           tone={summary.overdue > 0 ? "red" : undefined}
         />
       </div>
@@ -95,10 +108,10 @@ export function InvoiceRegister({
       {summary.outstanding > 0 ? (
         <Card>
           <CardBody className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3 text-sm">
-            <span className="text-[11px] uppercase tracking-wide text-faint">Ageing</span>
+            <span className="text-[11px] uppercase tracking-wide text-faint">{t("Ageing")}</span>
             {(["current", "1-30", "31-60", "61-90", "90+"] as const).map((bucket) => (
               <span key={bucket} className="flex items-baseline gap-1.5">
-                <span className="text-muted">{bucket === "current" ? "Not yet due" : `${bucket} days`}</span>
+                <span className="text-muted">{bucket === "current" ? t("Not yet due") : fmt(t("{count} days"), { count: bucket })}</span>
                 <span className="font-mono tabular-nums text-fg">{money(summary.ageing[bucket])}</span>
               </span>
             ))}
@@ -112,8 +125,8 @@ export function InvoiceRegister({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search number, client, project, proposal…"
-            aria-label="Search invoices"
+            placeholder={t("Search number, client, project, proposal…")}
+            aria-label={t("Search invoices")}
             className={`${CONTROL} w-full pl-8 pr-3 placeholder:text-faint`}
           />
         </div>
@@ -121,15 +134,15 @@ export function InvoiceRegister({
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as InvoiceStatus | "ALL" | "OPEN" | "OVERDUE")}
-          aria-label="Filter by status"
+          aria-label={t("Filter by status")}
           className={CONTROL}
         >
-          <option value="ALL">All</option>
-          <option value="OPEN">Unpaid</option>
-          <option value="OVERDUE">Overdue</option>
+          <option value="ALL">{t("All")}</option>
+          <option value="OPEN">{t("Not paid")}</option>
+          <option value="OVERDUE">{t("Overdue")}</option>
           {INVOICE_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {INVOICE_STATUS_LABEL[s]}
+              {t(INVOICE_STATUS_LABEL[s])}
             </option>
           ))}
         </select>
@@ -138,7 +151,7 @@ export function InvoiceRegister({
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            aria-label="Currency"
+            aria-label={t("Currency")}
             className={CONTROL}
           >
             {currencies.map((c) => (
@@ -150,28 +163,32 @@ export function InvoiceRegister({
         ) : null}
 
         <span className="text-xs text-muted tabular-nums">
-          {rows.length} of {inCurrency.length} in {currency}
+          {fmt(t("{count} of {total} in {currency}"), {
+            count: rows.length,
+            total: inCurrency.length,
+            currency,
+          })}
         </span>
       </div>
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
           <Inbox className="h-8 w-8 text-faint" />
-          <p className="mt-3 text-sm font-medium text-fg">No invoice matches these filters.</p>
+          <p className="mt-3 text-sm font-medium text-fg">{t("No invoice matches these filters.")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-1">
           <table className="w-full min-w-[980px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-4 pb-1.5 font-medium">Invoice</th>
-                <th className="px-3 pb-1.5 font-medium">Billed to</th>
-                <th className="px-3 pb-1.5 font-medium">Dated</th>
-                <th className="px-3 pb-1.5 font-medium">Due</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Total</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Received</th>
-                <th className="px-3 pb-1.5 text-right font-medium">Outstanding</th>
-                <th className="px-4 pb-1.5 font-medium">Status</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Invoice")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Billed to")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Dated")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Due")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Total")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Received")}</th>
+                <th className="px-3 pb-1.5 text-right font-medium">{t("Outstanding")}</th>
+                <th className="px-4 pb-1.5 font-medium">{t("Status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -210,7 +227,7 @@ export function InvoiceRegister({
                       {militaryDate(i.dueDate)}
                       {late !== null ? (
                         <div className="text-[10px] font-medium text-red-600">
-                          {ageingBucket(late) === "90+" ? "90+ days" : `${late} days`}
+                          {fmt(t("{count} days"), { count: ageingBucket(late) === "90+" ? "90+" : late })}
                         </div>
                       ) : null}
                     </td>

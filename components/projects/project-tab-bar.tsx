@@ -14,9 +14,11 @@ import {
   HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 
 export function ProjectTabBar({ projectId }: { projectId: string }) {
   const pathname = usePathname();
+  const tr = useT();
   const base = `/projects/${projectId}`;
 
   const tabs = [
@@ -47,7 +49,7 @@ export function ProjectTabBar({ projectId }: { projectId: string }) {
               )}
             >
               <Icon className="h-4 w-4" />
-              {t.label}
+              {tr(t.label)}
             </Link>
           );
         })}

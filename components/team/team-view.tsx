@@ -12,6 +12,8 @@ import {
   type Department,
 } from "@/lib/data/team.types";
 import { initials, cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "role" | "name" | "utilisation";
 
@@ -33,6 +35,7 @@ function utilTone(util: number): string {
 const roleOrder = { DIRECTOR: 0, MANAGER: 1, ADMIN: 2, STAFF: 3, VIEWER: 4 } as const;
 
 export function TeamView({ members }: { members: TeamMember[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState<"ALL" | Department>("ALL");
   const [sort, setSort] = useState<SortKey>("role");
@@ -77,7 +80,7 @@ export function TeamView({ members }: { members: TeamMember[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -89,7 +92,7 @@ export function TeamView({ members }: { members: TeamMember[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search team…"
+              placeholder={t("Search team…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -100,9 +103,9 @@ export function TeamView({ members }: { members: TeamMember[] }) {
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="h-9 rounded-lg border border-border bg-surface pl-7 pr-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             >
-              <option value="role">Role</option>
-              <option value="name">Name A–Z</option>
-              <option value="utilisation">Utilisation</option>
+              <option value="role">{t("Role")}</option>
+              <option value="name">{t("Name A–Z")}</option>
+              <option value="utilisation">{t("Utilisation")}</option>
             </select>
           </div>
         </div>
@@ -128,13 +131,13 @@ export function TeamView({ members }: { members: TeamMember[] }) {
                     <TeamStatusBadge status={m.status} />
                   </div>
                   <div className="mt-0.5 text-xs text-muted">
-                    {m.discipline ? DISCIPLINE_LABEL[m.discipline] : DEPARTMENT_LABEL[m.department]}
+                    {t(m.discipline ? DISCIPLINE_LABEL[m.discipline] : DEPARTMENT_LABEL[m.department])}
                     {m.officeLocation ? ` · ${m.officeLocation}` : ""}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <RoleBadge role={m.role} />
                     <span className="text-[11px] text-faint">
-                      {m.activeProjects} active project{m.activeProjects === 1 ? "" : "s"}
+                      {m.activeProjects === 1 ? t("1 active project") : fmt(t("{count} active projects"), { count: m.activeProjects })}
                     </span>
                   </div>
                 </div>
@@ -143,9 +146,9 @@ export function TeamView({ members }: { members: TeamMember[] }) {
               {/* Utilisation */}
               <div className="mt-4">
                 <div className="mb-1 flex items-center justify-between text-[11px]">
-                  <span className="text-muted">Utilisation</span>
+                  <span className="text-muted">{t("Utilisation")}</span>
                   <span className={cn("font-medium", m.utilisation > 100 ? "text-red-600" : "text-fg")}>
-                    {m.utilisation}%{m.utilisation > 100 ? " · over-allocated" : ""}
+                    {m.utilisation}%{m.utilisation > 100 ? ` · ${t("over-allocated")}` : ""}
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
@@ -177,13 +180,13 @@ export function TeamView({ members }: { members: TeamMember[] }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
             <UsersRound className="h-5 w-5" />
           </div>
-          <p className="text-sm font-medium text-fg">No team members match your filters</p>
-          <p className="text-xs text-muted">Try a different search term or department.</p>
+          <p className="text-sm font-medium text-fg">{t("No team members match your filters")}</p>
+          <p className="text-xs text-muted">{t("Try a different search term or department.")}</p>
         </Card>
       )}
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {members.length} team members
+        {fmt(t("Showing {shown} of {total} team members"), { shown: rows.length, total: members.length })}
       </p>
     </div>
   );

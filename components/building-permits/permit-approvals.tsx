@@ -30,6 +30,8 @@ import {
   addApprovalAction,
   deleteApprovalAction,
 } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const field =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -46,6 +48,7 @@ export function PermitApprovals({
   today: string;
   onChanged: () => Promise<void>;
 }) {
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +88,7 @@ export function PermitApprovals({
         setOpen(false);
         await onChanged();
       } else {
-        setError(res.error);
+        setError(t(res.error));
       }
       setPending(false);
     })();
@@ -96,7 +99,7 @@ export function PermitApprovals({
     setPending(true);
     void (async () => {
       const res = await deleteApprovalAction(permitId, id);
-      if (!res.ok) setError(res.error);
+      if (!res.ok) setError(t(res.error));
       setConfirmId(null);
       await onChanged();
       setPending(false);
@@ -107,26 +110,26 @@ export function PermitApprovals({
     <div className="space-y-3">
       {approvals.length === 0 ? (
         <p className="text-sm text-muted">
-          No approval stage recorded. Add the concept approval the day it lands.
+          {t("No approval stage recorded. Add the concept approval the day it lands.")}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-3 pb-1.5 font-medium">Stage</th>
-                <th className="px-3 pb-1.5 font-medium">Status</th>
-                <th className="px-3 pb-1.5 font-medium">Decided</th>
-                <th className="px-3 pb-1.5 font-medium">Ref.</th>
-                <th className="px-3 pb-1.5 font-medium">Valid until</th>
-                <th className="px-3 pb-1.5 font-medium">Conditions</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Stage")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Status")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Decided")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Ref.")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Valid until")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Conditions")}</th>
                 <th className="px-3 pb-1.5" />
               </tr>
             </thead>
             <tbody>
               {approvals.map((a) => (
                 <tr key={a.id} className="border-t border-border/60 align-top even:bg-surface-2/40">
-                  <td className="px-3 py-2 font-medium text-fg">{APPROVAL_STAGE_LABEL[a.stage]}</td>
+                  <td className="px-3 py-2 font-medium text-fg">{t(APPROVAL_STAGE_LABEL[a.stage])}</td>
                   <td className="px-3 py-2">
                     <ApprovalStatusBadge status={a.status} />
                   </td>
@@ -149,21 +152,21 @@ export function PermitApprovals({
                           onClick={() => remove(a.id)}
                           className="font-medium text-red-600 hover:underline"
                         >
-                          Delete
+                          {t("Delete")}
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmId(null)}
                           className="text-muted hover:underline"
                         >
-                          Keep
+                          {t("Keep")}
                         </button>
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setConfirmId(a.id)}
-                        aria-label={`Delete ${APPROVAL_STAGE_LABEL[a.stage]}`}
+                        aria-label={fmt(t("Delete {name}"), { name: t(APPROVAL_STAGE_LABEL[a.stage]) })}
                         className="text-faint transition-colors hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -183,7 +186,7 @@ export function PermitApprovals({
           className="grid gap-3 rounded-lg border border-border bg-surface-2/40 p-3 sm:grid-cols-4"
         >
           <div>
-            <label className={label}>Stage</label>
+            <label className={label}>{t("Stage")}</label>
             <select
               value={stage}
               onChange={(e) => setStage(e.target.value as BuildingPermitApprovalStage)}
@@ -191,13 +194,13 @@ export function PermitApprovals({
             >
               {APPROVAL_STAGES.map((s) => (
                 <option key={s} value={s}>
-                  {APPROVAL_STAGE_LABEL[s]}
+                  {t(APPROVAL_STAGE_LABEL[s])}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className={label}>Status</label>
+            <label className={label}>{t("Status")}</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as BuildingPermitApprovalStatus)}
@@ -205,19 +208,19 @@ export function PermitApprovals({
             >
               {APPROVAL_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {APPROVAL_STATUS_LABEL[s]}
+                  {t(APPROVAL_STATUS_LABEL[s])}
                 </option>
               ))}
             </select>
           </div>
           {status === "PENDING" ? (
             <div className="sm:col-span-2 self-end pb-2 text-xs text-muted">
-              A pending stage carries no decision date yet.
+              {t("A pending stage carries no decision date yet.")}
             </div>
           ) : (
             <>
               <div>
-                <label className={label}>Decided</label>
+                <label className={label}>{t("Decided")}</label>
                 <input
                   type="date"
                   value={decidedAt}
@@ -226,7 +229,7 @@ export function PermitApprovals({
                 />
               </div>
               <div>
-                <label className={label}>Valid until</label>
+                <label className={label}>{t("Valid until")}</label>
                 <input
                   type="date"
                   value={validUntil}
@@ -237,7 +240,7 @@ export function PermitApprovals({
             </>
           )}
           <div>
-            <label className={label}>Reference</label>
+            <label className={label}>{t("Reference")}</label>
             <input
               value={refNumber}
               onChange={(e) => setRefNumber(e.target.value)}
@@ -245,11 +248,11 @@ export function PermitApprovals({
             />
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Conditions</label>
+            <label className={label}>{t("Conditions")}</label>
             <input
               value={conditions}
               onChange={(e) => setConditions(e.target.value)}
-              placeholder="What the approval is conditional on"
+              placeholder={t("What the approval is conditional on")}
               className={field}
             />
           </div>
@@ -259,7 +262,7 @@ export function PermitApprovals({
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {pending ? "Saving…" : "Save approval"}
+              {pending ? t("Saving…") : t("Save approval")}
             </button>
             <button
               type="button"
@@ -269,7 +272,7 @@ export function PermitApprovals({
               }}
               className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -279,7 +282,7 @@ export function PermitApprovals({
           onClick={() => setOpen(true)}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
-          <Plus className="h-4 w-4" /> Add approval stage
+          <Plus className="h-4 w-4" /> {t("Add approval stage")}
         </button>
       )}
 

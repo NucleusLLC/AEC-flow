@@ -26,14 +26,14 @@ export default async function DrawingsPage() {
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <PenTool className="h-4 w-4" />
-            Annotate
+            {tr("Annotate")}
           </Link>
           <Link
             href="/drawings/intake"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Upload className="h-4 w-4" />
-            Upload
+            {tr("Upload")}
           </Link>
         </div>
       </div>

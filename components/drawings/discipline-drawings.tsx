@@ -22,9 +22,13 @@ import { Badge } from "@/components/ui/badge";
 import { DrawingStatusBadge } from "@/components/drawings/badges";
 import { SHEET_TYPE_LABEL, type SheetType } from "@/lib/drawings/sheet-type";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
+import { sheetTypeText } from "@/components/drawings/t-context";
 import type { Drawing } from "@/lib/data/drawings.types";
 
 export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
+  const t = useT();
   const [collapsed, setCollapsed] = useState<string[]>([]);
 
   const projects = useMemo(() => {
@@ -46,16 +50,15 @@ export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
           <FileStack className="h-5 w-5" />
         </div>
-        <p className="mt-3 text-sm font-medium text-fg">No drawings in this discipline yet.</p>
+        <p className="mt-3 text-sm font-medium text-fg">{t("No drawings in this discipline yet.")}</p>
         <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-          Sheets appear here as they are added to a project&apos;s drawing set — this is what has
-          landed, as opposed to what the deliverables above say was promised.
+          {t("Sheets appear here as they are added to a project's drawing set — this is what has landed, as opposed to what the deliverables above say was promised.")}
         </p>
         <Link
           href="/drawings/intake"
           className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
         >
-          Add drawings
+          {t("Add drawings")}
         </Link>
       </Card>
     );
@@ -83,8 +86,8 @@ export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
               <span className="font-mono text-[11px] text-faint">{p.number}</span>
               <span className="truncate text-sm font-semibold text-fg">{p.name}</span>
               <span className="ml-auto flex items-center gap-2 text-xs text-faint">
-                {open > 0 ? <Badge tone="amber">{open} open</Badge> : null}
-                {p.sheets.length} sheet{p.sheets.length === 1 ? "" : "s"}
+                {open > 0 ? <Badge tone="amber">{fmt(t("{count} open"), { count: open })}</Badge> : null}
+                {p.sheets.length === 1 ? t("1 sheet") : fmt(t("{count} sheets"), { count: p.sheets.length })}
               </span>
             </button>
 
@@ -98,18 +101,18 @@ export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
                     </Link>
                     {d.sheetType ? (
                       <span className="text-[11px] text-faint">
-                        {SHEET_TYPE_LABEL[d.sheetType as SheetType] ?? d.sheetType}
+                        {SHEET_TYPE_LABEL[d.sheetType as SheetType] ? sheetTypeText(t, SHEET_TYPE_LABEL[d.sheetType as SheetType]) : d.sheetType}
                       </span>
                     ) : null}
                     {d.paperSize ? <span className="text-[11px] text-faint">{d.paperSize}</span> : null}
                     <span className="text-[11px] text-faint">{formatDate(d.uploadedAt)}</span>
-                    <Badge tone="neutral">Rev {d.revision}</Badge>
+                    <Badge tone="neutral">{fmt(t("Rev {rev}"), { rev: d.revision })}</Badge>
                     <DrawingStatusBadge status={d.status} />
                     <Link
                       href={`/drawings/${d.id}`}
                       className="inline-flex h-7 items-center gap-1 rounded-lg border border-border px-2 text-[11px] text-muted hover:bg-surface-2 hover:text-fg"
                     >
-                      <PenLine className="h-3 w-3" /> Review
+                      <PenLine className="h-3 w-3" /> {t("Review")}
                     </Link>
                   </li>
                 ))}

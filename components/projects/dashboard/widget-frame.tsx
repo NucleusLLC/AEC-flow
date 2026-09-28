@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronUp, ChevronDown, X, Settings2, GripVertical, Pencil } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
 
 export function WidgetFrame({
   title,
@@ -29,6 +30,7 @@ export function WidgetFrame({
   children: React.ReactNode;
 }) {
   const [showSettings, setShowSettings] = useState(false);
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,8 +62,8 @@ export function WidgetFrame({
               onMouseDown={onDragHandleDown}
               onTouchStart={onDragHandleDown}
               className="-ml-1 cursor-grab rounded p-0.5 text-faint opacity-0 transition-opacity hover:text-fg group-hover:opacity-100 active:cursor-grabbing"
-              aria-label="Drag to reorder"
-              title="Drag to reorder"
+              aria-label={t("Drag to reorder")}
+              title={t("Drag to reorder")}
             >
               <GripVertical className="h-4 w-4" />
             </button>
@@ -84,7 +86,7 @@ export function WidgetFrame({
             <h3
               className="truncate text-sm font-semibold text-fg"
               onDoubleClick={onRename ? startEdit : undefined}
-              title={onRename ? "Double-click to rename" : undefined}
+              title={onRename ? t("Double-click to rename") : undefined}
             >
               {title}
             </h3>
@@ -92,27 +94,27 @@ export function WidgetFrame({
         </div>
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           {onRename && !editing ? (
-            <button type="button" onClick={startEdit} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label="Rename widget" title="Rename">
+            <button type="button" onClick={startEdit} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label={t("Rename widget")} title={t("Rename")}>
               <Pencil className="h-3.5 w-3.5" />
             </button>
           ) : null}
           {settings ? (
-            <button type="button" onClick={() => setShowSettings((v) => !v)} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label="Configure widget" title="Configure">
+            <button type="button" onClick={() => setShowSettings((v) => !v)} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label={t("Configure widget")} title={t("Configure")}>
               <Settings2 className="h-3.5 w-3.5" />
             </button>
           ) : null}
           {onMoveUp ? (
-            <button type="button" onClick={onMoveUp} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label="Move up" title="Move up">
+            <button type="button" onClick={onMoveUp} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label={t("Move up")} title={t("Move up")}>
               <ChevronUp className="h-3.5 w-3.5" />
             </button>
           ) : null}
           {onMoveDown ? (
-            <button type="button" onClick={onMoveDown} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label="Move down" title="Move down">
+            <button type="button" onClick={onMoveDown} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-fg" aria-label={t("Move down")} title={t("Move down")}>
               <ChevronDown className="h-3.5 w-3.5" />
             </button>
           ) : null}
           {onRemove ? (
-            <button type="button" onClick={onRemove} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-red-600" aria-label="Remove widget" title="Remove">
+            <button type="button" onClick={onRemove} className="rounded p-1 text-faint hover:bg-surface-2 hover:text-red-600" aria-label={t("Remove widget")} title={t("Remove")}>
               <X className="h-3.5 w-3.5" />
             </button>
           ) : null}

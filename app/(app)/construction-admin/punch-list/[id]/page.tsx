@@ -8,6 +8,7 @@ import { PunchStatusBadge } from "@/components/construction-admin/badges";
 import { PunchStatus } from "@/components/construction-admin/punch-status";
 import { getPunchItem } from "@/lib/data/ca/punch-list";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -27,6 +28,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export default async function PunchItemDetailPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const item = await getPunchItem(id);
   if (!item) notFound();
@@ -35,7 +37,7 @@ export default async function PunchItemDetailPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/punch-list" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Punch List
+        {t("Punch List")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -64,14 +66,14 @@ export default async function PunchItemDetailPage({ params }: PageProps) {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
         >
           <FileDown className="h-4 w-4" />
-          Project snag list
+          {t("Project snag list")}
         </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Description" />
+            <CardHeader title={t("Description")} />
             <CardBody>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{item.description}</p>
             </CardBody>
@@ -79,7 +81,7 @@ export default async function PunchItemDetailPage({ params }: PageProps) {
 
           {item.notes ? (
             <Card>
-              <CardHeader title="Notes" />
+              <CardHeader title={t("Notes")} />
               <CardBody>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{item.notes}</p>
               </CardBody>
@@ -91,14 +93,14 @@ export default async function PunchItemDetailPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label="Trade">{item.trade ?? "—"}</Row>
-              <Row label="Responsible party">{item.responsibleParty ?? "—"}</Row>
-              <Row label="Identified">{formatDate(item.dateIdentified)}</Row>
-              <Row label="Due">{formatDate(item.dueDate)}</Row>
-              <Row label="Completed">{formatDate(item.dateCompleted)}</Row>
-              <Row label="Verified by">{item.verifiedBy ?? "—"}</Row>
+              <Row label={t("Trade")}>{item.trade ?? "—"}</Row>
+              <Row label={t("Responsible party")}>{item.responsibleParty ?? "—"}</Row>
+              <Row label={t("Identified")}>{formatDate(item.dateIdentified)}</Row>
+              <Row label={t("Due")}>{formatDate(item.dueDate)}</Row>
+              <Row label={t("Completed")}>{formatDate(item.dateCompleted)}</Row>
+              <Row label={t("Verified by")}>{item.verifiedBy ?? "—"}</Row>
             </CardBody>
           </Card>
         </div>

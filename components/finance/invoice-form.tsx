@@ -17,6 +17,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
 import { dueDateFrom, invoiceTotals, lineAmount } from "@/lib/finance/calc";
 import type { InvoiceDTO, InvoiceInput, InvoiceLineInput, TaxMode } from "@/lib/finance/types";
@@ -51,6 +53,7 @@ export function InvoiceForm({
   today: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -165,10 +168,13 @@ export function InvoiceForm({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader title="Billed to" subtitle="Copied onto the invoice — a client renamed later does not rewrite it." />
+        <CardHeader
+          title={t("Billed to")}
+          subtitle={t("Copied onto the invoice — a client renamed later does not rewrite it.")}
+        />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Client</label>
+            <label className={label}>{t("Client")}</label>
             <select
               value={clientId}
               onChange={(e) => {
@@ -178,7 +184,7 @@ export function InvoiceForm({
               }}
               className={input}
             >
-              <option value="">— type a name instead —</option>
+              <option value="">{t("— type a name instead —")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -187,27 +193,27 @@ export function InvoiceForm({
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Billed to *</label>
+            <label className={label}>{t("Billed to")} *</label>
             <input
               value={client?.name ?? clientName}
               onChange={(e) => setClientName(e.target.value)}
               disabled={Boolean(client)}
-              placeholder="Who the invoice is addressed to"
+              placeholder={t("Who the invoice is addressed to")}
               className={input}
             />
           </div>
           <div>
-            <label className={label}>Attention of</label>
+            <label className={label}>{t("Attention of")}</label>
             <input value={contactName} onChange={(e) => setContactName(e.target.value)} className={input} />
           </div>
           <div>
-            <label className={label}>Their email</label>
+            <label className={label}>{t("Their email")}</label>
             <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={input} />
           </div>
           <div>
-            <label className={label}>Project</label>
+            <label className={label}>{t("Project")}</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-              <option value="">— none —</option>
+              <option value="">{t("— none —")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -216,7 +222,7 @@ export function InvoiceForm({
             </select>
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Billing address</label>
+            <label className={label}>{t("Billing address")}</label>
             <input value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} className={input} />
           </div>
         </CardBody>
@@ -224,25 +230,25 @@ export function InvoiceForm({
 
       <Card>
         <CardHeader
-          title="The invoice"
+          title={t("The invoice")}
           subtitle={
             source?.proposalNumber
-              ? `Raised from proposal ${source.proposalNumber}.`
-              : "Dates, terms and the currency this invoice is in."
+              ? fmt(t("Raised from proposal {number}."), { number: source.proposalNumber })
+              : t("Dates, terms and the currency this invoice is in.")
           }
         />
         <CardBody className="grid gap-4 sm:grid-cols-4">
           <div className="sm:col-span-2">
-            <label className={label}>Title</label>
+            <label className={label}>{t("Title")}</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Architectural services — stage 2"
+              placeholder={t("Architectural services — stage 2")}
               className={input}
             />
           </div>
           <div>
-            <label className={label}>Currency</label>
+            <label className={label}>{t("Currency")}</label>
             <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={input}>
               {currencyOptions(["AWG", "USD", "ANG", "EUR"]).map((c) => (
                 <option key={c} value={c}>
@@ -252,7 +258,7 @@ export function InvoiceForm({
             </select>
           </div>
           <div>
-            <label className={label}>Invoice date</label>
+            <label className={label}>{t("Invoice date")}</label>
             <input
               type="date"
               value={issueDate}
@@ -265,7 +271,7 @@ export function InvoiceForm({
             />
           </div>
           <div>
-            <label className={label}>Terms (days)</label>
+            <label className={label}>{t("Terms (days)")}</label>
             <input
               type="number"
               value={termsDays}
@@ -278,15 +284,15 @@ export function InvoiceForm({
             />
           </div>
           <div>
-            <label className={label}>Due</label>
+            <label className={label}>{t("Due")}</label>
             <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={input} />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Introduction</label>
+            <label className={label}>{t("Introduction")}</label>
             <input
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
-              placeholder="What this invoice covers, in the client's terms"
+              placeholder={t("What this invoice covers, in the client's terms")}
               className={input}
             />
           </div>
@@ -294,17 +300,17 @@ export function InvoiceForm({
       </Card>
 
       <Card>
-        <CardHeader title="Lines" subtitle="An amount, or a quantity and a rate that produce one." />
+        <CardHeader title={t("Lines")} subtitle={t("An amount, or a quantity and a rate that produce one.")} />
         <CardBody className="space-y-3">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                  <th className="px-2 pb-1.5 font-medium">Description</th>
-                  <th className="px-2 pb-1.5 font-medium">Qty</th>
-                  <th className="px-2 pb-1.5 font-medium">Rate</th>
-                  <th className="px-2 pb-1.5 text-right font-medium">Amount</th>
-                  <th className="px-2 pb-1.5 text-center font-medium">Tax</th>
+                  <th className="px-2 pb-1.5 font-medium">{t("Description")}</th>
+                  <th className="px-2 pb-1.5 font-medium">{t("Qty")}</th>
+                  <th className="px-2 pb-1.5 font-medium">{t("Rate")}</th>
+                  <th className="px-2 pb-1.5 text-right font-medium">{t("Amount")}</th>
+                  <th className="px-2 pb-1.5 text-center font-medium">{t("Tax")}</th>
                   <th className="px-2 pb-1.5" />
                 </tr>
               </thead>
@@ -315,11 +321,13 @@ export function InvoiceForm({
                       <input
                         value={l.description}
                         onChange={(e) => patchLine(l.key, { description: e.target.value })}
-                        placeholder="What is being billed"
+                        placeholder={t("What is being billed")}
                         className={input}
                       />
                       {l.milestoneName ? (
-                        <div className="mt-1 text-[11px] text-faint">Milestone: {l.milestoneName}</div>
+                        <div className="mt-1 text-[11px] text-faint">
+                          {fmt(t("Milestone: {name}"), { name: l.milestoneName })}
+                        </div>
                       ) : null}
                     </td>
                     <td className="px-2 py-2 w-24">
@@ -357,14 +365,14 @@ export function InvoiceForm({
                         type="checkbox"
                         checked={l.taxable !== false}
                         onChange={(e) => patchLine(l.key, { taxable: e.target.checked })}
-                        aria-label="Taxable"
+                        aria-label={t("Taxable")}
                       />
                     </td>
                     <td className="px-2 py-2 text-right">
                       <button
                         type="button"
                         onClick={() => setLines((ls) => (ls.length === 1 ? ls : ls.filter((x) => x.key !== l.key)))}
-                        aria-label="Remove line"
+                        aria-label={t("Remove line")}
                         className="text-faint transition-colors hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -383,17 +391,20 @@ export function InvoiceForm({
             }
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
-            <Plus className="h-4 w-4" /> Add a line
+            <Plus className="h-4 w-4" /> {t("Add a line")}
           </button>
         </CardBody>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Tax" subtitle="Snapshotted onto this invoice, not joined to a rate that may change." />
+          <CardHeader
+            title={t("Tax")}
+            subtitle={t("Snapshotted onto this invoice, not joined to a rate that may change.")}
+          />
           <CardBody className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className={label}>Name</label>
+              <label className={label}>{t("Name")}</label>
               <input
                 value={taxName}
                 onChange={(e) => setTaxName(e.target.value)}
@@ -402,7 +413,7 @@ export function InvoiceForm({
               />
             </div>
             <div>
-              <label className={label}>Percent</label>
+              <label className={label}>{t("Percent")}</label>
               <input
                 type="number"
                 step="0.01"
@@ -412,30 +423,30 @@ export function InvoiceForm({
               />
             </div>
             <div>
-              <label className={label}>Applied</label>
+              <label className={label}>{t("Applied")}</label>
               <select value={taxMode} onChange={(e) => setTaxMode(e.target.value as TaxMode)} className={input}>
-                <option value="EXCLUSIVE">Added on top</option>
-                <option value="INCLUSIVE">Already in the amounts</option>
+                <option value="EXCLUSIVE">{t("Added on top")}</option>
+                <option value="INCLUSIVE">{t("Already in the amounts")}</option>
               </select>
             </div>
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Totals" subtitle="The same arithmetic the server stores." />
+          <CardHeader title={t("Totals")} subtitle={t("The same arithmetic the server stores.")} />
           <CardBody className="space-y-1 text-sm">
-            <Row label="Subtotal" value={money(totals.subtotal)} />
+            <Row label={t("Subtotal")} value={money(totals.subtotal)} />
             {Number(taxPercent) > 0 ? (
               <>
-                <Row label="Taxable" value={money(totals.taxableSubtotal)} muted />
+                <Row label={t("Taxable")} value={money(totals.taxableSubtotal)} muted />
                 <Row
-                  label={`${taxName || "Tax"} ${Number(taxPercent)}%${taxMode === "INCLUSIVE" ? " (included)" : ""}`}
+                  label={`${taxName || t("Tax")} ${Number(taxPercent)}%${taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}`}
                   value={money(totals.taxTotal)}
                 />
               </>
             ) : null}
             <div className="mt-2 flex items-baseline justify-between border-t border-border pt-2">
-              <span className="font-medium text-fg">Total</span>
+              <span className="font-medium text-fg">{t("Total")}</span>
               <span className="font-mono text-lg font-semibold tabular-nums text-fg">
                 {money(totals.total)}
               </span>
@@ -445,14 +456,17 @@ export function InvoiceForm({
       </div>
 
       <Card>
-        <CardHeader title="Notes and footer" subtitle="The footer prints under the total — terms, bank details." />
+        <CardHeader
+          title={t("Notes and footer")}
+          subtitle={t("The footer prints under the total — terms, bank details.")}
+        />
         <CardBody className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className={label}>Internal notes</label>
+            <label className={label}>{t("Internal notes")}</label>
             <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Printed footer</label>
+            <label className={label}>{t("Printed footer")}</label>
             <textarea rows={3} value={footer} onChange={(e) => setFooter(e.target.value)} className={field} />
           </div>
         </CardBody>
@@ -465,18 +479,18 @@ export function InvoiceForm({
           disabled={pending}
           className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save draft" : "Create draft"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save draft") : t("Create draft")}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600">{t(error)}</p> : null}
     </div>
   );
 }

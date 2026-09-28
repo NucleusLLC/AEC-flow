@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/components/i18n/language-provider";
 import { Badge } from "@/components/ui/badge";
 import {
   CHANGE_ORDER_STATUS_LABEL,
@@ -21,6 +24,7 @@ import {
   IMPACT_LEVEL_LABEL,
   IMPACT_LEVEL_TONE,
   DISCIPLINE_LABEL,
+  tCa,
 } from "@/lib/ca/labels";
 import type {
   ChangeOrderStatus,
@@ -37,45 +41,56 @@ import type {
 } from "@/lib/ca/types";
 
 export function ChangeOrderStatusBadge({ status }: { status: ChangeOrderStatus }) {
-  return <Badge tone={CHANGE_ORDER_STATUS_TONE[status]}>{CHANGE_ORDER_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={CHANGE_ORDER_STATUS_TONE[status]}>{tCa(t, CHANGE_ORDER_STATUS_LABEL[status])}</Badge>;
 }
 
 export function RfiStatusBadge({ status }: { status: RfiStatus }) {
-  return <Badge tone={RFI_STATUS_TONE[status]}>{RFI_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={RFI_STATUS_TONE[status]}>{tCa(t, RFI_STATUS_LABEL[status])}</Badge>;
 }
 
 export function RfiPriorityBadge({ priority }: { priority: RfiPriority }) {
-  return <Badge tone={RFI_PRIORITY_TONE[priority]}>{RFI_PRIORITY_LABEL[priority]}</Badge>;
+  const t = useT();
+  return <Badge tone={RFI_PRIORITY_TONE[priority]}>{t(RFI_PRIORITY_LABEL[priority])}</Badge>;
 }
 
 export function ReportStatusBadge({ status }: { status: CaReportStatus }) {
-  return <Badge tone={CA_REPORT_STATUS_TONE[status]}>{CA_REPORT_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={CA_REPORT_STATUS_TONE[status]}>{t(CA_REPORT_STATUS_LABEL[status])}</Badge>;
 }
 
 export function CertStatusBadge({ status }: { status: CertificationStatus }) {
-  return <Badge tone={CERT_STATUS_TONE[status]}>{CERT_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={CERT_STATUS_TONE[status]}>{t(CERT_STATUS_LABEL[status])}</Badge>;
 }
 
 export function PunchStatusBadge({ status }: { status: PunchStatus }) {
-  return <Badge tone={PUNCH_STATUS_TONE[status]}>{PUNCH_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={PUNCH_STATUS_TONE[status]}>{tCa(t, PUNCH_STATUS_LABEL[status])}</Badge>;
 }
 
 export function SiteInstructionStatusBadge({ status }: { status: SiteInstructionStatus }) {
-  return <Badge tone={SITE_INSTRUCTION_STATUS_TONE[status]}>{SITE_INSTRUCTION_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={SITE_INSTRUCTION_STATUS_TONE[status]}>{t(SITE_INSTRUCTION_STATUS_LABEL[status])}</Badge>;
 }
 
 export function SubmittalStatusBadge({ status }: { status: SubmittalStatus }) {
-  return <Badge tone={SUBMITTAL_STATUS_TONE[status]}>{SUBMITTAL_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={SUBMITTAL_STATUS_TONE[status]}>{t(SUBMITTAL_STATUS_LABEL[status])}</Badge>;
 }
 
 export function DelayStatusBadge({ status }: { status: DelayStatus }) {
-  return <Badge tone={DELAY_STATUS_TONE[status]}>{DELAY_STATUS_LABEL[status]}</Badge>;
+  const t = useT();
+  return <Badge tone={DELAY_STATUS_TONE[status]}>{t(DELAY_STATUS_LABEL[status])}</Badge>;
 }
 
 export function ImpactBadge({ level, label }: { level: ImpactLevel; label?: string }) {
-  return <Badge tone={IMPACT_LEVEL_TONE[level]}>{label ? `${label}: ` : ""}{IMPACT_LEVEL_LABEL[level]}</Badge>;
+  const t = useT();
+  return <Badge tone={IMPACT_LEVEL_TONE[level]}>{label ? `${label}: ` : ""}{t(IMPACT_LEVEL_LABEL[level])}</Badge>;
 }
 
 export function DisciplineBadge({ discipline }: { discipline: CaDiscipline }) {
-  return <Badge tone="slate">{DISCIPLINE_LABEL[discipline]}</Badge>;
+  const t = useT();
+  return <Badge tone="slate">{t(DISCIPLINE_LABEL[discipline])}</Badge>;
 }

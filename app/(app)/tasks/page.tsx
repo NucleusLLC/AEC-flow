@@ -1,6 +1,7 @@
 import { TasksBoard } from "@/components/tasks/tasks-board";
 import { getServerT } from "@/lib/i18n/server";
 import { getTasks } from "@/lib/data/tasks";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Tasks · AEC-flow" };
 
@@ -14,7 +15,7 @@ export default async function TasksPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-fg">{tr("Tasks")}</h2>
         <p className="mt-1 text-sm text-muted">
-          A shared task board — {open} open of {tasks.length}. Drag cards between columns, click to edit.
+          {fmt(tr("A shared task board — {open} open of {total}. Drag cards between columns, click to edit."), { open, total: tasks.length })}
         </p>
       </div>
       <TasksBoard tasks={tasks} />

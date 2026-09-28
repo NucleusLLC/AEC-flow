@@ -7,9 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { NewProjectPanel, type CreatedProject } from "@/components/projects/new-project-panel";
 import { getSystemCurrency } from "@/lib/format";
 import type { EstimateProject } from "@/lib/data/estimates";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "projectNumber" | "projectName" | "address" | "client" | "date" | "amount";
 const nf0 = (n: number) => Math.round(n).toLocaleString("en-US");
+
+/** Display labels for the status badge (translated at render). */
+const ESTIMATE_STATUS_LABEL: Record<EstimateProject["status"], string> = {
+  draft: "Draft",
+  in_review: "In review",
+  approved: "Approved",
+};
 
 const statusTone: Record<EstimateProject["status"], "slate" | "amber" | "green"> = {
   draft: "slate",
@@ -18,6 +27,7 @@ const statusTone: Record<EstimateProject["status"], "slate" | "amber" | "green">
 };
 
 export function ProjectListView({ projects, startProjects = [], clients = [], onSelect }: { projects: EstimateProject[]; startProjects?: EstimateProject[]; clients?: { id: string; name: string }[]; onSelect: (p: EstimateProject) => void }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "date", dir: -1 });
   const [newOpen, setNewOpen] = useState(false);
@@ -61,28 +71,28 @@ export function ProjectListView({ projects, startProjects = [], clients = [], on
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-2/50 px-4 py-3">
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
-          <FileSpreadsheet className="h-4 w-4 text-brand" /> Estimates
-          <span className="text-xs font-normal text-faint">· {projects.length} projects</span>
+          <FileSpreadsheet className="h-4 w-4 text-brand" /> {t("Estimates")}
+          <span className="text-xs font-normal text-faint">· {projects.length === 1 ? t("1 project") : fmt(t("{count} projects"), { count: projects.length })}</span>
         </div>
         <div className="relative ml-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search number, name, address, client…" className="h-8 w-72 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Search number, name, address, client…")} className="h-8 w-72 rounded-lg border border-border bg-surface pl-8 pr-3 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30" />
         </div>
         <div className="relative">
           <button type="button" onClick={() => setNewOpen((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90">
-            <Plus className="h-4 w-4" /> New estimate
+            <Plus className="h-4 w-4" /> {t("New estimate")}
           </button>
           {newOpen ? (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setNewOpen(false)} aria-hidden />
               <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-border bg-surface p-1 shadow-lg">
                 <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-faint">
-                  Choose a project to estimate
+                  {t("Choose a project to estimate")}
                 </div>
                 <div className="max-h-72 overflow-y-auto">
                   {startProjects.length === 0 ? (
                     <div className="px-3 py-4 text-sm text-muted">
-                      Every project already has an estimate.
+                      {t("Every project already has an estimate.")}
                     </div>
                   ) : (
                     startProjects.map((p) => (
@@ -106,7 +116,7 @@ export function ProjectListView({ projects, startProjects = [], clients = [], on
                   onClick={() => { setNewOpen(false); setAddProjectOpen(true); }}
                   className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm font-medium text-brand transition-colors hover:bg-surface-2"
                 >
-                  <FolderPlus className="h-4 w-4" /> Add new project
+                  <FolderPlus className="h-4 w-4" /> {t("Add new project")}
                 </button>
               </div>
             </>
@@ -118,7 +128,7 @@ export function ProjectListView({ projects, startProjects = [], clients = [], on
         <div className="border-b border-border bg-surface-2/30 p-4">
           <NewProjectPanel
             clients={clients}
-            submitLabel="Create project & estimate it"
+            submitLabel={t("Create project & estimate it")}
             onCreated={onProjectCreated}
             onCancel={() => setAddProjectOpen(false)}
           />
@@ -129,14 +139,14 @@ export function ProjectListView({ projects, startProjects = [], clients = [], on
         <table className="w-full min-w-[820px] border-collapse text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-faint">
-              <Th label="Project No." k="projectNumber" sort={sort} onSort={toggleSort} />
-              <Th label="Project Name" k="projectName" sort={sort} onSort={toggleSort} />
-              <Th label="Address" k="address" sort={sort} onSort={toggleSort} />
-              <Th label="Client" k="client" sort={sort} onSort={toggleSort} />
-              <Th label="Version" sort={sort} onSort={toggleSort} />
-              <Th label="Date" k="date" sort={sort} onSort={toggleSort} align="center" />
-              <Th label="Status" sort={sort} onSort={toggleSort} align="center" />
-              <Th label="Amount" k="amount" sort={sort} onSort={toggleSort} align="right" />
+              <Th label={t("Project No.")} k="projectNumber" sort={sort} onSort={toggleSort} />
+              <Th label={t("Project Name")} k="projectName" sort={sort} onSort={toggleSort} />
+              <Th label={t("Address")} k="address" sort={sort} onSort={toggleSort} />
+              <Th label={t("Client")} k="client" sort={sort} onSort={toggleSort} />
+              <Th label={t("Version")} sort={sort} onSort={toggleSort} />
+              <Th label={t("Date")} k="date" sort={sort} onSort={toggleSort} align="center" />
+              <Th label={t("Status")} sort={sort} onSort={toggleSort} align="center" />
+              <Th label={t("Amount")} k="amount" sort={sort} onSort={toggleSort} align="right" />
             </tr>
           </thead>
           <tbody>
@@ -148,19 +158,19 @@ export function ProjectListView({ projects, startProjects = [], clients = [], on
                 <td className="px-3 py-2 text-[11px] text-muted">{p.client}</td>
                 <td className="px-3 py-2 text-[11px] text-muted">{p.version}</td>
                 <td className="px-3 py-2 text-center text-[11px] tabular-nums text-muted">{p.date}</td>
-                <td className="px-3 py-2 text-center"><Badge tone={statusTone[p.status]}>{p.status.replace("_", " ")}</Badge></td>
+                <td className="px-3 py-2 text-center"><Badge tone={statusTone[p.status]}>{t(ESTIMATE_STATUS_LABEL[p.status])}</Badge></td>
                 <td className="px-3 py-2 text-right text-xs font-medium tabular-nums text-fg">{p.currency} {nf0(p.amount)}</td>
               </tr>
             ))}
             {!rows.length ? (
               <tr>
-                <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted">No projects match “{q}”.</td>
+                <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted">{fmt(t("No projects match “{query}”."), { query: q })}</td>
               </tr>
             ) : null}
           </tbody>
         </table>
       </div>
-      <p className="border-t border-border px-4 py-2 text-[11px] text-faint">Click a project to open its estimate sheet. Click a column header to sort.</p>
+      <p className="border-t border-border px-4 py-2 text-[11px] text-faint">{t("Click a project to open its estimate sheet. Click a column header to sort.")}</p>
     </Card>
   );
 }

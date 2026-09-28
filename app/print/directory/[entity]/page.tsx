@@ -11,6 +11,8 @@ import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt as fmtText } from "@/lib/i18n/format";
 
 type Row = Record<string, unknown>;
 type Col = { label: string; key: string; right?: boolean; fmt?: (v: unknown, row: Row) => string };
@@ -97,7 +99,8 @@ type PageProps = { params: Promise<{ entity: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { entity } = await params;
-  return { title: CONFIG[entity] ? `${CONFIG[entity].title} · AEC-flow` : "Directory" };
+  const t = await getServerT();
+  return { title: CONFIG[entity] ? `${t(CONFIG[entity].title)} · AEC-flow` : t("Directory") };
 }
 
 export default async function DirectoryPrintPage({ params }: PageProps) {
@@ -112,7 +115,10 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
   setSystemCurrency(configuredCurrency);
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const t = await getServerT();
+  const title = t(cfg.title);
   const rows = (await cfg.getter()) as Row[];
+  const recordsLabel = fmtText(t(rows.length === 1 ? "1 record" : "{count} records"), { count: rows.length });
   const cell = (c: Col, row: Row) => {
     const v = row[c.key];
     if (c.fmt) return c.fmt(v, row);
@@ -120,7 +126,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
   };
 
   return (
-    <PrintSurface backHref="/exports" backLabel="Back to Data">
+    <PrintSurface backHref="/exports" backLabel={t("Back to Data")}>
       {/* Letterhead */}
       <DocumentLetterhead
         logo={{ dataUrl: practice.logoDataUrl, position: practice.logo.position, size: practice.logo.size }}
@@ -128,8 +134,8 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
         borderClass="border-b-2 border-gray-900 pb-4"
         details={
           <div className="text-right">
-            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{cfg.title}</div>
-            <div className="mt-1 text-xs text-gray-500">{rows.length} records · {formatDate(new Date())}</div>
+            <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{title}</div>
+            <div className="mt-1 text-xs text-gray-500">{recordsLabel} · {formatDate(new Date())}</div>
           </div>
         }
       />
@@ -138,7 +144,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
         <thead>
           <tr className="border-y border-gray-300 text-left text-[10px] uppercase tracking-wide text-gray-500">
             {cfg.columns.map((c) => (
-              <th key={c.key} className={`py-2 pr-3 font-semibold ${c.right ? "text-right" : ""}`}>{c.label}</th>
+              <th key={c.key} className={`py-2 pr-3 font-semibold ${c.right ? "text-right" : ""}`}>{t(c.label)}</th>
             ))}
           </tr>
         </thead>
@@ -161,14 +167,14 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
             ))
           ) : (
             <tr>
-              <td className="py-4 text-gray-400" colSpan={cfg.columns.length}>No records.</td>
+              <td className="py-4 text-gray-400" colSpan={cfg.columns.length}>{t("No records.")}</td>
             </tr>
           )}
         </tbody>
       </table>
 
       <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {companyName} · {cfg.title} · {rows.length} records
+        {companyName} · {title} · {recordsLabel}
       </div>
     </PrintSurface>
   );

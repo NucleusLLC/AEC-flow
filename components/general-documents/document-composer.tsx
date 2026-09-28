@@ -33,6 +33,8 @@ import {
   createDocumentAction,
   updateDocumentAction,
 } from "@/app/(app)/documents/general/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const field =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -59,6 +61,7 @@ export function DocumentComposer({
   firmName: string;
   today: string;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -194,8 +197,8 @@ export function DocumentComposer({
         {catalogueByCategory().map((group) => (
           <Card key={group.category}>
             <CardHeader
-              title={DOCUMENT_CATEGORY_LABEL[group.category]}
-              subtitle={DOCUMENT_CATEGORY_BLURB[group.category]}
+              title={t(DOCUMENT_CATEGORY_LABEL[group.category])}
+              subtitle={t(DOCUMENT_CATEGORY_BLURB[group.category])}
             />
             <CardBody className="grid gap-2 sm:grid-cols-2">
               {group.entries.map((e) => (
@@ -207,12 +210,12 @@ export function DocumentComposer({
                 >
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 shrink-0 text-muted" />
-                    <span className="text-sm font-medium text-fg">{e.label}</span>
+                    <span className="text-sm font-medium text-fg">{t(e.label)}</span>
                     {e.abbreviation ? (
                       <span className="font-mono text-[10px] text-faint">{e.abbreviation}</span>
                     ) : null}
                   </div>
-                  <p className="mt-0.5 text-xs text-muted">{e.summary}</p>
+                  <p className="mt-0.5 text-xs text-muted">{t(e.summary)}</p>
                 </button>
               ))}
             </CardBody>
@@ -228,12 +231,12 @@ export function DocumentComposer({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-fg">
-            {entry.label}
+            {t(entry.label)}
             {entry.abbreviation ? (
               <span className="ml-2 font-mono text-[11px] text-faint">{entry.abbreviation}</span>
             ) : null}
           </h3>
-          <p className="text-xs text-muted">{entry.summary}</p>
+          <p className="text-xs text-muted">{t(entry.summary)}</p>
         </div>
         {mode === "new" ? (
           <button
@@ -241,7 +244,7 @@ export function DocumentComposer({
             onClick={() => setDocType("")}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-muted transition-colors hover:text-fg"
           >
-            <RotateCcw className="h-3.5 w-3.5" /> Choose another type
+            <RotateCcw className="h-3.5 w-3.5" /> {t("Choose another type")}
           </button>
         ) : null}
       </div>
@@ -249,17 +252,17 @@ export function DocumentComposer({
       {entry.practiceNote ? (
         <p className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs text-fg">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          {entry.practiceNote}
+          {t(entry.practiceNote)}
         </p>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Who and what" subtitle="Filled into the letter as you type." />
+            <CardHeader title={t("Who and what")} subtitle={t("Filled into the letter as you type.")} />
             <CardBody className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={label}>Client</label>
+                <label className={label}>{t("Client")}</label>
                 <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={input}>
                   <option value="">— none —</option>
                   {clients.map((c) => (
@@ -270,7 +273,7 @@ export function DocumentComposer({
                 </select>
               </div>
               <div>
-                <label className={label}>Project</label>
+                <label className={label}>{t("Project")}</label>
                 <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
                   <option value="">— none —</option>
                   {projects.map((p) => (
@@ -283,7 +286,7 @@ export function DocumentComposer({
               {entry.counterpartyLabel ? (
                 <>
                   <div>
-                    <label className={label}>{entry.counterpartyLabel}</label>
+                    <label className={label}>{t(entry.counterpartyLabel)}</label>
                     <input
                       value={counterpartyName}
                       onChange={(e) => setCounterpartyName(e.target.value)}
@@ -291,7 +294,7 @@ export function DocumentComposer({
                     />
                   </div>
                   <div>
-                    <label className={label}>Their address</label>
+                    <label className={label}>{t("Their address")}</label>
                     <input
                       value={counterpartyAddress}
                       onChange={(e) => setCounterpartyAddress(e.target.value)}
@@ -301,11 +304,11 @@ export function DocumentComposer({
                 </>
               ) : null}
               <div>
-                <label className={label}>Addressed to (name)</label>
+                <label className={label}>{t("Addressed to (name)")}</label>
                 <input value={contactName} onChange={(e) => setContactName(e.target.value)} className={input} />
               </div>
               <div>
-                <label className={label}>Their email</label>
+                <label className={label}>{t("Their email")}</label>
                 <input
                   type="email"
                   value={contactEmail}
@@ -314,7 +317,7 @@ export function DocumentComposer({
                 />
               </div>
               <div>
-                <label className={label}>Our reference</label>
+                <label className={label}>{t("Our reference")}</label>
                 <input
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
@@ -322,15 +325,15 @@ export function DocumentComposer({
                 />
               </div>
               <div>
-                <label className={label}>Subject</label>
+                <label className={label}>{t("Subject")}</label>
                 <input value={subject} onChange={(e) => setSubject(e.target.value)} className={input} />
               </div>
               <div>
-                <label className={label}>Date of the document</label>
+                <label className={label}>{t("Date of the document")}</label>
                 <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={input} />
               </div>
               <div>
-                <label className={label}>Effective from</label>
+                <label className={label}>{t("Effective from")}</label>
                 <input
                   type="date"
                   value={effectiveDate}
@@ -339,7 +342,7 @@ export function DocumentComposer({
                 />
               </div>
               <div>
-                <label className={label}>Until</label>
+                <label className={label}>{t("Until")}</label>
                 <input
                   type="date"
                   value={expiryDate}
@@ -352,14 +355,14 @@ export function DocumentComposer({
 
           <Card>
             <CardHeader
-              title="The particulars"
-              subtitle={`What this ${entry.label.toLowerCase()} needs to say.`}
+              title={t("The particulars")}
+              subtitle={fmt(t("What this {type} needs to say."), { type: t(entry.label).toLowerCase() })}
             />
             <CardBody className="space-y-4">
               {entry.fields.map((f) => (
                 <div key={f.key}>
                   <label className={label}>
-                    {f.label}
+                    {t(f.label)}
                     {f.required ? <span className="ml-1 text-red-600">*</span> : null}
                   </label>
                   {f.type === "textarea" ? (
@@ -376,7 +379,7 @@ export function DocumentComposer({
                       onChange={(e) => setValue(f.key, e.target.value)}
                       className={input}
                     >
-                      <option value="">— choose —</option>
+                      <option value="">{t("— choose —")}</option>
                       {(f.options ?? []).map((o) => (
                         <option key={o} value={o}>
                           {o}
@@ -392,14 +395,14 @@ export function DocumentComposer({
                       className={input}
                     />
                   )}
-                  {f.help ? <p className="mt-1 text-[11px] text-faint">{f.help}</p> : null}
+                  {f.help ? <p className="mt-1 text-[11px] text-faint">{t(f.help)}</p> : null}
                 </div>
               ))}
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Internal notes" subtitle="Never printed on the document." />
+            <CardHeader title={t("Internal notes")} subtitle={t("Never printed on the document.")} />
             <CardBody>
               <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={field} />
             </CardBody>
@@ -410,11 +413,11 @@ export function DocumentComposer({
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           <Card>
             <CardHeader
-              title="The document"
+              title={t("The document")}
               subtitle={
                 bodyOverride === null
-                  ? "Written from the template as you fill the fields."
-                  : "You are editing the wording — the fields no longer rewrite it."
+                  ? t("Written from the template as you fill the fields.")
+                  : t("You are editing the wording — the fields no longer rewrite it.")
               }
               action={
                 bodyOverride === null ? (
@@ -423,23 +426,23 @@ export function DocumentComposer({
                     onClick={() => setBodyOverride(paragraphs.join("\n\n"))}
                     className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
                   >
-                    <Pencil className="h-3.5 w-3.5" /> Edit the wording
+                    <Pencil className="h-3.5 w-3.5" /> {t("Edit the wording")}
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setBodyOverride(null)}
                     className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs font-medium text-muted transition-colors hover:text-fg"
-                    title="Go back to the template wording — your edits are discarded"
+                    title={t("Go back to the template wording — your edits are discarded")}
                   >
-                    <Wand2 className="h-3.5 w-3.5" /> Back to the template
+                    <Wand2 className="h-3.5 w-3.5" /> {t("Back to the template")}
                   </button>
                 )
               }
             />
             <CardBody className="space-y-3">
               <div>
-                <label className={label}>Title</label>
+                <label className={label}>{t("Title")}</label>
                 <input
                   value={titleOverride}
                   onChange={(e) => setTitleOverride(e.target.value)}
@@ -451,7 +454,7 @@ export function DocumentComposer({
               {bodyOverride === null ? (
                 <div className="space-y-2 rounded-lg border border-border bg-surface-2/40 p-3 text-sm leading-relaxed text-fg">
                   {paragraphs.length === 0 ? (
-                    <p className="text-muted">Fill the particulars and the letter appears here.</p>
+                    <p className="text-muted">{t("Fill the particulars and the letter appears here.")}</p>
                   ) : (
                     paragraphs.map((p, i) => <p key={i}>{p}</p>)
                   )}
@@ -462,14 +465,15 @@ export function DocumentComposer({
                   value={bodyOverride}
                   onChange={(e) => setBodyOverride(e.target.value)}
                   className={`${field} font-serif leading-relaxed`}
-                  placeholder="One paragraph per block, separated by a blank line."
+                  placeholder={t("One paragraph per block, separated by a blank line.")}
                 />
               )}
 
               {composed && composed.missing.length > 0 ? (
                 <p className="text-xs text-amber-700 dark:text-amber-500">
-                  Still needed before this can be issued:{" "}
-                  {composed.missing.map((f) => f.label).join(", ")}.
+                  {fmt(t("Still needed before this can be issued: {fields}."), {
+                    fields: composed.missing.map((f) => t(f.label)).join(", "),
+                  })}
                 </p>
               ) : null}
             </CardBody>
@@ -482,18 +486,18 @@ export function DocumentComposer({
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {pending ? "Saving…" : mode === "edit" ? "Save draft" : "Create draft"}
+              {pending ? t("Saving…") : mode === "edit" ? t("Save draft") : t("Create draft")}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
               className="inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-red-600">{t(error)}</p> : null}
           <TemplateNotice />
         </div>
       </div>
@@ -506,10 +510,12 @@ export function DocumentComposer({
  * the document itself: these are the practice's own letters, not ours.
  */
 function TemplateNotice() {
+  const t = useT();
   return (
     <p className="text-xs text-faint">
-      Templates are a starting point. A power of attorney, an NDA or a notice of termination has
-      legal effect — have your lawyer read the wording once before you rely on it.
+      {t(
+        "Templates are a starting point. A power of attorney, an NDA or a notice of termination has legal effect — have your lawyer read the wording once before you rely on it.",
+      )}
     </p>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Clock, Play, Square, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
 
 type Session = { start: number; end: number };
 const KEY = "aecflow:punchclock";
@@ -24,6 +25,7 @@ function isSameDay(a: number, b: number): boolean {
 
 /** Punch clock — live clock plus a clock-in/out timer with a session log (today). */
 export function PunchClock() {
+  const t = useT();
   const [now, setNow] = useState(() => Date.now());
   const [clockedInAt, setClockedInAt] = useState<number | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -77,7 +79,7 @@ export function PunchClock() {
     // opaque while every real card around it turned to glass. Same markup.
     <Card className="p-5">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
-        <Clock className="h-4 w-4 text-brand" /> Punch Clock
+        <Clock className="h-4 w-4 text-brand" /> {t("Punch Clock")}
       </div>
 
       <div className="text-center">
@@ -96,7 +98,7 @@ export function PunchClock() {
             onClick={punchOut}
             className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
           >
-            <Square className="h-4 w-4" /> Clock out
+            <Square className="h-4 w-4" /> {t("Clock out")}
           </button>
         ) : (
           <button
@@ -104,20 +106,20 @@ export function PunchClock() {
             onClick={punchIn}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
           >
-            <Play className="h-4 w-4" /> Clock in
+            <Play className="h-4 w-4" /> {t("Clock in")}
           </button>
         )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-center">
         <div className="rounded-lg border border-border bg-surface-2/40 py-2">
-          <div className="text-[10px] uppercase tracking-wide text-faint">Current session</div>
+          <div className="text-[10px] uppercase tracking-wide text-faint">{t("Current session")}</div>
           <div className="font-mono text-lg font-semibold tabular-nums text-fg">
             {clockedInAt ? fmtClock(now - clockedInAt) : "00:00:00"}
           </div>
         </div>
         <div className="rounded-lg border border-border bg-surface-2/40 py-2">
-          <div className="text-[10px] uppercase tracking-wide text-faint">Today total</div>
+          <div className="text-[10px] uppercase tracking-wide text-faint">{t("Today total")}</div>
           <div className="font-mono text-lg font-semibold tabular-nums text-fg">{fmtClock(liveTotal)}</div>
         </div>
       </div>
@@ -125,9 +127,9 @@ export function PunchClock() {
       {todays.length > 0 ? (
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wide text-faint">Today&apos;s sessions</span>
+            <span className="text-[10px] uppercase tracking-wide text-faint">{t("Today’s sessions")}</span>
             <button type="button" onClick={clearLog} className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-red-600">
-              <Trash2 className="h-3 w-3" /> Clear
+              <Trash2 className="h-3 w-3" /> {t("Clear")}
             </button>
           </div>
           <ul className="space-y-1">

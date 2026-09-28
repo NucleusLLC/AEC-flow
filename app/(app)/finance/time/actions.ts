@@ -14,6 +14,7 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { getServerT } from "@/lib/i18n/server";
 import {
   decideTimeEntries,
   deleteTimeEntry,
@@ -39,6 +40,12 @@ function revalidateTime(): void {
   revalidatePath("/finance/invoices");
 }
 
+/** The zod messages are English keys; translate each one before joining them. */
+async function issuesError(issues: { path: string; message: string }[]): Promise<string> {
+  const t = await getServerT();
+  return issuesToMessage(issues.map((i) => ({ ...i, message: t(i.message) })));
+}
+
 function failure(e: unknown, fallback: string): { ok: false; error: string } {
   if (
     e instanceof TimeEntryForbiddenError ||
@@ -52,7 +59,7 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
 
 export async function logTimeAction(input: TimeEntryInput): Promise<TimeActionResult> {
   const parsed = parseTimeEntryInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const entry = await logTime(parsed.value as TimeEntryInput);
     revalidateTime();
@@ -67,7 +74,7 @@ export async function updateTimeEntryAction(
   input: TimeEntryInput,
 ): Promise<TimeActionResult> {
   const parsed = parseTimeEntryInput(input);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const entry = await updateTimeEntry(id, parsed.value as TimeEntryInput);
     revalidateTime();
@@ -102,7 +109,7 @@ export async function decideTimeAction(
   decision: { approve: boolean; reason?: string | null },
 ): Promise<TimeActionResult> {
   const parsed = parseApprovalDecision(decision);
-  if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
+  if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
     const count = await decideTimeEntries(ids, parsed.value);
     revalidateTime();

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
 import { Card, CardBody } from "@/components/ui/card";
 import { ProfitView } from "@/components/finance/profit-view";
 import { canSeeProfit, profitByProject } from "@/lib/data/finance-analysis";
 
-export const metadata: Metadata = { title: "Profitability · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Profitability")} · AEC-flow` };
+}
 
 /**
  * What each job earned against what it cost.
@@ -15,13 +19,14 @@ export const metadata: Metadata = { title: "Profitability · AEC-flow" };
  */
 export default async function ProfitPage() {
   const allowed = await canSeeProfit();
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-fg">Profitability</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Profitability")}</h2>
         <p className="text-sm text-muted">
-          What each job is worth at charge-out, what it has cost, and what is still to be billed.
+          {t("What each job is worth at charge-out, what it has cost, and what is still to be billed.")}
         </p>
       </div>
 
@@ -30,10 +35,11 @@ export default async function ProfitPage() {
       ) : (
         <Card>
           <CardBody className="py-12 text-center">
-            <p className="text-sm font-medium text-fg">This one is for directors and administrators.</p>
+            <p className="text-sm font-medium text-fg">{t("This one is for directors and administrators.")}</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-              Margin is worked out from internal cost rates, which are close to what people are
-              paid. Your own hours and their worth are on the Time screen.
+              {t(
+                "Margin is worked out from internal cost rates, which are close to what people are paid. Your own hours and their worth are on the Time screen.",
+              )}
             </p>
           </CardBody>
         </Card>

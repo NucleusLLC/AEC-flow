@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { cssString, footerMarginBoxesCss, PAGE_NUMBER_WIDTH_MM } from "./footer-boxes";
+import {
+  cssString,
+  footerMarginBoxesCss,
+  pageNumberContent,
+  PAGE_NUMBER_WIDTH_MM,
+} from "./footer-boxes";
 import { FOOTER_FROM_EDGE_MM } from "./preview-geometry";
 
 /**
@@ -152,5 +157,31 @@ describe("footerMarginBoxesCss", () => {
     const strip = 60 - 14 - 14;
     expect(widthsMm(narrow).reduce((a, b) => a + b, 0)).toBe(strip);
     expect(widthsMm(narrow).every((w) => w >= 0)).toBe(true);
+  });
+});
+
+describe("pageNumberContent", () => {
+  it("prints the English default exactly as before", () => {
+    expect(pageNumberContent("Page {page} of {pages}")).toBe(
+      '"Page " counter(page) " of " counter(pages)',
+    );
+    const css = footerMarginBoxesCss({
+      pageWidthMm: 210,
+      marginLeftMm: 14,
+      marginRightMm: 14,
+      marginBottomMm: 14,
+    });
+    expect(css).toContain('content: "Page " counter(page) " of " counter(pages);');
+  });
+
+  it("follows a translated template, whatever its word order", () => {
+    expect(pageNumberContent("Página {page} de {pages}")).toBe(
+      '"Página " counter(page) " de " counter(pages)',
+    );
+    expect(pageNumberContent("{page}/{pages}")).toBe('counter(page) "/" counter(pages)');
+  });
+
+  it("escapes quotes in the wording", () => {
+    expect(pageNumberContent('Say "{page}"')).toBe('"Say \\"" counter(page) "\\""');
   });
 });

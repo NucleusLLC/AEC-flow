@@ -25,6 +25,8 @@ import {
 } from "@/lib/data/documents";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const KIND_META: Record<DocKind, { icon: typeof FileText; color: string; bg: string }> = {
   DRAWING: { icon: PencilRuler, color: "#1d4ed8", bg: "#1d4ed814" },
@@ -54,21 +56,22 @@ const KIND_FILTERS: Array<"ALL" | DocKind> = [
   "SPREADSHEET",
 ];
 
-function toPreview(d: DocumentItem): PreviewDoc {
+function toPreview(d: DocumentItem, t: (text: string) => string): PreviewDoc {
   return {
     name: d.name,
     fileType: d.fileType,
     sizeLabel: formatFileSize(d.sizeKb),
     meta: [
-      { label: "Project", value: d.projectName ?? "Practice" },
-      { label: "Owner", value: d.owner },
-      { label: "Updated", value: formatDate(d.updatedAt) },
-      { label: "Version", value: d.version },
+      { label: t("Project"), value: d.projectName ?? t("Practice") },
+      { label: t("Owner"), value: d.owner },
+      { label: t("Updated"), value: formatDate(d.updatedAt) },
+      { label: t("Version"), value: d.version },
     ],
   };
 }
 
 export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
+  const t = useT();
   const projects = useMemo(
     () =>
       Array.from(
@@ -111,7 +114,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {k === "ALL" ? "All" : DOC_KIND_LABEL[k]}
+              {k === "ALL" ? t("All") : t(DOC_KIND_LABEL[k])}
             </button>
           ))}
         </div>
@@ -122,7 +125,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search documents…"
+              placeholder={t("Search documents…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-64"
             />
           </div>
@@ -131,7 +134,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
             onChange={(e) => setProject(e.target.value)}
             className="h-9 max-w-[240px] rounded-lg border border-border bg-surface px-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
-            <option value="ALL">All projects</option>
+            <option value="ALL">{t("All projects")}</option>
             {projects.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}
@@ -147,8 +150,8 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
             <FileText className="h-5 w-5" />
           </div>
-          <p className="text-sm font-medium text-fg">No documents match your filters</p>
-          <p className="text-xs text-muted">Try a different kind, project, or search term.</p>
+          <p className="text-sm font-medium text-fg">{t("No documents match your filters")}</p>
+          <p className="text-xs text-muted">{t("Try a different kind, project, or search term.")}</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -159,7 +162,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
               <Card key={d.id} className="group flex flex-col p-4 transition-colors hover:border-brand/40">
                 <button
                   type="button"
-                  onClick={() => setPreview(toPreview(d))}
+                  onClick={() => setPreview(toPreview(d, t))}
                   className="flex items-start gap-3 text-left"
                 >
                   <span
@@ -173,13 +176,13 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
                       {d.name}
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-muted">
-                      {d.projectName ?? "Practice"}
+                      {d.projectName ?? t("Practice")}
                     </span>
                   </span>
                 </button>
 
                 <div className="mt-3 flex items-center gap-2 text-xs text-faint">
-                  <Badge tone="neutral">{DOC_KIND_LABEL[d.kind]}</Badge>
+                  <Badge tone="neutral">{t(DOC_KIND_LABEL[d.kind])}</Badge>
                   <span
                     className="rounded px-1.5 py-0.5 font-mono text-[10px] font-bold text-white"
                     style={{ background: FILE_COLOR[d.fileType] }}
@@ -196,16 +199,16 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setPreview(toPreview(d))}
+                      onClick={() => setPreview(toPreview(d, t))}
                       className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
                     >
                       <Eye className="h-3.5 w-3.5" />
-                      Preview
+                      {t("Preview")}
                     </button>
                     <EmailButton variant="icon" subject={d.name} attachment={`${d.name}.${d.fileType.toLowerCase()}`} relatedType="document" relatedId={d.id} />
                     <button
                       type="button"
-                      aria-label="Download"
+                      aria-label={t("Download")}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg"
                     >
                       <Download className="h-4 w-4" />
@@ -219,7 +222,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
       )}
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {documents.length} documents
+        {fmt(t("Showing {shown} of {total} documents"), { shown: rows.length, total: documents.length })}
       </p>
 
       <DocumentPreview doc={preview} onClose={() => setPreview(null)} />

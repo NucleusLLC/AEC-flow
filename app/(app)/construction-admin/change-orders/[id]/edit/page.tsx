@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { ChangeOrderForm } from "@/components/construction-admin/change-order-form";
 import { getChangeOrder } from "@/lib/data/ca/change-orders";
 import { getProjects } from "@/lib/data/projects";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -15,6 +16,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EditChangeOrderPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const [co, projects] = await Promise.all([getChangeOrder(id), getProjects()]);
   if (!co) notFound();
@@ -24,13 +26,13 @@ export default async function EditChangeOrderPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href={`/construction-admin/change-orders/${co.id}`} className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Back to change order
+        {t("Back to change order")}
       </Link>
       <div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-faint">{co.changeOrderNumber}</span>
         </div>
-        <h2 className="mt-1 text-xl font-semibold text-fg">Edit Change Order</h2>
+        <h2 className="mt-1 text-xl font-semibold text-fg">{t("Edit Change Order")}</h2>
       </div>
       <ChangeOrderForm
         projects={options}

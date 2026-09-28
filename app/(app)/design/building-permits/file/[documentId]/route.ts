@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getPermitDocumentUrl } from "@/lib/data/building-permits";
+import { getServerT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +22,17 @@ export async function GET(
   // The proxy already gates this path, but the tenant scope reads the company
   // off the session — with no session there is no scope, so refuse outright.
   const session = await getServerSession(authOptions);
+  const t = await getServerT();
   if (!session?.user?.companyId) {
-    return new NextResponse("Sign in to open this document.", { status: 401 });
+    return new NextResponse(t("Sign in to open this document."), { status: 401 });
   }
 
   const { documentId } = await params;
   try {
     const url = await getPermitDocumentUrl(documentId);
-    if (!url) return new NextResponse("That document is not available.", { status: 404 });
+    if (!url) return new NextResponse(t("That document is not available."), { status: 404 });
     return NextResponse.redirect(url, { status: 302, headers: { "cache-control": "no-store" } });
   } catch {
-    return new NextResponse("The document could not be opened. Try again.", { status: 502 });
+    return new NextResponse(t("The document could not be opened. Try again."), { status: 502 });
   }
 }

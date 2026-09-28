@@ -7,6 +7,8 @@ import { DelayStatusBadge } from "@/components/construction-admin/badges";
 import { DelayNoticeDetermination } from "@/components/construction-admin/delay-notice-determination";
 import { getDelayNotice } from "@/lib/data/ca/delay-notices";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -26,6 +28,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export default async function DelayNoticeDetailPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const dn = await getDelayNotice(id);
   if (!dn) notFound();
@@ -34,7 +37,7 @@ export default async function DelayNoticeDetailPage({ params }: PageProps) {
     <div className="w-full space-y-6">
       <Link href="/construction-admin/delay-notices" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg">
         <ArrowLeft className="h-4 w-4" />
-        Delay Notices
+        {t("Delay Notices")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -54,12 +57,12 @@ export default async function DelayNoticeDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Description" />
+            <CardHeader title={t("Description")} />
             <CardBody className="space-y-4">
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{dn.description ?? "—"}</p>
               {dn.cause ? (
                 <div>
-                  <div className="text-xs font-medium text-muted">Cause</div>
+                  <div className="text-xs font-medium text-muted">{t("Cause")}</div>
                   <p className="mt-0.5 text-sm text-fg">{dn.cause}</p>
                 </div>
               ) : null}
@@ -71,14 +74,14 @@ export default async function DelayNoticeDetailPage({ params }: PageProps) {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label="Responsible party">{dn.responsibleParty ?? "—"}</Row>
-              <Row label="Claimed days">{dn.claimedDays} d</Row>
-              <Row label="Approved days"><span className="font-semibold">{dn.approvedDays} d</span></Row>
-              <Row label="Cost impact">{formatCurrency(dn.costImpact, dn.currency)}</Row>
-              <Row label="Delay started">{formatDate(dn.dateStarted)}</Row>
-              <Row label="Resolved">{formatDate(dn.dateResolved)}</Row>
+              <Row label={t("Responsible party")}>{dn.responsibleParty ?? "—"}</Row>
+              <Row label={t("Claimed days")}>{fmt(t("{days} d"), { days: dn.claimedDays })}</Row>
+              <Row label={t("Approved days")}><span className="font-semibold">{fmt(t("{days} d"), { days: dn.approvedDays })}</span></Row>
+              <Row label={t("Cost impact")}>{formatCurrency(dn.costImpact, dn.currency)}</Row>
+              <Row label={t("Delay started")}>{formatDate(dn.dateStarted)}</Row>
+              <Row label={t("Resolved")}>{formatDate(dn.dateResolved)}</Row>
             </CardBody>
           </Card>
         </div>

@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { listPunchItems } from "@/lib/data/ca/punch-list";
-import { PUNCH_STATUS_LABEL } from "@/lib/ca/labels";
+import { PUNCH_STATUS_LABEL, tCa } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import type { PunchListItem, PunchStatus, PunchPriority } from "@/lib/ca/types";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ project: string }> };
 
@@ -48,14 +50,14 @@ function byLocation(items: PunchListItem[]): [string, PunchListItem[]][] {
   return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
-function Summary({ items }: { items: PunchListItem[] }) {
+function Summary({ items, t }: { items: PunchListItem[]; t: (text: string) => string }) {
   const outstanding = items.filter((p) => OUTSTANDING.includes(p.status)).length;
   const tiles: [string, number | string][] = [
-    ["Total items", items.length],
-    ["Outstanding", outstanding],
-    ["Completed", items.filter((p) => p.status === "COMPLETED").length],
-    ["Verified", items.filter((p) => p.status === "VERIFIED").length],
-    ["Critical open", items.filter((p) => p.priority === "CRITICAL" && OUTSTANDING.includes(p.status)).length],
+    [t("Total items"), items.length],
+    [t("Outstanding"), outstanding],
+    [t("Completed"), items.filter((p) => p.status === "COMPLETED").length],
+    [t("Verified"), items.filter((p) => p.status === "VERIFIED").length],
+    [t("Critical open"), items.filter((p) => p.priority === "CRITICAL" && OUTSTANDING.includes(p.status)).length],
   ];
   return (
     <div className="mt-4 grid grid-cols-5 gap-3 rounded-md bg-gray-50 px-4 py-3 text-[11px] print:bg-gray-50">
@@ -69,19 +71,19 @@ function Summary({ items }: { items: PunchListItem[] }) {
   );
 }
 
-function ItemsTable({ items }: { items: PunchListItem[] }) {
+function ItemsTable({ items, t }: { items: PunchListItem[]; t: (text: string) => string }) {
   return (
     <table className="w-full border-collapse text-[10.5px]">
       <thead>
         <tr className="border-b border-gray-300 text-left text-[9px] uppercase tracking-wide text-gray-500">
-          <th className="py-1.5 pr-2 font-medium">Item</th>
-          <th className="py-1.5 pr-2 font-medium">Description</th>
-          <th className="py-1.5 pr-2 font-medium">Trade</th>
-          <th className="py-1.5 pr-2 font-medium">Responsible</th>
-          <th className="py-1.5 pr-2 font-medium">Priority</th>
-          <th className="py-1.5 pr-2 font-medium">Status</th>
-          <th className="py-1.5 pr-2 font-medium">Due</th>
-          <th className="py-1.5 font-medium">Completed</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Item")}</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Description")}</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Trade")}</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Responsible")}</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Priority")}</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Status")}</th>
+          <th className="py-1.5 pr-2 font-medium">{t("Due")}</th>
+          <th className="py-1.5 font-medium">{t("Completed")}</th>
         </tr>
       </thead>
       <tbody>
@@ -91,8 +93,8 @@ function ItemsTable({ items }: { items: PunchListItem[] }) {
             <td className="py-1.5 pr-2 text-gray-900">{p.description}</td>
             <td className="py-1.5 pr-2 text-gray-700 whitespace-nowrap">{p.trade ?? "—"}</td>
             <td className="py-1.5 pr-2 text-gray-700 whitespace-nowrap">{p.responsibleParty ?? "—"}</td>
-            <td className={`py-1.5 pr-2 font-medium whitespace-nowrap ${PRIORITY_COLOR[p.priority]}`}>{PRIORITY_LABEL[p.priority]}</td>
-            <td className={`py-1.5 pr-2 font-medium whitespace-nowrap ${STATUS_COLOR[p.status]}`}>{PUNCH_STATUS_LABEL[p.status]}</td>
+            <td className={`py-1.5 pr-2 font-medium whitespace-nowrap ${PRIORITY_COLOR[p.priority]}`}>{t(PRIORITY_LABEL[p.priority])}</td>
+            <td className={`py-1.5 pr-2 font-medium whitespace-nowrap ${STATUS_COLOR[p.status]}`}>{tCa(t, PUNCH_STATUS_LABEL[p.status])}</td>
             <td className="py-1.5 pr-2 text-gray-700 whitespace-nowrap">{formatDate(p.dueDate)}</td>
             <td className="py-1.5 text-gray-700 whitespace-nowrap">{formatDate(p.dateCompleted)}</td>
           </tr>
@@ -103,6 +105,7 @@ function ItemsTable({ items }: { items: PunchListItem[] }) {
 }
 
 export default async function PunchListPrintPage({ params }: PageProps) {
+  const t = await getServerT();
   const { project } = await params;
   const all = project === "all";
   const [items, practice] = await Promise.all([
@@ -121,8 +124,8 @@ export default async function PunchListPrintPage({ params }: PageProps) {
   }
   const projects = [...projectGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
-  const docTitle = all ? "Punch List Register" : "Punch List";
-  const heading = all ? "Portfolio Snag & Defect Register" : projects[0][0];
+  const docTitle = all ? t("Punch List Register") : t("Punch List");
+  const heading = all ? t("Portfolio Snag & Defect Register") : projects[0][0];
   const reportRef = `PL-REG-${all ? "ALL" : project}`;
   const backHref = "/construction-admin/punch-list";
 
@@ -143,27 +146,27 @@ export default async function PunchListPrintPage({ params }: PageProps) {
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
             <div className="mt-1 font-mono text-xs text-gray-600">{reportRef}</div>
-            <div className="text-[11px] text-gray-500">Issued {formatDate(new Date().toISOString())}</div>
+            <div className="text-[11px] text-gray-500">{fmt(t("Issued {date}"), { date: formatDate(new Date().toISOString()) })}</div>
           </div>
         }
       />
 
       <h1 className="mt-6 text-lg font-bold text-gray-900">{heading}</h1>
-      <Summary items={items} />
+      <Summary items={items} t={t} />
 
       {projects.map(([projectName, projectItems]) => (
         <section key={projectName} className="mt-8">
           {all ? (
             <h2 className="mb-2 border-b border-gray-300 pb-1 text-[12px] font-semibold text-gray-900">
               {projectName}
-              <span className="ml-2 font-normal text-gray-400">({projectItems.length} items)</span>
+              <span className="ml-2 font-normal text-gray-400">{fmt(t("({count} items)"), { count: projectItems.length })}</span>
             </h2>
           ) : null}
           {byLocation(projectItems).map(([location, locItems]) => (
             <div key={location} className="mt-4 break-inside-avoid">
-              <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{location}</h3>
+              <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{location === "Unspecified location" ? t(location) : location}</h3>
               <div className="mt-1">
-                <ItemsTable items={locItems} />
+                <ItemsTable items={locItems} t={t} />
               </div>
             </div>
           ))}
@@ -176,16 +179,20 @@ export default async function PunchListPrintPage({ params }: PageProps) {
           {["Prepared by (Consultant)", "Acknowledged (Contractor)", "Verified (Owner / Lender)"].map((role) => (
             <div key={role}>
               <div className="h-px w-full bg-gray-400" />
-              <div className="mt-1 text-xs text-gray-600">{role}</div>
-              <div className="text-[11px] text-gray-400">Name · Signature · Date</div>
+              <div className="mt-1 text-xs text-gray-600">{t(role)}</div>
+              <div className="text-[11px] text-gray-400">{t("Name · Signature · Date")}</div>
             </div>
           ))}
         </div>
       </div>
 
       <p className="mt-6 text-[9px] leading-relaxed text-gray-400">
-        Disclaimer: This snag and defect register is issued for construction administration purposes. Items
-        remain subject to site verification and final inspection prior to handover. © {companyName}.
+        {fmt(
+          t(
+            "Disclaimer: This snag and defect register is issued for construction administration purposes. Items remain subject to site verification and final inspection prior to handover. © {company}.",
+          ),
+          { company: companyName },
+        )}
       </p>
       <div className="mt-3 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
         {companyName} · {reportRef} · {docTitle}

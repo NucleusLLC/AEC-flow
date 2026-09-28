@@ -6,6 +6,8 @@ import { Copy, Check, X, UserPlus, Mail, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { createInviteAction, revokeInviteAction } from "@/app/(app)/team/invite-actions";
 import type { UserRole } from "@prisma/client";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SeatUsage = { used: number; pending: number; limit: number; available: number };
 type InviteRow = { id: string; email: string; role: string; token: string; createdAt: string; expiresAt: string | null };
@@ -22,6 +24,7 @@ export function TeamInvites({
   /** Display only; the invite actions enforce the member-admin gate themselves. */
   canInvite: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("STAFF");
@@ -80,13 +83,14 @@ export function TeamInvites({
     <Card className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-fg">Team seats & invites</h3>
+          <h3 className="text-sm font-semibold text-fg">{t("Team seats & invites")}</h3>
           <p className="text-xs text-muted">
-            {seatUsage.used} member{seatUsage.used === 1 ? "" : "s"}
-            {seatUsage.pending > 0 ? ` · ${seatUsage.pending} pending` : ""} of {seatUsage.limit} seats
+            {seatUsage.used === 1 ? t("1 member") : fmt(t("{count} members"), { count: seatUsage.used })}
+            {seatUsage.pending > 0 ? ` · ${fmt(t("{count} pending"), { count: seatUsage.pending })}` : ""}{" "}
+            {fmt(t("of {limit} seats"), { limit: seatUsage.limit })}
             {" · "}
             <span className={full ? "text-rose-600" : "text-emerald-600"}>
-              {seatUsage.available} available
+              {fmt(t("{count} available"), { count: seatUsage.available })}
             </span>
           </p>
         </div>
@@ -97,7 +101,7 @@ export function TeamInvites({
 
       {!canInvite ? (
         <p className="mt-3 text-xs text-muted">
-          Only an administrator or director can invite people to this company.
+          {t("Only an administrator or director can invite people to this company.")}
         </p>
       ) : null}
 
@@ -105,7 +109,7 @@ export function TeamInvites({
       {canInvite ? (
       <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-2">
         <div className="min-w-[200px] flex-1">
-          <label className="mb-1 block text-xs text-muted">Invite by email</label>
+          <label className="mb-1 block text-xs text-muted">{t("Invite by email")}</label>
           <input
             type="email"
             value={email}
@@ -116,11 +120,11 @@ export function TeamInvites({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-muted">Role</label>
+          <label className="mb-1 block text-xs text-muted">{t("Role")}</label>
           <select value={role} onChange={(e) => setRole(e.target.value as UserRole)} className={field} disabled={full}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
-                {r.charAt(0) + r.slice(1).toLowerCase()}
+                {t(r.charAt(0) + r.slice(1).toLowerCase())}
               </option>
             ))}
           </select>
@@ -131,16 +135,16 @@ export function TeamInvites({
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
         >
           <UserPlus className="h-4 w-4" />
-          {pending ? "Sending…" : "Send invite"}
+          {pending ? t("Sending…") : t("Send invite")}
         </button>
       </form>
       ) : null}
       {canInvite && full ? (
         <p className="mt-2 text-xs text-amber-600">
-          All seats are in use. Raise this company&rsquo;s seat limit (founder Admin) or revoke a pending invite.
+          {t("All seats are in use. Raise this company’s seat limit (founder Admin) or revoke a pending invite.")}
         </p>
       ) : null}
-      {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-rose-600">{t(error)}</p> : null}
 
       {/* Freshly created invite — emailed when possible, link always shown as fallback */}
       {sent ? (
@@ -148,14 +152,15 @@ export function TeamInvites({
           {sent.emailed ? (
             <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-800">
               <Mail className="h-3.5 w-3.5" />
-              Invite emailed to {sent.email}. You can also share this link:
+              {fmt(t("Invite emailed to {email}. You can also share this link:"), { email: sent.email })}
             </p>
           ) : (
             <p className="flex items-start gap-1.5 text-xs font-medium text-amber-700">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
-                Invite created, but the email couldn&rsquo;t be sent
-                {sent.emailError ? ` (${sent.emailError})` : ""}. Share this link with them:
+                {sent.emailError
+                  ? fmt(t("Invite created, but the email couldn’t be sent ({reason}). Share this link with them:"), { reason: sent.emailError })
+                  : t("Invite created, but the email couldn’t be sent. Share this link with them:")}
               </span>
             </p>
           )}
@@ -167,7 +172,7 @@ export function TeamInvites({
               className="inline-flex h-8 items-center gap-1 rounded border border-emerald-300 px-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
             >
               {copied === "new" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied === "new" ? "Copied" : "Copy"}
+              {copied === "new" ? t("Copied") : t("Copy")}
             </button>
           </div>
         </div>
@@ -176,14 +181,14 @@ export function TeamInvites({
       {/* Pending invites */}
       {invitations.length > 0 ? (
         <div className="mt-4 border-t border-border pt-3">
-          <p className="mb-2 text-xs font-medium text-muted">Pending invites</p>
+          <p className="mb-2 text-xs font-medium text-muted">{t("Pending invites")}</p>
           <ul className="space-y-1.5">
             {invitations.map((inv) => (
               <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-2/50 px-3 py-2">
                 <div className="min-w-0">
                   <span className="text-sm text-fg">{inv.email}</span>
                   <span className="ml-2 rounded bg-surface px-1.5 py-0.5 text-[10px] uppercase text-muted">{inv.role}</span>
-                  {inv.expiresAt ? <span className="ml-2 text-[11px] text-faint">expires {inv.expiresAt}</span> : null}
+                  {inv.expiresAt ? <span className="ml-2 text-[11px] text-faint">{fmt(t("expires {date}"), { date: inv.expiresAt })}</span> : null}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button
@@ -192,7 +197,7 @@ export function TeamInvites({
                     className="inline-flex h-7 items-center gap-1 rounded border border-border px-2 text-xs font-medium text-fg hover:bg-surface"
                   >
                     {copied === inv.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied === inv.id ? "Copied" : "Copy link"}
+                    {copied === inv.id ? t("Copied") : t("Copy link")}
                   </button>
                   <button
                     type="button"
@@ -201,7 +206,7 @@ export function TeamInvites({
                     className="inline-flex h-7 items-center gap-1 rounded border border-rose-200 px-2 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                   >
                     <X className="h-3.5 w-3.5" />
-                    Revoke
+                    {t("Revoke")}
                   </button>
                 </div>
               </li>

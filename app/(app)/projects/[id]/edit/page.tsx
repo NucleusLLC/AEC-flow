@@ -6,14 +6,17 @@ import { ProjectForm, type ProjectFormValues } from "@/components/projects/proje
 import { getProject } from "@/lib/data/projects";
 import { getClients } from "@/lib/data/clients";
 import { getTeam } from "@/lib/data/team";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const project = await getProject(id);
+  const t = await getServerT();
   return {
-    title: project ? `Edit ${project.name} · AEC-flow` : "Edit Project · AEC-flow",
+    title: project ? `${fmt(t("Edit {title}"), { title: project.name })} · AEC-flow` : `${t("Edit project")} · AEC-flow`,
   };
 }
 
@@ -21,6 +24,7 @@ export default async function EditProjectPage({ params }: PageProps) {
   const { id } = await params;
   const [project, clients, team] = await Promise.all([getProject(id), getClients(), getTeam()]);
   if (!project) notFound();
+  const t = await getServerT();
 
   // Build the select option lists, ensuring the project's current client and
   // manager are always present (so the prefilled value resolves even if the
@@ -62,7 +66,7 @@ export default async function EditProjectPage({ params }: PageProps) {
       </Link>
 
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit project</h2>
+        <h2 className="text-xl font-semibold text-fg">{t("Edit project")}</h2>
         <p className="text-sm text-muted">
           <span className="font-mono text-fg">{project.projectNumber}</span> · {project.name}
         </p>

@@ -29,7 +29,7 @@ export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   ISSUED: "Issued",
   SIGNED: "Signed",
   SUPERSEDED: "Superseded",
-  VOID: "Void",
+  VOID: "Voided",
 };
 
 export type BadgeTone = "neutral" | "blue" | "green" | "amber" | "red" | "violet" | "slate";

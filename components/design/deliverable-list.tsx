@@ -11,8 +11,10 @@ import {
   type DesignDeliverableDTO,
   type DeliverableStatus,
 } from "@/lib/design/types";
+import { useT } from "@/components/i18n/language-provider";
 
 export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<DeliverableStatus | "ALL">("ALL");
 
@@ -33,8 +35,8 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
         <FileStack className="h-8 w-8 text-faint" />
-        <p className="mt-3 text-sm font-medium text-fg">No deliverables yet</p>
-        <p className="mt-1 text-sm text-muted">Add a drawing or design document to start the register.</p>
+        <p className="mt-3 text-sm font-medium text-fg">{t("No deliverables yet")}</p>
+        <p className="mt-1 text-sm text-muted">{t("Add a drawing or design document to start the register.")}</p>
       </div>
     );
   }
@@ -47,7 +49,7 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search number, title, project…"
+            placeholder={t("Search number, title, project…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
         </div>
@@ -56,9 +58,9 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
           onChange={(e) => setStatus(e.target.value as DeliverableStatus | "ALL")}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
         >
-          <option value="ALL">All statuses</option>
+          <option value="ALL">{t("All statuses")}</option>
           {DELIVERABLE_STATUSES.map((s) => (
-            <option key={s} value={s}>{DELIVERABLE_STATUS_LABEL[s]}</option>
+            <option key={s} value={s}>{t(DELIVERABLE_STATUS_LABEL[s])}</option>
           ))}
         </select>
       </div>
@@ -67,12 +69,12 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
         <table className="w-full min-w-[680px] text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-2.5 font-medium">Number</th>
-              <th className="px-4 py-2.5 font-medium">Title</th>
-              <th className="px-4 py-2.5 font-medium">Type</th>
-              <th className="px-4 py-2.5 text-center font-medium">Rev</th>
-              <th className="px-4 py-2.5 font-medium">Status</th>
-              <th className="px-4 py-2.5 font-medium">Issued</th>
+              <th className="px-4 py-2.5 font-medium">{t("Number")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Title")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Type")}</th>
+              <th className="px-4 py-2.5 text-center font-medium">{t("Rev")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Status")}</th>
+              <th className="px-4 py-2.5 font-medium">{t("Issued")}</th>
             </tr>
           </thead>
           <tbody>
@@ -84,7 +86,7 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
                   </Link>
                 </td>
                 <td className="px-4 py-2.5 text-fg">{d.title}</td>
-                <td className="px-4 py-2.5 text-muted">{DELIVERABLE_TYPE_LABEL[d.type]}</td>
+                <td className="px-4 py-2.5 text-muted">{t(DELIVERABLE_TYPE_LABEL[d.type])}</td>
                 <td className="px-4 py-2.5 text-center font-mono text-xs text-muted">{d.revision}</td>
                 <td className="px-4 py-2.5"><DeliverableStatusBadge status={d.status} /></td>
                 <td className="px-4 py-2.5 text-muted">{d.issuedDate ?? "—"}</td>
@@ -93,7 +95,7 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
-                  No deliverables match your filters.
+                  {t("No deliverables match your filters.")}
                 </td>
               </tr>
             ) : null}

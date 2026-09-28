@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Ban, Plus, Send, Trash2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 import { InvoiceStatusBadge, OverdueBadge } from "@/components/finance/badges";
 import { daysOverdue, settlement } from "@/lib/finance/calc";
 import { militaryDate } from "@/lib/building-permits/register";
@@ -49,6 +51,7 @@ export function InvoicePanel({
   today: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState<null | "pay" | "void" | "delete">(null);
@@ -102,16 +105,16 @@ export function InvoicePanel({
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-4">
-        <Stat label="Total" value={money(invoice.total)} />
-        <Stat label="Received" value={paid > 0 ? money(paid) : "—"} />
+        <Stat label={t("Total")} value={money(invoice.total)} />
+        <Stat label={t("Received")} value={paid > 0 ? money(paid) : "—"} />
         <Stat
-          label="Outstanding"
+          label={t("Outstanding")}
           value={outstanding > 0 ? money(outstanding) : "—"}
           tone={late !== null ? "red" : undefined}
-          note={late !== null ? `${late} days overdue` : undefined}
+          note={late !== null ? fmt(t("{count} days overdue"), { count: late }) : undefined}
         />
         <Stat
-          label="Status"
+          label={t("Status")}
           value=""
           badge={
             <div className="flex flex-col items-start gap-1">
@@ -124,23 +127,28 @@ export function InvoicePanel({
 
       {overpaidBy > 0 ? (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-fg">
-          {money(overpaidBy)} more has been received than this invoice asked for.
+          {fmt(t("{amount} more has been received than this invoice asked for."), {
+            amount: money(overpaidBy),
+          })}
         </p>
       ) : null}
       {invoice.status === "VOID" && invoice.voidReason ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-sm text-fg">
-          Voided {militaryDate(invoice.voidedAt)}: {invoice.voidReason}
+          {fmt(t("Voided {date}: {reason}"), {
+            date: militaryDate(invoice.voidedAt),
+            reason: invoice.voidReason,
+          })}
         </p>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/print/finance/invoices/${invoice.id}`} className={BTN}>
-          Print / PDF
+          {t("Print / PDF")}
         </Link>
         {isDraft ? (
           <>
             <Link href={`/finance/invoices/${invoice.id}/edit`} className={BTN}>
-              Edit
+              {t("Edit")}
             </Link>
             <button
               type="button"
@@ -155,35 +163,35 @@ export function InvoicePanel({
               }
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              <Send className="h-4 w-4" /> Issue
+              <Send className="h-4 w-4" /> {t("Issue")}
             </button>
             <button type="button" disabled={pending} onClick={() => setAsking("delete")} className={`${BTN} text-red-600`}>
-              <Trash2 className="h-4 w-4" /> Delete draft
+              <Trash2 className="h-4 w-4" /> {t("Delete draft")}
             </button>
           </>
         ) : null}
         {canTakePayment ? (
           <button type="button" disabled={pending} onClick={() => setAsking("pay")} className={BTN}>
-            <Plus className="h-4 w-4" /> Record a payment
+            <Plus className="h-4 w-4" /> {t("Record a payment")}
           </button>
         ) : null}
         {!isDraft && invoice.status !== "VOID" ? (
           <button type="button" disabled={pending} onClick={() => setAsking("void")} className={`${BTN} text-red-600`}>
-            <Ban className="h-4 w-4" /> Void
+            <Ban className="h-4 w-4" /> {t("Void this invoice")}
           </button>
         ) : null}
       </div>
 
       {asking === "pay" ? (
         <Card>
-          <CardHeader title="Record a payment" subtitle="What was actually received, and when." />
+          <CardHeader title={t("Record a payment")} subtitle={t("What was actually received, and when.")} />
           <CardBody className="grid gap-3 sm:grid-cols-4">
             <div>
-              <label className={label}>Received on</label>
+              <label className={label}>{t("Received on")}</label>
               <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className={input} />
             </div>
             <div>
-              <label className={label}>Amount</label>
+              <label className={label}>{t("Amount")}</label>
               <input
                 type="number"
                 step="0.01"
@@ -194,7 +202,7 @@ export function InvoicePanel({
               />
             </div>
             <div>
-              <label className={label}>How</label>
+              <label className={label}>{t("How")}</label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value as InvoicePaymentMethod)}
@@ -202,17 +210,17 @@ export function InvoicePanel({
               >
                 {PAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>
-                    {PAYMENT_METHOD_LABEL[m]}
+                    {t(PAYMENT_METHOD_LABEL[m])}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={label}>Reference</label>
+              <label className={label}>{t("Reference")}</label>
               <input
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder="Bank reference"
+                placeholder={t("Bank reference")}
                 className={`${input} font-mono`}
               />
             </div>
@@ -232,13 +240,13 @@ export function InvoicePanel({
                 }
                 className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
               >
-                {pending ? "Saving…" : "Record it"}
+                {pending ? t("Saving…") : t("Record it")}
               </button>
               <button type="button" onClick={() => setAsking(null)} className={BTN}>
-                Cancel
+                {t("Cancel")}
               </button>
               <span className="text-xs text-faint">
-                Leave the amount blank at your peril — it has to be a figure, and it may not be zero.
+                {t("Leave the amount blank at your peril — it has to be a figure, and it may not be zero.")}
               </span>
             </div>
           </CardBody>
@@ -249,11 +257,11 @@ export function InvoicePanel({
         <Card>
           <CardBody className="flex flex-wrap items-end gap-2">
             <div className="min-w-[260px] flex-1">
-              <label className={label}>Why is it being voided?</label>
+              <label className={label}>{t("Why is it being voided?")}</label>
               <input
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
-                placeholder="Raised against the wrong project"
+                placeholder={t("Raised against the wrong project")}
                 className={input}
               />
             </div>
@@ -263,14 +271,15 @@ export function InvoicePanel({
               onClick={() => run(() => voidInvoiceAction(invoice.id, voidReason))}
               className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-600/90 disabled:opacity-60"
             >
-              Void it
+              {t("Void it")}
             </button>
             <button type="button" onClick={() => setAsking(null)} className={BTN}>
-              Cancel
+              {t("Cancel")}
             </button>
             <p className="w-full text-[11px] text-faint">
-              The invoice stays readable and keeps its number. Voiding frees the proposal
-              milestones it billed, so they can be invoiced again.
+              {t(
+                "The invoice stays readable and keeps its number. Voiding frees the proposal milestones it billed, so they can be invoiced again.",
+              )}
             </p>
           </CardBody>
         </Card>
@@ -279,28 +288,32 @@ export function InvoicePanel({
       {asking === "delete" ? (
         <Card>
           <CardBody className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-fg">Delete this draft invoice?</span>
+            <span className="text-sm text-fg">{t("Delete this draft invoice?")}</span>
             <button
               type="button"
               disabled={pending}
               onClick={() => run(() => deleteInvoiceAction(invoice.id), () => router.push("/finance/invoices"))}
               className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-600/90 disabled:opacity-60"
             >
-              Delete
+              {t("Delete")}
             </button>
             <button type="button" onClick={() => setAsking(null)} className={BTN}>
-              Keep it
+              {t("Keep it")}
             </button>
           </CardBody>
         </Card>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600">{t(error)}</p> : null}
 
       <Card>
         <CardHeader
-          title="Lines"
-          subtitle={invoice.proposalNumber ? `Raised from proposal ${invoice.proposalNumber}.` : undefined}
+          title={t("Lines")}
+          subtitle={
+            invoice.proposalNumber
+              ? fmt(t("Raised from proposal {number}."), { number: invoice.proposalNumber })
+              : undefined
+          }
         />
         <CardBody>
           <table className="w-full text-sm">
@@ -310,7 +323,9 @@ export function InvoicePanel({
                   <td className="py-2 pr-3">
                     <div className="text-fg">{l.description}</div>
                     {l.milestoneName ? (
-                      <div className="text-[11px] text-faint">Milestone: {l.milestoneName}</div>
+                      <div className="text-[11px] text-faint">
+                        {fmt(t("Milestone: {name}"), { name: l.milestoneName })}
+                      </div>
                     ) : null}
                     {l.quantity !== null && l.unitRate !== null ? (
                       <div className="text-[11px] text-faint">
@@ -320,29 +335,29 @@ export function InvoicePanel({
                   </td>
                   <td className="py-2 text-right font-mono tabular-nums text-fg">{money(l.amount)}</td>
                   <td className="w-16 py-2 text-right text-[11px] text-faint">
-                    {l.taxable ? "" : "no tax"}
+                    {l.taxable ? "" : t("no tax")}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr>
-                <td className="pt-3 text-right text-muted">Subtotal</td>
+                <td className="pt-3 text-right text-muted">{t("Subtotal")}</td>
                 <td className="pt-3 text-right font-mono tabular-nums text-fg">{money(invoice.subtotal)}</td>
                 <td />
               </tr>
               {invoice.taxPercent > 0 ? (
                 <tr>
                   <td className="text-right text-muted">
-                    {invoice.taxName ?? "Tax"} {invoice.taxPercent}%
-                    {invoice.taxMode === "INCLUSIVE" ? " (included)" : ""}
+                    {invoice.taxName ?? t("Tax")} {invoice.taxPercent}%
+                    {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
                   </td>
                   <td className="text-right font-mono tabular-nums text-fg">{money(invoice.taxTotal)}</td>
                   <td />
                 </tr>
               ) : null}
               <tr>
-                <td className="pt-2 text-right font-medium text-fg">Total</td>
+                <td className="pt-2 text-right font-medium text-fg">{t("Total")}</td>
                 <td className="pt-2 text-right font-mono text-base font-semibold tabular-nums text-fg">
                   {money(invoice.total)}
                 </td>
@@ -354,18 +369,21 @@ export function InvoicePanel({
       </Card>
 
       <Card>
-        <CardHeader title="Payments" subtitle="The status above follows these rows, not the other way round." />
+        <CardHeader
+          title={t("Payments")}
+          subtitle={t("The status above follows these rows, not the other way round.")}
+        />
         <CardBody>
           {invoice.payments.length === 0 ? (
-            <p className="text-sm text-muted">Nothing received yet.</p>
+            <p className="text-sm text-muted">{t("Nothing received yet.")}</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
-                  <th className="pb-1.5 font-medium">Received</th>
-                  <th className="pb-1.5 font-medium">How</th>
-                  <th className="pb-1.5 font-medium">Reference</th>
-                  <th className="pb-1.5 text-right font-medium">Amount</th>
+                  <th className="pb-1.5 font-medium">{t("Received")}</th>
+                  <th className="pb-1.5 font-medium">{t("How")}</th>
+                  <th className="pb-1.5 font-medium">{t("Reference")}</th>
+                  <th className="pb-1.5 text-right font-medium">{t("Amount")}</th>
                   <th className="pb-1.5" />
                 </tr>
               </thead>
@@ -373,7 +391,7 @@ export function InvoicePanel({
                 {invoice.payments.map((p) => (
                   <tr key={p.id} className="border-t border-border/60">
                     <td className="py-2 font-mono text-xs tabular-nums">{militaryDate(p.paidAt)}</td>
-                    <td className="py-2 text-muted">{PAYMENT_METHOD_LABEL[p.method]}</td>
+                    <td className="py-2 text-muted">{t(PAYMENT_METHOD_LABEL[p.method])}</td>
                     <td className="py-2 font-mono text-xs text-muted">{p.reference ?? "—"}</td>
                     <td className="py-2 text-right font-mono tabular-nums text-fg">{money(p.amount)}</td>
                     <td className="py-2 text-right">
@@ -381,7 +399,7 @@ export function InvoicePanel({
                         type="button"
                         disabled={pending}
                         onClick={() => run(() => deletePaymentAction(invoice.id, p.id))}
-                        aria-label="Delete payment"
+                        aria-label={t("Delete payment")}
                         className="text-faint transition-colors hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />

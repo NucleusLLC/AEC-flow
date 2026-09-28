@@ -6,13 +6,13 @@ import { KanbanBoard } from "@/components/widgets/kanban-board";
 export const metadata = { title: "Widgets · AEC-flow" };
 
 export default async function WidgetsPage() {
-  const tr = await getServerT();
+  const t = await getServerT();
   return (
     <div className="w-full space-y-5">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-fg">{tr("Widgets")}</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-fg">{t("Widgets")}</h2>
         <p className="mt-1 text-sm text-muted">
-          {tr("Handy personal tools — punch clock, world clocks, and a quick Kanban board. Saved in your browser.")}
+          {t("Handy personal tools — punch clock, world clocks, and a quick Kanban board. Saved in your browser.")}
         </p>
       </div>
 

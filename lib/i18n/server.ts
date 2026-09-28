@@ -7,10 +7,7 @@
  *   <h2>{t("Clients")}</h2>
  */
 import { cookies } from "next/headers";
-import { DEFAULT_LANG, translate, type Lang } from "./dictionaries";
-
-const LANG_CODES = ["en", "es", "nl", "de", "zh", "pt"];
-const isLang = (v: unknown): v is Lang => typeof v === "string" && LANG_CODES.includes(v);
+import { DEFAULT_LANG, isLang, translate, type Lang } from "./dictionaries";
 
 export async function getServerLang(): Promise<Lang> {
   try {

@@ -7,6 +7,8 @@ import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ProjectSelect } from "@/components/projects/project-select";
 import type { PunchListItem, PunchPriority } from "@/lib/ca/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string };
 
@@ -35,6 +37,7 @@ type Values = {
 export function PunchForm({ projects: projectProp }: { projects: ProjectOption[] }) {
   // Grown when a project is created from the picker below; `projects.find` in
   // the submit handler must read this, not the prop.
+  const t = useT();
   const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; item?: PunchListItem; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -53,7 +56,7 @@ export function PunchForm({ projects: projectProp }: { projects: ProjectOption[]
         body: JSON.stringify({ ...values, projectName: project?.name ?? values.projectId }),
       });
       const json = await res.json();
-      if (!res.ok) setResult({ ok: false, error: json.error ?? `Request failed (${res.status})` });
+      if (!res.ok) setResult({ ok: false, error: json.error ?? fmt(t("Request failed ({status})"), { status: res.status }) });
       else setResult({ ok: true, item: json.data });
     } catch (err) {
       setResult({ ok: false, error: (err as Error).message });
@@ -69,8 +72,8 @@ export function PunchForm({ projects: projectProp }: { projects: ProjectOption[]
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 px-5 py-4">
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" /></span>
           <p className="text-sm text-emerald-800">
-            Punch item {result.item?.itemNumber} created.{" "}
-            {result.item ? <Link href={`/construction-admin/punch-list/${result.item.id}`} className="font-medium underline">Open item</Link> : null}
+            {fmt(t("Punch item {number} created."), { number: result.item?.itemNumber ?? "" })}{" "}
+            {result.item ? <Link href={`/construction-admin/punch-list/${result.item.id}`} className="font-medium underline">{t("Open item")}</Link> : null}
           </p>
         </div>
       ) : result?.error ? (
@@ -81,7 +84,7 @@ export function PunchForm({ projects: projectProp }: { projects: ProjectOption[]
       ) : null}
 
       <Card>
-        <CardHeader title="Punch List Item" />
+        <CardHeader title={t("Punch List Item")} />
         <CardBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Was a required select over a list that is empty on a fresh
@@ -93,7 +96,7 @@ export function PunchForm({ projects: projectProp }: { projects: ProjectOption[]
               rules={{ required: true }}
               render={({ field }) => (
                 <ProjectSelect
-                  label="Project *"
+                  label={t("Project *")}
                   projects={projects}
                   value={field.value ?? ""}
                   onChange={field.onChange}
@@ -106,38 +109,38 @@ export function PunchForm({ projects: projectProp }: { projects: ProjectOption[]
               )}
             />
             <div>
-              <label className={labelCls}>Location</label>
-              <input className={inputCls} placeholder="e.g. Level 8 — Unit 0804" {...register("location")} />
+              <label className={labelCls}>{t("Location")}</label>
+              <input className={inputCls} placeholder={t("e.g. Level 8 — Unit 0804")} {...register("location")} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Description *</label>
-            <textarea className={`${inputCls} h-auto min-h-[90px] py-2`} placeholder="Describe the defect or outstanding work…" {...register("description", { required: true })} />
+            <label className={labelCls}>{t("Description *")}</label>
+            <textarea className={`${inputCls} h-auto min-h-[90px] py-2`} placeholder={t("Describe the defect or outstanding work…")} {...register("description", { required: true })} />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div>
-              <label className={labelCls}>Trade</label>
-              <input className={inputCls} placeholder="e.g. Plumbing" {...register("trade")} />
+              <label className={labelCls}>{t("Trade")}</label>
+              <input className={inputCls} placeholder={t("e.g. Plumbing")} {...register("trade")} />
             </div>
             <div>
-              <label className={labelCls}>Responsible party</label>
-              <input className={inputCls} placeholder="Contractor / subcontractor" {...register("responsibleParty")} />
+              <label className={labelCls}>{t("Responsible party")}</label>
+              <input className={inputCls} placeholder={t("Contractor / subcontractor")} {...register("responsibleParty")} />
             </div>
             <div>
-              <label className={labelCls}>Priority</label>
+              <label className={labelCls}>{t("Priority")}</label>
               <select className={inputCls} {...register("priority")}>
                 {(Object.keys(PRIORITY_LABEL) as PunchPriority[]).map((p) => (
-                  <option key={p} value={p}>{PRIORITY_LABEL[p]}</option>
+                  <option key={p} value={p}>{t(PRIORITY_LABEL[p])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Due date</label>
+              <label className={labelCls}>{t("Due date")}</label>
               <input type="date" className={inputCls} {...register("dueDate")} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Notes</label>
+            <label className={labelCls}>{t("Notes")}</label>
             <textarea className={`${inputCls} h-auto min-h-[70px] py-2`} {...register("notes")} />
           </div>
         </CardBody>
@@ -145,10 +148,10 @@ export function PunchForm({ projects: projectProp }: { projects: ProjectOption[]
 
       <div className="flex items-center gap-2">
         <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50">
-          {saving ? "Saving…" : "Add punch item"}
+          {saving ? t("Saving…") : t("Add punch item")}
         </button>
         <Link href="/construction-admin/punch-list" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2">
-          Cancel
+          {t("Cancel")}
         </Link>
       </div>
     </form>

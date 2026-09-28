@@ -3,45 +3,48 @@ import { ShoppingCart, Boxes, FileStack, ArrowUpRight } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
 import type { ProjectModulesRollup } from "@/lib/data/project-rollup";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export function ProjectModulesRollupCard({
+export async function ProjectModulesRollupCard({
   rollup,
   projectId,
 }: {
   rollup: ProjectModulesRollup;
   projectId: string;
 }) {
+  const t = await getServerT();
   const q = `?project=${encodeURIComponent(projectId)}`;
   const rows = [
     {
       href: `/procurement${q}`,
       icon: ShoppingCart,
-      label: "Purchase orders",
+      label: t("Purchase orders"),
       value: rollup.purchaseOrders.total,
       sub:
         rollup.purchaseOrders.total > 0
-          ? `${rollup.purchaseOrders.open} open · ${formatCurrency(rollup.purchaseOrders.value, rollup.purchaseOrders.currency, { maximumFractionDigits: 0 })}`
-          : "None yet",
+          ? `${fmt(t("{count} open"), { count: rollup.purchaseOrders.open })} · ${formatCurrency(rollup.purchaseOrders.value, rollup.purchaseOrders.currency, { maximumFractionDigits: 0 })}`
+          : t("None yet"),
     },
     {
       href: `/materials${q}`,
       icon: Boxes,
-      label: "Material selections",
+      label: t("Material selections"),
       value: rollup.materials.total,
-      sub: rollup.materials.total > 0 ? `${rollup.materials.approved} approved+` : "None yet",
+      sub: rollup.materials.total > 0 ? fmt(t("{count} approved+"), { count: rollup.materials.approved }) : t("None yet"),
     },
     {
       href: `/design${q}`,
       icon: FileStack,
-      label: "Design deliverables",
+      label: t("Design deliverables"),
       value: rollup.deliverables.total,
-      sub: rollup.deliverables.total > 0 ? `${rollup.deliverables.issued} issued` : "None yet",
+      sub: rollup.deliverables.total > 0 ? fmt(t("{count} issued"), { count: rollup.deliverables.issued }) : t("None yet"),
     },
   ];
 
   return (
     <Card>
-      <CardHeader title="Procurement, Materials & Design" subtitle="Across this project" />
+      <CardHeader title={t("Procurement, Materials & Design")} subtitle={t("Across this project")} />
       <div className="divide-y divide-border">
         {rows.map((r) => {
           const Icon = r.icon;

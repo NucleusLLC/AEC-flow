@@ -7,6 +7,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { ProjectPicker, ProjectCrumb, type ProjectPickerRow } from "@/components/projects/project-picker";
 import { DrawingsView } from "./drawings-view";
 import type { Drawing } from "@/lib/data/drawings.types";
+import { useT } from "@/components/i18n/language-provider";
 
 export function DrawingsApp({
   drawings,
@@ -15,6 +16,7 @@ export function DrawingsApp({
   drawings: Drawing[];
   directory: Record<string, { location: string; client: string }>;
 }) {
+  const t = useT();
   const [sel, setSel] = useState<string | null>(null);
 
   const rows: ProjectPickerRow[] = useMemo(() => {
@@ -46,9 +48,9 @@ export function DrawingsApp({
             <FileStack className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
-            <p className="text-sm font-medium text-fg">No drawings yet</p>
+            <p className="text-sm font-medium text-fg">{t("No drawings yet")}</p>
             <p className="mt-0.5 text-xs text-muted">
-              Drop a sheet set and the register fills itself in — you confirm what was read.
+              {t("Drop a sheet set and the register fills itself in — you confirm what was read.")}
             </p>
           </div>
           <Link
@@ -56,18 +58,18 @@ export function DrawingsApp({
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Upload className="h-4 w-4" />
-            Add drawings
+            {t("Add drawings")}
           </Link>
         </CardBody>
       </Card>
     );
   }
 
-  if (!sel) return <ProjectPicker title="Drawings" countLabel="Sheets" rows={rows} onSelect={setSel} />;
+  if (!sel) return <ProjectPicker title={t("Drawings")} countLabel={t("Sheets")} rows={rows} onSelect={setSel} />;
 
   const row = rows.find((r) => r.key === sel);
   const filtered = drawings.filter((d) => d.projectId === sel);
-  if (!row) return <ProjectPicker title="Drawings" countLabel="Sheets" rows={rows} onSelect={setSel} />;
+  if (!row) return <ProjectPicker title={t("Drawings")} countLabel={t("Sheets")} rows={rows} onSelect={setSel} />;
 
   return (
     <div className="space-y-4">

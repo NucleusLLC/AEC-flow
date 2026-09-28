@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -9,13 +11,17 @@ import { getInvoice } from "@/lib/data/invoices";
 import { militaryDate, ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Invoice · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Invoice")} · AEC-flow` };
+}
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const invoice = await getInvoice(id);
   if (!invoice) notFound();
   const today = ymd(new Date());
+  const t = await getServerT();
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -26,7 +32,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        Invoices
+        {t("Invoices")}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -41,7 +47,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <EmailButton
           subject={`Invoice ${invoice.number} — ${invoice.clientName}`}
           attachment={`${invoice.number}`}
-          label="Email"
+          label={t("Email")}
           defaultTo={invoice.contactEmail ?? ""}
           relatedType="invoice"
           relatedId={invoice.id}
@@ -57,18 +63,24 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       <InvoicePanel invoice={invoice} today={today} />
 
       <Card>
-        <CardHeader title="Details" />
+        <CardHeader title={t("Details")} />
         <CardBody className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {[
-            { label: "Invoice date", value: militaryDate(invoice.issueDate), mono: true },
-            { label: "Due", value: militaryDate(invoice.dueDate), mono: true },
-            { label: "Terms", value: invoice.termsDays === null ? "—" : `${invoice.termsDays} days` },
-            { label: "Currency", value: invoice.currency, mono: true },
-            { label: "Attention of", value: invoice.contactName ?? "—" },
-            { label: "Email", value: invoice.contactEmail ?? "—" },
-            { label: "From proposal", value: invoice.proposalNumber ?? "—", mono: true },
-            { label: "Raised by", value: invoice.createdByName ?? "—" },
-            { label: "Issued by", value: invoice.issuedByName ?? "—" },
+            { label: t("Invoice date"), value: militaryDate(invoice.issueDate), mono: true },
+            { label: t("Due"), value: militaryDate(invoice.dueDate), mono: true },
+            {
+              label: t("Terms"),
+              value:
+                invoice.termsDays === null
+                  ? "—"
+                  : fmt(t("{count} days"), { count: invoice.termsDays }),
+            },
+            { label: t("Currency"), value: invoice.currency, mono: true },
+            { label: t("Attention of"), value: invoice.contactName ?? "—" },
+            { label: t("Email"), value: invoice.contactEmail ?? "—" },
+            { label: t("From proposal"), value: invoice.proposalNumber ?? "—", mono: true },
+            { label: t("Raised by"), value: invoice.createdByName ?? "—" },
+            { label: t("Issued by"), value: invoice.issuedByName ?? "—" },
           ].map((f) => (
             <div
               key={f.label}
@@ -85,7 +97,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           ) : null}
           {invoice.notes ? (
             <p className="whitespace-pre-line text-sm text-muted sm:col-span-2">
-              <span className="text-faint">Internal notes: </span>
+              <span className="text-faint">{t("Internal notes:")} </span>
               {invoice.notes}
             </p>
           ) : null}

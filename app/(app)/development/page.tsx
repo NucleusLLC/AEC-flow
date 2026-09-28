@@ -5,19 +5,24 @@ import { DevStatusBadge } from "@/components/development/badges";
 import { DEV_PROJECT_TYPE_LABEL } from "@/lib/data/development.types";
 import { listDevelopmentProjects } from "@/lib/data/development";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Land Development · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Land Development")} · AEC-flow` };
+}
 
 export default async function DevelopmentListPage() {
   const projects = await listDevelopmentProjects();
+  const t = await getServerT();
   return (
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold text-fg">
-            <Map className="h-5 w-5 text-brand" /> Land Development
+            <Map className="h-5 w-5 text-brand" /> {t("Land Development")}
           </h1>
-          <p className="text-sm text-muted">Parceling-plan pro formas — acquisition, infrastructure, lots, units, sales and profit, A to Z.</p>
+          <p className="text-sm text-muted">{t("Parceling-plan pro formas — acquisition, infrastructure, lots, units, sales and profit, A to Z.")}</p>
         </div>
       </div>
 
@@ -29,20 +34,20 @@ export default async function DevelopmentListPage() {
                 <div className="min-w-0">
                   <div className="font-mono text-[11px] text-faint">{p.projectNumber}</div>
                   <h3 className="mt-0.5 truncate font-semibold text-fg group-hover:text-brand">{p.name}</h3>
-                  <p className="truncate text-xs text-muted">{p.location} · {DEV_PROJECT_TYPE_LABEL[p.projectType]}</p>
+                  <p className="truncate text-xs text-muted">{p.location} · {t(DEV_PROJECT_TYPE_LABEL[p.projectType])}</p>
                 </div>
                 <DevStatusBadge status={p.status} />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <Metric label="Net sellable" value={`${formatNumber(p.netSellableLand)} m²`} />
-                <Metric label="Lots" value={String(p.totalLots)} />
-                <Metric label="Project cost" value={formatCurrency(p.totalProjectCost, p.currency)} />
-                <Metric label="Revenue" value={formatCurrency(p.totalRevenue, p.currency)} />
-                <Metric label="Profit" value={formatCurrency(p.totalProfit, p.currency)} accent />
-                <Metric label="ROI" value={`${p.roiPct.toFixed(1)}%`} accent />
+                <Metric label={t("Net sellable")} value={`${formatNumber(p.netSellableLand)} m²`} />
+                <Metric label={t("Lots")} value={String(p.totalLots)} />
+                <Metric label={t("Project cost")} value={formatCurrency(p.totalProjectCost, p.currency)} />
+                <Metric label={t("Revenue")} value={formatCurrency(p.totalRevenue, p.currency)} />
+                <Metric label={t("Profit")} value={formatCurrency(p.totalProfit, p.currency)} accent />
+                <Metric label={t("ROI")} value={`${p.roiPct.toFixed(1)}%`} accent />
               </div>
               <div className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-brand opacity-0 transition-opacity group-hover:opacity-100">
-                Open workspace <ArrowRight className="h-3.5 w-3.5" />
+                {t("Open workspace")} <ArrowRight className="h-3.5 w-3.5" />
               </div>
             </Card>
           </Link>

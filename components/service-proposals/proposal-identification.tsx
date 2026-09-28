@@ -17,13 +17,16 @@
 import { Fragment } from "react";
 import type { IdentificationRow, ProposalIdentification } from "@/lib/proposals/identification";
 
-function PrintColumn({ rows }: { rows: IdentificationRow[] }) {
+type Translate = (text: string) => string;
+const identity: Translate = (text) => text;
+
+function PrintColumn({ rows, t }: { rows: IdentificationRow[]; t: Translate }) {
   if (rows.length === 0) return null;
   return (
     <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1">
       {rows.map((r) => (
         <Fragment key={r.label}>
-          <dt className="text-gray-500">{r.label}</dt>
+          <dt className="text-gray-500">{t(r.label)}</dt>
           <dd className="font-medium text-gray-900">{r.value}</dd>
         </Fragment>
       ))}
@@ -32,23 +35,30 @@ function PrintColumn({ rows }: { rows: IdentificationRow[] }) {
 }
 
 /** Document variant — drop inside a `PrintSection`. Renders nothing when there is no data. */
-export function ProposalIdentificationPrint({ identification }: { identification: ProposalIdentification }) {
+/** `t` translates the row labels (the print route passes the server translator). */
+export function ProposalIdentificationPrint({
+  identification,
+  t = identity,
+}: {
+  identification: ProposalIdentification;
+  t?: Translate;
+}) {
   if (!identification.hasAny) return null;
   return (
     <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-[11px]">
-      <PrintColumn rows={identification.project} />
-      <PrintColumn rows={identification.client} />
+      <PrintColumn rows={identification.project} t={t} />
+      <PrintColumn rows={identification.client} t={t} />
     </div>
   );
 }
 
-function AppColumn({ rows }: { rows: IdentificationRow[] }) {
+function AppColumn({ rows, t }: { rows: IdentificationRow[]; t: Translate }) {
   if (rows.length === 0) return null;
   return (
     <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1.5 text-sm">
       {rows.map((r) => (
         <Fragment key={r.label}>
-          <dt className="text-muted">{r.label}</dt>
+          <dt className="text-muted">{t(r.label)}</dt>
           <dd className="font-medium text-fg">{r.value}</dd>
         </Fragment>
       ))}
@@ -57,12 +67,18 @@ function AppColumn({ rows }: { rows: IdentificationRow[] }) {
 }
 
 /** In-app variant — drop inside a `CardBody`. Renders nothing when there is no data. */
-export function ProposalIdentificationDetail({ identification }: { identification: ProposalIdentification }) {
+export function ProposalIdentificationDetail({
+  identification,
+  t = identity,
+}: {
+  identification: ProposalIdentification;
+  t?: Translate;
+}) {
   if (!identification.hasAny) return null;
   return (
     <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-      <AppColumn rows={identification.project} />
-      <AppColumn rows={identification.client} />
+      <AppColumn rows={identification.project} t={t} />
+      <AppColumn rows={identification.client} t={t} />
     </div>
   );
 }

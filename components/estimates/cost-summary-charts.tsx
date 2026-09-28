@@ -1,6 +1,7 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { useT } from "@/components/i18n/language-provider";
 
 /**
  * Always-on Cost Summary charts — a donut of the cost composition and a bar of the
@@ -63,6 +64,7 @@ export function CostSummaryCharts({
   sections: CostSection[];
   money: (n: number) => string;
 }) {
+  const t = useT();
   const total = segments.reduce((a, s) => a + s.value, 0);
   const pctOf = (s: CostSegment) => (s.pctOverride != null ? s.pctOverride : total > 0 ? (s.value / total) * 100 : 0);
 
@@ -74,7 +76,7 @@ export function CostSummaryCharts({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
       {/* Composition — labour / material / equipment / subs / GC / profit / BBO */}
-      <Panel title="Cost Composition">
+      <Panel title={t("Cost Composition")}>
         {total > 0 ? (
           <div className="flex flex-col items-center gap-3 sm:flex-row">
             <div className="h-48 w-full max-w-[220px] shrink-0 text-faint">
@@ -120,7 +122,7 @@ export function CostSummaryCharts({
             </ul>
           </div>
         ) : (
-          <Empty label="Add priced items to see the cost composition." />
+          <Empty label={t("Add priced items to see the cost composition.")} />
         )}
       </Panel>
 
@@ -128,7 +130,7 @@ export function CostSummaryCharts({
           puts the label in an SVG axis gutter, which clips any name too long for it no
           matter how wide the gutter is. Here the name is a full-width HTML line above its
           bar, so it wraps naturally and is never cropped. */}
-      <Panel title="Cost by Section">
+      <Panel title={t("Cost by Section")}>
         {sections.length ? (
           <ul className="space-y-2.5">
             {sections.map((s, i) => {
@@ -152,7 +154,7 @@ export function CostSummaryCharts({
             })}
           </ul>
         ) : (
-          <Empty label="Add a section to see cost by section." />
+          <Empty label={t("Add a section to see cost by section.")} />
         )}
       </Panel>
     </div>

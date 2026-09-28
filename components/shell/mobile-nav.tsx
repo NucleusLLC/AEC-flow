@@ -21,7 +21,7 @@ export function MobileNav() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Open menu"
+        aria-label={t("Open menu")}
         className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:text-fg md:hidden"
       >
         <Menu className="h-5 w-5" />
@@ -45,13 +45,13 @@ export function MobileNav() {
                 </div>
                 <div className="leading-tight">
                   <div className="text-sm font-semibold text-white">AEC-flow</div>
-                  <div className="text-[11px] text-sidebar-muted">AEC Suite</div>
+                  <div className="text-[11px] text-sidebar-muted">{t("AEC Suite")}</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close menu"
+                aria-label={t("Close menu")}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-muted hover:text-white"
               >
                 <X className="h-5 w-5" />
@@ -78,7 +78,7 @@ export function MobileNav() {
                           <li key={item.href}>
                             <div
                               aria-disabled
-                              title="Coming soon — not part of the beta"
+                              title={t("Coming soon — not part of the beta")}
                               className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-muted/50"
                             >
                               <Icon className="h-[18px] w-[18px] shrink-0 text-sidebar-muted/40" strokeWidth={2} />

@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import { listClientOptions } from "@/app/(app)/clients/actions";
 import { CreatableSelect } from "@/components/forms/creatable-select";
 import { NewProjectPanel, type CreatedProject } from "./new-project-panel";
+import { useT } from "@/components/i18n/language-provider";
 
 export type ProjectOption = {
   id: string;
@@ -77,6 +78,7 @@ export function ProjectSelect({
   // Null until the create panel is first opened — see the header note.
   const [clients, setClients] = useState<{ id: string; name: string }[] | null>(null);
   const [wanted, setWanted] = useState(false);
+  const t = useT();
 
   // The fetch has to live in an effect, not in `renderCreate`. With no projects
   // on file the create panel opens immediately, so `renderCreate` runs during
@@ -97,7 +99,7 @@ export function ProjectSelect({
   return (
     <CreatableSelect
       id={id}
-      label={label}
+      label={t(label)}
       hint={hint}
       allowEmpty={allowEmpty}
       placeholder={placeholder}
@@ -109,10 +111,10 @@ export function ProjectSelect({
         value: by === "id" ? p.id : (p.projectNumber ?? p.id),
         label: p.projectNumber ? `${p.projectNumber} — ${p.name}` : p.name,
       }))}
-      addLabel="＋ Add a new project"
+      addLabel={t("＋ Add a new project")}
       onCreateOpen={() => setWanted(true)}
       renderCreate={({ onCreated: accept, onCancel }) => {
-        if (clients === null) return <p className="text-xs text-muted">Loading clients…</p>;
+        if (clients === null) return <p className="text-xs text-muted">{t("Loading clients…")}</p>;
         return (
           <NewProjectPanel
             clients={clients}

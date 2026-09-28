@@ -70,6 +70,8 @@ import {
   removeMarkupAction,
 } from "@/app/(app)/drawings/studio/actions";
 import { drawingFileUrlAction } from "@/app/(app)/drawings/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /** How often the studio looks for other people's work. See the header. */
 const POLL_MS = 20_000;
@@ -121,6 +123,7 @@ export function DrawingStudio({
   team: { id: string; name: string }[];
   currentUser: { id: string; name: string };
 }) {
+  const t = useT();
   const router = useRouter();
 
   const [bytes, setBytes] = useState<ArrayBuffer | null>(null);
@@ -165,16 +168,17 @@ export function DrawingStudio({
         // Fetched once, held in memory: the signed URL expires in five minutes
         // and a review does not.
         const response = await fetch(result.url);
-        if (!response.ok) throw new Error(`The file could not be downloaded (${response.status}).`);
+        if (!response.ok) throw new Error(fmt(t("The file could not be downloaded ({status})."), { status: response.status }));
         const buffer = await response.arrayBuffer();
         if (!cancelled) setBytes(buffer);
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : "The file could not be downloaded.");
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t("The file could not be downloaded."));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per drawing; a language switch must not refetch the file
   }, [drawing.id]);
 
   /* ---------------- other people's work ---------------- */
@@ -207,7 +211,7 @@ export function DrawingStudio({
       // A text mark needs its words before it is worth storing.
       let text = draft.text ?? null;
       if (draft.kind === "TEXT" || draft.kind === "CALLOUT") {
-        text = window.prompt(draft.kind === "TEXT" ? "Note" : "Callout")?.trim() || null;
+        text = window.prompt(draft.kind === "TEXT" ? t("Note") : t("Callout"))?.trim() || null;
         if (!text) return;
       }
 
@@ -246,7 +250,7 @@ export function DrawingStudio({
       );
       if (!result.ok) setError(result.error);
     },
-    [drawing.id, page, calibration, currentUser],
+    [drawing.id, page, calibration, currentUser, t],
   );
 
   const onDelete = useCallback(async (id: string) => {
@@ -264,7 +268,7 @@ export function DrawingStudio({
   }, []);
 
   const clearMine = useCallback(async () => {
-    if (!window.confirm("Remove every mark you made on this page?")) return;
+    if (!window.confirm(t("Remove every mark you made on this page?"))) return;
     const mine = markups.filter((m) => m.authorId === currentUser.id && m.page === page);
     setMarkups((prev) => prev.filter((m) => !mine.some((x) => x.id === m.id)));
     const result = await clearMyMarkupsAction(drawing.id, page);
@@ -272,7 +276,7 @@ export function DrawingStudio({
       setError(result.error);
       void refresh();
     }
-  }, [markups, currentUser.id, page, drawing.id, refresh]);
+  }, [markups, currentUser.id, page, drawing.id, refresh, t]);
 
   /* ---------------- comments ---------------- */
 
@@ -374,7 +378,7 @@ export function DrawingStudio({
     setCalibrating(false);
     if (lengthPt <= 0) return;
     const answer = window.prompt(
-      "How long is that line in real millimetres?\n(e.g. 8000 for an 8 m grid)",
+      t("How long is that line in real millimetres?\n(e.g. 8000 for an 8 m grid)"),
     );
     const mm = Number(answer?.replace(/[^\d.]/g, ""));
     const mmPerPoint = calibrationFrom(lengthPt, mm);
@@ -398,9 +402,9 @@ export function DrawingStudio({
           <h2 className="mt-1 flex flex-wrap items-center gap-2 text-xl font-semibold text-fg">
             <span className="font-mono text-base text-faint">{drawing.code}</span>
             {drawing.title}
-            <Badge tone="neutral">Rev {drawing.revision}</Badge>
+            <Badge tone="neutral">{fmt(t("Rev {rev}"), { rev: drawing.revision })}</Badge>
             {drawing.paperSize ? <Badge tone="slate">{drawing.paperSize}</Badge> : null}
-            {openCount > 0 ? <Badge tone="amber">{openCount} open</Badge> : null}
+            {openCount > 0 ? <Badge tone="amber">{fmt(t("{count} open"), { count: openCount })}</Badge> : null}
           </h2>
         </div>
       </div>
@@ -415,8 +419,8 @@ export function DrawingStudio({
         <Card className="overflow-hidden">
           <Toolbar
             tool={tool}
-            setTool={(t) => {
-              setTool(t);
+            setTool={(next) => {
+              setTool(next);
               setCommentMode(false);
               setCalibrating(false);
             }}
@@ -449,14 +453,14 @@ export function DrawingStudio({
 
           <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-sm">
             <div className="flex items-center gap-1">
-              <IconButton label="Previous page" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <IconButton label={t("Previous page")} disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </IconButton>
               <span className="px-1 tabular-nums text-muted">
-                Page {page} of {pageCount}
+                {fmt(t("Page {page} of {count}"), { page, count: pageCount })}
               </span>
               <IconButton
-                label="Next page"
+                label={t("Next page")}
                 disabled={page >= pageCount}
                 onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
               >
@@ -464,14 +468,14 @@ export function DrawingStudio({
               </IconButton>
             </div>
             <div className="flex items-center gap-1">
-              <IconButton label="Zoom out" onClick={() => zoomBy(-1)}>
+              <IconButton label={t("Zoom out")} onClick={() => zoomBy(-1)}>
                 <ZoomOut className="h-4 w-4" />
               </IconButton>
               <span className="w-12 text-center tabular-nums text-muted">{Math.round(zoom * 100)}%</span>
-              <IconButton label="Zoom in" onClick={() => zoomBy(1)}>
+              <IconButton label={t("Zoom in")} onClick={() => zoomBy(1)}>
                 <ZoomIn className="h-4 w-4" />
               </IconButton>
-              <IconButton label="Fit to width" onClick={() => fitWidth()}>
+              <IconButton label={t("Fit to width")} onClick={() => fitWidth()}>
                 <Maximize2 className="h-4 w-4" />
               </IconButton>
             </div>
@@ -480,13 +484,12 @@ export function DrawingStudio({
           <div ref={scrollRef} className="max-h-[calc(100vh-20rem)] overflow-auto bg-surface-2 p-4">
             {!isPdf ? (
               <p className="py-16 text-center text-sm text-muted">
-                This is a {drawing.fileType} file. Only PDFs can be opened here — download it from
-                the register instead.
+                {fmt(t("This is a {type} file. Only PDFs can be opened here — download it from the register instead."), { type: drawing.fileType })}
               </p>
             ) : loadError ? (
               <p className="py-16 text-center text-sm text-red-600">{loadError}</p>
             ) : !bytes ? (
-              <p className="py-16 text-center text-sm text-muted">Opening the drawing…</p>
+              <p className="py-16 text-center text-sm text-muted">{t("Opening the drawing…")}</p>
             ) : (
               <div className="relative mx-auto w-fit">
                 <PdfPageCanvas
@@ -526,14 +529,14 @@ export function DrawingStudio({
           {selectedId && markups.some((m) => m.id === selectedId && m.canDelete) ? (
             <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-sm">
               <span className="text-muted">
-                {markups.find((m) => m.id === selectedId)?.authorName}&apos;s mark selected
+                {fmt(t("{name}'s mark selected"), { name: markups.find((m) => m.id === selectedId)?.authorName ?? "" })}
               </span>
               <button
                 type="button"
                 onClick={() => onDelete(selectedId)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-xs text-muted hover:bg-surface-2 hover:text-red-600"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete it
+                <Trash2 className="h-3.5 w-3.5" /> {t("Delete it")}
               </button>
             </div>
           ) : null}
@@ -595,6 +598,7 @@ function Toolbar({
   hiddenAuthors: string[];
   toggleAuthor: (id: string) => void;
 }) {
+  const tr = useT();
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-3 py-2">
       <div className="flex flex-wrap items-center gap-1">
@@ -603,8 +607,8 @@ function Toolbar({
             key={label}
             type="button"
             onClick={() => setTool(t)}
-            aria-label={label}
-            title={label}
+            aria-label={tr(label)}
+            title={tr(label)}
             aria-pressed={tool === t && !commentMode && !calibrating}
             className={cn(
               "grid h-8 w-8 place-items-center rounded-lg border text-muted transition-colors",
@@ -623,7 +627,7 @@ function Toolbar({
           type="button"
           onClick={toggleComment}
           aria-pressed={commentMode}
-          title="Pin a comment"
+          title={tr("Pin a comment")}
           className={cn(
             "grid h-8 w-8 place-items-center rounded-lg border transition-colors",
             commentMode ? "border-brand bg-brand/10 text-brand" : "border-transparent text-muted hover:bg-surface-2",
@@ -638,8 +642,8 @@ function Toolbar({
           aria-pressed={calibrating}
           title={
             calibration
-              ? `Calibrated against ${calibration.reference} — click to redo`
-              : "Calibrate: drag along a known dimension, then type what it is"
+              ? fmt(tr("Calibrated against {reference} — click to redo"), { reference: calibration.reference })
+              : tr("Calibrate: drag along a known dimension, then type what it is")
           }
           className={cn(
             "grid h-8 w-8 place-items-center rounded-lg border transition-colors",
@@ -656,7 +660,7 @@ function Toolbar({
         <button
           type="button"
           onClick={onClearMine}
-          title="Clear my marks on this page"
+          title={tr("Clear my marks on this page")}
           className="grid h-8 w-8 place-items-center rounded-lg border border-transparent text-muted transition-colors hover:bg-surface-2 hover:text-red-600"
         >
           <Eraser className="h-4 w-4" />
@@ -669,7 +673,7 @@ function Toolbar({
             key={c}
             type="button"
             onClick={() => setColour(c)}
-            aria-label={`Colour ${c}`}
+            aria-label={fmt(tr("Colour {colour}"), { colour: c })}
             className={cn(
               "h-5 w-5 rounded-full border-2 transition-transform",
               colour === c ? "scale-110 border-fg" : "border-transparent",
@@ -680,7 +684,7 @@ function Toolbar({
       </div>
 
       <label className="flex items-center gap-2 text-xs text-muted">
-        Weight
+        {tr("Weight")}
         <input
           type="range"
           min={1}
@@ -696,7 +700,7 @@ function Toolbar({
         <select
           value={stamp}
           onChange={(e) => setStamp(e.target.value)}
-          aria-label="Stamp"
+          aria-label={tr("Stamp")}
           className="h-8 rounded-lg border border-border bg-surface px-2 text-xs text-fg"
         >
           {STAMPS.map((s) => (
@@ -709,7 +713,7 @@ function Toolbar({
 
       {authors.length > 1 ? (
         <div className="flex items-center gap-1 text-xs text-muted">
-          <span className="text-[11px] uppercase tracking-wide text-faint">Show</span>
+          <span className="text-[11px] uppercase tracking-wide text-faint">{tr("Show")}</span>
           {authors.map((a) => (
             <button
               key={a.id}
@@ -766,6 +770,7 @@ function CommentPins({
   view: PageView;
   onOpen: (id: string) => void;
 }) {
+  const t = useT();
   return (
     <>
       {comments.map((c, i) => {
@@ -777,7 +782,7 @@ function CommentPins({
             type="button"
             onClick={() => onOpen(c.id)}
             title={c.body}
-            aria-label={`Comment by ${c.authorName}`}
+            aria-label={fmt(t("Comment by {name}"), { name: c.authorName })}
             className={cn(
               "absolute z-10 -translate-x-1/2 -translate-y-full rounded-full px-2 py-0.5 text-[11px] font-semibold text-white shadow",
               c.status === "RESOLVED" ? "bg-green-600/80" : "bg-amber-500",

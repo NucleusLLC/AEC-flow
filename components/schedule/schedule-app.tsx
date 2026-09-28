@@ -8,6 +8,8 @@ import { EmailButton } from "@/components/email/email-button";
 import { NewProjectPanel, type CreatedProject } from "@/components/projects/new-project-panel";
 import { ScheduleGantt } from "./schedule-gantt";
 import type { ProjectSchedule } from "@/lib/data/schedule";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 /** A project that can be scheduled, whether or not it has a programme yet. */
 export type SchedulableProject = {
@@ -59,6 +61,7 @@ export function ScheduleApp({
   // Projects created inline: saveProject revalidates /projects, not /schedule,
   // so this page's `projects` prop does not include them until a reload.
   const [added, setAdded] = useState<CreatedProject[]>([]);
+  const t = useT();
 
   /** Rows for projects that already have a programme (persisted or seeded). */
   const scheduledRows: ProjectPickerRow[] = useMemo(
@@ -145,18 +148,18 @@ export function ScheduleApp({
               onClick={() => setNewOpen((v) => !v)}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
             >
-              <Plus className="h-4 w-4" /> New Schedule
+              <Plus className="h-4 w-4" /> {t("New Schedule")}
             </button>
             {newOpen ? (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setNewOpen(false)} aria-hidden />
                 <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-border bg-surface p-1 shadow-lg">
                   <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-faint">
-                    Choose a project to schedule
+                    {t("Choose a project to schedule")}
                   </div>
                   <div className="max-h-72 overflow-y-auto">
                     {rows.length === 0 ? (
-                      <div className="px-3 py-4 text-sm text-muted">No projects yet.</div>
+                      <div className="px-3 py-4 text-sm text-muted">{t("No projects yet.")}</div>
                     ) : (
                       rows.map((r) => (
                         <button
@@ -170,7 +173,7 @@ export function ScheduleApp({
                             <span className="block truncate text-xs text-muted">{r.projectNumber} · {r.client}</span>
                           </span>
                           <span className="shrink-0 text-[11px] text-faint">
-                            {r.count ? `${r.count} tasks` : "No programme yet"}
+                            {r.count ? fmt(t("{count} tasks"), { count: r.count }) : t("No programme yet")}
                           </span>
                         </button>
                       ))
@@ -182,7 +185,7 @@ export function ScheduleApp({
                     onClick={openNewProject}
                     className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border px-3 py-2.5 text-left text-sm font-medium text-brand transition-colors hover:bg-surface-2"
                   >
-                    <FolderPlus className="h-4 w-4" /> Add new project
+                    <FolderPlus className="h-4 w-4" /> {t("Add new project")}
                   </button>
                 </div>
               </>
@@ -192,12 +195,12 @@ export function ScheduleApp({
         {addProjectOpen ? (
           <NewProjectPanel
             clients={clients}
-            submitLabel="Create project & schedule it"
+            submitLabel={t("Create project & schedule it")}
             onCreated={onProjectCreated}
             onCancel={() => setAddProjectOpen(false)}
           />
         ) : null}
-        <ProjectPicker title="Schedule" countLabel="Tasks" rows={rows} onSelect={setSel} />
+        <ProjectPicker title={t("Schedule")} countLabel={t("Tasks")} rows={rows} onSelect={setSel} />
       </div>
     );
 
@@ -236,7 +239,7 @@ export function ScheduleApp({
             href={`/print/schedule/${selected.projectId}`}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
-            <Printer className="h-4 w-4" /> Print preview
+            <Printer className="h-4 w-4" /> {t("Print preview")}
           </Link>
         </div>
       </div>

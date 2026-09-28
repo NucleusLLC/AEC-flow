@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -8,7 +10,10 @@ import { getClients } from "@/lib/data/clients";
 import { getProjects } from "@/lib/data/projects";
 import { ymd } from "@/lib/building-permits/register";
 
-export const metadata: Metadata = { title: "Edit invoice · AEC-flow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Edit invoice")} · AEC-flow` };
+}
 
 export default async function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,6 +24,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   if (invoice.status !== "DRAFT") redirect(`/finance/invoices/${invoice.id}`);
 
   const [clients, projects] = await Promise.all([getClients(), getProjects()]);
+  const t = await getServerT();
 
   return (
     <div className="w-full space-y-6">
@@ -30,8 +36,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         {invoice.number}
       </Link>
       <div>
-        <h2 className="text-xl font-semibold text-fg">Edit {invoice.number}</h2>
-        <p className="text-sm text-muted">Totals recalculate as you type, and again on save.</p>
+        <h2 className="text-xl font-semibold text-fg">{fmt(t("Edit {number}"), { number: invoice.number })}</h2>
+        <p className="text-sm text-muted">{t("Totals recalculate as you type, and again on save.")}</p>
       </div>
       <InvoiceForm
         mode="edit"

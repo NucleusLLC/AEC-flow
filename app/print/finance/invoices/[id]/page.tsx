@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 import { notFound } from "next/navigation";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { PrintSurface } from "@/components/print/print-surface";
@@ -10,7 +12,10 @@ import { militaryDate } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 import { PAYMENT_METHOD_LABEL } from "@/lib/finance/types";
 
-export const metadata: Metadata = { title: "Invoice · Print" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return { title: `${t("Invoice")} · ${t("Print")}` };
+}
 
 /**
  * The invoice as the client receives it.
@@ -31,6 +36,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
     getFirmIdentity(),
   ]);
   if (!invoice) notFound();
+  const t = await getServerT();
 
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -45,17 +51,17 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           size: practice.logo.size,
         }}
         name={firm.name}
-        tagline="Architecture · Engineering · Project Management"
+        tagline={t("Architecture · Engineering · Project Management")}
         borderClass="border-b-2 border-gray-900 pb-4"
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">
-              {invoice.status === "VOID" ? "Void invoice" : "Invoice"}
+              {invoice.status === "VOID" ? t("Void invoice") : t("Invoice")}
             </div>
             <div className="mt-1 font-mono text-xs text-gray-600">{invoice.number}</div>
             <div className="text-[11px] text-gray-500">
               {militaryDate(invoice.issueDate)}
-              {invoice.status === "DRAFT" ? " · DRAFT" : ""}
+              {invoice.status === "DRAFT" ? ` · ${t("DRAFT")}` : ""}
             </div>
           </div>
         }
@@ -63,7 +69,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
       <div className="mt-6 flex flex-wrap justify-between gap-6 text-[11px] leading-relaxed">
         <div>
-          <div className="text-gray-400">Billed to</div>
+          <div className="text-gray-400">{t("Billed to")}</div>
           <div className="font-medium text-gray-900">{invoice.clientName}</div>
           {invoice.contactName ? <div className="text-gray-700">{invoice.contactName}</div> : null}
           {invoice.billingAddress ? (
@@ -73,20 +79,22 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <div className="text-right">
           {invoice.projectName ? (
             <>
-              <div className="text-gray-400">Project</div>
+              <div className="text-gray-400">{t("Project")}</div>
               <div className="text-gray-900">{invoice.projectName}</div>
             </>
           ) : null}
           {invoice.proposalNumber ? (
             <>
-              <div className="mt-1 text-gray-400">Proposal</div>
+              <div className="mt-1 text-gray-400">{t("Proposal")}</div>
               <div className="font-mono text-gray-900">{invoice.proposalNumber}</div>
             </>
           ) : null}
-          <div className="mt-1 text-gray-400">Due</div>
+          <div className="mt-1 text-gray-400">{t("Due")}</div>
           <div className="text-gray-900">
             {militaryDate(invoice.dueDate)}
-            {invoice.termsDays !== null ? ` (${invoice.termsDays} days)` : ""}
+            {invoice.termsDays !== null
+              ? ` (${fmt(t("{count} days"), { count: invoice.termsDays })})`
+              : ""}
           </div>
         </div>
       </div>
@@ -101,10 +109,10 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       <table className="mt-6 w-full border-collapse text-[11px]">
         <thead>
           <tr className="border-b border-gray-300 text-left text-gray-500">
-            <th className="py-1 pr-2 font-medium">Description</th>
-            <th className="py-1 px-2 text-right font-medium">Qty</th>
-            <th className="py-1 px-2 text-right font-medium">Rate</th>
-            <th className="py-1 pl-2 text-right font-medium">Amount</th>
+            <th className="py-1 pr-2 font-medium">{t("Description")}</th>
+            <th className="py-1 px-2 text-right font-medium">{t("Qty")}</th>
+            <th className="py-1 px-2 text-right font-medium">{t("Rate")}</th>
+            <th className="py-1 pl-2 text-right font-medium">{t("Amount")}</th>
           </tr>
         </thead>
         <tbody>
@@ -112,7 +120,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             <tr key={l.id} className="break-inside-avoid border-b border-gray-200 align-top">
               <td className="py-1.5 pr-2 text-gray-900">
                 {l.description}
-                {l.taxable ? "" : <span className="text-gray-400"> (no tax)</span>}
+                {l.taxable ? "" : <span className="text-gray-400"> ({t("no tax")})</span>}
               </td>
               <td className="py-1.5 px-2 text-right text-gray-700">{l.quantity ?? ""}</td>
               <td className="py-1.5 px-2 text-right font-mono text-gray-700">
@@ -128,20 +136,20 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <table className="w-64 text-[11px]">
           <tbody>
             <tr>
-              <td className="py-0.5 text-gray-500">Subtotal</td>
+              <td className="py-0.5 text-gray-500">{t("Subtotal")}</td>
               <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.subtotal)}</td>
             </tr>
             {invoice.taxPercent > 0 ? (
               <tr>
                 <td className="py-0.5 text-gray-500">
-                  {invoice.taxName ?? "Tax"} {invoice.taxPercent}%
-                  {invoice.taxMode === "INCLUSIVE" ? " (included)" : ""}
+                  {invoice.taxName ?? t("Tax")} {invoice.taxPercent}%
+                  {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
                 </td>
                 <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.taxTotal)}</td>
               </tr>
             ) : null}
             <tr className="border-t border-gray-900">
-              <td className="py-1 font-semibold text-gray-900">Total</td>
+              <td className="py-1 font-semibold text-gray-900">{t("Total")}</td>
               <td className="py-1 text-right font-mono text-sm font-bold text-gray-900">
                 {money(invoice.total)}
               </td>
@@ -149,11 +157,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             {paid > 0 ? (
               <>
                 <tr>
-                  <td className="py-0.5 text-gray-500">Received</td>
+                  <td className="py-0.5 text-gray-500">{t("Received")}</td>
                   <td className="py-0.5 text-right font-mono text-gray-900">−{money(paid)}</td>
                 </tr>
                 <tr className="border-t border-gray-300">
-                  <td className="py-1 font-semibold text-gray-900">Balance due</td>
+                  <td className="py-1 font-semibold text-gray-900">{t("Balance due")}</td>
                   <td className="py-1 text-right font-mono text-sm font-bold text-gray-900">
                     {money(outstanding)}
                   </td>
@@ -167,14 +175,14 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       {invoice.payments.length > 0 ? (
         <div className="mt-6 break-inside-avoid">
           <h2 className="border-b border-gray-300 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Payments received
+            {t("Payments received")}
           </h2>
           <table className="mt-2 w-full border-collapse text-[10px]">
             <tbody>
               {invoice.payments.map((p) => (
                 <tr key={p.id} className="border-b border-gray-200">
                   <td className="py-1 pr-2 font-mono text-gray-700">{militaryDate(p.paidAt)}</td>
-                  <td className="py-1 px-2 text-gray-700">{PAYMENT_METHOD_LABEL[p.method]}</td>
+                  <td className="py-1 px-2 text-gray-700">{t(PAYMENT_METHOD_LABEL[p.method])}</td>
                   <td className="py-1 px-2 font-mono text-gray-500">{p.reference ?? ""}</td>
                   <td className="py-1 pl-2 text-right font-mono text-gray-900">{money(p.amount)}</td>
                 </tr>
@@ -192,7 +200,9 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
 
       {invoice.status === "VOID" ? (
         <p className="mt-6 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-          This invoice has been voided{invoice.voidReason ? `: ${invoice.voidReason}` : ""}.
+          {invoice.voidReason
+            ? fmt(t("This invoice has been voided: {reason}."), { reason: invoice.voidReason })
+            : t("This invoice has been voided.")}
         </p>
       ) : null}
 

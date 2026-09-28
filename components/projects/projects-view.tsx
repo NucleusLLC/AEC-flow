@@ -14,6 +14,8 @@ import {
 } from "@/lib/data/projects.types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "status" | "name" | "progress" | "deadline";
 
@@ -32,6 +34,7 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
   const [status, setStatus] = useState<"ALL" | ProjectStatus>("ALL");
   const [priority, setPriority] = useState<"ALL" | Priority>("ALL");
   const [sort, setSort] = useState<SortKey>("status");
+  const t = useT();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -70,7 +73,7 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -82,7 +85,7 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search projects…"
+              placeholder={t("Search projects…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -91,10 +94,10 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
             onChange={(e) => setPriority(e.target.value as "ALL" | Priority)}
             className="h-9 rounded-lg border border-border bg-surface px-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           >
-            <option value="ALL">All priorities</option>
+            <option value="ALL">{t("All priorities")}</option>
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
-                {p.charAt(0) + p.slice(1).toLowerCase()}
+                {t(p.charAt(0) + p.slice(1).toLowerCase())}
               </option>
             ))}
           </select>
@@ -105,10 +108,10 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="h-9 rounded-lg border border-border bg-surface pl-7 pr-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             >
-              <option value="status">Status</option>
-              <option value="name">Name A–Z</option>
-              <option value="progress">Progress</option>
-              <option value="deadline">Deadline</option>
+              <option value="status">{t("Status")}</option>
+              <option value="name">{t("Name A–Z")}</option>
+              <option value="progress">{t("Progress")}</option>
+              <option value="deadline">{t("Deadline")}</option>
             </select>
           </div>
         </div>
@@ -120,13 +123,13 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
           <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Project</th>
-                <th className="px-3 py-2.5 font-medium">Client</th>
-                <th className="px-3 py-2.5 font-medium">Manager</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium">Priority</th>
-                <th className="px-3 py-2.5 font-medium">Progress</th>
-                <th className="px-5 py-2.5 font-medium text-right">Target</th>
+                <th className="px-5 py-2.5 font-medium">{t("Project")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Client")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Manager")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Priority")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Progress")}</th>
+                <th className="px-5 py-2.5 font-medium text-right">{t("Target")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -138,7 +141,7 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                         <span className="font-mono text-[11px] text-faint">{p.projectNumber}</span>
                         {p.disciplines.slice(0, 2).map((d) => (
                           <Badge key={d} tone="slate">
-                            {DISCIPLINE_LABEL[d]}
+                            {t(DISCIPLINE_LABEL[d])}
                           </Badge>
                         ))}
                         {p.disciplines.length > 2 ? (
@@ -186,14 +189,14 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <FolderKanban className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No projects match your filters</p>
-            <p className="text-xs text-muted">Try a different search term or clear the filters.</p>
+            <p className="text-sm font-medium text-fg">{t("No projects match your filters")}</p>
+            <p className="text-xs text-muted">{t("Try a different search term or clear the filters.")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {projects.length} projects
+        {fmt(t("Showing {count} of {total} projects"), { count: rows.length, total: projects.length })}
       </p>
     </div>
   );

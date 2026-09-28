@@ -14,8 +14,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { deletePermitAction } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export function PermitDeleteButton({ id, reference }: { id: string; reference: string }) {
+  const t = useT();
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
@@ -26,7 +29,7 @@ export function PermitDeleteButton({ id, reference }: { id: string; reference: s
     start(async () => {
       const res = await deletePermitAction(id);
       if (!res.ok) {
-        setError(res.error);
+        setError(t(res.error));
         return;
       }
       router.push("/design/building-permits");
@@ -37,14 +40,14 @@ export function PermitDeleteButton({ id, reference }: { id: string; reference: s
   if (confirming) {
     return (
       <span className="inline-flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted">Remove {reference} from the register?</span>
+        <span className="text-muted">{fmt(t("Remove {reference} from the register?"), { reference })}</span>
         <button
           type="button"
           onClick={remove}
           disabled={pending}
           className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50"
         >
-          {pending ? "Removing…" : "Remove"}
+          {pending ? t("Removing…") : t("Remove")}
         </button>
         <button
           type="button"
@@ -54,7 +57,7 @@ export function PermitDeleteButton({ id, reference }: { id: string; reference: s
           }}
           className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium text-muted hover:text-fg"
         >
-          Cancel
+          {t("Cancel")}
         </button>
         {error ? <span className="text-xs text-rose-600">{error}</span> : null}
       </span>
@@ -67,7 +70,7 @@ export function PermitDeleteButton({ id, reference }: { id: string; reference: s
       onClick={() => setConfirming(true)}
       className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:border-rose-300 hover:text-rose-600"
     >
-      <Trash2 className="h-4 w-4" /> Delete
+      <Trash2 className="h-4 w-4" /> {t("Delete")}
     </button>
   );
 }

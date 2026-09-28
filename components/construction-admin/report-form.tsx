@@ -8,6 +8,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
 import type { CaReport, CaReportType } from "@/lib/ca/types";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string };
 
@@ -68,6 +70,7 @@ export function ReportForm({
 }) {
   // Grown when a project is created from the picker below; `projects.find` in
   // the submit handler must read this, not the prop.
+  const t = useT();
   const [projects, setProjects] = useState(projectProp);
   const [result, setResult] = useState<{ ok: boolean; report?: CaReport; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -96,7 +99,7 @@ export function ReportForm({
         }),
       });
       const json = await res.json();
-      if (!res.ok) setResult({ ok: false, error: json.error ?? `Request failed (${res.status})` });
+      if (!res.ok) setResult({ ok: false, error: json.error ?? fmt(t("Request failed ({status})"), { status: res.status }) });
       else setResult({ ok: true, report: json.data });
     } catch (err) {
       setResult({ ok: false, error: (err as Error).message });
@@ -112,8 +115,11 @@ export function ReportForm({
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-emerald-200 bg-emerald-50 px-5 py-4">
           <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" /></span>
           <p className="text-sm text-emerald-800">
-            {result.report ? CA_REPORT_TYPE_LABEL[result.report.reportType] : "Report"} {result.report?.reportNumber} created.{" "}
-            {result.report ? <Link href={`/construction-admin/reports/${result.report.id}`} className="font-medium underline">Open report</Link> : null}
+            {fmt(t("{type} {number} created."), {
+              type: result.report ? t(CA_REPORT_TYPE_LABEL[result.report.reportType]) : t("Report"),
+              number: result.report?.reportNumber ?? "",
+            })}{" "}
+            {result.report ? <Link href={`/construction-admin/reports/${result.report.id}`} className="font-medium underline">{t("Open report")}</Link> : null}
           </p>
         </div>
       ) : result?.error ? (
@@ -124,7 +130,7 @@ export function ReportForm({
       ) : null}
 
       <Card>
-        <CardHeader title="Report Header" />
+        <CardHeader title={t("Report Header")} />
         <CardBody className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Was a required select over a list that is empty on a fresh
@@ -136,7 +142,7 @@ export function ReportForm({
               rules={{ required: true }}
               render={({ field }) => (
                 <ProjectSelect
-                  label="Project *"
+                  label={t("Project *")}
                   projects={projects}
                   value={field.value ?? ""}
                   onChange={field.onChange}
@@ -146,53 +152,53 @@ export function ReportForm({
               )}
             />
             <div>
-              <label className={labelCls}>Report type</label>
+              <label className={labelCls}>{t("Report type")}</label>
               <select className={inputCls} {...register("reportType")}>
-                {REPORT_TYPES.map((t) => (
-                  <option key={t} value={t}>{CA_REPORT_TYPE_LABEL[t]}</option>
+                {REPORT_TYPES.map((rt) => (
+                  <option key={rt} value={rt}>{t(CA_REPORT_TYPE_LABEL[rt])}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Period start</label>
+              <label className={labelCls}>{t("Period start")}</label>
               <input type="date" className={inputCls} {...register("reportingPeriodStart")} />
             </div>
             <div>
-              <label className={labelCls}>Period end</label>
+              <label className={labelCls}>{t("Period end")}</label>
               <input type="date" className={inputCls} {...register("reportingPeriodEnd")} />
             </div>
-            <TextField register={register} name="preparedBy" label="Prepared by" />
-            <TextField register={register} name="weatherSummary" label="Weather" />
+            <TextField register={register} name="preparedBy" label={t("Prepared by")} />
+            <TextField register={register} name="weatherSummary" label={t("Weather")} />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Progress" />
+        <CardHeader title={t("Progress")} />
         <CardBody className="space-y-4">
-          <TextField register={register} name="workCompleted" label="Work completed" area />
-          <TextField register={register} name="workPlannedNextPeriod" label="Work planned next period" area />
-          <TextField register={register} name="siteConditions" label="Site conditions" />
+          <TextField register={register} name="workCompleted" label={t("Work completed")} area />
+          <TextField register={register} name="workPlannedNextPeriod" label={t("Work planned next period")} area />
+          <TextField register={register} name="siteConditions" label={t("Site conditions")} />
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader
-          title="Manpower"
+          title={t("Manpower")}
           action={
             <button type="button" onClick={() => manpower.append({ trade: "", count: 0, hours: 0 })} className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg hover:bg-surface-2">
               <Plus className="h-3.5 w-3.5" />
-              Add trade
+              {t("Add trade")}
             </button>
           }
         />
         <CardBody className="space-y-2">
           {manpower.fields.map((f, i) => (
             <div key={f.id} className="grid grid-cols-12 items-center gap-2">
-              <input className={`${inputCls} col-span-7`} placeholder="Trade / contractor" {...register(`manpowerSummary.${i}.trade` as const)} />
-              <input type="number" className={`${inputCls} col-span-2 text-right`} placeholder="No." {...register(`manpowerSummary.${i}.count` as const, { valueAsNumber: true })} />
-              <input type="number" className={`${inputCls} col-span-2 text-right`} placeholder="Hrs" {...register(`manpowerSummary.${i}.hours` as const, { valueAsNumber: true })} />
-              <button type="button" onClick={() => manpower.remove(i)} disabled={manpower.fields.length === 1} className="col-span-1 inline-flex h-9 items-center justify-center rounded-lg text-faint hover:text-red-600 disabled:opacity-30" aria-label="Remove">
+              <input className={`${inputCls} col-span-7`} placeholder={t("Trade / contractor")} {...register(`manpowerSummary.${i}.trade` as const)} />
+              <input type="number" className={`${inputCls} col-span-2 text-right`} placeholder={t("No.")} {...register(`manpowerSummary.${i}.count` as const, { valueAsNumber: true })} />
+              <input type="number" className={`${inputCls} col-span-2 text-right`} placeholder={t("Hrs")} {...register(`manpowerSummary.${i}.hours` as const, { valueAsNumber: true })} />
+              <button type="button" onClick={() => manpower.remove(i)} disabled={manpower.fields.length === 1} className="col-span-1 inline-flex h-9 items-center justify-center rounded-lg text-faint hover:text-red-600 disabled:opacity-30" aria-label={t("Remove")}>
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -201,23 +207,23 @@ export function ReportForm({
       </Card>
 
       <Card>
-        <CardHeader title="Events, Quality &amp; Risk" />
+        <CardHeader title={t("Events, Quality & Risk")} />
         <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField register={register} name="materialDeliveries" label="Material deliveries" area />
-          <TextField register={register} name="safetyIncidents" label="Safety incidents" area />
-          <TextField register={register} name="qualityIssues" label="Quality issues" area />
-          <TextField register={register} name="delays" label="Delays" area />
-          <TextField register={register} name="risks" label="Risks" area />
-          <TextField register={register} name="notes" label="Notes" area />
+          <TextField register={register} name="materialDeliveries" label={t("Material deliveries")} area />
+          <TextField register={register} name="safetyIncidents" label={t("Safety incidents")} area />
+          <TextField register={register} name="qualityIssues" label={t("Quality issues")} area />
+          <TextField register={register} name="delays" label={t("Delays")} area />
+          <TextField register={register} name="risks" label={t("Risks")} area />
+          <TextField register={register} name="notes" label={t("Notes")} area />
         </CardBody>
       </Card>
 
       <div className="flex items-center gap-2">
         <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50">
-          {saving ? "Saving…" : "Generate report"}
+          {saving ? t("Saving…") : t("Generate report")}
         </button>
         <Link href="/construction-admin/reports" className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2">
-          Cancel
+          {t("Cancel")}
         </Link>
       </div>
     </form>

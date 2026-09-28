@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
 
 /** Workspace tabs. The full spec set is listed; tabs not yet built are marked. */
 const TABS: Array<{ label: string; segment: string; soon?: boolean }> = [
@@ -22,34 +23,35 @@ const TABS: Array<{ label: string; segment: string; soon?: boolean }> = [
 ];
 
 export function DevTabBar({ projectId }: { projectId: string }) {
+  const t = useT();
   const pathname = usePathname();
   const base = `/development/${projectId}`;
   return (
     <div className="-mx-1 flex flex-wrap items-center gap-1 border-b border-border pb-3">
-      {TABS.map((t) => {
-        const href = t.segment ? `${base}/${t.segment}` : base;
-        const active = t.segment ? pathname.startsWith(href) : pathname === base;
-        if (t.soon) {
+      {TABS.map((tab) => {
+        const href = tab.segment ? `${base}/${tab.segment}` : base;
+        const active = tab.segment ? pathname.startsWith(href) : pathname === base;
+        if (tab.soon) {
           return (
             <span
-              key={t.label}
-              title="Coming in the next build phase"
+              key={tab.label}
+              title={t("Coming in the next build phase")}
               className="cursor-not-allowed rounded-lg px-3 py-1.5 text-sm font-medium text-faint/70"
             >
-              {t.label}
+              {t(tab.label)}
             </span>
           );
         }
         return (
           <Link
-            key={t.label}
+            key={tab.label}
             href={href}
             className={cn(
               "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
               active ? "bg-brand text-brand-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
             )}
           >
-            {t.label}
+            {t(tab.label)}
           </Link>
         );
       })}

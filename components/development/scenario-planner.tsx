@@ -5,6 +5,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { evaluateScenario, sensitivity, type ScenarioVars } from "@/lib/development/calc";
 import { SCENARIO_KIND_LABEL, type Scenario } from "@/lib/data/development.types";
 import { formatCurrency } from "@/lib/format";
+import { useT } from "@/components/i18n/language-provider";
 
 const numInput = "h-8 w-28 rounded border border-border bg-surface px-2 text-right text-sm tabular-nums text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
 
@@ -21,6 +22,7 @@ export function ScenarioPlanner({
   unitCount: number;
   currency: string;
 }) {
+  const t = useT();
   const toVars = (s: Scenario): ScenarioVars => ({
     landPurchasePrice: s.landPurchasePrice, salesPricePerM2: s.salesPricePerM2, constructionCostPerM2: s.constructionCostPerM2,
     infrastructureCost: s.infrastructureCost, softCostPct: s.softCostPct, financingRatePct: s.financingRatePct,
@@ -39,37 +41,37 @@ export function ScenarioPlanner({
   const sens = useMemo(() => sensitivity(customResult.revenue, customResult.cost), [customResult]);
 
   const driverRows: Array<{ k: keyof ScenarioVars; label: string; suffix?: string }> = [
-    { k: "landPurchasePrice", label: "Land purchase price" },
-    { k: "salesPricePerM2", label: "Sales price /m²" },
-    { k: "constructionCostPerM2", label: "Construction cost /m²" },
-    { k: "infrastructureCost", label: "Infrastructure cost" },
-    { k: "softCostPct", label: "Soft cost", suffix: "%" },
-    { k: "financingRatePct", label: "Financing rate", suffix: "%" },
-    { k: "contingencyPct", label: "Contingency", suffix: "%" },
+    { k: "landPurchasePrice", label: t("Land purchase price") },
+    { k: "salesPricePerM2", label: t("Sales price /m²") },
+    { k: "constructionCostPerM2", label: t("Construction cost /m²") },
+    { k: "infrastructureCost", label: t("Infrastructure cost") },
+    { k: "softCostPct", label: t("Soft cost"), suffix: "%" },
+    { k: "financingRatePct", label: t("Financing rate"), suffix: "%" },
+    { k: "contingencyPct", label: t("Contingency"), suffix: "%" },
   ];
 
   return (
     <div className="space-y-6">
       {/* Comparison */}
       <Card className="overflow-hidden">
-        <CardHeader title="Scenario comparison" subtitle="Revenue, cost and return for each case" />
+        <CardHeader title={t("Scenario comparison")} subtitle={t("Revenue, cost and return for each case")} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-4 py-2.5 font-medium">Scenario</th>
-                <th className="px-3 py-2.5 text-right font-medium">Revenue</th>
-                <th className="px-3 py-2.5 text-right font-medium">Cost</th>
-                <th className="px-3 py-2.5 text-right font-medium">Profit</th>
-                <th className="px-3 py-2.5 text-right font-medium">Margin</th>
-                <th className="px-3 py-2.5 text-right font-medium">ROI</th>
-                <th className="px-3 py-2.5 text-right font-medium">Break-even /m²</th>
+                <th className="px-4 py-2.5 font-medium">{t("Scenario")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Revenue")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Cost")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Profit")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Margin")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("ROI")}</th>
+                <th className="px-3 py-2.5 text-right font-medium">{t("Break-even /m²")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {compared.map(({ s, r }) => (
                 <tr key={s.id} className="even:bg-surface-2/40">
-                  <td className="px-4 py-2.5"><span className="font-medium text-fg">{s.name}</span> <span className="text-[11px] text-faint">{SCENARIO_KIND_LABEL[s.kind]}</span></td>
+                  <td className="px-4 py-2.5"><span className="font-medium text-fg">{s.name}</span> <span className="text-[11px] text-faint">{t(SCENARIO_KIND_LABEL[s.kind])}</span></td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-fg">{formatCurrency(r.revenue, currency)}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{formatCurrency(r.cost, currency)}</td>
                   <td className={`px-3 py-2.5 text-right font-medium tabular-nums ${r.profit < 0 ? "text-red-600" : "text-emerald-600"}`}>{formatCurrency(r.profit, currency)}</td>
@@ -86,7 +88,7 @@ export function ScenarioPlanner({
       {/* Custom + sensitivity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Custom scenario" subtitle="Tune the drivers — outputs recalc live" />
+          <CardHeader title={t("Custom scenario")} subtitle={t("Tune the drivers — outputs recalc live")} />
           <CardBody className="space-y-2">
             {driverRows.map((d) => (
               <label key={d.k} className="flex items-center justify-between gap-3">
@@ -98,20 +100,20 @@ export function ScenarioPlanner({
               </label>
             ))}
             <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
-              <Out label="Revenue" value={formatCurrency(customResult.revenue, currency)} />
-              <Out label="Cost" value={formatCurrency(customResult.cost, currency)} />
-              <Out label="Profit" value={formatCurrency(customResult.profit, currency)} accent />
-              <Out label="ROI" value={`${customResult.roiPct.toFixed(1)}%`} accent />
-              <Out label="Margin" value={`${customResult.marginPct.toFixed(1)}%`} />
-              <Out label="Break-even /m²" value={formatCurrency(customResult.breakEvenSalesPricePerM2, currency)} />
+              <Out label={t("Revenue")} value={formatCurrency(customResult.revenue, currency)} />
+              <Out label={t("Cost")} value={formatCurrency(customResult.cost, currency)} />
+              <Out label={t("Profit")} value={formatCurrency(customResult.profit, currency)} accent />
+              <Out label={t("ROI")} value={`${customResult.roiPct.toFixed(1)}%`} accent />
+              <Out label={t("Margin")} value={`${customResult.marginPct.toFixed(1)}%`} />
+              <Out label={t("Break-even /m²")} value={formatCurrency(customResult.breakEvenSalesPricePerM2, currency)} />
             </div>
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Sensitivity" subtitle="Profit at ±5% / ±10% on price and cost" />
+          <CardHeader title={t("Sensitivity")} subtitle={t("Profit at ±5% / ±10% on price and cost")} />
           <CardBody className="space-y-4">
-            {([["Sales price", sens.price], ["Construction cost", sens.cost]] as const).map(([title, cells]) => (
+            {([[t("Sales price"), sens.price], [t("Construction cost"), sens.cost]] as const).map(([title, cells]) => (
               <div key={title}>
                 <div className="mb-1.5 text-xs font-medium text-muted">{title}</div>
                 <div className="grid grid-cols-5 gap-1.5 text-center text-xs">

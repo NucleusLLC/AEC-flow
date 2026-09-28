@@ -12,6 +12,8 @@ import {
 } from "@/lib/data/orders.types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "recent" | "value" | "start";
 
@@ -25,6 +27,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | OrderStatus; label: string }> = [
 ];
 
 export function OrdersView({ orders }: { orders: OrderListItem[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | OrderStatus>("ALL");
   const [sort, setSort] = useState<SortKey>("recent");
@@ -65,7 +68,7 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -77,7 +80,7 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               type="search"
-              placeholder="Search orders…"
+              placeholder={t("Search orders…")}
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
             />
           </div>
@@ -88,9 +91,9 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="h-9 rounded-lg border border-border bg-surface pl-7 pr-2.5 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             >
-              <option value="recent">Most recent</option>
-              <option value="value">Fee value</option>
-              <option value="start">Start date</option>
+              <option value="recent">{t("Most recent")}</option>
+              <option value="value">{t("Fee value")}</option>
+              <option value="start">{t("Start date")}</option>
             </select>
           </div>
         </div>
@@ -102,12 +105,12 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
           <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Order</th>
-                <th className="px-3 py-2.5 font-medium">Client</th>
-                <th className="px-3 py-2.5 font-medium">Service</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium text-right">Fee</th>
-                <th className="px-5 py-2.5 font-medium">Timeline</th>
+                <th className="px-5 py-2.5 font-medium">{t("Order")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Client")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Service")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+                <th className="px-3 py-2.5 font-medium text-right">{t("Fee")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Timeline")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -143,7 +146,7 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
                         {formatDate(o.expectedStartDate)} → {formatDate(o.expectedEndDate)}
                       </span>
                     ) : (
-                      <span className="text-faint">Not scheduled</span>
+                      <span className="text-faint">{t("Not scheduled")}</span>
                     )}
                   </td>
                 </tr>
@@ -157,15 +160,15 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <ClipboardList className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No orders match your filters</p>
-            <p className="text-xs text-muted">Try a different search term or clear the filters.</p>
+            <p className="text-sm font-medium text-fg">{t("No orders match your filters")}</p>
+            <p className="text-xs text-muted">{t("Try a different search term or clear the filters.")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {orders.length} orders
-        {status !== "ALL" ? ` · ${ORDER_STATUS_LABEL[status]}` : ""}
+        {fmt(t("Showing {count} of {total} orders"), { count: rows.length, total: orders.length })}
+        {status !== "ALL" ? ` · ${t(ORDER_STATUS_LABEL[status])}` : ""}
       </p>
     </div>
   );

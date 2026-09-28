@@ -4,6 +4,7 @@ import { CaPrintShell, PrintSection } from "@/components/construction-admin/prin
 import { getReport } from "@/lib/data/ca/reports";
 import { CA_REPORT_TYPE_LABEL, CA_REPORT_STATUS_LABEL } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -23,6 +24,7 @@ function Para({ title, body }: { title: string; body: string | null }) {
 }
 
 export default async function ReportPrintPage({ params }: PageProps) {
+  const t = await getServerT();
   const { id } = await params;
   const r = await getReport(id);
   if (!r) notFound();
@@ -30,34 +32,34 @@ export default async function ReportPrintPage({ params }: PageProps) {
   return (
     <CaPrintShell
       backHref={`/construction-admin/reports/${r.id}`}
-      docTitle={CA_REPORT_TYPE_LABEL[r.reportType]}
+      docTitle={t(CA_REPORT_TYPE_LABEL[r.reportType])}
       refNumber={r.reportNumber}
-      statusLabel={CA_REPORT_STATUS_LABEL[r.status]}
+      statusLabel={t(CA_REPORT_STATUS_LABEL[r.status])}
       title={`${r.projectName}`}
       meta={[
-        { label: "Period", value: r.reportingPeriodStart ? `${formatDate(r.reportingPeriodStart)} – ${formatDate(r.reportingPeriodEnd)}` : "—" },
-        { label: "Prepared by", value: r.preparedBy ?? "—" },
-        { label: "Reviewed by", value: r.reviewedBy ?? "—" },
-        { label: "Weather", value: r.weatherSummary ?? "—" },
+        { label: t("Period"), value: r.reportingPeriodStart ? `${formatDate(r.reportingPeriodStart)} – ${formatDate(r.reportingPeriodEnd)}` : "—" },
+        { label: t("Prepared by"), value: r.preparedBy ?? "—" },
+        { label: t("Reviewed by"), value: r.reviewedBy ?? "—" },
+        { label: t("Weather"), value: r.weatherSummary ?? "—" },
       ]}
       signatures={[
-        { role: "Prepared by", name: r.preparedBy ?? "" },
-        { role: "Reviewed by", name: r.reviewedBy ?? "" },
-        { role: "Approved by", name: r.approvedBy ?? "" },
+        { role: t("Prepared by"), name: r.preparedBy ?? "" },
+        { role: t("Reviewed by"), name: r.reviewedBy ?? "" },
+        { role: t("Approved by"), name: r.approvedBy ?? "" },
       ]}
     >
-      <Para title="Work Completed" body={r.workCompleted} />
-      <Para title="Work Planned Next Period" body={r.workPlannedNextPeriod} />
-      <Para title="Site Conditions" body={r.siteConditions} />
+      <Para title={t("Work Completed")} body={r.workCompleted} />
+      <Para title={t("Work Planned Next Period")} body={r.workPlannedNextPeriod} />
+      <Para title={t("Site Conditions")} body={r.siteConditions} />
 
       {r.manpowerSummary.length ? (
-        <PrintSection title="Manpower">
+        <PrintSection title={t("Manpower")}>
           <table className="w-full border-collapse text-[11.5px]">
             <thead>
               <tr className="border-y border-gray-300 text-left text-[10px] uppercase tracking-wide text-gray-500">
-                <th className="py-1.5 pr-3 font-semibold">Trade</th>
-                <th className="py-1.5 pr-3 text-right font-semibold">No.</th>
-                <th className="py-1.5 text-right font-semibold">Hours</th>
+                <th className="py-1.5 pr-3 font-semibold">{t("Trade")}</th>
+                <th className="py-1.5 pr-3 text-right font-semibold">{t("No.")}</th>
+                <th className="py-1.5 text-right font-semibold">{t("Hours")}</th>
               </tr>
             </thead>
             <tbody>
@@ -73,12 +75,12 @@ export default async function ReportPrintPage({ params }: PageProps) {
         </PrintSection>
       ) : null}
 
-      <Para title="Material Deliveries" body={r.materialDeliveries} />
-      <Para title="Safety Incidents" body={r.safetyIncidents} />
-      <Para title="Quality Issues" body={r.qualityIssues} />
-      <Para title="Delays" body={r.delays} />
-      <Para title="Risks" body={r.risks} />
-      <Para title="Notes" body={r.notes} />
+      <Para title={t("Material Deliveries")} body={r.materialDeliveries} />
+      <Para title={t("Safety Incidents")} body={r.safetyIncidents} />
+      <Para title={t("Quality Issues")} body={r.qualityIssues} />
+      <Para title={t("Delays")} body={r.delays} />
+      <Para title={t("Risks")} body={r.risks} />
+      <Para title={t("Notes")} body={r.notes} />
     </CaPrintShell>
   );
 }

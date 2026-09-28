@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { LogIn, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { useT } from "@/components/i18n/language-provider";
 
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -12,6 +13,7 @@ const labelCls = "mb-1 block text-xs font-medium text-muted";
 
 export function LoginForm() {
   const router = useRouter();
+  const t = useT();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") || "/";
   const justReset = params.get("reset") === "1";
@@ -42,18 +44,18 @@ export function LoginForm() {
       {justReset && !error ? (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
-          Password updated. Sign in with your new password.
+          {t("Password updated. Sign in with your new password.")}
         </div>
       ) : null}
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          {error}
+          {t(error)}
         </div>
       ) : null}
 
       <div>
-        <label className={labelCls} htmlFor="email">Email</label>
+        <label className={labelCls} htmlFor="email">{t("Email")}</label>
         <input
           id="email"
           type="email"
@@ -68,9 +70,9 @@ export function LoginForm() {
 
       <div>
         <div className="mb-1 flex items-baseline justify-between">
-          <label className="block text-xs font-medium text-muted" htmlFor="password">Password</label>
+          <label className="block text-xs font-medium text-muted" htmlFor="password">{t("Password")}</label>
           <Link href="/forgot-password" className="text-xs text-muted hover:text-brand hover:underline">
-            Forgot password?
+            {t("Forgot password?")}
           </Link>
         </div>
         <input
@@ -91,7 +93,7 @@ export function LoginForm() {
         className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-        {loading ? "Signing in…" : "Sign in"}
+        {loading ? t("Signing in…") : t("Sign in")}
       </button>
     </form>
   );

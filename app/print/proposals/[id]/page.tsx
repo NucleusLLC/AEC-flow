@@ -5,13 +5,15 @@ import { getProposal } from "@/lib/data/proposals";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
+import { getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const proposal = await getProposal(id);
-  return { title: proposal ? `${proposal.refNumber} — Fee Proposal` : "Fee Proposal" };
+  const t = await getServerT();
+  return { title: proposal ? `${proposal.refNumber} — ${t("Fee Proposal")}` : t("Fee Proposal") };
 }
 
 export default async function ProposalPrintPage({ params }: PageProps) {
@@ -21,6 +23,7 @@ export default async function ProposalPrintPage({ params }: PageProps) {
   const { logoDataUrl, logo } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const t = await getServerT();
 
   return (
     // This route used to print the proposal's own reference in the bottom-left
@@ -28,13 +31,14 @@ export default async function ProposalPrintPage({ params }: PageProps) {
     // document in the suite whose footer read differently from every other. The
     // reference has never depended on that: it is in the letterhead, and again in
     // the document's own end-of-document line, both of which are unchanged.
-    <PrintSurface backHref={`/proposals/${proposal.id}`} backLabel="Back to proposal">
+    <PrintSurface backHref={`/proposals/${proposal.id}`} backLabel={t("Back to proposal")}>
       <ProposalDocument
         proposal={proposal}
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
         companyName={companyName}
         companyLocation={firm.location}
         sheet={false}
+        t={t}
       />
     </PrintSurface>
   );

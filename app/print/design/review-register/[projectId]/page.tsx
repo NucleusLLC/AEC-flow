@@ -4,6 +4,8 @@ import { CaPrintShell, PrintSection } from "@/components/construction-admin/prin
 import { projectReviewRegister } from "@/lib/data/review-register";
 import { registerSummary, type RegisterStatus } from "@/lib/drawings/review-register";
 import { militaryDate } from "@/lib/building-permits/register";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Review Register · Print" };
 
@@ -38,6 +40,7 @@ export default async function ReviewRegisterPrintPage({
   params: Promise<{ projectId: string }>;
   searchParams: Promise<{ status?: string; assignee?: string }>;
 }) {
+  const t = await getServerT();
   const [{ projectId }, query] = await Promise.all([params, searchParams]);
 
   const wanted = (query.status ?? "OPEN").toUpperCase();
@@ -52,31 +55,31 @@ export default async function ReviewRegisterPrintPage({
 
   const { totals } = register;
   const scope =
-    status === "ALL" ? "Every item" : status === "OPEN" ? "Open items only" : "Resolved items only";
+    status === "ALL" ? t("Every item") : status === "OPEN" ? t("Open items only") : t("Resolved items only");
 
   return (
     <CaPrintShell
       backHref={`/projects/${projectId}`}
-      docTitle="Review Register"
+      docTitle={t("Review Register")}
       refNumber={register.projectNumber ?? register.projectName}
       statusLabel={scope}
-      title={`Drawing review register — ${register.projectName}`}
+      title={fmt(t("Drawing review register — {project}"), { project: register.projectName })}
       meta={[
-        { label: "Open", value: String(totals.open) },
-        { label: "Unassigned", value: String(totals.unassigned) },
-        { label: "Sheets", value: `${totals.sheetsWithItems} of ${totals.sheets}` },
-        { label: "As at", value: militaryDate(register.asOf.slice(0, 10)) },
+        { label: t("Open"), value: String(totals.open) },
+        { label: t("Unassigned"), value: String(totals.unassigned) },
+        { label: t("Sheets"), value: fmt(t("{count} of {total}"), { count: totals.sheetsWithItems, total: totals.sheets }) },
+        { label: t("As at"), value: militaryDate(register.asOf.slice(0, 10)) },
       ]}
       signatures={[
-        { role: "Reviewed by", name: "" },
-        { role: "Actioned by", name: "" },
-        { role: "Closed out by", name: "" },
+        { role: t("Reviewed by"), name: "" },
+        { role: t("Actioned by"), name: "" },
+        { role: t("Closed out by"), name: "" },
       ]}
     >
       <p className="mt-2 text-[11px] text-gray-600">{registerSummary(totals)}</p>
 
       {totals.byAssignee.length > 0 ? (
-        <PrintSection title="Open items by person">
+        <PrintSection title={t("Open items by person")}>
           {/* Short and fixed-length: worth holding together. */}
           <table className="w-full border-collapse text-[10.5px]" data-keep-together>
             <tbody>
@@ -93,31 +96,31 @@ export default async function ReviewRegisterPrintPage({
 
       {register.groups.length === 0 ? (
         <p className="mt-6 text-[11px] text-gray-500">
-          Nothing matches this filter. That is a result, not an error — the set has been reviewed
-          and there is nothing outstanding on it.
+          {t("Nothing matches this filter. That is a result, not an error — the set has been reviewed and there is nothing outstanding on it.")}
         </p>
       ) : (
         register.groups.map((group) => (
           <PrintSection
             key={group.sheet.drawingId}
-            title={`${group.sheet.sheetNumber} · ${group.sheet.title || "Untitled sheet"} · Rev ${group.sheet.revision}`}
+            title={`${group.sheet.sheetNumber} · ${group.sheet.title || t("Untitled sheet")} · ${fmt(t("Rev {rev}"), { rev: group.sheet.revision })}`}
           >
             {group.items.length === 0 ? (
               <p className="text-[10.5px] text-gray-500">
-                {group.unlabelledMarkups} redline{group.unlabelledMarkups === 1 ? "" : "s"} with no
-                note. Nothing written to action.
+                {group.unlabelledMarkups === 1
+                  ? t("1 redline with no note. Nothing written to action.")
+                  : fmt(t("{count} redlines with no note. Nothing written to action."), { count: group.unlabelledMarkups })}
               </p>
             ) : (
               <table className="w-full border-collapse text-[10.5px]">
                 <thead>
                   <tr className="border-b border-gray-300 text-left text-gray-500">
-                    <th className="w-20 py-1 pr-2 font-medium">Ref</th>
-                    <th className="w-10 py-1 px-2 text-center font-medium">Pg</th>
-                    <th className="py-1 px-2 font-medium">Item</th>
-                    <th className="w-28 py-1 px-2 font-medium">Raised by</th>
-                    <th className="w-28 py-1 px-2 font-medium">With</th>
-                    <th className="w-14 py-1 px-2 text-right font-medium">Days</th>
-                    <th className="w-20 py-1 pl-2 font-medium">Status</th>
+                    <th className="w-20 py-1 pr-2 font-medium">{t("Ref")}</th>
+                    <th className="w-10 py-1 px-2 text-center font-medium">{t("Pg")}</th>
+                    <th className="py-1 px-2 font-medium">{t("Item")}</th>
+                    <th className="w-28 py-1 px-2 font-medium">{t("Raised by")}</th>
+                    <th className="w-28 py-1 px-2 font-medium">{t("With")}</th>
+                    <th className="w-14 py-1 px-2 text-right font-medium">{t("Days")}</th>
+                    <th className="w-20 py-1 pl-2 font-medium">{t("Status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -134,7 +137,7 @@ export default async function ReviewRegisterPrintPage({
                       <td className="py-1 px-2 text-gray-900">
                         {item.body}
                         {item.kind === "MARKUP" ? (
-                          <span className="text-gray-500"> (redline)</span>
+                          <span className="text-gray-500"> ({t("redline")})</span>
                         ) : null}
                       </td>
                       <td className="py-1 px-2 text-gray-600">{item.authorName}</td>
@@ -146,8 +149,8 @@ export default async function ReviewRegisterPrintPage({
                       </td>
                       <td className="py-1 pl-2 text-gray-600">
                         {item.status === "RESOLVED"
-                          ? `Resolved${item.resolvedByName ? ` · ${item.resolvedByName}` : ""}`
-                          : "Open"}
+                          ? `${t("Resolved")}${item.resolvedByName ? ` · ${item.resolvedByName}` : ""}`
+                          : t("Open")}
                       </td>
                     </tr>
                   ))}
@@ -157,8 +160,9 @@ export default async function ReviewRegisterPrintPage({
 
             {group.items.length > 0 && group.unlabelledMarkups > 0 ? (
               <p className="mt-1 text-[10px] text-gray-500">
-                Plus {group.unlabelledMarkups} redline{group.unlabelledMarkups === 1 ? "" : "s"} with
-                no note.
+                {group.unlabelledMarkups === 1
+                  ? t("Plus 1 redline with no note.")
+                  : fmt(t("Plus {count} redlines with no note."), { count: group.unlabelledMarkups })}
               </p>
             ) : null}
           </PrintSection>
@@ -166,9 +170,10 @@ export default async function ReviewRegisterPrintPage({
       )}
 
       <p className="mt-6 text-[10px] text-gray-500">
-        References are numbered per sheet in the order items were raised and do not change when the
-        register is filtered — {`A-101/3`} is {`A-101/3`} on every copy. Ages are measured to{" "}
-        {militaryDate(register.asOf.slice(0, 10))}.
+        {fmt(
+          t("References are numbered per sheet in the order items were raised and do not change when the register is filtered — {ref} is {ref} on every copy. Ages are measured to {date}."),
+          { ref: "A-101/3", date: militaryDate(register.asOf.slice(0, 10)) },
+        )}
       </p>
     </CaPrintShell>
   );

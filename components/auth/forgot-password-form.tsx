@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { AlertTriangle, Loader2, Mail, MailCheck } from "lucide-react";
 import { requestPasswordResetAction } from "@/app/forgot-password/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -13,6 +15,7 @@ export function ForgotPasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const t = useT();
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,8 +36,10 @@ export function ForgotPasswordForm() {
       <div className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
         <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
-          If an account exists for <span className="font-medium">{sentTo}</span>, a reset link is on its way.
-          It works once and expires in an hour. Check your spam folder if it doesn&rsquo;t arrive.
+          {fmt(
+            t("If an account exists for {email}, a reset link is on its way. It works once and expires in an hour. Check your spam folder if it doesn’t arrive."),
+            { email: sentTo },
+          )}
         </div>
       </div>
     );
@@ -45,12 +50,12 @@ export function ForgotPasswordForm() {
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          {error}
+          {t(error)}
         </div>
       ) : null}
 
       <div>
-        <label className={labelCls} htmlFor="email">Email</label>
+        <label className={labelCls} htmlFor="email">{t("Email")}</label>
         <input
           id="email"
           type="email"
@@ -70,7 +75,7 @@ export function ForgotPasswordForm() {
         className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-        {pending ? "Sending…" : "Send reset link"}
+        {pending ? t("Sending…") : t("Send reset link")}
       </button>
     </form>
   );

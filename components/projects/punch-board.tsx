@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSharedState, uid } from "@/components/projects/dashboard/hooks";
 import { cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type PunchStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "VERIFIED";
 type Priority = "LOW" | "MEDIUM" | "HIGH";
@@ -25,6 +27,7 @@ const STATUS_LABEL: Record<PunchStatus, string> = {
   VERIFIED: "Verified",
 };
 const PRIORITY_TONE: Record<Priority, "slate" | "amber" | "red"> = { LOW: "slate", MEDIUM: "amber", HIGH: "red" };
+const PRIORITY_LABEL: Record<Priority, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High" };
 
 const inputCls =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -41,6 +44,7 @@ export function PunchBoard({ projectId }: { projectId: string }) {
   const [items, setItems] = useSharedState<PunchItem[]>(`aec.proj.${projectId}.punch`, []);
   const [filter, setFilter] = useState<"ALL" | PunchStatus>("ALL");
   const [form, setForm] = useState({ description: "", location: "", trade: "", priority: "MEDIUM" as Priority });
+  const t = useT();
 
   const add = () => {
     if (!form.description.trim()) return;
@@ -59,13 +63,13 @@ export function PunchBoard({ projectId }: { projectId: string }) {
       {/* Add form */}
       <Card className="p-4">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
-          <input className={`${inputCls} sm:col-span-5`} placeholder="Defect / item description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} onKeyDown={(e) => e.key === "Enter" && add()} />
-          <input className={`${inputCls} sm:col-span-3`} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-          <input className={`${inputCls} sm:col-span-2`} placeholder="Trade" value={form.trade} onChange={(e) => setForm({ ...form, trade: e.target.value })} />
+          <input className={`${inputCls} sm:col-span-5`} placeholder={t("Defect / item description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} onKeyDown={(e) => e.key === "Enter" && add()} />
+          <input className={`${inputCls} sm:col-span-3`} placeholder={t("Location")} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+          <input className={`${inputCls} sm:col-span-2`} placeholder={t("Trade")} value={form.trade} onChange={(e) => setForm({ ...form, trade: e.target.value })} />
           <select className={`${inputCls} sm:col-span-1`} value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Med</option>
-            <option value="HIGH">High</option>
+            <option value="LOW">{t("Low")}</option>
+            <option value="MEDIUM">{t("Med")}</option>
+            <option value="HIGH">{t("High")}</option>
           </select>
           <button type="button" onClick={add} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 sm:col-span-1">
             <Plus className="h-4 w-4" />
@@ -85,7 +89,7 @@ export function PunchBoard({ projectId }: { projectId: string }) {
               filter === f.key ? "bg-brand text-brand-fg ring-brand" : "bg-surface text-muted ring-border hover:text-fg",
             )}
           >
-            {f.label}
+            {t(f.label)}
             {f.key !== "ALL" ? <span className="ml-1 text-[10px] opacity-70">{counts(f.key as PunchStatus)}</span> : null}
           </button>
         ))}
@@ -97,11 +101,11 @@ export function PunchBoard({ projectId }: { projectId: string }) {
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Item</th>
-                <th className="px-3 py-2.5 font-medium">Location</th>
-                <th className="px-3 py-2.5 font-medium">Trade</th>
-                <th className="px-3 py-2.5 font-medium">Priority</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">{t("Item")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Location")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Trade")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Priority")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
                 <th className="px-5 py-2.5 font-medium"></th>
               </tr>
             </thead>
@@ -111,7 +115,7 @@ export function PunchBoard({ projectId }: { projectId: string }) {
                   <td className="px-5 py-2.5 text-fg">{it.description}</td>
                   <td className="px-3 py-2.5 text-muted">{it.location || "—"}</td>
                   <td className="px-3 py-2.5 text-muted">{it.trade || "—"}</td>
-                  <td className="px-3 py-2.5"><Badge tone={PRIORITY_TONE[it.priority]}>{it.priority.toLowerCase()}</Badge></td>
+                  <td className="px-3 py-2.5"><Badge tone={PRIORITY_TONE[it.priority]}>{t(PRIORITY_LABEL[it.priority]).toLowerCase()}</Badge></td>
                   <td className="px-3 py-2.5">
                     <select
                       value={it.status}
@@ -119,12 +123,12 @@ export function PunchBoard({ projectId }: { projectId: string }) {
                       className="h-7 rounded-lg border border-border bg-surface px-2 text-xs text-fg focus:border-brand focus:outline-none"
                     >
                       {(Object.keys(STATUS_LABEL) as PunchStatus[]).map((s) => (
-                        <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                        <option key={s} value={s}>{t(STATUS_LABEL[s])}</option>
                       ))}
                     </select>
                   </td>
                   <td className="px-5 py-2.5 text-right">
-                    <button type="button" onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="text-faint hover:text-red-600" aria-label="Delete item">
+                    <button type="button" onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="text-faint hover:text-red-600" aria-label={t("Delete item")}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
@@ -138,18 +142,18 @@ export function PunchBoard({ projectId }: { projectId: string }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <ListChecks className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">{items.length === 0 ? "No punch items yet" : "Nothing in this filter"}</p>
-            <p className="text-xs text-muted">Add defects and snags above; status updates save automatically.</p>
+            <p className="text-sm font-medium text-fg">{items.length === 0 ? t("No punch items yet") : t("Nothing in this filter")}</p>
+            <p className="text-xs text-muted">{t("Add defects and snags above; status updates save automatically.")}</p>
           </div>
         ) : null}
       </Card>
 
       <div className="flex flex-wrap gap-4 px-1 text-xs text-faint">
-        <span>Open {counts("OPEN")}</span>
-        <span>In progress {counts("IN_PROGRESS")}</span>
-        <span>Completed {counts("COMPLETED")}</span>
-        <span>Verified {counts("VERIFIED")}</span>
-        <span>· {items.length} total</span>
+        <span>{t("Open")} {counts("OPEN")}</span>
+        <span>{t("In progress")} {counts("IN_PROGRESS")}</span>
+        <span>{t("Completed")} {counts("COMPLETED")}</span>
+        <span>{t("Verified")} {counts("VERIFIED")}</span>
+        <span>· {fmt(t("{count} total"), { count: items.length })}</span>
       </div>
     </div>
   );

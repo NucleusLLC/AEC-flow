@@ -16,6 +16,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { useT } from "@/components/i18n/language-provider";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
 import { expenseChargeable } from "@/lib/finance/timesheet";
 import {
@@ -53,6 +54,7 @@ export function ExpenseForm({
   today: string;
 }) {
   const router = useRouter();
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -108,13 +110,13 @@ export function ExpenseForm({
   return (
     <Card>
       <CardHeader
-        title={mode === "edit" ? "Edit the expense" : "Record an expense"}
-        subtitle="What was spent stays what was spent; a markup only changes what a client is charged."
+        title={mode === "edit" ? t("Edit the expense") : t("Record an expense")}
+        subtitle={t("What was spent stays what was spent; a markup only changes what a client is charged.")}
       />
       <CardBody className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <span className={label}>Date</span>
+            <span className={label}>{t("Date")}</span>
             <input
               type="date"
               value={date}
@@ -124,7 +126,7 @@ export function ExpenseForm({
           </div>
 
           <div>
-            <span className={label}>Category</span>
+            <span className={label}>{t("Category")}</span>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
@@ -132,20 +134,20 @@ export function ExpenseForm({
             >
               {EXPENSE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {EXPENSE_CATEGORY_LABEL[c]}
+                  {t(EXPENSE_CATEGORY_LABEL[c])}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <span className={label}>Project</span>
+            <span className={label}>{t("Project")}</span>
             <select
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
               className={input}
             >
-              <option value="">No project</option>
+              <option value="">{t("No project")}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -155,27 +157,27 @@ export function ExpenseForm({
           </div>
 
           <div className="sm:col-span-2">
-            <span className={label}>What the money was spent on</span>
+            <span className={label}>{t("What the money was spent on")}</span>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="A0 plots for the permit submission"
+              placeholder={t("A0 plots for the permit submission")}
               className={input}
             />
           </div>
 
           <div>
-            <span className={label}>Paid to</span>
+            <span className={label}>{t("Paid to")}</span>
             <input
               value={vendor}
               onChange={(e) => setVendor(e.target.value)}
-              placeholder="Vendor"
+              placeholder={t("Vendor")}
               className={input}
             />
           </div>
 
           <div>
-            <span className={label}>Amount</span>
+            <span className={label}>{t("Amount")}</span>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -185,7 +187,7 @@ export function ExpenseForm({
           </div>
 
           <div>
-            <span className={label}>Currency</span>
+            <span className={label}>{t("Currency")}</span>
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
@@ -201,7 +203,7 @@ export function ExpenseForm({
 
           {billable ? (
             <div>
-              <span className={label}>Handling markup %</span>
+              <span className={label}>{t("Handling markup %")}</span>
               <input
                 value={markupPercent}
                 onChange={(e) => setMarkupPercent(e.target.value)}
@@ -213,9 +215,9 @@ export function ExpenseForm({
 
           {canRecordForOthers && people.length > 0 ? (
             <div>
-              <span className={label}>Incurred by</span>
+              <span className={label}>{t("Incurred by")}</span>
               <select value={userId} onChange={(e) => setUserId(e.target.value)} className={input}>
-                <option value="">Me</option>
+                <option value="">{t("Me")}</option>
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -234,7 +236,7 @@ export function ExpenseForm({
               onChange={(e) => setBillable(e.target.checked)}
               className="h-4 w-4 rounded border-border"
             />
-            Rechargeable to the client
+            {t("Rechargeable to the client")}
           </label>
           <label className="flex items-center gap-2 text-sm text-muted">
             <input
@@ -243,10 +245,10 @@ export function ExpenseForm({
               onChange={(e) => setReimbursable(e.target.checked)}
               className="h-4 w-4 rounded border-border"
             />
-            Paid out of pocket — the practice owes it back
+            {t("Paid out of pocket — the practice owes it back")}
           </label>
           <span className="ml-auto text-sm text-muted">
-            Chargeable{" "}
+            {t("Chargeable")}{" "}
             <span className="font-mono font-semibold tabular-nums text-fg">
               {formatCurrency(chargeable, currency, {
                 minimumFractionDigits: 2,
@@ -258,7 +260,7 @@ export function ExpenseForm({
 
         {error ? (
           <p className="rounded-lg border border-red-600/30 bg-red-600/5 px-3 py-2 text-sm text-red-600">
-            {error}
+            {t(error)}
           </p>
         ) : null}
 
@@ -269,14 +271,14 @@ export function ExpenseForm({
             disabled={pending || !description.trim() || !(netAmount > 0)}
             className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
           >
-            {mode === "edit" ? "Save" : "Record it"}
+            {mode === "edit" ? t("Save") : t("Record it")}
           </button>
           <button
             type="button"
             onClick={() => router.push("/finance/expenses")}
             className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm text-muted hover:bg-surface-2"
           >
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </CardBody>

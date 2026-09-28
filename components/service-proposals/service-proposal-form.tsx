@@ -28,6 +28,8 @@ import {
 import { saveClient } from "@/app/(app)/clients/actions";
 import type { ClientWriteInput } from "@/lib/data/clients.types";
 import { saveProject } from "@/app/(app)/projects/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type Option = { id: string; name: string };
 
@@ -120,7 +122,10 @@ const FIELD_LABEL: Record<string, string> = {
   validUntil: "Valid until",
 };
 
-const humanField = (segment: string) => FIELD_LABEL[segment] ?? segment;
+type Translate = (text: string) => string;
+
+const humanField = (segment: string, t: Translate) => (FIELD_LABEL[segment] ? t(FIELD_LABEL[segment]) : segment);
+const groupLabel = (group: string, t: Translate) => (GROUP_LABEL[group] ? t(GROUP_LABEL[group]) : group);
 
 /**
  * Rewrite server issue paths from payload indexes to stable row keys, and build a
@@ -130,6 +135,7 @@ const humanField = (segment: string) => FIELD_LABEL[segment] ?? segment;
 function mapIssues(
   raw: { path: string; message: string }[],
   keys: RowKeyMap,
+  t: Translate,
 ): FieldIssue[] {
   return raw.map((issue) => {
     const [group, second, ...rest] = issue.path.split(".");
@@ -140,17 +146,17 @@ function mapIssues(
       return {
         path: [group, rowKeys[index], leaf].filter(Boolean).join("."),
         message: issue.message,
-        label: `${GROUP_LABEL[group] ?? group} — line ${index + 1}${leaf ? ` — ${humanField(leaf)}` : ""}`,
+        label: `${groupLabel(group, t)} — ${fmt(t("line {n}"), { n: index + 1 })}${leaf ? ` — ${humanField(leaf, t)}` : ""}`,
       };
     }
     if (group === "costBasis") {
       return {
         path: issue.path,
         message: issue.message,
-        label: `${GROUP_LABEL.costBasis}${second ? ` — ${humanField(second)}` : ""}`,
+        label: `${groupLabel("costBasis", t)}${second ? ` — ${humanField(second, t)}` : ""}`,
       };
     }
-    return { path: issue.path, message: issue.message, label: humanField(group) };
+    return { path: issue.path, message: issue.message, label: humanField(group, t) };
   });
 }
 
@@ -216,6 +222,7 @@ export function ServiceProposalForm({
   mode: "new" | "edit";
   initial?: ServiceProposalDTO;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -331,7 +338,7 @@ export function ServiceProposalForm({
   function saveNewProject() {
     const name = newProjectName.trim();
     if (!name) {
-      setNewProjectError("Project name is required.");
+      setNewProjectError(t("Project name is required."));
       return;
     }
     // createProject resolves the client by NAME and throws when it finds none,
@@ -339,7 +346,7 @@ export function ServiceProposalForm({
     // return "Client not found".
     const client = clientOptions.find((c) => c.id === clientId);
     if (!client) {
-      setNewProjectError("Choose a client first — a project must belong to one.");
+      setNewProjectError(t("Choose a client first — a project must belong to one."));
       return;
     }
     setNewProjectError(null);
@@ -371,7 +378,7 @@ export function ServiceProposalForm({
   function saveNewClient() {
     const name = newClientName.trim();
     if (!name) {
-      setNewClientError("Client name is required.");
+      setNewClientError(t("Client name is required."));
       return;
     }
     setNewClientError(null);
@@ -500,11 +507,11 @@ export function ServiceProposalForm({
 
   function applyTemplate(key: string) {
     setTemplateKey(key);
-    const t = getTemplate(key);
-    if (!t) return;
-    setBasisType(t.defaultBasis);
+    const tpl = getTemplate(key);
+    if (!tpl) return;
+    setBasisType(tpl.defaultBasis);
     setFees(
-      t.fees.map((f) => ({
+      tpl.fees.map((f) => ({
         ...emptyFee(),
         label: f.label,
         method: f.method,
@@ -515,11 +522,11 @@ export function ServiceProposalForm({
         category: f.category,
       })),
     );
-    setPhases(t.phases.map((p) => ({ key: uid(), name: p.name, percent: String(p.percentage) })));
-    setScopeSummary(t.scopeSummary);
-    setExclusions(t.exclusions);
-    setAssumptions(t.assumptions);
-    setTerms(t.terms);
+    setPhases(tpl.phases.map((p) => ({ key: uid(), name: p.name, percent: String(p.percentage) })));
+    setScopeSummary(tpl.scopeSummary);
+    setExclusions(tpl.exclusions);
+    setAssumptions(tpl.assumptions);
+    setTerms(tpl.terms);
   }
 
   const feeToComponent = (f: FeeRow) => ({
@@ -654,7 +661,7 @@ export function ServiceProposalForm({
           : await createServiceProposalAction(payload);
       if (!res.ok) {
         setError(res.error);
-        setIssues(res.fieldIssues ? mapIssues(res.fieldIssues, rowKeys) : []);
+        setIssues(res.fieldIssues ? mapIssues(res.fieldIssues, rowKeys, t) : []);
         return;
       }
       router.push(`/design/service-proposals/${res.id}`);
@@ -703,24 +710,24 @@ export function ServiceProposalForm({
       <div className="space-y-6" ref={nav}>
         {mode === "new" ? (
           <Card>
-            <CardHeader title="Start from a template" subtitle="Optional — prefills fees, phases and scope for a common project type" />
+            <CardHeader title={t("Start from a template")} subtitle={t("Optional — prefills fees, phases and scope for a common project type")} />
             <CardBody>
               <select
                 value={templateKey}
                 onChange={(e) => applyTemplate(e.target.value)}
                 className={field}
               >
-                <option value="">— Blank proposal —</option>
+                <option value="">{t("— Blank proposal —")}</option>
                 {["Architecture", "Interior", "Engineering", "Other"].map((g) => (
-                  <optgroup key={g} label={g}>
-                    {PROPOSAL_TEMPLATES.filter((t) => t.group === g).map((t) => (
-                      <option key={t.key} value={t.key}>{t.name} — {t.description}</option>
+                  <optgroup key={g} label={t(g)}>
+                    {PROPOSAL_TEMPLATES.filter((tpl) => tpl.group === g).map((tpl) => (
+                      <option key={tpl.key} value={tpl.key}>{t(tpl.name)} — {t(tpl.description)}</option>
                     ))}
                   </optgroup>
                 ))}
               </select>
               {templateKey ? (
-                <p className="mt-2 text-xs text-muted">Template applied — everything below is editable.</p>
+                <p className="mt-2 text-xs text-muted">{t("Template applied — everything below is editable.")}</p>
               ) : null}
             </CardBody>
           </Card>
@@ -728,62 +735,62 @@ export function ServiceProposalForm({
 
         {/* Proposal */}
         <Card>
-          <CardHeader title="Proposal" />
+          <CardHeader title={t("Proposal")} />
           <CardBody className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className={label}>Title *</label>
+              <label className={label}>{t("Title *")}</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className={`${field} ${issueFor("title") ? fieldInvalid : ""}`}
                 data-invalid={issueFor("title") ? "true" : undefined}
                 aria-invalid={issueFor("title") ? true : undefined}
-                placeholder="Architectural design services — Palm Beach Residence"
+                placeholder={t("Architectural design services — Palm Beach Residence")}
               />
               <FieldError msg={issueFor("title")} />
             </div>
             <div>
-              <label className={label}>Proposal number</label>
+              <label className={label}>{t("Proposal number")}</label>
               <input
                 value={number}
                 onChange={(e) => setNumber(e.target.value)}
                 className={`${field} font-mono ${issueFor("number") ? fieldInvalid : ""}`}
                 data-invalid={issueFor("number") ? "true" : undefined}
                 aria-invalid={issueFor("number") ? true : undefined}
-                placeholder={mode === "new" ? "Assigned automatically" : undefined}
-                aria-label="Proposal number"
+                placeholder={mode === "new" ? t("Assigned automatically") : undefined}
+                aria-label={t("Proposal number")}
               />
               <FieldError msg={issueFor("number")} />
               {!issueFor("number") ? (
                 <p className="mt-1 text-xs text-faint">
                   {mode === "new"
-                    ? "Leave blank for the next number in the sequence."
-                    : "Must be unique — a number already in use is refused."}
+                    ? t("Leave blank for the next number in the sequence.")
+                    : t("Must be unique — a number already in use is refused.")}
                 </p>
               ) : null}
             </div>
             <div>
-              <label className={label}>Client</label>
+              <label className={label}>{t("Client")}</label>
               <select
                 value={newClientOpen ? NEW_CLIENT : clientId}
                 onChange={(e) => onClientChange(e.target.value)}
                 className={field}
               >
-                <option value="">— None —</option>
-                <option value={NEW_CLIENT}>+ New client</option>
+                <option value="">{t("— None —")}</option>
+                <option value={NEW_CLIENT}>{t("+ New client")}</option>
                 {clientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
 
               {newClientOpen ? (
                 <div className="mt-2 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
-                  <p className="text-xs font-medium text-muted">New client</p>
+                  <p className="text-xs font-medium text-muted">{t("New client")}</p>
                   <input
                     value={newClientName}
                     onChange={(e) => setNewClientName(e.target.value)}
                     onKeyDown={onNewClientKeyDown}
                     className={field}
-                    placeholder="Client name *"
-                    aria-label="New client name"
+                    placeholder={t("Client name *")}
+                    aria-label={t("New client name")}
                     autoFocus
                   />
                   <input
@@ -791,8 +798,8 @@ export function ServiceProposalForm({
                     onChange={(e) => setNewClientCompany(e.target.value)}
                     onKeyDown={onNewClientKeyDown}
                     className={field}
-                    placeholder="Legal / company name"
-                    aria-label="New client company name"
+                    placeholder={t("Legal / company name")}
+                    aria-label={t("New client company name")}
                   />
                   <input
                     type="email"
@@ -800,8 +807,8 @@ export function ServiceProposalForm({
                     onChange={(e) => setNewClientEmail(e.target.value)}
                     onKeyDown={onNewClientKeyDown}
                     className={field}
-                    placeholder="Email"
-                    aria-label="New client email"
+                    placeholder={t("Email")}
+                    aria-label={t("New client email")}
                   />
                   <input
                     type="tel"
@@ -810,8 +817,8 @@ export function ServiceProposalForm({
                     onChange={(e) => setNewClientMobile(e.target.value)}
                     onKeyDown={onNewClientKeyDown}
                     className={field}
-                    placeholder="Cell phone"
-                    aria-label="New client cell phone"
+                    placeholder={t("Cell phone")}
+                    aria-label={t("New client cell phone")}
                   />
                   {newClientError ? (
                     <div className="flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-700 dark:text-rose-400">
@@ -825,7 +832,7 @@ export function ServiceProposalForm({
                       disabled={clientPending}
                       className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
                     >
-                      {clientPending ? "Saving…" : "Save client"}
+                      {clientPending ? t("Saving…") : t("Save client")}
                     </button>
                     <button
                       type="button"
@@ -833,34 +840,34 @@ export function ServiceProposalForm({
                       disabled={clientPending}
                       className="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-muted hover:text-fg disabled:opacity-50"
                     >
-                      Cancel
+                      {t("Cancel")}
                     </button>
                   </div>
                 </div>
               ) : null}
             </div>
             <div>
-              <label className={label}>Project</label>
+              <label className={label}>{t("Project")}</label>
               <select
                 value={newProjectOpen ? NEW_PROJECT : projectId}
                 onChange={(e) => onProjectChange(e.target.value)}
                 className={field}
               >
-                <option value="">— None —</option>
-                <option value={NEW_PROJECT}>+ New project</option>
+                <option value="">{t("— None —")}</option>
+                <option value={NEW_PROJECT}>{t("+ New project")}</option>
                 {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
 
               {newProjectOpen ? (
                 <div className="mt-2 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
-                  <p className="text-xs font-medium text-muted">New project</p>
+                  <p className="text-xs font-medium text-muted">{t("New project")}</p>
                   <input
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
                     onKeyDown={onNewProjectKeyDown}
                     className={field}
-                    placeholder="Project name *"
-                    aria-label="New project name"
+                    placeholder={t("Project name *")}
+                    aria-label={t("New project name")}
                     autoFocus
                   />
                   <input
@@ -868,24 +875,27 @@ export function ServiceProposalForm({
                     onChange={(e) => setNewProjectAddress(e.target.value)}
                     onKeyDown={onNewProjectKeyDown}
                     className={field}
-                    placeholder="Site address"
-                    aria-label="New project site address"
+                    placeholder={t("Site address")}
+                    aria-label={t("New project site address")}
                   />
                   <input
                     value={newProjectNumber}
                     onChange={(e) => setNewProjectNumber(e.target.value)}
                     onKeyDown={onNewProjectKeyDown}
                     className={`${field} font-mono`}
-                    placeholder="Project number — blank for automatic, or e.g. 2026A-019"
-                    aria-label="New project number"
+                    placeholder={t("Project number — blank for automatic, or e.g. 2026A-019")}
+                    aria-label={t("New project number")}
                     maxLength={40}
                   />
                   {/* A project must belong to a client, so say which one it will
                    * be filed under rather than letting the server reject it. */}
                   <p className="text-[11px] text-faint">
                     {clientOptions.find((c) => c.id === clientId)
-                      ? `Filed under ${clientOptions.find((c) => c.id === clientId)!.name}. Standard phases are added automatically; so is the number, unless you type one.`
-                      : "Choose a client above first — a project must belong to one."}
+                      ? fmt(
+                          t("Filed under {client}. Standard phases are added automatically; so is the number, unless you type one."),
+                          { client: clientOptions.find((c) => c.id === clientId)!.name },
+                        )
+                      : t("Choose a client above first — a project must belong to one.")}
                   </p>
                   {newProjectError ? (
                     <div className="flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-700 dark:text-rose-400">
@@ -899,7 +909,7 @@ export function ServiceProposalForm({
                       disabled={projectPending}
                       className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-xs font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
                     >
-                      {projectPending ? "Saving…" : "Save project"}
+                      {projectPending ? t("Saving…") : t("Save project")}
                     </button>
                     <button
                       type="button"
@@ -907,14 +917,14 @@ export function ServiceProposalForm({
                       disabled={projectPending}
                       className="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-muted hover:text-fg disabled:opacity-50"
                     >
-                      Cancel
+                      {t("Cancel")}
                     </button>
                   </div>
                 </div>
               ) : null}
             </div>
             <div>
-              <label className={label}>Contact name</label>
+              <label className={label}>{t("Contact name")}</label>
               <input
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
@@ -925,7 +935,7 @@ export function ServiceProposalForm({
               <FieldError msg={issueFor("contactName")} />
             </div>
             <div>
-              <label className={label}>Contact email</label>
+              <label className={label}>{t("Contact email")}</label>
               <input
                 type="email"
                 /* Two people on one proposal is normal; without `multiple` the
@@ -941,7 +951,7 @@ export function ServiceProposalForm({
               <FieldError msg={issueFor("contactEmail")} />
             </div>
             <div>
-              <label className={label}>Currency</label>
+              <label className={label}>{t("Currency")}</label>
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={field}>
                 {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -952,16 +962,16 @@ export function ServiceProposalForm({
         {/* Cost basis */}
         {anyPercent ? (
           <Card>
-            <CardHeader title="Cost basis" subtitle="What the percentage fees are calculated from" />
+            <CardHeader title={t("Cost basis")} subtitle={t("What the percentage fees are calculated from")} />
             <CardBody className="grid gap-4 sm:grid-cols-3">
               <div className="sm:col-span-2">
-                <label className={label}>Basis *</label>
+                <label className={label}>{t("Basis *")}</label>
                 <select value={basisType} onChange={(e) => setBasisType(e.target.value as CostBasisType)} className={field}>
-                  {BASIS_TYPES.map((b) => <option key={b} value={b}>{COST_BASIS_LABEL[b]}</option>)}
+                  {BASIS_TYPES.map((b) => <option key={b} value={b}>{t(COST_BASIS_LABEL[b])}</option>)}
                 </select>
               </div>
               <div>
-                <label className={label}>Amount *</label>
+                <label className={label}>{t("Amount *")}</label>
                 <input
                   type="number"
                   step="any"
@@ -976,32 +986,32 @@ export function ServiceProposalForm({
                 <FieldError msg={issueFor("costBasis.amount")} />
               </div>
               <div className="sm:col-span-3">
-                <label className={label}>Source note (e.g. which estimate figure)</label>
-                <input value={basisSourceField} onChange={(e) => setBasisSourceField(e.target.value)} className={field} placeholder="Estimate EST-2026-014 — direct cost" />
+                <label className={label}>{t("Source note (e.g. which estimate figure)")}</label>
+                <input value={basisSourceField} onChange={(e) => setBasisSourceField(e.target.value)} className={field} placeholder={t("Estimate EST-2026-014 — direct cost")} />
               </div>
 
               {usesWorksheet ? (
                 <div className="sm:col-span-3 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted">Development-cost worksheet</span>
+                    <span className="text-xs font-medium text-muted">{t("Development-cost worksheet")}</span>
                     <span className="text-xs text-muted">
-                      When a line is flagged as professional fees, the fee basis excludes it to avoid a circular calculation.
+                      {t("When a line is flagged as professional fees, the fee basis excludes it to avoid a circular calculation.")}
                     </span>
                   </div>
                   {worksheet.map((w) => {
                     const setW = (patch: Partial<WorksheetRow>) => setWorksheet((p) => p.map((x) => x.key === w.key ? { ...x, ...patch } : x));
                     return (
                       <div key={w.key} className="grid items-center gap-2 sm:grid-cols-[1fr_130px_auto_auto_32px]">
-                        <input value={w.category} onChange={(e) => setW({ category: e.target.value })} className={field} placeholder="Building construction" />
+                        <input value={w.category} onChange={(e) => setW({ category: e.target.value })} className={field} placeholder={t("Building construction")} />
                         <input type="number" step="any" min="0" value={w.amount} onChange={(e) => setW({ amount: e.target.value })} className={`${field} text-right`} placeholder="2000000" />
-                        <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={w.included} onChange={(e) => setW({ included: e.target.checked })} /> In basis</label>
-                        <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={w.isProfFees} onChange={(e) => setW({ isProfFees: e.target.checked })} /> Prof. fees</label>
-                        <button type="button" onClick={() => setWorksheet((p) => p.filter((x) => x.key !== w.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove line"><Trash2 className="h-4 w-4" /></button>
+                        <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={w.included} onChange={(e) => setW({ included: e.target.checked })} /> {t("In basis")}</label>
+                        <label className="inline-flex items-center gap-1 text-xs text-muted"><input type="checkbox" checked={w.isProfFees} onChange={(e) => setW({ isProfFees: e.target.checked })} /> {t("Prof. fees")}</label>
+                        <button type="button" onClick={() => setWorksheet((p) => p.filter((x) => x.key !== w.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label={t("Remove line")}><Trash2 className="h-4 w-4" /></button>
                       </div>
                     );
                   })}
                   <button type="button" onClick={() => setWorksheet((p) => [...p, { key: uid(), category: "", amount: "", included: true, isProfFees: false }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1 text-xs font-medium text-muted hover:border-brand hover:text-fg">
-                    <Plus className="h-3.5 w-3.5" /> Add cost line
+                    <Plus className="h-3.5 w-3.5" /> {t("Add cost line")}
                   </button>
                 </div>
               ) : null}
@@ -1011,7 +1021,7 @@ export function ServiceProposalForm({
 
         {/* Fees */}
         <Card>
-          <CardHeader title="Professional fees" subtitle="One line per discipline or service" />
+          <CardHeader title={t("Professional fees")} subtitle={t("One line per discipline or service")} />
           <CardBody className="space-y-2">
             {fees.map((f) => {
               const set = (patch: Partial<FeeRow>) =>
@@ -1028,37 +1038,37 @@ export function ServiceProposalForm({
                         className={`${field} ${iss("label") ? fieldInvalid : ""}`}
                         data-invalid={iss("label") ? "true" : undefined}
                         aria-invalid={iss("label") ? true : undefined}
-                        placeholder="Architecture"
+                        placeholder={t("Architecture")}
                       />
                       <FieldError msg={iss("label")} />
                     </div>
                     <select value={f.method} onChange={(e) => set({ method: e.target.value as FeeMethod })} className={field}>
-                      {FEE_METHOD_ORDER.map((m) => <option key={m} value={m}>{FEE_METHOD_LABEL[m]}</option>)}
+                      {FEE_METHOD_ORDER.map((m) => <option key={m} value={m}>{t(FEE_METHOD_LABEL[m])}</option>)}
                     </select>
-                    <button type="button" onClick={() => setFees((p) => p.length === 1 ? p : p.filter((x) => x.key !== f.key))} disabled={fees.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label="Remove fee"><Trash2 className="h-4 w-4" /></button>
+                    <button type="button" onClick={() => setFees((p) => p.length === 1 ? p : p.filter((x) => x.key !== f.key))} disabled={fees.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label={t("Remove fee")}><Trash2 className="h-4 w-4" /></button>
                   </div>
 
                   {/* Method-specific inputs */}
                   <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_140px]">
                     {f.method === "PERCENT_OF_BASIS" ? (
-                      <label className="text-xs text-muted">Percentage
+                      <label className="text-xs text-muted">{t("Percentage")}
                         <input type="number" step="any" min="0" value={f.percent} onChange={(e) => set({ percent: e.target.value })} className={`${field} mt-0.5 text-right ${iss("percent") ? fieldInvalid : ""}`} data-invalid={iss("percent") ? "true" : undefined} aria-invalid={iss("percent") ? true : undefined} placeholder="7.5" />
                         <FieldError msg={iss("percent")} />
                       </label>
                     ) : null}
                     {LUMP_METHODS.includes(f.method) ? (
-                      <label className="text-xs text-muted">Amount
+                      <label className="text-xs text-muted">{t("Amount")}
                         <input type="number" step="any" min="0" value={f.fixedAmount} onChange={(e) => set({ fixedAmount: e.target.value })} className={`${field} mt-0.5 text-right ${iss("fixedAmount") ? fieldInvalid : ""}`} data-invalid={iss("fixedAmount") ? "true" : undefined} aria-invalid={iss("fixedAmount") ? true : undefined} placeholder="55000" />
                         <FieldError msg={iss("fixedAmount")} />
                       </label>
                     ) : null}
                     {RATE_METHODS.includes(f.method) ? (
                       <>
-                        <label className="text-xs text-muted">{(RATE_METHOD_UNIT[f.method] ?? "quantity")[0].toUpperCase() + (RATE_METHOD_UNIT[f.method] ?? "quantity").slice(1)}
+                        <label className="text-xs text-muted">{t((RATE_METHOD_UNIT[f.method] ?? "quantity")[0].toUpperCase() + (RATE_METHOD_UNIT[f.method] ?? "quantity").slice(1))}
                           <input type="number" step="any" min="0" value={f.quantity} onChange={(e) => set({ quantity: e.target.value })} className={`${field} mt-0.5 text-right ${iss("quantity") ? fieldInvalid : ""}`} data-invalid={iss("quantity") ? "true" : undefined} aria-invalid={iss("quantity") ? true : undefined} placeholder="120" />
                           <FieldError msg={iss("quantity")} />
                         </label>
-                        <label className="text-xs text-muted">Rate
+                        <label className="text-xs text-muted">{t("Rate")}
                           <input type="number" step="any" min="0" value={f.unitRate} onChange={(e) => set({ unitRate: e.target.value })} className={`${field} mt-0.5 text-right ${iss("unitRate") ? fieldInvalid : ""}`} data-invalid={iss("unitRate") ? "true" : undefined} aria-invalid={iss("unitRate") ? true : undefined} placeholder="150" />
                           <FieldError msg={iss("unitRate")} />
                         </label>
@@ -1066,11 +1076,11 @@ export function ServiceProposalForm({
                     ) : null}
                     {MARKUP_METHODS.includes(f.method) ? (
                       <>
-                        <label className="text-xs text-muted">Base cost
+                        <label className="text-xs text-muted">{t("Base cost")}
                           <input type="number" step="any" min="0" value={f.baseAmount} onChange={(e) => set({ baseAmount: e.target.value })} className={`${field} mt-0.5 text-right ${iss("baseAmount") ? fieldInvalid : ""}`} data-invalid={iss("baseAmount") ? "true" : undefined} aria-invalid={iss("baseAmount") ? true : undefined} placeholder="40000" />
                           <FieldError msg={iss("baseAmount")} />
                         </label>
-                        <label className="text-xs text-muted">Markup %
+                        <label className="text-xs text-muted">{t("Markup %")}
                           <input type="number" step="any" min="0" value={f.markupPercent} onChange={(e) => set({ markupPercent: e.target.value })} className={`${field} mt-0.5 text-right ${iss("markupPercent") ? fieldInvalid : ""}`} data-invalid={iss("markupPercent") ? "true" : undefined} aria-invalid={iss("markupPercent") ? true : undefined} placeholder="10" />
                           <FieldError msg={iss("markupPercent")} />
                         </label>
@@ -1081,17 +1091,17 @@ export function ServiceProposalForm({
 
                   <div className="mt-2 flex items-center gap-4 text-xs text-muted">
                     <label className="inline-flex items-center gap-1.5">
-                      <span>Type</span>
+                      <span>{t("Type")}</span>
                       <select value={f.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })} className="h-7 rounded border border-border bg-surface px-2 text-xs">
-                        <option value="BASE">Base</option>
-                        <option value="OPTIONAL">Optional</option>
-                        <option value="ADDITIONAL">Additional</option>
+                        <option value="BASE">{t("Base")}</option>
+                        <option value="OPTIONAL">{t("Optional")}</option>
+                        <option value="ADDITIONAL">{t("Additional")}</option>
                       </select>
                     </label>
                     {f.category === "OPTIONAL" ? (
                       <label className="inline-flex items-center gap-1.5">
                         <input type="checkbox" checked={f.selected} onChange={(e) => set({ selected: e.target.checked })} />
-                        <span>Selected (include in total)</span>
+                        <span>{t("Selected (include in total)")}</span>
                       </label>
                     ) : null}
                   </div>
@@ -1099,14 +1109,14 @@ export function ServiceProposalForm({
               );
             })}
             <button type="button" onClick={() => setFees((p) => [...p, emptyFee()])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-              <Plus className="h-4 w-4" /> Add fee line
+              <Plus className="h-4 w-4" /> {t("Add fee line")}
             </button>
           </CardBody>
         </Card>
 
         {/* Phases */}
         <Card>
-          <CardHeader title="Design phases" subtitle="How the base fee is distributed — should total 100%" />
+          <CardHeader title={t("Design phases")} subtitle={t("How the base fee is distributed — should total 100%")} />
           <CardBody className="space-y-2">
             {phases.map((ph) => {
               const iss = (leaf: string) => issueFor(`phases.${ph.key}.${leaf}`);
@@ -1123,16 +1133,16 @@ export function ServiceProposalForm({
                   <div className="flex h-9 items-center justify-end px-1 text-sm tabular-nums text-muted">
                     {money((calc.totals.baseFeeTotal * (Number(ph.percent) || 0)) / 100)}
                   </div>
-                  <button type="button" onClick={() => setPhases((p) => p.length === 1 ? p : p.filter((x) => x.key !== ph.key))} disabled={phases.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label="Remove phase"><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setPhases((p) => p.length === 1 ? p : p.filter((x) => x.key !== ph.key))} disabled={phases.length === 1} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600 disabled:opacity-30" aria-label={t("Remove phase")}><Trash2 className="h-4 w-4" /></button>
                 </div>
               );
             })}
             <div className="flex items-center gap-3 pt-1">
               <button type="button" onClick={() => setPhases((p) => [...p, { key: uid(), name: "", percent: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-                <Plus className="h-4 w-4" /> Add phase
+                <Plus className="h-4 w-4" /> {t("Add phase")}
               </button>
               <span className={`ml-auto text-sm tabular-nums ${Math.abs(phasePct - 100) < 0.005 ? "text-muted" : "font-medium text-amber-600 dark:text-amber-400"}`}>
-                Total {Math.round(phasePct * 100) / 100}%{Math.abs(phasePct - 100) < 0.005 ? "" : " — should be 100%"}
+                {fmt(t("Total {pct}%"), { pct: Math.round(phasePct * 100) / 100 })}{Math.abs(phasePct - 100) < 0.005 ? "" : ` — ${t("should be 100%")}`}
               </span>
             </div>
           </CardBody>
@@ -1140,16 +1150,16 @@ export function ServiceProposalForm({
 
         {/* Payment schedule */}
         <Card>
-          <CardHeader title="Payment schedule" subtitle="Optional — should total 100% of the grand total" />
+          <CardHeader title={t("Payment schedule")} subtitle={t("Optional — should total 100% of the grand total")} />
           <CardBody className="space-y-2">
             {milestones.length === 0 ? (
-              <p className="text-sm text-muted">No payment milestones yet.</p>
+              <p className="text-sm text-muted">{t("No payment milestones yet.")}</p>
             ) : milestones.map((m) => {
               const iss = (leaf: string) => issueFor(`paymentMilestones.${m.key}.${leaf}`);
               return (
                 <div key={m.key} className="grid gap-2 sm:grid-cols-[1fr_100px_120px_40px]">
                   <div>
-                    <input value={m.name} onChange={(e) => setMilestones((p) => p.map((x) => x.key === m.key ? { ...x, name: e.target.value } : x))} className={`${field} ${iss("name") ? fieldInvalid : ""}`} data-invalid={iss("name") ? "true" : undefined} aria-invalid={iss("name") ? true : undefined} placeholder="On acceptance" />
+                    <input value={m.name} onChange={(e) => setMilestones((p) => p.map((x) => x.key === m.key ? { ...x, name: e.target.value } : x))} className={`${field} ${iss("name") ? fieldInvalid : ""}`} data-invalid={iss("name") ? "true" : undefined} aria-invalid={iss("name") ? true : undefined} placeholder={t("On acceptance")} />
                     <FieldError msg={iss("name")} />
                   </div>
                   <div>
@@ -1159,75 +1169,75 @@ export function ServiceProposalForm({
                   <div className="flex h-9 items-center justify-end px-1 text-sm tabular-nums text-muted">
                     {money((calc.totals.grandTotal * (Number(m.percent) || 0)) / 100)}
                   </div>
-                  <button type="button" onClick={() => setMilestones((p) => p.filter((x) => x.key !== m.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove milestone"><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setMilestones((p) => p.filter((x) => x.key !== m.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label={t("Remove milestone")}><Trash2 className="h-4 w-4" /></button>
                 </div>
               );
             })}
             <button type="button" onClick={() => setMilestones((p) => [...p, { key: uid(), name: "", percent: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-              <Plus className="h-4 w-4" /> Add milestone
+              <Plus className="h-4 w-4" /> {t("Add milestone")}
             </button>
           </CardBody>
         </Card>
 
         {/* Reimbursables */}
         <Card>
-          <CardHeader title="Reimbursable expenses" subtitle="Printing, travel, permit fees — added to the subtotal" />
+          <CardHeader title={t("Reimbursable expenses")} subtitle={t("Printing, travel, permit fees — added to the subtotal")} />
           <CardBody className="space-y-2">
             {reimb.length === 0 ? (
-              <p className="text-sm text-muted">No reimbursables yet.</p>
+              <p className="text-sm text-muted">{t("No reimbursables yet.")}</p>
             ) : reimb.map((r) => {
               const iss = (leaf: string) => issueFor(`reimbursables.${r.key}.${leaf}`);
               return (
                 <div key={r.key} className="grid gap-2 sm:grid-cols-[1fr_140px_40px]">
                   <div>
-                    <input value={r.label} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, label: e.target.value } : x))} className={`${field} ${iss("label") ? fieldInvalid : ""}`} data-invalid={iss("label") ? "true" : undefined} aria-invalid={iss("label") ? true : undefined} placeholder="Printing & plotting" />
+                    <input value={r.label} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, label: e.target.value } : x))} className={`${field} ${iss("label") ? fieldInvalid : ""}`} data-invalid={iss("label") ? "true" : undefined} aria-invalid={iss("label") ? true : undefined} placeholder={t("Printing & plotting")} />
                     <FieldError msg={iss("label")} />
                   </div>
                   <div>
                     <input type="number" step="any" min="0" value={r.amount} onChange={(e) => setReimb((p) => p.map((x) => x.key === r.key ? { ...x, amount: e.target.value } : x))} className={`${field} text-right ${iss("amount") ? fieldInvalid : ""}`} data-invalid={iss("amount") ? "true" : undefined} aria-invalid={iss("amount") ? true : undefined} placeholder="1500" />
                     <FieldError msg={iss("amount")} />
                   </div>
-                  <button type="button" onClick={() => setReimb((p) => p.filter((x) => x.key !== r.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove reimbursable"><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setReimb((p) => p.filter((x) => x.key !== r.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label={t("Remove reimbursable")}><Trash2 className="h-4 w-4" /></button>
                 </div>
               );
             })}
             <button type="button" onClick={() => setReimb((p) => [...p, { key: uid(), label: "", amount: "" }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-              <Plus className="h-4 w-4" /> Add reimbursable
+              <Plus className="h-4 w-4" /> {t("Add reimbursable")}
             </button>
           </CardBody>
         </Card>
 
         {/* Tax & discount */}
         <Card>
-          <CardHeader title="Tax & discount" />
+          <CardHeader title={t("Tax & discount")} />
           <CardBody className="grid gap-4 sm:grid-cols-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={label}>Tax name</label>
+                <label className={label}>{t("Tax name")}</label>
                 <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={`${field} ${issueFor(`taxes.${TAX_KEY}.name`) ? fieldInvalid : ""}`} data-invalid={issueFor(`taxes.${TAX_KEY}.name`) ? "true" : undefined} aria-invalid={issueFor(`taxes.${TAX_KEY}.name`) ? true : undefined} placeholder="BBO" />
                 <FieldError msg={issueFor(`taxes.${TAX_KEY}.name`)} />
               </div>
               <div>
-                <label className={label}>Tax %</label>
+                <label className={label}>{t("Tax %")}</label>
                 <input type="number" step="any" min="0" value={taxPercent} onChange={(e) => setTaxPercent(e.target.value)} className={`${field} text-right ${issueFor(`taxes.${TAX_KEY}.percent`) ? fieldInvalid : ""}`} data-invalid={issueFor(`taxes.${TAX_KEY}.percent`) ? "true" : undefined} aria-invalid={issueFor(`taxes.${TAX_KEY}.percent`) ? true : undefined} />
                 <FieldError msg={issueFor(`taxes.${TAX_KEY}.percent`)} />
               </div>
             </div>
             <div className="grid grid-cols-[1fr_90px_90px] gap-3">
               <div>
-                <label className={label}>Discount</label>
-                <input value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} className={`${field} ${issueFor(`discounts.${DISCOUNT_KEY}.label`) ? fieldInvalid : ""}`} data-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? "true" : undefined} aria-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? true : undefined} placeholder="Repeat client" />
+                <label className={label}>{t("Discount")}</label>
+                <input value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} className={`${field} ${issueFor(`discounts.${DISCOUNT_KEY}.label`) ? fieldInvalid : ""}`} data-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? "true" : undefined} aria-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? true : undefined} placeholder={t("Repeat client")} />
                 <FieldError msg={issueFor(`discounts.${DISCOUNT_KEY}.label`)} />
               </div>
               <div>
-                <label className={label}>Type</label>
+                <label className={label}>{t("Type")}</label>
                 <select value={discountType} onChange={(e) => setDiscountType(e.target.value as "PERCENT" | "FIXED")} className={field}>
                   <option value="PERCENT">%</option>
-                  <option value="FIXED">Fixed</option>
+                  <option value="FIXED">{t("Fixed")}</option>
                 </select>
               </div>
               <div>
-                <label className={label}>Value</label>
+                <label className={label}>{t("Value")}</label>
                 <input type="number" step="any" min="0" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} className={`${field} text-right ${issueFor(`discounts.${DISCOUNT_KEY}.value`) ? fieldInvalid : ""}`} data-invalid={issueFor(`discounts.${DISCOUNT_KEY}.value`) ? "true" : undefined} aria-invalid={issueFor(`discounts.${DISCOUNT_KEY}.value`) ? true : undefined} />
                 <FieldError msg={issueFor(`discounts.${DISCOUNT_KEY}.value`)} />
               </div>
@@ -1237,10 +1247,10 @@ export function ServiceProposalForm({
 
         {/* Scope of services */}
         <Card>
-          <CardHeader title="Scope of services" subtitle="Itemised inclusions and exclusions — appears as a list on the document" />
+          <CardHeader title={t("Scope of services")} subtitle={t("Itemised inclusions and exclusions — appears as a list on the document")} />
           <CardBody className="space-y-2">
             {scopeRows.length === 0 ? (
-              <p className="text-sm text-muted">No scope items yet — add inclusions and exclusions, or use the free-text summary below.</p>
+              <p className="text-sm text-muted">{t("No scope items yet — add inclusions and exclusions, or use the free-text summary below.")}</p>
             ) : scopeRows.map((s, i) => {
               const setS = (patch: Partial<ScopeRow>) => setScopeRows((p) => p.map((x) => x.key === s.key ? { ...x, ...patch } : x));
               const iss = (leaf: string) => issueFor(`scopeItems.${s.key}.${leaf}`);
@@ -1255,27 +1265,27 @@ export function ServiceProposalForm({
               return (
                 <div key={s.key} className="grid grid-cols-[20px_1fr] gap-2 sm:grid-cols-[20px_1fr_1.4fr_auto_32px] sm:items-center">
                   <div className="row-span-4 flex flex-col items-center justify-center sm:row-span-1">
-                    <button type="button" onClick={() => move(-1)} disabled={i === 0} className="flex h-4 w-5 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-25 disabled:hover:bg-transparent" aria-label="Move scope item up" title="Move up"><ChevronUp className="h-3.5 w-3.5" /></button>
-                    <button type="button" onClick={() => move(1)} disabled={i === scopeRows.length - 1} className="flex h-4 w-5 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-25 disabled:hover:bg-transparent" aria-label="Move scope item down" title="Move down"><ChevronDown className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => move(-1)} disabled={i === 0} className="flex h-4 w-5 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-25 disabled:hover:bg-transparent" aria-label={t("Move scope item up")} title={t("Move up")}><ChevronUp className="h-3.5 w-3.5" /></button>
+                    <button type="button" onClick={() => move(1)} disabled={i === scopeRows.length - 1} className="flex h-4 w-5 items-center justify-center rounded text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-25 disabled:hover:bg-transparent" aria-label={t("Move scope item down")} title={t("Move down")}><ChevronDown className="h-3.5 w-3.5" /></button>
                   </div>
                   <div>
-                    <input value={s.title} onChange={(e) => setS({ title: e.target.value })} className={`${field} ${iss("title") ? fieldInvalid : ""}`} data-invalid={iss("title") ? "true" : undefined} aria-invalid={iss("title") ? true : undefined} placeholder="Site analysis & feasibility" />
+                    <input value={s.title} onChange={(e) => setS({ title: e.target.value })} className={`${field} ${iss("title") ? fieldInvalid : ""}`} data-invalid={iss("title") ? "true" : undefined} aria-invalid={iss("title") ? true : undefined} placeholder={t("Site analysis & feasibility")} />
                     <FieldError msg={iss("title")} />
                   </div>
                   <div>
-                    <input value={s.description} onChange={(e) => setS({ description: e.target.value })} className={`${field} ${iss("description") ? fieldInvalid : ""}`} data-invalid={iss("description") ? "true" : undefined} aria-invalid={iss("description") ? true : undefined} placeholder="Optional detail" />
+                    <input value={s.description} onChange={(e) => setS({ description: e.target.value })} className={`${field} ${iss("description") ? fieldInvalid : ""}`} data-invalid={iss("description") ? "true" : undefined} aria-invalid={iss("description") ? true : undefined} placeholder={t("Optional detail")} />
                     <FieldError msg={iss("description")} />
                   </div>
                   <label className="inline-flex items-center gap-1.5 text-xs text-muted">
                     <input type="checkbox" checked={s.included} onChange={(e) => setS({ included: e.target.checked })} />
-                    {s.included ? "Included" : "Excluded"}
+                    {s.included ? t("Included") : t("Excluded")}
                   </label>
-                  <button type="button" onClick={() => setScopeRows((p) => p.filter((x) => x.key !== s.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label="Remove scope item"><Trash2 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setScopeRows((p) => p.filter((x) => x.key !== s.key))} className="flex h-9 items-center justify-center rounded-lg text-muted hover:text-rose-600" aria-label={t("Remove scope item")}><Trash2 className="h-4 w-4" /></button>
                 </div>
               );
             })}
             <button type="button" onClick={() => setScopeRows((p) => [...p, { key: uid(), title: "", description: "", included: true }])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
-              <Plus className="h-4 w-4" /> Add scope item
+              <Plus className="h-4 w-4" /> {t("Add scope item")}
             </button>
           </CardBody>
         </Card>
@@ -1283,37 +1293,37 @@ export function ServiceProposalForm({
         {/* Scope & terms */}
         <Card>
           <CardHeader
-            title="Scope narrative & terms"
-            subtitle="Wrap a phrase in ** to print it bold — a convention nobody is told about is one nobody uses."
+            title={t("Scope narrative & terms")}
+            subtitle={t("Wrap a phrase in ** to print it bold — a convention nobody is told about is one nobody uses.")}
           />
           <CardBody className="space-y-3">
             <div>
-              <label className={label}>Scope summary</label>
+              <label className={label}>{t("Scope summary")}</label>
               <textarea value={scopeSummary} onChange={(e) => setScopeSummary(e.target.value)} rows={3} className={`${field} h-auto py-2`} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={label}>Exclusions</label>
+                <label className={label}>{t("Exclusions")}</label>
                 <textarea value={exclusions} onChange={(e) => setExclusions(e.target.value)} rows={2} className={`${field} h-auto py-2`} />
               </div>
               <div>
-                <label className={label}>Assumptions</label>
+                <label className={label}>{t("Assumptions")}</label>
                 <textarea value={assumptions} onChange={(e) => setAssumptions(e.target.value)} rows={2} className={`${field} h-auto py-2`} />
               </div>
             </div>
             <div>
-              <label className={label}>Terms & conditions</label>
+              <label className={label}>{t("Terms & conditions")}</label>
               <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={2} className={`${field} h-auto py-2`} />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={label}>Valid until</label>
+                <label className={label}>{t("Valid until")}</label>
                 <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className={`${field} ${issueFor("validUntil") ? fieldInvalid : ""}`} data-invalid={issueFor("validUntil") ? "true" : undefined} aria-invalid={issueFor("validUntil") ? true : undefined} />
                 <FieldError msg={issueFor("validUntil")} />
               </div>
               <label className="flex items-end gap-2 pb-1.5 text-sm text-muted">
                 <input type="checkbox" checked={showFeeDerivation} onChange={(e) => setShowFeeDerivation(e.target.checked)} />
-                Show fee derivation to the client
+                {t("Show fee derivation to the client")}
               </label>
             </div>
           </CardBody>
@@ -1328,7 +1338,7 @@ export function ServiceProposalForm({
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {/* Only claim fields are highlighted when at least one of them actually is. */}
               {issues.length > 0 && orphanIssues.length === issues.length
-                ? "The proposal could not be saved:"
+                ? t("The proposal could not be saved:")
                 : error}
             </div>
             {orphanIssues.length > 0 ? (
@@ -1347,34 +1357,34 @@ export function ServiceProposalForm({
 
         <div className="flex items-center gap-3">
           <button type="submit" disabled={pending} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
-            {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Create proposal"}
+            {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Create proposal")}
           </button>
-          <button type="button" onClick={() => router.back()} className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-muted hover:text-fg">Cancel</button>
+          <button type="button" onClick={() => router.back()} className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-muted hover:text-fg">{t("Cancel")}</button>
         </div>
       </div>
 
       {/* Live summary rail */}
       <div className="lg:sticky lg:top-4 lg:self-start">
         <div className="card-surface rounded-xl border border-border bg-surface p-4">
-          <h3 className="text-sm font-semibold text-fg">Live summary</h3>
+          <h3 className="text-sm font-semibold text-fg">{t("Live summary")}</h3>
           <dl className="mt-3 space-y-1.5 text-sm">
-            <Row k="Base fee" v={money(calc.totals.baseFeeTotal)} />
+            <Row k={t("Base fee")} v={money(calc.totals.baseFeeTotal)} />
             {calc.totals.optionalServicesTotal > 0 ? (
-              <Row k="Optional (selected)" v={money(calc.totals.optionalSelectedTotal)} muted />
+              <Row k={t("Optional (selected)")} v={money(calc.totals.optionalSelectedTotal)} muted />
             ) : null}
-            {calc.totals.reimbursablesTotal > 0 ? <Row k="Reimbursables" v={money(calc.totals.reimbursablesTotal)} /> : null}
-            <Row k="Subtotal" v={money(calc.totals.subtotal)} />
-            {calc.totals.discountTotal > 0 ? <Row k="Discount" v={`− ${money(calc.totals.discountTotal)}`} /> : null}
-            {calc.totals.taxTotal > 0 ? <Row k={`Tax`} v={money(calc.totals.taxTotal)} /> : null}
+            {calc.totals.reimbursablesTotal > 0 ? <Row k={t("Reimbursables")} v={money(calc.totals.reimbursablesTotal)} /> : null}
+            <Row k={t("Subtotal")} v={money(calc.totals.subtotal)} />
+            {calc.totals.discountTotal > 0 ? <Row k={t("Discount")} v={`− ${money(calc.totals.discountTotal)}`} /> : null}
+            {calc.totals.taxTotal > 0 ? <Row k={t("Tax")} v={money(calc.totals.taxTotal)} /> : null}
             <div className="mt-1.5 flex justify-between border-t border-border pt-2 text-base font-semibold text-fg">
-              <dt>Grand total</dt>
+              <dt>{t("Grand total")}</dt>
               <dd className="tabular-nums">{money(calc.totals.grandTotal)}</dd>
             </div>
           </dl>
 
           {calc.totals.optionalServicesTotal - calc.totals.optionalSelectedTotal > 0 ? (
             <p className="mt-2 text-xs text-muted">
-              + {money(calc.totals.optionalServicesTotal - calc.totals.optionalSelectedTotal)} in unselected options
+              {fmt(t("+ {amount} in unselected options"), { amount: money(calc.totals.optionalServicesTotal - calc.totals.optionalSelectedTotal) })}
             </p>
           ) : null}
 

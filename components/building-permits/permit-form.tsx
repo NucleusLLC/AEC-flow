@@ -34,6 +34,7 @@ import {
   createPermitAction,
   updatePermitAction,
 } from "@/app/(app)/design/building-permits/actions";
+import { useT } from "@/components/i18n/language-provider";
 
 /** Offered alongside the practice's System Currency, which always leads the list. */
 const OTHER_CURRENCIES = ["AWG", "USD", "ANG", "EUR"];
@@ -64,6 +65,7 @@ export function PermitForm({
   mode: "new" | "edit";
   initial?: BuildingPermitDTO;
 }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +172,7 @@ export function PermitForm({
           ? await updatePermitAction(initial.id, input)
           : await createPermitAction(input);
       if (!res.ok) {
-        setError(res.error);
+        setError(t(res.error));
         return;
       }
       router.push(`/design/building-permits/${res.id}`);
@@ -181,51 +183,51 @@ export function PermitForm({
   return (
     <form onSubmit={submit} className="space-y-6">
       <Card>
-        <CardHeader title="Identification" subtitle="What this file is, and what the authority calls it." />
+        <CardHeader title={t("Identification")} subtitle={t("What this file is, and what the authority calls it.")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Our reference</label>
+            <label className={label}>{t("Our reference")}</label>
             <input
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               className={`${field} font-mono`}
-              placeholder="Leave blank for the next reference"
+              placeholder={t("Leave blank for the next reference")}
             />
           </div>
           <div>
-            <label className={label}>Authority&rsquo;s permit number</label>
+            <label className={label}>{t("Authority’s permit number")}</label>
             <input
               value={permitNumber}
               onChange={(e) => setPermitNumber(e.target.value)}
               className={`${field} font-mono`}
-              placeholder="Request number"
+              placeholder={t("Request number")}
             />
           </div>
           <div>
-            <label className={label}>Permit type</label>
+            <label className={label}>{t("Permit type")}</label>
             <select
               value={permitType}
               onChange={(e) => setPermitType(e.target.value as BuildingPermitType)}
               className={field}
             >
-              {PERMIT_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {PERMIT_TYPE_LABEL[t]}
+              {PERMIT_TYPES.map((pt) => (
+                <option key={pt} value={pt}>
+                  {t(PERMIT_TYPE_LABEL[pt])}
                 </option>
               ))}
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Title *</label>
+            <label className={label}>{t("Title *")}</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className={field}
-              placeholder="Two-storey residence, Sabana Blanco"
+              placeholder={t("Two-storey residence, Sabana Blanco")}
             />
           </div>
           <div>
-            <label className={label}>Status</label>
+            <label className={label}>{t("Status")}</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as BuildingPermitStatus)}
@@ -233,38 +235,38 @@ export function PermitForm({
             >
               {PERMIT_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {PERMIT_STATUS_LABEL[s]}
+                  {t(PERMIT_STATUS_LABEL[s])}
                 </option>
               ))}
             </select>
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Scope of works</label>
+            <label className={label}>{t("Scope of works")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className={area}
-              placeholder="What is being applied for, in the words the application uses."
+              placeholder={t("What is being applied for, in the words the application uses.")}
             />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Property" subtitle="The parcel the application is filed against." />
+        <CardHeader title={t("Property")} subtitle={t("The parcel the application is filed against.")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Applicant</label>
+            <label className={label}>{t("Applicant")}</label>
             <input
               value={applicantName}
               onChange={(e) => setApplicantName(e.target.value)}
               className={field}
-              placeholder="Filed in the name of"
+              placeholder={t("Filed in the name of")}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>Site address</label>
+            <label className={label}>{t("Site address")}</label>
             <input
               value={siteAddress}
               onChange={(e) => setSiteAddress(e.target.value)}
@@ -272,16 +274,16 @@ export function PermitForm({
             />
           </div>
           <div>
-            <label className={label}>Parcel number</label>
+            <label className={label}>{t("Parcel number")}</label>
             <input
               value={parcelNumber}
               onChange={(e) => setParcelNumber(e.target.value)}
               className={`${field} font-mono`}
-              placeholder="Meetbrief / cadastral"
+              placeholder={t("Meetbrief / cadastral")}
             />
           </div>
           <div>
-            <label className={label}>Land registry</label>
+            <label className={label}>{t("Land registry")}</label>
             <input
               value={landRegistry}
               onChange={(e) => setLandRegistry(e.target.value)}
@@ -290,7 +292,7 @@ export function PermitForm({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={label}>Lot area (m²)</label>
+              <label className={label}>{t("Lot area (m²)")}</label>
               <input
                 type="number"
                 min={0}
@@ -301,7 +303,7 @@ export function PermitForm({
               />
             </div>
             <div>
-              <label className={label}>Built area (m²)</label>
+              <label className={label}>{t("Built area (m²)")}</label>
               <input
                 type="number"
                 min={0}
@@ -316,28 +318,28 @@ export function PermitForm({
       </Card>
 
       <Card>
-        <CardHeader title="Authority" subtitle="Who is deciding, and who to chase." />
+        <CardHeader title={t("Authority")} subtitle={t("Who is deciding, and who to chase.")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Authority</label>
+            <label className={label}>{t("Authority")}</label>
             <input
               value={authority}
               onChange={(e) => setAuthority(e.target.value)}
               className={field}
-              placeholder="DOW / Public Works"
+              placeholder={t("DOW / Public Works")}
             />
           </div>
           <div>
-            <label className={label}>Contact</label>
+            <label className={label}>{t("Contact")}</label>
             <input
               value={authorityContact}
               onChange={(e) => setAuthorityContact(e.target.value)}
               className={field}
-              placeholder="Case officer"
+              placeholder={t("Case officer")}
             />
           </div>
           <div>
-            <label className={label}>Email</label>
+            <label className={label}>{t("Email")}</label>
             <input
               type="email"
               value={authorityEmail}
@@ -351,24 +353,24 @@ export function PermitForm({
 
       <Card>
         <CardHeader
-          title="Dates"
-          subtitle="The milestones the case file is read for. Leave a date empty until it has happened."
+          title={t("Dates")}
+          subtitle={t("The milestones the case file is read for. Leave a date empty until it has happened.")}
         />
         <CardBody className="grid gap-4 sm:grid-cols-4">
           <div>
-            <label className={label}>Submittal date</label>
+            <label className={label}>{t("Submittal date")}</label>
             <input type="date" value={submittedAt} onChange={(e) => setSubmittedAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Acknowledged</label>
+            <label className={label}>{t("Acknowledged")}</label>
             <input type="date" value={acknowledgedAt} onChange={(e) => setAcknowledgedAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Concept approval</label>
+            <label className={label}>{t("Concept approval")}</label>
             <input type="date" value={conceptApprovalAt} onChange={(e) => setConceptApprovalAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Concept approval ref.</label>
+            <label className={label}>{t("Concept approval ref.")}</label>
             <input
               value={conceptApprovalRef}
               onChange={(e) => setConceptApprovalRef(e.target.value)}
@@ -376,29 +378,29 @@ export function PermitForm({
             />
           </div>
           <div>
-            <label className={label}>Decision</label>
+            <label className={label}>{t("Decision")}</label>
             <input type="date" value={decisionAt} onChange={(e) => setDecisionAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Permit ready date</label>
+            <label className={label}>{t("Permit ready date")}</label>
             <input type="date" value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Expires</label>
+            <label className={label}>{t("Expires")}</label>
             <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className={field} />
           </div>
           <div>
-            <label className={label}>Target decision</label>
+            <label className={label}>{t("Target decision")}</label>
             <input type="date" value={targetDecisionAt} onChange={(e) => setTargetDecisionAt(e.target.value)} className={field} />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Money" subtitle="Declared value of the works and the authority's fee." />
+        <CardHeader title={t("Money")} subtitle={t("Declared value of the works and the authority's fee.")} />
         <CardBody className="grid gap-4 sm:grid-cols-4">
           <div className="sm:col-span-2">
-            <label className={label}>Estimated value</label>
+            <label className={label}>{t("Estimated value")}</label>
             <input
               type="number"
               min={0}
@@ -409,7 +411,7 @@ export function PermitForm({
             />
           </div>
           <div>
-            <label className={label}>Currency</label>
+            <label className={label}>{t("Currency")}</label>
             <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={field}>
               {currencyOptions(OTHER_CURRENCIES).map((c) => (
                 <option key={c} value={c}>
@@ -420,7 +422,7 @@ export function PermitForm({
           </div>
           <div />
           <div className="sm:col-span-2">
-            <label className={label}>Fee amount</label>
+            <label className={label}>{t("Fee amount")}</label>
             <input
               type="number"
               min={0}
@@ -431,26 +433,26 @@ export function PermitForm({
             />
           </div>
           <div>
-            <label className={label}>Fee paid</label>
+            <label className={label}>{t("Fee paid")}</label>
             <input type="date" value={feePaidAt} onChange={(e) => setFeePaidAt(e.target.value)} className={field} />
           </div>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Assignment & notes" />
+        <CardHeader title={t("Assignment & notes")} />
         <CardBody className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className={label}>Responsible</label>
+            <label className={label}>{t("Responsible")}</label>
             <input
               value={responsibleName}
               onChange={(e) => setResponsibleName(e.target.value)}
               className={field}
-              placeholder="Who runs this file"
+              placeholder={t("Who runs this file")}
             />
           </div>
           <div className="sm:col-span-3">
-            <label className={label}>Notes</label>
+            <label className={label}>{t("Notes")}</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -473,14 +475,14 @@ export function PermitForm({
           disabled={pending}
           className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
         >
-          {pending ? "Saving…" : mode === "edit" ? "Save changes" : "Open permit file"}
+          {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Open permit file")}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium text-muted hover:text-fg"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </form>

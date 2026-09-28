@@ -8,10 +8,12 @@ import { Check, AlertTriangle } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { changeOrderBreakdown, revisedContractValue } from "@/lib/ca/calc";
-import { CHANGE_ORDER_STATUS_LABEL } from "@/lib/ca/labels";
+import { CHANGE_ORDER_STATUS_LABEL, tCa } from "@/lib/ca/labels";
 import type { ChangeOrder, ChangeOrderStatus } from "@/lib/ca/types";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
 import { firmName } from "@/lib/firm-identity";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 type ProjectOption = { id: string; name: string; value: number };
 
@@ -69,6 +71,7 @@ export function ChangeOrderForm({
   changeOrderId?: string;
 }) {
   const router = useRouter();
+  const t = useT();
   // Grown when a project is created from the picker below; `projects.find` in
   // the submit handler must read this, not the prop.
   const [projects, setProjects] = useState(projectProp);
@@ -138,7 +141,7 @@ export function ChangeOrderForm({
       });
       const json = await res.json();
       if (!res.ok) {
-        setResult({ ok: false, error: json.error ?? `Request failed (${res.status})` });
+        setResult({ ok: false, error: json.error ?? fmt(t("Request failed ({status})"), { status: res.status }) });
       } else {
         setResult({ ok: true, co: json.data });
         if (mode === "edit") router.refresh();
@@ -160,13 +163,13 @@ export function ChangeOrderForm({
           </span>
           <div className="text-sm">
             <p className="font-medium text-emerald-800">
-              Change order {mode === "new" ? "created" : "updated"} — {result.co?.changeOrderNumber}
+              {fmt(t(mode === "new" ? "Change order created — {number}" : "Change order updated — {number}"), { number: result.co?.changeOrderNumber ?? "" })}
             </p>
             <p className="mt-0.5 text-emerald-700">
-              Saved to the database via the API.{" "}
+              {t("Saved to the database via the API.")}{" "}
               {result.co ? (
                 <Link href={`/construction-admin/change-orders/${result.co.id}`} className="font-medium underline">
-                  Open change order
+                  {t("Open change order")}
                 </Link>
               ) : null}
             </p>
@@ -176,7 +179,7 @@ export function ChangeOrderForm({
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 px-5 py-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div className="text-sm">
-            <p className="font-medium text-amber-800">Not saved</p>
+            <p className="font-medium text-amber-800">{t("Not saved")}</p>
             <p className="mt-0.5 text-amber-700">{result.error}</p>
           </div>
         </div>
@@ -185,7 +188,7 @@ export function ChangeOrderForm({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Change Order" subtitle="Scope, reason and parties" />
+            <CardHeader title={t("Change Order")} subtitle={t("Scope, reason and parties")} />
             <CardBody className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Was a required select over a list that is empty on a fresh
@@ -199,7 +202,7 @@ export function ChangeOrderForm({
                   rules={{ required: true }}
                   render={({ field }) => (
                     <ProjectSelect
-                      label="Project *"
+                      label={t("Project *")}
                       projects={projects}
                       value={field.value ?? ""}
                       onChange={(next) => {
@@ -215,37 +218,37 @@ export function ChangeOrderForm({
                   )}
                 />
                 <div>
-                  <label className={labelCls}>Requested by</label>
+                  <label className={labelCls}>{t("Requested by")}</label>
                   <input className={inputCls} {...register("requestedBy")} />
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Title *</label>
-                <input className={inputCls} placeholder="e.g. Upgrade lobby flooring" {...register("title", { required: true })} />
+                <label className={labelCls}>{t("Title *")}</label>
+                <input className={inputCls} placeholder={t("e.g. Upgrade lobby flooring")} {...register("title", { required: true })} />
               </div>
               <div>
-                <label className={labelCls}>Reason</label>
-                <input className={inputCls} placeholder="Owner request / design development / site condition" {...register("reason")} />
+                <label className={labelCls}>{t("Reason")}</label>
+                <input className={inputCls} placeholder={t("Owner request / design development / site condition")} {...register("reason")} />
               </div>
               <div>
-                <label className={labelCls}>Scope description</label>
+                <label className={labelCls}>{t("Scope description")}</label>
                 <textarea className={`${inputCls} h-auto min-h-[80px] py-2`} {...register("description")} />
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelCls}>Contractor</label>
+                  <label className={labelCls}>{t("Contractor")}</label>
                   <input className={inputCls} {...register("contractor")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Owner</label>
+                  <label className={labelCls}>{t("Owner")}</label>
                   <input className={inputCls} {...register("owner")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Architect</label>
+                  <label className={labelCls}>{t("Architect")}</label>
                   <input className={inputCls} {...register("architect")} />
                 </div>
                 <div>
-                  <label className={labelCls}>Engineer</label>
+                  <label className={labelCls}>{t("Engineer")}</label>
                   <input className={inputCls} {...register("engineer")} />
                 </div>
               </div>
@@ -253,7 +256,7 @@ export function ChangeOrderForm({
           </Card>
 
           <Card>
-            <CardHeader title="Cost Breakdown" subtitle="Direct costs and markups (compounded per spec)" />
+            <CardHeader title={t("Cost Breakdown")} subtitle={t("Direct costs and markups (compounded per spec)")} />
             <CardBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 {([
@@ -263,7 +266,7 @@ export function ChangeOrderForm({
                   ["costSubcontractor", "Subcontractor"],
                 ] as const).map(([name, label]) => (
                   <div key={name}>
-                    <label className={labelCls}>{label}</label>
+                    <label className={labelCls}>{t(label)}</label>
                     <input type="number" step="any" className={`${inputCls} text-right`} {...register(name, { valueAsNumber: true })} />
                   </div>
                 ))}
@@ -276,7 +279,7 @@ export function ChangeOrderForm({
                   ["vatPercentage", "VAT %"],
                 ] as const).map(([name, label]) => (
                   <div key={name}>
-                    <label className={labelCls}>{label}</label>
+                    <label className={labelCls}>{t(label)}</label>
                     <input type="number" step="any" className={`${inputCls} text-right`} {...register(name, { valueAsNumber: true })} />
                   </div>
                 ))}
@@ -288,35 +291,35 @@ export function ChangeOrderForm({
         {/* Sidebar: live totals + commercial */}
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Calculated Total" />
+            <CardHeader title={t("Calculated Total")} />
             <CardBody className="space-y-2">
-              <MoneyLine currency={currency} label="Subtotal" value={breakdown.subtotal} />
-              <MoneyLine currency={currency} label="Overhead" value={breakdown.overhead} />
-              <MoneyLine currency={currency} label="Profit" value={breakdown.profit} />
-              <MoneyLine currency={currency} label="Contingency" value={breakdown.contingency} />
-              <MoneyLine currency={currency} label="VAT" value={breakdown.vat} />
+              <MoneyLine currency={currency} label={t("Subtotal")} value={breakdown.subtotal} />
+              <MoneyLine currency={currency} label={t("Overhead")} value={breakdown.overhead} />
+              <MoneyLine currency={currency} label={t("Profit")} value={breakdown.profit} />
+              <MoneyLine currency={currency} label={t("Contingency")} value={breakdown.contingency} />
+              <MoneyLine currency={currency} label={t("VAT")} value={breakdown.vat} />
               <div className="border-t border-border pt-2">
-                <MoneyLine currency={currency} label="Total cost" value={breakdown.total} strong />
+                <MoneyLine currency={currency} label={t("Total cost")} value={breakdown.total} strong />
               </div>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Contract Impact" />
+            <CardHeader title={t("Contract Impact")} />
             <CardBody className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={labelCls}>Status</label>
+                  <label className={labelCls}>{t("Status")}</label>
                   <select className={inputCls} {...register("status")}>
                     {(Object.keys(CHANGE_ORDER_STATUS_LABEL) as ChangeOrderStatus[]).map((s) => (
                       <option key={s} value={s}>
-                        {CHANGE_ORDER_STATUS_LABEL[s]}
+                        {tCa(t, CHANGE_ORDER_STATUS_LABEL[s])}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Currency</label>
+                  <label className={labelCls}>{t("Currency")}</label>
                   <select className={inputCls} {...register("currency")}>
                     {currencyOptions(OTHER_CURRENCIES).map((c) => (
                       <option key={c} value={c}>
@@ -327,20 +330,20 @@ export function ChangeOrderForm({
                 </div>
               </div>
               <div>
-                <label className={labelCls}>Original contract value</label>
+                <label className={labelCls}>{t("Original contract value")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("originalContractValue", { valueAsNumber: true })} />
               </div>
               <div>
-                <label className={labelCls}>Approved COs to date</label>
+                <label className={labelCls}>{t("Approved COs to date")}</label>
                 <input type="number" step="any" className={`${inputCls} text-right`} {...register("approvedChangeOrdersToDate", { valueAsNumber: true })} />
               </div>
               <div>
-                <label className={labelCls}>Schedule impact (days)</label>
+                <label className={labelCls}>{t("Schedule impact (days)")}</label>
                 <input type="number" step="1" className={`${inputCls} text-right`} {...register("scheduleImpactDays", { valueAsNumber: true })} />
               </div>
               <div className="rounded-lg bg-surface-2 p-3">
-                <MoneyLine currency={currency} label="Revised contract value" value={revised} strong />
-                <p className="mt-1 text-[11px] text-faint">Includes this CO only when status is Approved.</p>
+                <MoneyLine currency={currency} label={t("Revised contract value")} value={revised} strong />
+                <p className="mt-1 text-[11px] text-faint">{t("Includes this CO only when status is Approved.")}</p>
               </div>
             </CardBody>
           </Card>
@@ -351,13 +354,13 @@ export function ChangeOrderForm({
               disabled={saving}
               className="inline-flex h-10 flex-1 items-center justify-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
-              {saving ? "Saving…" : mode === "new" ? "Create change order" : "Save changes"}
+              {saving ? t("Saving…") : mode === "new" ? t("Create change order") : t("Save changes")}
             </button>
             <Link
               href="/construction-admin/change-orders"
               className="inline-flex h-10 items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              {t("Cancel")}
             </Link>
           </div>
         </div>

@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import { formatDate } from "@/lib/format";
 import type { ScheduleSummary } from "@/lib/integrations/schedule/adapter";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
 /**
  * "Where we stand against the plan" for a project — beta wish: the overall
@@ -41,7 +43,7 @@ function Metric({ label, value, sub }: { label: string; value: string; sub?: str
   );
 }
 
-export function ProjectProgrammeStatusCard({
+export async function ProjectProgrammeStatusCard({
   summary,
   scheduleKey,
 }: {
@@ -50,22 +52,23 @@ export function ProjectProgrammeStatusCard({
    *  number for the demo seeds. Feeds the print route. */
   scheduleKey: string;
 }) {
+  const t = await getServerT();
   // No programme at all: say so once, and offer the way in. The Schedule picker
   // now lists projects without a programme, so the link lands somewhere useful.
   if (!summary.found || summary.taskCount === 0) {
     return (
       <Card>
         <CardHeader
-          title="Programme status"
-          subtitle="Where the project stands against its plan"
+          title={t("Programme status")}
+          subtitle={t("Where the project stands against its plan")}
           action={
             <Link href="/schedule" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
-              Open Schedule <ArrowUpRight className="h-3 w-3" />
+              {t("Open Schedule")} <ArrowUpRight className="h-3 w-3" />
             </Link>
           }
         />
         <div className="px-5 pb-5 text-sm text-muted">
-          No programme yet — build one in Schedule and the plan-versus-actual position appears here.
+          {t("No programme yet — build one in Schedule and the plan-versus-actual position appears here.")}
         </div>
       </Card>
     );
@@ -75,37 +78,48 @@ export function ProjectProgrammeStatusCard({
   const behind = summary.varianceDays < 0;
   const varianceText =
     summary.varianceDays === 0
-      ? "On plan"
-      : `${Math.abs(summary.varianceDays)} day${Math.abs(summary.varianceDays) === 1 ? "" : "s"} ${behind ? "behind" : "ahead"}`;
+      ? t("On plan")
+      : fmt(
+          t(
+            Math.abs(summary.varianceDays) === 1
+              ? behind
+                ? "1 day behind"
+                : "1 day ahead"
+              : behind
+                ? "{count} days behind"
+                : "{count} days ahead",
+          ),
+          { count: Math.abs(summary.varianceDays) },
+        );
   const slip =
     summary.baselineFinish && summary.forecastFinish && summary.forecastFinish !== summary.baselineFinish;
 
   return (
     <Card>
       <CardHeader
-        title="Programme status"
-        subtitle="Where the project stands against its plan"
+        title={t("Programme status")}
+        subtitle={t("Where the project stands against its plan")}
         action={
           <div className="flex items-center gap-3">
             <Link
               href={`/print/schedule/${encodeURIComponent(scheduleKey)}`}
               className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-fg"
             >
-              <Printer className="h-3 w-3" /> Print
+              <Printer className="h-3 w-3" /> {t("Print")}
             </Link>
             <Link href="/schedule" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
-              Open programme <ArrowUpRight className="h-3 w-3" />
+              {t("Open programme")} <ArrowUpRight className="h-3 w-3" />
             </Link>
           </div>
         }
       />
       <div className="space-y-4 px-5 pb-5">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={overallTone[summary.overall]}>{overallLabel[summary.overall]}</Badge>
+          <Badge tone={overallTone[summary.overall]}>{t(overallLabel[summary.overall])}</Badge>
           <span className="text-xs text-muted">{varianceText}</span>
           <span className="ml-auto text-[11px] text-faint">
-            {summary.taskCount} task{summary.taskCount === 1 ? "" : "s"}
-            {summary.criticalCount > 0 ? ` · ${summary.criticalCount} on the critical path` : ""}
+            {fmt(t(summary.taskCount === 1 ? "1 task" : "{count} tasks"), { count: summary.taskCount })}
+            {summary.criticalCount > 0 ? ` · ${fmt(t("{count} on the critical path"), { count: summary.criticalCount })}` : ""}
           </span>
         </div>
 
@@ -113,14 +127,14 @@ export function ProjectProgrammeStatusCard({
         <div className="space-y-2.5">
           <div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted">Planned to date</span>
+              <span className="text-muted">{t("Planned to date")}</span>
               <span className="font-medium tabular-nums text-fg">{summary.pctPlanned}%</span>
             </div>
             <ProgressBar value={summary.pctPlanned} className="mt-1.5" />
           </div>
           <div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted">Actual</span>
+              <span className="text-muted">{t("Actual")}</span>
               <span className="font-medium tabular-nums text-fg">{summary.pctActual}%</span>
             </div>
             <ProgressBar value={summary.pctActual} className="mt-1.5" />
@@ -128,16 +142,16 @@ export function ProjectProgrammeStatusCard({
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <Metric label="SPI" value={summary.spi.toFixed(2)} sub={summary.spi >= 1 ? "at or above plan" : "below plan"} />
-          <Metric label="Planned finish" value={summary.plannedFinish ? formatDate(summary.plannedFinish) : "—"} />
+          <Metric label="SPI" value={summary.spi.toFixed(2)} sub={summary.spi >= 1 ? t("at or above plan") : t("below plan")} />
+          <Metric label={t("Planned finish")} value={summary.plannedFinish ? formatDate(summary.plannedFinish) : "—"} />
           <Metric
-            label="Baseline finish"
+            label={t("Baseline finish")}
             value={summary.baselineFinish ? formatDate(summary.baselineFinish) : "—"}
           />
           <Metric
-            label="Forecast finish"
+            label={t("Forecast finish")}
             value={summary.forecastFinish ? formatDate(summary.forecastFinish) : "—"}
-            sub={slip ? (behind ? "later than baseline" : "earlier than baseline") : undefined}
+            sub={slip ? (behind ? t("later than baseline") : t("earlier than baseline")) : undefined}
           />
         </div>
       </div>

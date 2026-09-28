@@ -8,18 +8,20 @@ import { formatCurrency } from "@/lib/format";
 import { materialTotal } from "@/lib/materials/calc";
 import type { MaterialSelectionDTO } from "@/lib/materials/types";
 import { createPoFromSelectionsAction } from "@/app/(app)/procurement/actions";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 export type SupplierGroup = { supplier: string; items: MaterialSelectionDTO[] };
 
 export function PoFromSelections({ groups }: { groups: SupplierGroup[] }) {
+  const t = useT();
   if (groups.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
         <ShoppingCart className="h-8 w-8 text-faint" />
-        <p className="mt-3 text-sm font-medium text-fg">Nothing to order</p>
+        <p className="mt-3 text-sm font-medium text-fg">{t("Nothing to order")}</p>
         <p className="mt-1 max-w-sm text-sm text-muted">
-          Approved material selections that aren&rsquo;t already on a purchase order will appear here,
-          grouped by supplier.
+          {t("Approved material selections that aren’t already on a purchase order will appear here, grouped by supplier.")}
         </p>
       </div>
     );
@@ -35,6 +37,7 @@ export function PoFromSelections({ groups }: { groups: SupplierGroup[] }) {
 }
 
 function Group({ group }: { group: SupplierGroup }) {
+  const t = useT();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +83,12 @@ function Group({ group }: { group: SupplierGroup }) {
   return (
     <Card>
       <CardHeader
-        title={group.supplier || "No supplier assigned"}
-        subtitle={`${group.items.length} approved selection${group.items.length === 1 ? "" : "s"}`}
+        title={group.supplier || t("No supplier assigned")}
+        subtitle={
+          group.items.length === 1
+            ? t("1 approved selection")
+            : fmt(t("{count} approved selections"), { count: group.items.length })
+        }
       />
       <CardBody className="space-y-4">
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -89,10 +96,10 @@ function Group({ group }: { group: SupplierGroup }) {
             <thead>
               <tr className="border-b border-border bg-surface-2/40 text-left text-xs uppercase tracking-wide text-muted">
                 <th className="w-8 px-3 py-2" />
-                <th className="px-3 py-2 font-medium">Product</th>
-                <th className="px-3 py-2 text-right font-medium">Qty</th>
-                <th className="px-3 py-2 text-right font-medium">Unit cost</th>
-                <th className="px-3 py-2 text-right font-medium">Amount</th>
+                <th className="px-3 py-2 font-medium">{t("Product")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("Qty")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("Unit cost")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -127,17 +134,17 @@ function Group({ group }: { group: SupplierGroup }) {
 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-[220px]">
-            <label className="mb-1 block text-xs font-medium text-muted">Supplier / vendor on the PO</label>
+            <label className="mb-1 block text-xs font-medium text-muted">{t("Supplier / vendor on the PO")}</label>
             <input
               value={vendorName}
               onChange={(e) => setVendorName(e.target.value)}
-              placeholder="Supplier name"
+              placeholder={t("Supplier name")}
               className="h-9 w-64 rounded-lg border border-border bg-surface px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             />
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted">
-              {selectedCount} selected · <span className="font-semibold text-fg">{money(selectedTotal)}</span>
+              {fmt(t("{count} selected"), { count: selectedCount })} · <span className="font-semibold text-fg">{money(selectedTotal)}</span>
             </span>
             <button
               type="button"
@@ -146,14 +153,14 @@ function Group({ group }: { group: SupplierGroup }) {
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50"
             >
               <PackagePlus className="h-4 w-4" />
-              {pending ? "Creating…" : "Create purchase order"}
+              {pending ? t("Creating…") : t("Create purchase order")}
             </button>
           </div>
         </div>
 
         {error ? (
           <div className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-4 py-2.5 text-sm text-rose-700 dark:text-rose-400">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+            <AlertTriangle className="h-4 w-4 shrink-0" /> {t(error)}
           </div>
         ) : null}
       </CardBody>

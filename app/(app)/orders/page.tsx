@@ -4,39 +4,45 @@ import { Card } from "@/components/ui/card";
 import { OrdersView } from "@/components/orders/orders-view";
 import { getOrders, summarizeOrders } from "@/lib/data/orders";
 import { formatCurrencyCompact } from "@/lib/format";
+import { getServerT } from "@/lib/i18n/server";
+import { fmt } from "@/lib/i18n/format";
 
-export const metadata = { title: "Orders · AEC-flow" };
+export async function generateMetadata() {
+  const t = await getServerT();
+  return { title: `${t("Orders")} · AEC-flow` };
+}
 
 export default async function OrdersPage() {
+  const t = await getServerT();
   const orders = await getOrders();
   const summary = summarizeOrders(orders);
 
   const tiles = [
     {
-      label: "Active Orders",
+      label: t("Active Orders"),
       value: String(summary.activeCount),
-      hint: `${summary.unscheduled} awaiting project setup`,
+      hint: fmt(t("{count} awaiting project setup"), { count: summary.unscheduled }),
     },
     {
-      label: "Active Value",
+      label: t("Active Value"),
       value: formatCurrencyCompact(summary.activeValue),
-      hint: "confirmed & in progress",
+      hint: t("confirmed & in progress"),
     },
     {
-      label: "Completed",
+      label: t("Completed"),
       value: String(summary.completedCount),
-      hint: formatCurrencyCompact(summary.completedValue) + " delivered",
+      hint: fmt(t("{amount} delivered"), { amount: formatCurrencyCompact(summary.completedValue) }),
     },
-    { label: "Total Orders", value: String(summary.total), hint: "all time" },
+    { label: t("Total Orders"), value: String(summary.total), hint: t("all time") },
   ];
 
   return (
     <div className="w-full space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-fg">Orders</h2>
+          <h2 className="text-xl font-semibold text-fg">{t("Orders")}</h2>
           <p className="text-sm text-muted">
-            Confirmed engagements from approved proposals — the bridge into project delivery.
+            {t("Confirmed engagements from approved proposals — the bridge into project delivery.")}
           </p>
         </div>
         <Link
@@ -44,16 +50,16 @@ export default async function OrdersPage() {
           className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
         >
           <Plus className="h-4 w-4" />
-          New Order
+          {t("New Order")}
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <Card key={t.label} className="p-5">
-            <div className="text-sm text-muted">{t.label}</div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{t.value}</div>
-            <div className="mt-1 text-xs text-faint">{t.hint}</div>
+        {tiles.map((tile) => (
+          <Card key={tile.label} className="p-5">
+            <div className="text-sm text-muted">{tile.label}</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-fg">{tile.value}</div>
+            <div className="mt-1 text-xs text-faint">{tile.hint}</div>
           </Card>
         ))}
       </div>

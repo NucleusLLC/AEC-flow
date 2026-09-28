@@ -8,6 +8,8 @@ import { LeaveTypeBadge, LeaveStatusBadge } from "@/components/leave/badges";
 import { type LeaveRequest, type LeaveStatus } from "@/lib/data/leave.types";
 import { formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const STATUS_FILTERS: Array<{ key: "ALL" | LeaveStatus; label: string }> = [
   { key: "ALL", label: "All" },
@@ -17,6 +19,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | LeaveStatus; label: string }> = [
 ];
 
 export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | LeaveStatus>("ALL");
 
@@ -46,7 +49,7 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
                   : "bg-surface text-muted ring-border hover:text-fg",
               )}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -57,7 +60,7 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Search by name…"
+            placeholder={t("Search by name…")}
             className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 sm:w-56"
           />
         </div>
@@ -69,14 +72,14 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-faint">
-                <th className="px-5 py-2.5 font-medium">Member</th>
-                <th className="px-3 py-2.5 font-medium">Type</th>
-                <th className="px-3 py-2.5 font-medium">Dates</th>
-                <th className="px-3 py-2.5 font-medium text-center">Days</th>
-                <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-5 py-2.5 font-medium">Approver</th>
+                <th className="px-5 py-2.5 font-medium">{t("Member")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Type")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Dates")}</th>
+                <th className="px-3 py-2.5 font-medium text-center">{t("Days")}</th>
+                <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+                <th className="px-5 py-2.5 font-medium">{t("Approver")}</th>
                 <th className="px-3 py-2.5 font-medium text-right">
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">{t("Actions")}</span>
                 </th>
               </tr>
             </thead>
@@ -110,7 +113,7 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
                   <td className="px-3 py-3 text-right">
                     <Link
                       href={`/leave/${r.id}/edit`}
-                      aria-label={`Edit ${r.userName}'s leave request`}
+                      aria-label={fmt(t("Edit {name}’s leave request"), { name: r.userName })}
                       className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-fg"
                     >
                       <Pencil className="h-4 w-4" />
@@ -127,13 +130,13 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-faint">
               <CalendarDays className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-fg">No leave requests match your filters</p>
+            <p className="text-sm font-medium text-fg">{t("No leave requests match your filters")}</p>
           </div>
         ) : null}
       </Card>
 
       <p className="px-1 text-xs text-faint">
-        Showing {rows.length} of {requests.length} requests
+        {fmt(t("Showing {shown} of {total} requests"), { shown: rows.length, total: requests.length })}
       </p>
     </div>
   );

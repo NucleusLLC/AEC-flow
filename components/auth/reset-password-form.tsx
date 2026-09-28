@@ -7,6 +7,8 @@ import { signIn } from "next-auth/react";
 import { AlertTriangle, KeyRound, Loader2 } from "lucide-react";
 import { resetPasswordAction } from "@/app/reset-password/[token]/actions";
 import { PASSWORD_MIN_LENGTH, validatePasswordConfirmation } from "@/lib/password-policy";
+import { useT } from "@/components/i18n/language-provider";
+import { fmt } from "@/lib/i18n/format";
 
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -14,6 +16,7 @@ const labelCls = "mb-1 block text-xs font-medium text-muted";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
+  const t = useT();
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -52,12 +55,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            {error}
+            {t(error)}
             {expired ? (
               <>
                 {" "}
                 <Link href="/forgot-password" className="font-medium underline">
-                  Request a new link
+                  {t("Request a new link")}
                 </Link>
               </>
             ) : null}
@@ -67,7 +70,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       <div>
         <label className={labelCls} htmlFor="password">
-          New password <span className="text-faint">(min {PASSWORD_MIN_LENGTH} characters)</span>
+          {t("New password")}{" "}
+          <span className="text-faint">{fmt(t("(min {count} characters)"), { count: PASSWORD_MIN_LENGTH })}</span>
         </label>
         <input
           id="password"
@@ -83,7 +87,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </div>
 
       <div>
-        <label className={labelCls} htmlFor="confirmation">Confirm new password</label>
+        <label className={labelCls} htmlFor="confirmation">{t("Confirm new password")}</label>
         <input
           id="confirmation"
           type="password"
@@ -101,7 +105,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
       >
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-        {pending ? "Saving…" : "Set new password"}
+        {pending ? t("Saving…") : t("Set new password")}
       </button>
     </form>
   );
