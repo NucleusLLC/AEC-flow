@@ -13,6 +13,10 @@ import { fmt } from "@/lib/i18n/format";
 
 export const metadata: Metadata = { title: "Edit document · AEC-flow" };
 
+/** "Write it with AI" runs as a server action from this page; a letter takes
+ *  ten to thirty seconds, so allow well beyond that. */
+export const maxDuration = 120;
+
 export default async function EditGeneralDocumentPage({
   params,
 }: {
