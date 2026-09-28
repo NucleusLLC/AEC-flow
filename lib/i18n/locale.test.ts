@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { formatDate } from "@/lib/format";
 import { DATE_LOCALE, dateLocale } from "./locale";
+import { timeAgo } from "./relative-time";
 import { LANG_CODES } from "./types";
 
 const D = new Date(Date.UTC(2026, 8, 27, 12));
@@ -28,5 +29,15 @@ describe("date locale", () => {
 
   it("still shows a dash for no date, in any language", () => {
     expect(formatDate(null, dateLocale("ja"))).toBe("—");
+  });
+});
+
+describe("relative time", () => {
+  it("reads in the viewer's language", () => {
+    const past = new Date(Date.now() - 3 * 24 * 3600 * 1000);
+    expect(timeAgo(past)).toBe("3 days ago");
+    expect(timeAgo(past, "nl")).toBe("3 dagen geleden");
+    expect(timeAgo(past, "de")).toBe("vor 3 Tagen");
+    expect(timeAgo(past, "ja")).toContain("3日前");
   });
 });

@@ -14,7 +14,7 @@ import { getActionItemsForUser } from "@/lib/data/meetings";
 import { ActionStatusBadge } from "@/components/meetings/badges";
 import { formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -40,6 +40,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
   if (!member) notFound();
   const actionItems = await getActionItemsForUser(member.id);
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   const leaveRemaining = member.annualLeaveTotal - member.annualLeaveTaken;
 
@@ -131,7 +132,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
                       <div className="text-sm text-fg">{a.description}</div>
                       <div className="mt-0.5 text-[11px] text-faint">
                         {a.meetingTitle} · {a.projectName}
-                        {a.dueDate ? ` · ${fmt(t("due {date}"), { date: formatDate(a.dueDate) })}` : ""}
+                        {a.dueDate ? ` · ${fmt(t("due {date}"), { date: formatDate(a.dueDate, locale) })}` : ""}
                       </div>
                     </div>
                     <ActionStatusBadge status={a.status} />
@@ -190,7 +191,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
               <DetailRow label={t("Joined")}>
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5 text-faint" />
-                  {formatDate(member.joiningDate)}
+                  {formatDate(member.joiningDate, locale)}
                 </span>
               </DetailRow>
             </CardBody>

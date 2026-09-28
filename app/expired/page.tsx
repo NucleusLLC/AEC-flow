@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentCompany } from "@/lib/server/tenant";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 export const dynamic = "force-dynamic";
@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 export default async function ExpiredPage() {
   const company = await getCurrentCompany();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const who = company?.name ?? t("This workspace");
   const ended = company?.expiresAt
-    ? new Date(company.expiresAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    ? new Date(company.expiresAt).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })
     : null;
 
   return (

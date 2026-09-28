@@ -23,7 +23,7 @@ import {
 import { minutesEmailBody, minutesSubject, unreachableNotice } from "@/lib/meetings/recipients";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -72,6 +72,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
   const meeting = await getMeeting(id);
   if (!meeting) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   /**
    * Emailing the minutes. The addresses are resolved server-side from the team
@@ -137,7 +138,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
             <MeetingTypeBadge type={meeting.type} />
             <span className="inline-flex items-center gap-1.5 text-sm text-muted">
               <CalendarClock className="h-3.5 w-3.5 text-faint" />
-              {formatDate(meeting.meetingDate)}
+              {formatDate(meeting.meetingDate, locale)}
             </span>
           </div>
           <h2 className="mt-1.5 text-2xl font-bold tracking-tight text-fg">{meeting.title}</h2>
@@ -209,7 +210,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
                         <td className="px-5 py-2 font-medium text-fg">{a.description}</td>
                         <td className="px-3 py-2 text-muted">{a.assignee}</td>
                         <td className="px-3 py-2 text-muted">
-                          {a.dueDate ? formatDate(a.dueDate) : <span className="text-faint">—</span>}
+                          {a.dueDate ? formatDate(a.dueDate, locale) : <span className="text-faint">—</span>}
                         </td>
                         <td className="px-5 py-2 text-right">
                           <ActionStatusBadge status={a.status} />
@@ -236,7 +237,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
               <DetailRow label={t("Type")}>
                 <MeetingTypeBadge type={meeting.type} />
               </DetailRow>
-              <DetailRow label={t("Date")}>{formatDate(meeting.meetingDate)}</DetailRow>
+              <DetailRow label={t("Date")}>{formatDate(meeting.meetingDate, locale)}</DetailRow>
               <DetailRow label={t("Author")}>{meeting.author}</DetailRow>
               <DetailRow label={t("Location")}>
                 {meeting.location ? (
@@ -249,7 +250,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
                 )}
               </DetailRow>
               <DetailRow label={t("Follow-up")}>
-                {meeting.followUpDate ? formatDate(meeting.followUpDate) : <span className="text-faint">—</span>}
+                {meeting.followUpDate ? formatDate(meeting.followUpDate, locale) : <span className="text-faint">—</span>}
               </DetailRow>
             </CardBody>
           </Card>

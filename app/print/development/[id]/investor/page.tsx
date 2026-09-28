@@ -4,7 +4,7 @@ import { DevPrintShell, PrintSection, PrintKv } from "@/components/development/p
 import { getDevelopmentProject } from "@/lib/data/development";
 import { deriveProjectMetrics } from "@/lib/development/metrics";
 import { computeCashFlow, sum, safeDiv, type CashFlowMonthInput } from "@/lib/development/calc";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import { formatCurrency, formatDate } from "@/lib/format";
 
@@ -22,6 +22,7 @@ export default async function InvestorPrintPage({ params }: PageProps) {
   const project = await getDevelopmentProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const m = deriveProjectMetrics(project);
   const cur = m.currency;
 
@@ -39,7 +40,7 @@ export default async function InvestorPrintPage({ params }: PageProps) {
         { label: t("Location"), value: project.location ?? "—" },
         { label: t("Owner"), value: project.clientOwner ?? "—" },
         { label: t("Currency"), value: cur },
-        { label: t("Issued"), value: formatDate(project.updatedAt) },
+        { label: t("Issued"), value: formatDate(project.updatedAt, locale) },
       ]}
     >
       <h1 className="mt-6 text-lg font-bold text-gray-900">{t("Investment & Financing Summary")}</h1>

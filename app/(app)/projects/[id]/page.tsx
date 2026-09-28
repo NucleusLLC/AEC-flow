@@ -10,7 +10,7 @@ import { getMeetingsForProject } from "@/lib/data/meetings";
 import { getActivityForProject } from "@/lib/data/activity";
 import { formatDate } from "@/lib/format";
 import type { ProjectSummary } from "@/lib/dashboard";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -27,6 +27,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
   const project = await getProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const meetings = await getMeetingsForProject(project.id);
   const activity = await getActivityForProject(project.id);
 
@@ -95,7 +96,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
                   href={`/meetings/${m.id}`}
                   className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
                 >
-                  <span className="w-24 shrink-0 text-xs tabular-nums text-faint">{formatDate(m.meetingDate)}</span>
+                  <span className="w-24 shrink-0 text-xs tabular-nums text-faint">{formatDate(m.meetingDate, locale)}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{m.title}</span>
                   <MeetingTypeBadge type={m.type} />
                   <span className="hidden shrink-0 text-xs text-muted sm:inline">

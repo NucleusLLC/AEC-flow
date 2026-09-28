@@ -19,7 +19,7 @@ import {
 import { drawingFileUrlAction } from "@/app/(app)/drawings/actions";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import { sheetTypeText } from "@/components/drawings/t-context";
 
@@ -72,6 +72,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | DrawingStatus; label: string }> = [
 
 export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const projects = useMemo(
     () =>
       Array.from(new Map(drawings.map((d) => [d.projectId, d.projectNumber + " — " + d.projectName])).entries()),
@@ -265,7 +266,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="text-muted">{formatDate(d.uploadedAt)}</div>
+                    <div className="text-muted">{formatDate(d.uploadedAt, locale)}</div>
                     <div className="text-[11px] text-faint">{d.uploadedBy}</div>
                   </td>
                   <td className="px-5 py-3 text-right">

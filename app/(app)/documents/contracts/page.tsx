@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { listContracts } from "@/lib/data/contracts";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE, type ContractStatus } from "@/lib/contracts/types";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Contracts · AEC-flow" };
 
@@ -16,6 +16,7 @@ const money = (n: number, currency: string) =>
 export default async function ContractsPage() {
   const contracts = await listContracts();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="w-full space-y-6">
@@ -98,7 +99,7 @@ export default async function ContractsPage() {
                     {money(c.contractSum, c.currency)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 align-top font-mono text-xs tabular-nums text-muted">
-                    {formatDate((c.issuedAt ?? c.createdAt).slice(0, 10))}
+                    {formatDate((c.issuedAt ?? c.createdAt).slice(0, 10), locale)}
                   </td>
                   <td className="px-4 py-2.5 align-top">
                     <Badge tone={CONTRACT_STATUS_TONE[c.status as ContractStatus]}>

@@ -7,13 +7,14 @@ import { SaveControl } from "@/components/development/save-control";
 import { PermitStatusBadge, RiskBadge } from "@/components/development/badges";
 import { PERMIT_TASK_STATUS_LABEL, type PermitTask, type PermitTaskStatus } from "@/lib/data/development.types";
 import { formatDate } from "@/lib/format";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const DONE: PermitTaskStatus[] = ["APPROVED", "DONE"];
 
 export function PermitTracker({ projectId, permits }: { projectId: string; permits: PermitTask[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [tasks, setTasks] = useState(permits);
   const setStatus = (id: string, status: PermitTaskStatus) => setTasks((p) => p.map((x) => (x.id === id ? { ...x, status } : x)));
 
@@ -71,7 +72,7 @@ export function PermitTracker({ projectId, permits }: { projectId: string; permi
                       {task.dependency ? <div className="text-[11px] text-faint">{fmt(t("depends on: {name}"), { name: task.dependency })}</div> : null}
                     </td>
                     <td className="px-3 py-2.5 text-muted">{task.responsible ?? "—"}</td>
-                    <td className={`px-3 py-2.5 ${isOverdue ? "font-medium text-red-600" : "text-muted"}`}>{formatDate(task.dueDate)}</td>
+                    <td className={`px-3 py-2.5 ${isOverdue ? "font-medium text-red-600" : "text-muted"}`}>{formatDate(task.dueDate, locale)}</td>
                     <td className="px-3 py-2.5"><RiskBadge level={task.riskLevel} /></td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
