@@ -75,14 +75,20 @@ export const AI_DRAFT_STYLE_BLURB: Record<AiDraftStyle, string> = {
   FRIENDLY: "Warm and plain, still professional.",
 };
 
-export type AiDraftLanguage = "en" | "es" | "nl";
+/** Every UI language, so a draft can always start in the language the user is working in. */
+export type AiDraftLanguage = "en" | "es" | "nl" | "de" | "zh" | "ja" | "pt";
 
-export const AI_DRAFT_LANGUAGES: AiDraftLanguage[] = ["en", "es", "nl"];
+export const AI_DRAFT_LANGUAGES: AiDraftLanguage[] = ["en", "es", "nl", "de", "zh", "ja", "pt"];
 
+/** Shown in the picker (through t()) and named to the model, so each is unambiguous. */
 export const AI_DRAFT_LANGUAGE_LABEL: Record<AiDraftLanguage, string> = {
   en: "English",
   es: "Spanish",
   nl: "Dutch",
+  de: "German",
+  zh: "Chinese (Simplified)",
+  ja: "Japanese",
+  pt: "Portuguese (Brazil)",
 };
 
 export const SUMMARY_MIN = 10;

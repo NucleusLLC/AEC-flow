@@ -126,14 +126,8 @@ export function DocumentComposer({
   );
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMissing, setAiMissing] = useState<string[]>([]);
-  /**
-   * Until the user picks one, the document is written in the language they are
-   * using — when it is one the draft can be written in. The menu-only UI
-   * languages (de, zh, ja, pt) are not, so those start from English.
-   */
-  const draftLanguage: AiDraftLanguage =
-    aiLanguage ||
-    ((AI_DRAFT_LANGUAGES as string[]).includes(lang) ? (lang as AiDraftLanguage) : "en");
+  /** Until the user picks one, the document is written in the language they are using. */
+  const draftLanguage: AiDraftLanguage = aiLanguage || lang;
 
   const entry = docType ? catalogueEntry(docType) : null;
   const isAi = entry?.key === AI_DRAFT_TYPE;

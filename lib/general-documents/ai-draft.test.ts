@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  AI_DRAFT_LANGUAGES,
   AI_DRAFT_TYPE,
   BLANK,
   aiKindLabel,
@@ -12,6 +13,7 @@ import {
 } from "./ai-draft";
 import { AI_DRAFT_ENTRY, CATALOGUE, catalogueByCategory, catalogueEntry, docTypeLabel } from "./catalogue";
 import { issueBlockers, parseGeneralDocumentInput } from "./schema";
+import { LANG_CODES } from "@/lib/i18n/types";
 
 const context = {
   firmName: "Fixture Architects",
@@ -53,12 +55,23 @@ describe("parseAiDraftRequest — the action's gate", () => {
   it("refuses a kind, style or language it does not offer", () => {
     expect(parseAiDraftRequest({ ...request, kind: "POEM" }).ok).toBe(false);
     expect(parseAiDraftRequest({ ...request, style: "PIRATE" }).ok).toBe(false);
-    expect(parseAiDraftRequest({ ...request, language: "de" }).ok).toBe(false);
+    expect(parseAiDraftRequest({ ...request, language: "fr" }).ok).toBe(false);
   });
 
   it("turns empty particulars into nulls", () => {
     const res = parseAiDraftRequest({ ...request, context: { ...context, reference: "" } });
     expect(res.ok && res.value.context.reference).toBe(null);
+  });
+});
+
+describe("draft languages", () => {
+  it("include every UI language, so a draft can start in the one the user is using", () => {
+    for (const l of LANG_CODES) expect(AI_DRAFT_LANGUAGES).toContain(l);
+  });
+
+  it("name the language to the model", () => {
+    const { user } = buildDraftPrompt({ ...request, language: "ja" });
+    expect(user).toContain("Language: Japanese.");
   });
 });
 
