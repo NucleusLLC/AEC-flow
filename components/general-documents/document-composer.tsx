@@ -52,6 +52,8 @@ import {
   type AiDraftStyle,
 } from "@/lib/general-documents/ai-draft";
 import { useLanguage, useT } from "@/components/i18n/language-provider";
+import { ClientSelect } from "@/components/clients/client-select";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { fmt } from "@/lib/i18n/format";
 
 const field =
@@ -65,8 +67,8 @@ export function DocumentComposer({
   mode,
   initial,
   initialType,
-  clients,
-  projects,
+  clients: clientsOnFile,
+  projects: projectsOnFile,
   firmName,
   today,
 }: {
@@ -87,6 +89,10 @@ export function DocumentComposer({
   const [docType, setDocType] = useState(initial?.docType ?? initialType ?? "");
   const [clientId, setClientId] = useState(initial?.clientId ?? "");
   const [projectId, setProjectId] = useState(initial?.projectId ?? "");
+  // Grown in place when a client or project is added from this form, so the
+  // new record is selected and named in the letter without a reload.
+  const [clients, setClients] = useState<PickerOption[]>(clientsOnFile);
+  const [projects, setProjects] = useState<PickerOption[]>(projectsOnFile);
   const [counterpartyName, setCounterpartyName] = useState(initial?.counterpartyName ?? "");
   const [counterpartyAddress, setCounterpartyAddress] = useState(initial?.counterpartyAddress ?? "");
   const [contactName, setContactName] = useState(initial?.contactName ?? "");
@@ -484,28 +490,29 @@ export function DocumentComposer({
               }
             />
             <CardBody className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={label}>{t("Client")}</label>
-                <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={input}>
-                  <option value="">— none —</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={label}>{t("Project")}</label>
-                <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-                  <option value="">— none —</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <ClientSelect
+                clients={clients}
+                value={clientId}
+                onChange={setClientId}
+                allowEmpty
+                placeholder={t("— none —")}
+                labelClassName={label}
+                onCreated={(c) => setClients((list) => [...list, c])}
+              />
+              <ProjectSelect
+                projects={projects}
+                value={projectId}
+                onChange={setProjectId}
+                allowEmpty
+                placeholder={t("— none —")}
+                labelClassName={label}
+                onCreated={(p) => {
+                  setProjects((list) => [...list, { id: p.id, name: p.projectName }]);
+                  // A new project names its client; pick it too when it is on file.
+                  const owner = clients.find((c) => c.name === p.client);
+                  if (owner && !clientId) setClientId(owner.id);
+                }}
+              />
               {entry.counterpartyLabel ? (
                 <>
                   <div>

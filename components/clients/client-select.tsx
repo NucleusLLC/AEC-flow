@@ -33,6 +33,8 @@ export function ClientSelect({
   id,
   className,
   labelClassName,
+  allowEmpty,
+  placeholder,
   onCreated,
 }: {
   clients: ClientOption[];
@@ -45,6 +47,9 @@ export function ClientSelect({
   id?: string;
   className?: string;
   labelClassName?: string;
+  /** The client link is optional on this form — see `CreatableSelect`. */
+  allowEmpty?: boolean;
+  placeholder?: string;
   onCreated?: (client: ClientOption) => void;
 }) {
   const t = useT();
@@ -55,6 +60,8 @@ export function ClientSelect({
       hint={hint}
       className={className}
       labelClassName={labelClassName}
+      allowEmpty={allowEmpty}
+      placeholder={placeholder}
       value={value}
       onChange={onChange}
       options={clients.map((c) => ({ value: by === "id" ? c.id : c.name, label: c.name }))}
