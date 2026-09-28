@@ -20,6 +20,7 @@ import {
   ChevronUp,
   FileText,
   Inbox,
+  Paperclip,
   Search,
 } from "lucide-react";
 import { PermitStatusBadge, ResponseDueBadge } from "@/components/building-permits/badges";
@@ -518,6 +519,15 @@ function LetterLine({ letter: l }: { letter: PermitLetterSummary }) {
           <span className="shrink-0 rounded bg-red-600/10 px-1 text-[10px] font-semibold text-red-700 dark:text-red-400">
             PDF
           </span>
+          {l.attachments.length > 0 ? (
+            <span
+              className="inline-flex shrink-0 items-center gap-0.5 text-[10px] text-muted"
+              title={fmt(t("{count} attachments"), { count: l.attachments.length })}
+            >
+              <Paperclip className="h-3 w-3" />
+              {l.attachments.length}
+            </span>
+          ) : null}
         </a>
       ) : (
         <span className="truncate font-mono text-muted" title={`${l.subject} — ${t("no PDF attached")}`}>

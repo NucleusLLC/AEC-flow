@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * Letters on a permit file, each carrying its PDF.
+ * Letters on a permit file, each carrying its PDF and any attachments that came
+ * with it (a Public Works letter with a stamped drawing, a checklist, a receipt).
+ * The first PDF on a letter is the letter; the rest are its attachments.
  *
  * Attaching a PDF is the drawing-intake path: ask the server for a signed upload
  * URL, PUT the bytes straight to the private bucket, then save the letter with
@@ -15,7 +17,7 @@
  */
 
 import { useRef, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, FileText, Paperclip, Plus, Trash2, X } from "lucide-react";
 import { ResponseDueBadge } from "@/components/building-permits/badges";
 import { validateLetterPdf } from "@/lib/building-permits/letter-file";
 import { militaryDate } from "@/lib/building-permits/register";
@@ -30,6 +32,7 @@ import {
   attachLetterPdfAction,
   createLetterUploadTicketAction,
   deleteCorrespondenceAction,
+  deleteDocumentAction,
 } from "@/app/(app)/design/building-permits/actions";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -92,6 +95,9 @@ export function PermitCorrespondence({
   const [responseDueAt, setResponseDueAt] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [extraFiles, setExtraFiles] = useState<File[]>([]);
+  const extraInput = useRef<HTMLInputElement>(null);
+  const [confirmFileId, setConfirmFileId] = useState<string | null>(null);
 
   function reset() {
     setLetterRef("");
@@ -101,6 +107,8 @@ export function PermitCorrespondence({
     setResponseDueAt("");
     setFile(null);
     if (fileInput.current) fileInput.current.value = "";
+    setExtraFiles([]);
+    if (extraInput.current) extraInput.current.value = "";
   }
 
   function add(e: React.FormEvent) {
@@ -109,8 +117,9 @@ export function PermitCorrespondence({
     setPending(true);
     void (async () => {
       try {
-        await fetch("/favicon.ico", { cache: "no-store" }); // TEMP experiment
         const pdf = file ? await uploadLetterPdf(permitId, file) : null;
+        const attachments = [];
+        for (const f of extraFiles) attachments.push(await uploadLetterPdf(permitId, f));
         const res = await addCorrespondenceAction(
           permitId,
           {
@@ -124,6 +133,7 @@ export function PermitCorrespondence({
             responseDueAt: requiresResponse ? responseDueAt || null : null,
           },
           pdf,
+          attachments,
         );
         if (!res.ok) {
           setError(t(res.error));
@@ -140,16 +150,23 @@ export function PermitCorrespondence({
     })();
   }
 
-  function attach(letterId: string, picked: File | undefined) {
-    if (!picked) return;
+  /** Upload one or more PDFs onto a letter: the first becomes the letter if it has none. */
+  function attach(letterId: string, picked: FileList | null) {
+    const chosen = picked ? Array.from(picked) : [];
+    if (chosen.length === 0) return;
     setError(null);
     setBusyId(letterId);
     setPending(true);
     void (async () => {
       try {
-        const pdf = await uploadLetterPdf(permitId, picked);
-        const res = await attachLetterPdfAction(letterId, pdf);
-        if (!res.ok) setError(t(res.error));
+        for (const f of chosen) {
+          const pdf = await uploadLetterPdf(permitId, f);
+          const res = await attachLetterPdfAction(letterId, pdf);
+          if (!res.ok) {
+            setError(t(res.error));
+            break;
+          }
+        }
         await onChanged();
       } catch (err) {
         setError(t(errorText(err, "The PDF was not attached.")));
@@ -157,6 +174,18 @@ export function PermitCorrespondence({
         setBusyId(null);
         setPending(false);
       }
+    })();
+  }
+
+  function removeFile(documentId: string) {
+    setError(null);
+    setPending(true);
+    void (async () => {
+      const res = await deleteDocumentAction(permitId, documentId);
+      if (!res.ok) setError(t(res.error));
+      setConfirmFileId(null);
+      await onChanged();
+      setPending(false);
     })();
   }
 
@@ -185,7 +214,7 @@ export function PermitCorrespondence({
                 <th className="px-3 pb-1.5 font-medium">{t("Ref.")}</th>
                 <th className="px-3 pb-1.5 font-medium">{t("Subject")}</th>
                 <th className="px-3 pb-1.5 font-medium">{t("Reply")}</th>
-                <th className="px-3 pb-1.5 font-medium">{t("PDF")}</th>
+                <th className="px-3 pb-1.5 font-medium">{t("Files")}</th>
                 <th className="px-3 pb-1.5" />
               </tr>
             </thead>
@@ -218,32 +247,75 @@ export function PermitCorrespondence({
                       )}
                     </td>
                     <td className="px-3 py-2">
-                      {l.pdf ? (
-                        <a
-                          href={`/design/building-permits/file/${l.pdf.documentId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-medium text-fg hover:text-brand hover:underline"
-                          title={l.pdf.filename ?? t("Open PDF")}
-                        >
-                          <FileText className="h-4 w-4 text-red-600" /> {t("Open PDF")}
-                        </a>
-                      ) : (
+                      <div className="space-y-1">
+                        {l.pdf ? (
+                          <a
+                            href={`/design/building-permits/file/${l.pdf.documentId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-fg hover:text-brand hover:underline"
+                            title={l.pdf.filename ?? t("Open PDF")}
+                          >
+                            <FileText className="h-4 w-4 text-red-600" /> {t("Open PDF")}
+                          </a>
+                        ) : null}
+                        {l.attachments.map((a) => (
+                          <div key={a.documentId} className="flex items-center gap-1.5 text-xs">
+                            <a
+                              href={`/design/building-permits/file/${a.documentId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex min-w-0 items-center gap-1 text-muted hover:text-brand hover:underline"
+                              title={a.filename ?? t("Attachment")}
+                            >
+                              <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                              <span className="max-w-[180px] truncate">{a.filename ?? t("Attachment")}</span>
+                            </a>
+                            {confirmFileId === a.documentId ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={pending}
+                                  onClick={() => removeFile(a.documentId)}
+                                  className="font-medium text-red-600 hover:underline"
+                                >
+                                  {t("Remove")}
+                                </button>
+                                <button type="button" onClick={() => setConfirmFileId(null)} className="text-muted hover:underline">
+                                  {t("Keep")}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmFileId(a.documentId)}
+                                aria-label={fmt(t("Remove attachment {name}"), { name: a.filename ?? "" })}
+                                className="text-faint transition-colors hover:text-red-600"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
                         <label
                           className={`inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-brand hover:underline ${
                             busyId === l.id ? "pointer-events-none opacity-60" : ""
                           }`}
                         >
                           <Paperclip className="h-3.5 w-3.5" />
-                          {busyId === l.id ? t("Uploading…") : t("Attach PDF")}
+                          {busyId === l.id ? t("Uploading…") : l.pdf ? t("Add attachment") : t("Attach PDF")}
                           <input
                             type="file"
+                            multiple
                             accept="application/pdf,.pdf"
                             className="sr-only"
-                            onChange={(e) => attach(l.id, e.target.files?.[0])}
+                            onChange={(e) => {
+                              attach(l.id, e.target.files);
+                              e.target.value = "";
+                            }}
                           />
                         </label>
-                      )}
+                      </div>
                     </td>
                     <td className="px-3 py-2 text-right">
                       {confirmId === l.id ? (
@@ -254,7 +326,11 @@ export function PermitCorrespondence({
                             onClick={() => remove(l.id)}
                             className="font-medium text-red-600 hover:underline"
                           >
-                            {l.pdf ? t("Delete letter + PDF") : t("Delete letter")}
+                            {l.attachments.length > 0
+                              ? t("Delete letter + all files")
+                              : l.pdf
+                                ? t("Delete letter + PDF")
+                                : t("Delete letter")}
                           </button>
                           <button type="button" onClick={() => setConfirmId(null)} className="text-muted hover:underline">
                             {t("Keep")}
@@ -326,6 +402,20 @@ export function PermitCorrespondence({
               className="block w-full text-sm text-muted file:mr-3 file:h-9 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:text-sm file:font-medium file:text-fg"
             />
           </div>
+          <div className="sm:col-span-4">
+            <label className={label}>{t("Attachments (PDF)")}</label>
+            <input
+              ref={extraInput}
+              type="file"
+              multiple
+              accept="application/pdf,.pdf"
+              onChange={(e) => setExtraFiles(Array.from(e.target.files ?? []))}
+              className="block w-full text-sm text-muted file:mr-3 file:h-9 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:text-sm file:font-medium file:text-fg"
+            />
+            <p className="mt-1 text-[11px] text-faint">
+              {t("Enclosures that came with the letter, such as a stamped drawing or a checklist. You can add more later.")}
+            </p>
+          </div>
           {direction === "INCOMING" ? (
             <>
               <label className="flex items-center gap-2 text-sm text-fg sm:col-span-2">
@@ -350,7 +440,7 @@ export function PermitCorrespondence({
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {pending ? (file ? t("Uploading…") : t("Saving…")) : t("Save letter")}
+              {pending ? (file || extraFiles.length > 0 ? t("Uploading…") : t("Saving…")) : t("Save letter")}
             </button>
             <button
               type="button"
