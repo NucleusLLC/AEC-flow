@@ -8,6 +8,7 @@
  */
 import { cookies } from "next/headers";
 import { DEFAULT_LANG, isLang, translate, type Lang } from "./dictionaries";
+import { dateLocale } from "./locale";
 
 export async function getServerLang(): Promise<Lang> {
   try {
@@ -22,4 +23,14 @@ export async function getServerLang(): Promise<Lang> {
 export async function getServerT(): Promise<(text: string) => string> {
   const lang = await getServerLang();
   return (text: string) => translate(lang, text);
+}
+
+/**
+ * The Intl locale for dates in the viewer's language:
+ *
+ *   const locale = await getServerLocale();
+ *   formatDate(row.createdAt, locale)
+ */
+export async function getServerLocale(): Promise<string> {
+  return dateLocale(await getServerLang());
 }

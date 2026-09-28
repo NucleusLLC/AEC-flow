@@ -7,7 +7,7 @@ import { SubmittalStatusBadge, DisciplineBadge } from "@/components/construction
 import { SubmittalReview } from "@/components/construction-admin/submittal-review";
 import { getSubmittal } from "@/lib/data/ca/submittals";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -28,6 +28,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function SubmittalDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const sub = await getSubmittal(id);
   if (!sub) notFound();
@@ -86,9 +87,9 @@ export default async function SubmittalDetailPage({ params }: PageProps) {
             <CardBody className="divide-y divide-border py-0">
               <Row label={t("Submitted by")}>{sub.submittedBy ?? "—"}</Row>
               <Row label={t("Reviewed by")}>{sub.reviewedBy ?? "—"}</Row>
-              <Row label={t("Required by")}>{formatDate(sub.dateRequired)}</Row>
-              <Row label={t("Submitted")}>{formatDate(sub.dateSubmitted)}</Row>
-              <Row label={t("Reviewed")}>{formatDate(sub.dateReviewed)}</Row>
+              <Row label={t("Required by")}>{formatDate(sub.dateRequired, locale)}</Row>
+              <Row label={t("Submitted")}>{formatDate(sub.dateSubmitted, locale)}</Row>
+              <Row label={t("Reviewed")}>{formatDate(sub.dateReviewed, locale)}</Row>
             </CardBody>
           </Card>
         </div>

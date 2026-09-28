@@ -150,6 +150,8 @@ export default defineConfig({
       // German, Mandarin, Japanese, Portuguese: menu and chrome only. Every
       // nav label covered, same keys in all four. Pure data, no React.
       "lib/i18n/menu-extra.test.ts",
+      // Dates in the viewer's language; English unchanged. Pure Intl, no React.
+      "lib/i18n/locale.test.ts",
     ],
     environment: "node",
   },

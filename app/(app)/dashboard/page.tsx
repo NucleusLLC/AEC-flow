@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { getBetaMembership } from "@/lib/data/account";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import { Greeting } from "@/components/dashboard/greeting";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
@@ -53,6 +53,7 @@ export default async function DashboardPage() {
   const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
   const pipelineMax = Math.max(...pipeline.map((s) => s.value));
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="w-full space-y-6">
@@ -74,7 +75,7 @@ export default async function DashboardPage() {
           <span className={betaDaysLeft <= 14 ? "text-amber-700" : "text-muted"}>
             ·{" "}
             {fmt(t("through {date}"), {
-              date: betaUntil.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }),
+              date: betaUntil.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" }),
             })}
           </span>
           <span className="ml-auto text-xs text-muted">{t('Tap "New Bug/Wish" anytime to send feedback.')}</span>
@@ -147,7 +148,7 @@ export default async function DashboardPage() {
                 <div className="hidden w-40 shrink-0 sm:block">
                   <div className="mb-1 flex items-center justify-between text-[11px] text-muted">
                     <span>{p.progressPct}%</span>
-                    <span>{formatDate(p.targetEndDate)}</span>
+                    <span>{formatDate(p.targetEndDate, locale)}</span>
                   </div>
                   <ProgressBar value={p.progressPct} />
                 </div>
@@ -175,7 +176,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-fg">{person.name}</div>
-                  <div className="text-xs text-muted">{fmt(t("Back {date}"), { date: formatDate(person.until) })}</div>
+                  <div className="text-xs text-muted">{fmt(t("Back {date}"), { date: formatDate(person.until, locale) })}</div>
                 </div>
                 <Badge tone="slate">{t(person.type)}</Badge>
               </div>

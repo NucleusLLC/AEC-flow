@@ -4,7 +4,8 @@
  * in `app/(app)/notifications/actions.ts`. See [[aec-prisma-client-boundary]].
  */
 import { getServerSession } from "next-auth";
-import { formatDistanceToNow } from "date-fns";
+import { timeAgo } from "@/lib/i18n/relative-time";
+import { getServerLang } from "@/lib/i18n/server";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import type { NotificationItem } from "./notifications.types";
@@ -37,11 +38,12 @@ export async function getNotificationsForCurrentUser(): Promise<NotificationItem
     orderBy: { createdAt: "desc" },
     take: 20,
   });
+  const lang = await getServerLang();
   return rows.map((n) => ({
     id: n.id,
     title: n.title,
     body: n.body,
-    at: formatDistanceToNow(n.createdAt, { addSuffix: true }),
+    at: timeAgo(n.createdAt, lang),
     href: n.link ?? "#",
     unread: !n.isRead,
   }));

@@ -12,7 +12,7 @@ import {
   type PriceItem,
 } from "@/lib/data/price-lists.types";
 import { savePriceBookAction } from "@/app/(app)/estimates/actions";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const editCls =
@@ -28,6 +28,7 @@ export function PriceListView({
   onSaved?: (materials: PriceItem[], equipment: PriceItem[]) => void;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const [tab, setTab] = useState<"materials" | "equipment">("materials");
   const [region, setRegion] = useState<string>(DEFAULT_REGION);
   const [q, setQ] = useState("");
@@ -144,7 +145,7 @@ export function PriceListView({
 
       {fetchedAt && tab === "materials" ? (
         <div className="border-b border-border bg-green-500/10 px-4 py-1.5 text-[11px] text-green-400">
-          {fetchedAt === "error" ? t("Could not reach the price service — showing last known values.") : fmt(t("Live prices updated {date} · sources: APEX, kooymanbv.com (Aruba)."), { date: new Date(fetchedAt).toLocaleString() })}
+          {fetchedAt === "error" ? t("Could not reach the price service — showing last known values.") : fmt(t("Live prices updated {date} · sources: APEX, kooymanbv.com (Aruba)."), { date: new Date(fetchedAt).toLocaleString(locale) })}
         </div>
       ) : null}
 

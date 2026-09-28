@@ -8,7 +8,7 @@ import { RfiStatusBadge, RfiPriorityBadge, DisciplineBadge } from "@/components/
 import type { Rfi, RfiStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { tCa } from "@/lib/ca/labels";
 import { fmt } from "@/lib/i18n/format";
 
@@ -21,6 +21,7 @@ const FILTERS: Array<{ key: "ALL" | RfiStatus; label: string }> = [
 
 export function RfiLog({ rfis }: { rfis: Rfi[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | RfiStatus>("ALL");
 
@@ -88,7 +89,7 @@ export function RfiLog({ rfis }: { rfis: Rfi[] }) {
                   <td className="px-3 py-3 text-muted">{r.projectName}</td>
                   <td className="px-3 py-3"><DisciplineBadge discipline={r.discipline} /></td>
                   <td className="px-3 py-3"><RfiPriorityBadge priority={r.priority} /></td>
-                  <td className="px-3 py-3 text-muted">{formatDate(r.dateRequired)}</td>
+                  <td className="px-3 py-3 text-muted">{formatDate(r.dateRequired, locale)}</td>
                   <td className="px-5 py-3"><RfiStatusBadge status={r.status} /></td>
                 </tr>
               ))}

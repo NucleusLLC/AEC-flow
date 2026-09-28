@@ -4,7 +4,7 @@ import { CaPrintShell, PrintSection } from "@/components/construction-admin/prin
 import { getCertification } from "@/lib/data/ca/certifications";
 import { CERT_STATUS_LABEL } from "@/lib/ca/labels";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -17,6 +17,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CertificationPrintPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const c = await getCertification(id);
   if (!c) notFound();
@@ -30,7 +31,7 @@ export default async function CertificationPrintPage({ params }: PageProps) {
       statusLabel={t(CERT_STATUS_LABEL[c.status])}
       title={c.projectName}
       meta={[
-        { label: t("Inspection"), value: formatDate(c.inspectionDate) },
+        { label: t("Inspection"), value: formatDate(c.inspectionDate, locale) },
         { label: t("Certified by"), value: c.certifiedBy ?? "—" },
         { label: t("Lender"), value: c.lenderName ?? "—" },
         { label: t("Contractor"), value: c.contractorName ?? "—" },

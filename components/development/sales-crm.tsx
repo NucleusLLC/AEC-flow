@@ -14,7 +14,7 @@ import {
   type DevReservationStatus, type DevSalesContractStatus,
 } from "@/lib/data/development.types";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const txt = "h-8 w-full rounded border border-transparent bg-transparent px-1.5 text-sm text-fg hover:border-border focus:border-brand focus:bg-surface focus:outline-none";
@@ -24,6 +24,7 @@ const cell = "border-b border-border px-3 py-1.5";
 
 export function SalesCrm({ projectId, leads, lots, reservations: r0, salesContracts: s0, currency }: { projectId: string; leads: SalesLead[]; lots: LotInventory[]; reservations: BuyerReservation[]; salesContracts: SalesContract[]; currency: string }) {
   const t = useT();
+  const locale = useDateLocale();
   const [reservations, setReservations] = useState<BuyerReservation[]>(r0);
   const [salesContracts, setSalesContracts] = useState<SalesContract[]>(s0);
   const sales = useMemo(() => {
@@ -92,7 +93,7 @@ export function SalesCrm({ projectId, leads, lots, reservations: r0, salesContra
                   <td className="px-3 py-2.5 text-right tabular-nums text-fg">{formatCurrency(l.budget, currency)}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{l.depositReceived ? formatCurrency(l.depositReceived, currency) : "—"}</td>
                   <td className="px-3 py-2.5 text-muted">{l.broker ?? "—"}</td>
-                  <td className="px-3 py-2.5 text-muted">{formatDate(l.followUpDate)}</td>
+                  <td className="px-3 py-2.5 text-muted">{formatDate(l.followUpDate, locale)}</td>
                   <td className="px-3 py-2.5"><LeadStatusBadge status={l.status} /></td>
                 </tr>
               ))}

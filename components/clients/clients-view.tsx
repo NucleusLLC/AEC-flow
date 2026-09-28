@@ -13,7 +13,7 @@ import {
 } from "@/lib/data/clients.types";
 import { formatCurrencyCompact, formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "recent" | "name" | "pipeline";
@@ -27,6 +27,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | ClientStatus; label: string }> = [
 
 export function ClientsView({ clients }: { clients: ClientListItem[] }) {
   const tr = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | ClientStatus>("ALL");
   const [type, setType] = useState<"ALL" | ClientType>("ALL");
@@ -162,7 +163,7 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
                       <span className="text-faint">—</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right text-muted">{formatDate(c.lastActivityDate)}</td>
+                  <td className="px-5 py-3 text-right text-muted">{formatDate(c.lastActivityDate, locale)}</td>
                 </tr>
               ))}
             </tbody>
