@@ -20,6 +20,7 @@
  */
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Card, CardBody } from "@/components/ui/card";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -188,7 +189,21 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
                     {p.marginPct}%
                   </td>
                   <td className="px-4 py-2.5 text-right align-top font-mono tabular-nums text-muted">
-                    {unbilled > 0 ? money(unbilled) : "—"}
+                    {/* The figure is also the way to act on it: this column is
+                      * the one people read in order to go and invoice the work. */}
+                    {unbilled > 0 && p.projectId ? (
+                      <Link
+                        href={`/finance/invoices/new?work=${p.projectId}`}
+                        className="text-brand underline-offset-2 hover:underline"
+                        title={fmt(t("Raise an invoice for {name}"), { name: p.projectName })}
+                      >
+                        {money(unbilled)}
+                      </Link>
+                    ) : unbilled > 0 ? (
+                      money(unbilled)
+                    ) : (
+                      "—"
+                    )}
                   </td>
                 </tr>
               );
@@ -201,6 +216,8 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
         {t(
           "Earned is what the work is worth at charge-out, not what has been invoiced — see the receivables tiles on Invoices for that. Cost counts every hour worked, billable or not.",
         )}
+        {" "}
+        {t("A figure in the last column links straight to raising the invoice for it.")}
       </p>
     </div>
   );

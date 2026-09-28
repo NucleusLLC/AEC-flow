@@ -25,6 +25,7 @@ import { getServerSession } from "next-auth";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
+import { releaseWork } from "@/lib/data/work-billing";
 import {
   invoiceStatus,
   invoiceTotals,
@@ -578,6 +579,10 @@ export async function voidInvoice(id: string, reason: string): Promise<InvoiceDT
     where: { id },
     data: { status: "VOID", voidReason: reason.trim() || "No reason given", voidedAt: new Date() },
   });
+  // A voided invoice has been withdrawn, so any hours and expenses billed on it
+  // are billable again. Leaving them stamped would quietly destroy the
+  // practice's right to bill work it actually did — see lib/data/work-billing.ts.
+  await releaseWork(id);
   const full = await getInvoice(id);
   if (!full) throw new InvoiceNotFoundError();
   return full;
@@ -592,6 +597,9 @@ export async function deleteInvoice(id: string): Promise<void> {
     data: { deletedAt: new Date() },
   });
   if (affected.count === 0) throw new InvoiceNotFoundError();
+  // Same as voiding: the draft is gone, so the work it held goes back on the
+  // unbilled list rather than disappearing with it.
+  await releaseWork(id);
 }
 
 // ── Payments ───────────────────────────────────────────────────────────────
