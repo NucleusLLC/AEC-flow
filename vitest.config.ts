@@ -142,6 +142,9 @@ export default defineConfig({
       // Translation coverage: every literal t() string has Spanish and Dutch.
       // Reads source files as text; no React, no database.
       "lib/i18n/coverage.test.ts",
+      // German, Mandarin, Japanese, Portuguese: menu and chrome only. Every
+      // nav label covered, same keys in all four. Pure data, no React.
+      "lib/i18n/menu-extra.test.ts",
     ],
     environment: "node",
   },
