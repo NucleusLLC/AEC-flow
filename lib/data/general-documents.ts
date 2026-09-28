@@ -130,7 +130,7 @@ function summaryDto(r: Row): GeneralDocumentSummaryDTO {
     docType: r.docType,
     // Resolved here so a register stays readable if a catalogue entry is ever
     // retired: the label falls back to the stored key rather than to nothing.
-    docTypeLabel: docTypeLabel(r.docType),
+    docTypeLabel: docTypeLabel(r.docType, toValues(r.values)),
     category: (entry?.category as DocumentCategory | undefined) ?? null,
     status: r.status,
     title: r.title,

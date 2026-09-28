@@ -13,6 +13,7 @@ import { getGeneralDocument } from "@/lib/data/general-documents";
 import { catalogueEntry } from "@/lib/general-documents/catalogue";
 import { militaryDate, ymd } from "@/lib/building-permits/register";
 import { getServerT } from "@/lib/i18n/server";
+import { A4Sheet } from "@/components/general-documents/a4-sheet";
 
 export const metadata: Metadata = { title: "Document · AEC-flow" };
 
@@ -96,27 +97,29 @@ export default async function GeneralDocumentPage({
           }
         />
         <CardBody>
-          <article className="space-y-3 font-serif text-[15px] leading-relaxed text-fg">
-            {doc.body.map((paragraph, i) => (
-              <p key={i} className="whitespace-pre-line">
-                {paragraph}
-              </p>
-            ))}
-          </article>
-
-          {entry ? (
-            <div className="mt-6 grid gap-6 border-t border-border pt-4 sm:grid-cols-3">
-              {entry.signatures.map((block) => (
-                <div key={block.role}>
-                  <div className="h-px w-full bg-border" />
-                  <div className="mt-1 text-xs text-muted">
-                    {block.role.replace(/\{\{firmName\}\}/g, "the practice")}
-                  </div>
-                  <div className="text-[11px] text-faint">{t("Name · Date")}</div>
-                </div>
+          <A4Sheet label={t("A4 · 210 × 297 mm")}>
+            <article className="space-y-3">
+              {doc.body.map((paragraph, i) => (
+                <p key={i} className="whitespace-pre-line">
+                  {paragraph}
+                </p>
               ))}
-            </div>
-          ) : null}
+            </article>
+
+            {entry ? (
+              <div className="mt-8 grid gap-6 pt-4 font-sans sm:grid-cols-3">
+                {entry.signatures.map((block) => (
+                  <div key={block.role}>
+                    <div className="h-px w-full bg-gray-400" />
+                    <div className="mt-1 text-xs text-gray-600">
+                      {block.role.replace(/\{\{firmName\}\}/g, "the practice")}
+                    </div>
+                    <div className="text-[11px] text-gray-400">{t("Name · Date")}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </A4Sheet>
         </CardBody>
       </Card>
 

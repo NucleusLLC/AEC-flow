@@ -13,6 +13,7 @@
 import { z } from "zod";
 import { catalogueEntry } from "./catalogue";
 import { requiredMissing } from "./render";
+import { AI_DRAFT_TYPE, hasBlank } from "./ai-draft";
 
 const dateOnly = z
   .string()
@@ -104,10 +105,21 @@ export function parseGeneralDocumentInput(
  * a half-written power of attorney is a perfectly good draft. This is the check
  * that runs at the moment it stops being a draft.
  */
-export function issueBlockers(docType: string, values: Record<string, string>): string[] {
+export function issueBlockers(
+  docType: string,
+  values: Record<string, string>,
+  body: string[] = [],
+): string[] {
   const entry = catalogueEntry(docType);
   if (!entry) return ["That is not a document type this app knows."];
-  return requiredMissing(entry, values).map((f) => f.label);
+  const blockers = requiredMissing(entry, values).map((f) => f.label);
+  // An AI draft marks every fact it was not given with a blank. Templates print
+  // a rule for an optional field on purpose; the AI's blanks are always facts
+  // the document needs, so it does not go out with one left in.
+  if (docType === AI_DRAFT_TYPE && hasBlank(body)) {
+    blockers.push("the blanks (__________) the AI left in the wording");
+  }
+  return blockers;
 }
 
 export function issuesToMessage(issues: { path: string; message: string }[]): string {
