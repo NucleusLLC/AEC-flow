@@ -123,6 +123,9 @@ export default defineConfig({
       // General Documents. The catalogue and its token renderer are pure data
       // and pure string work; the tests include a typo tripwire on every template.
       "lib/general-documents/catalogue.test.ts",
+      // Documents written with AI: the request gate, the prompt, reading the
+      // answer, and the issue gate on blanks. Pure; no network.
+      "lib/general-documents/ai-draft.test.ts",
       // Finance. Invoice arithmetic (exact money, ageing, status from payments)
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
