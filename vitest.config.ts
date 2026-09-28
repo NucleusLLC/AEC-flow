@@ -74,6 +74,13 @@ export default defineConfig({
       "lib/email/compose.test.ts",
       "lib/server/document-email.test.ts",
       "lib/data/email-log.test.ts",
+      // Building Permit module. Three named files, same reason as every entry
+      // above: the register arithmetic and the zod gate are pure, and the enum
+      // tripwire reads prisma/schema.prisma off disk as text rather than
+      // connecting to anything.
+      "lib/building-permits/register.test.ts",
+      "lib/building-permits/schema.test.ts",
+      "lib/building-permits/enums.test.ts",
     ],
     environment: "node",
   },

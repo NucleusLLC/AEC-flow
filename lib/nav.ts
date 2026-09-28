@@ -30,6 +30,7 @@ import {
   FileSignature,
   UploadCloud,
   Mail,
+  Stamp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -69,6 +70,19 @@ export const DRAWINGS_INTAKE_ITEM: NavItem = {
   icon: UploadCloud,
 };
 
+/**
+ * The Building Permit register, defined ONCE for the same reason the drawings
+ * bin is: two navigations reach it — this list (the full/Complete-AEC sidebar)
+ * and `lib/modules.ts` (Module 1's sidebar) — and a permit register that is
+ * called one thing in one module and another elsewhere is a feature its owner
+ * cannot find.
+ */
+export const BUILDING_PERMITS_ITEM: NavItem = {
+  label: "Building Permits",
+  href: "/design/building-permits",
+  icon: Stamp,
+};
+
 /** Section title used wherever the drawings bin appears. */
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
@@ -88,6 +102,7 @@ export const navSections: NavSection[] = [
       { label: "Design Register", href: "/design", icon: FileStack },
       { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
       { label: "Architecture", href: "/design/architecture", icon: Building2 },
+      BUILDING_PERMITS_ITEM,
       { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
       { label: "Interior Design", href: "/design/interior", icon: Sofa },
     ],
