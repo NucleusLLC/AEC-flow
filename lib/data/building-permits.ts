@@ -19,6 +19,13 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { nextPermitReference } from "@/lib/building-permits/register";
 import {
+  CLOSED_PERMIT_STATUSES,
+  DEFAULT_REVISION_LEAD_DAYS,
+  leadDays,
+  revisionReminder,
+  type PermitRevisionReminder,
+} from "@/lib/building-permits/revision-reminder";
+import {
   buildDocumentKey,
   buildLetterKey,
   isDocumentKeyForPermit,
@@ -271,6 +278,13 @@ function openResponseDue(rows: CorrespondenceRow[]): string | null {
   return earliest;
 }
 
+/** When the newest version was recorded (not its submitted date, which may be backdated). */
+function latestRecorded(submissions: { createdAt: Date }[]): string | null {
+  let latest: Date | null = null;
+  for (const s of submissions) if (!latest || s.createdAt > latest) latest = s.createdAt;
+  return latest?.toISOString() ?? null;
+}
+
 function summaryDto(r: PermitRow): BuildingPermitSummaryDTO {
   return {
     id: r.id,
@@ -292,6 +306,11 @@ function summaryDto(r: PermitRow): BuildingPermitSummaryDTO {
     issuedAt: ymd(r.issuedAt),
     expiresAt: ymd(r.expiresAt),
     targetDecisionAt: ymd(r.targetDecisionAt),
+    revisionDueAt: ymd(r.revisionDueAt),
+    revisionReminderDays: r.revisionReminderDays,
+    revisionNote: r.revisionNote,
+    revisionSetAt: r.revisionSetAt?.toISOString() ?? null,
+    latestSubmissionRecordedAt: latestRecorded(r.submissions),
     responsibleName: r.responsibleName,
     submissionCount: r.submissions.length,
     meetingCount: r.meetings.length,
@@ -359,6 +378,57 @@ export async function listBuildingPermits(
     orderBy: [{ createdAt: "desc" }],
   });
   return rows.map(summaryDto);
+}
+
+/**
+ * Permit files whose revision deadline is inside its warning window, most
+ * urgent first — what the dashboards blink about. Only open files with a
+ * deadline are read; the window itself is decided by revisionReminder().
+ */
+export async function listRevisionReminders(today: string): Promise<PermitRevisionReminder[]> {
+  const rows = await prisma.buildingPermit.findMany({
+    where: {
+      deletedAt: null,
+      revisionDueAt: { not: null },
+      status: { notIn: [...CLOSED_PERMIT_STATUSES] },
+    },
+    select: {
+      id: true,
+      reference: true,
+      title: true,
+      status: true,
+      authority: true,
+      revisionDueAt: true,
+      revisionReminderDays: true,
+      revisionNote: true,
+      revisionSetAt: true,
+      submissions: { select: { createdAt: true } },
+    },
+  });
+  const out: PermitRevisionReminder[] = [];
+  for (const r of rows) {
+    const verdict = revisionReminder(
+      {
+        status: r.status,
+        revisionDueAt: ymd(r.revisionDueAt),
+        revisionReminderDays: r.revisionReminderDays,
+        revisionSetAt: r.revisionSetAt?.toISOString() ?? null,
+        latestSubmissionRecordedAt: latestRecorded(r.submissions),
+      },
+      today,
+    );
+    if (!verdict) continue;
+    out.push({
+      permitId: r.id,
+      reference: r.reference,
+      title: r.title,
+      authority: r.authority,
+      dueAt: ymd(r.revisionDueAt)!,
+      note: r.revisionNote,
+      ...verdict,
+    });
+  }
+  return out.sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
 /** One case file, or null when it does not exist or belongs to another practice. */
@@ -440,6 +510,9 @@ function writeData(input: BuildingPermitInput) {
     issuedAt: toDate(input.issuedAt),
     expiresAt: toDate(input.expiresAt),
     targetDecisionAt: toDate(input.targetDecisionAt),
+    revisionDueAt: toDate(input.revisionDueAt),
+    revisionReminderDays: leadDays(input.revisionReminderDays ?? DEFAULT_REVISION_LEAD_DAYS),
+    revisionNote: input.revisionNote ?? null,
     feeAmount: input.feeAmount ?? null,
     feePaidAt: toDate(input.feePaidAt),
     responsibleId: input.responsibleId ?? null,
@@ -459,6 +532,7 @@ export async function createBuildingPermit(input: BuildingPermitInput): Promise<
     const created = await prisma.buildingPermit.create({
       data: {
         ...writeData(input),
+        revisionSetAt: input.revisionDueAt ? new Date() : null,
         reference,
         createdById: who.id,
         createdByName: who.name,
@@ -480,18 +554,24 @@ export async function updateBuildingPermit(
   const who = await actor();
   const current = await prisma.buildingPermit.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, reference: true },
+    select: { id: true, reference: true, revisionDueAt: true },
   });
   if (!current) throw new PermitNotFoundError();
 
   const asked = input.reference?.trim() || undefined;
   if (asked && asked !== current.reference) await assertReferenceFree(asked, id);
 
+  // A new or moved deadline is a new request: stamp it, so only a version
+  // recorded from now on counts as the revision it asks for.
+  const due = toDate(input.revisionDueAt);
+  const dueChanged = (due?.getTime() ?? null) !== (current.revisionDueAt?.getTime() ?? null);
+
   try {
     const updated = await prisma.buildingPermit.update({
       where: { id },
       data: {
         ...writeData(input),
+        ...(dueChanged ? { revisionSetAt: due ? new Date() : null } : {}),
         ...(asked ? { reference: asked } : {}),
         updatedById: who.id,
       },

@@ -117,6 +117,8 @@ export default defineConfig({
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
       "lib/building-permits/print-filter.test.ts",
+      // Revision deadline: when the dashboard starts blinking, and when it stops. Pure.
+      "lib/building-permits/revision-reminder.test.ts",
       // The BBO contained in a proposal price: pure money arithmetic, and the
       // per-milestone split the accounting side adds up every month.
       "lib/proposals/bbo.test.ts",

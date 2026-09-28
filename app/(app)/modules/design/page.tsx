@@ -5,17 +5,23 @@ import { StatTile, StatSection } from "@/components/modules/stat-tile";
 import { designSummary } from "@/lib/data/design";
 import { DISCIPLINE_LABEL, DISCIPLINE_SLUG, DISCIPLINES } from "@/lib/design/types";
 import { getServerT } from "@/lib/i18n/server";
+import { listRevisionReminders } from "@/lib/data/building-permits";
+import { ymd } from "@/lib/building-permits/register";
+import { RevisionReminders } from "@/components/building-permits/revision-reminders";
 
 export const metadata = { title: "Module 1 Dashboard · AEC-flow" };
 
 export default async function DesignModuleDashboard() {
   const summary = await designSummary();
   const t = await getServerT();
+  const revisionReminders = await listRevisionReminders(ymd(new Date()));
   const statFor = (d: (typeof DISCIPLINES)[number]) =>
     summary.byDiscipline.find((s) => s.discipline === d) ?? { total: 0, issued: 0, draft: 0 };
 
   return (
     <ModuleDashboard moduleKey="design">
+      <RevisionReminders reminders={revisionReminders} t={t} />
+
       <StatSection title={t("Design register")}>
         <StatTile icon={FileStack} label={t("Deliverables")} value={String(summary.total)} href="/design" />
         <StatTile icon={Send} label={t("Issued / approved")} value={String(summary.issued)} href="/design" />

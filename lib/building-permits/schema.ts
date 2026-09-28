@@ -121,6 +121,16 @@ export const buildingPermitInputSchema = z
     issuedAt: optionalDate,
     expiresAt: optionalDate,
     targetDecisionAt: optionalDate,
+    revisionDueAt: optionalDate,
+    revisionReminderDays: z
+      .union([z.number(), z.string(), z.null()])
+      .optional()
+      .transform((v) => (v === null || v === undefined || v === "" ? null : Number(v)))
+      .refine(
+        (v) => v === null || (Number.isInteger(v) && v >= 0 && v <= 90),
+        "Remind between 0 and 90 days before",
+      ),
+    revisionNote: optionalText(500, "The revision note"),
 
     feeAmount: optionalMoney,
     feePaidAt: optionalDate,

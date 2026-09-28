@@ -92,6 +92,7 @@ export default async function BuildingPermitFilePrintPage({
             mono
           />
           <Fact label={t("Target decision")} value={militaryDate(permit.targetDecisionAt)} mono />
+          <Fact label={t("Revision due")} value={militaryDate(permit.revisionDueAt)} mono />
         </dl>
         {permit.description ? (
           <p className="mt-3 whitespace-pre-line text-[10.5px] text-gray-800">

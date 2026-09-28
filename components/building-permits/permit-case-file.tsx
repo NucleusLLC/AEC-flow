@@ -221,6 +221,7 @@ function facts(permit: BuildingPermitDTO): { label: string; value: string; mono?
     { label: "Concept approval", value: militaryDate(permit.conceptApprovalAt), mono: true },
     { label: "Concept approval ref.", value: permit.conceptApprovalRef ?? "—", mono: true },
     { label: "Target decision", value: militaryDate(permit.targetDecisionAt), mono: true },
+    { label: "Revision due", value: militaryDate(permit.revisionDueAt), mono: true },
     { label: "Expires", value: militaryDate(permit.expiresAt), mono: true },
   ];
 }

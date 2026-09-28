@@ -2779,6 +2779,14 @@ model BuildingPermit {
   expiresAt          DateTime?
   targetDecisionAt   DateTime?
 
+  /// The authority's deadline for a revised submission, and how many days ahead
+  /// the dashboard starts warning (lib/building-permits/revision-reminder.ts).
+  revisionDueAt        DateTime?
+  revisionReminderDays Int       @default(7)
+  revisionNote         String?
+  /// When the deadline was last set; a version recorded after it answers it.
+  revisionSetAt        DateTime?
+
   feeAmount Decimal?
   feePaidAt DateTime?
 
@@ -2804,6 +2812,7 @@ model BuildingPermit {
   @@index([companyId, projectId])
   @@index([companyId, submittedAt])
   @@index([companyId, createdAt])
+  @@index([companyId, revisionDueAt])
   @@map("building_permits")
 }
 
