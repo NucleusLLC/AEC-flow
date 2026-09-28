@@ -9,7 +9,7 @@ import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
 import type { CaReport, CaReportType } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const TYPES: Array<{ key: "ALL" | CaReportType; label: string }> = [
@@ -23,6 +23,7 @@ const TYPES: Array<{ key: "ALL" | CaReportType; label: string }> = [
 
 export function ReportList({ reports }: { reports: CaReport[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"ALL" | CaReportType>("ALL");
 
@@ -87,7 +88,7 @@ export function ReportList({ reports }: { reports: CaReport[] }) {
                   </td>
                   <td className="px-3 py-3 text-muted">{r.projectName}</td>
                   <td className="px-3 py-3 text-muted">
-                    {r.reportingPeriodStart ? `${formatDate(r.reportingPeriodStart)} – ${formatDate(r.reportingPeriodEnd)}` : "—"}
+                    {r.reportingPeriodStart ? `${formatDate(r.reportingPeriodStart, locale)} – ${formatDate(r.reportingPeriodEnd, locale)}` : "—"}
                   </td>
                   <td className="px-5 py-3"><ReportStatusBadge status={r.status} /></td>
                 </tr>

@@ -6,7 +6,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { CertStatusBadge } from "@/components/construction-admin/badges";
 import { getCertification } from "@/lib/data/ca/certifications";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -37,6 +37,7 @@ function MoneyRow({ label, value, currency, strong }: { label: string; value: nu
 
 export default async function CertificationDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const c = await getCertification(id);
   if (!c) notFound();
@@ -123,11 +124,11 @@ export default async function CertificationDetailPage({ params }: PageProps) {
           <Card>
             <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
-              <Row label={t("Inspection date")}>{formatDate(c.inspectionDate)}</Row>
+              <Row label={t("Inspection date")}>{formatDate(c.inspectionDate, locale)}</Row>
               <Row label={t("Certified by")}>{c.certifiedBy ?? "—"}</Row>
               <Row label={t("Lender / bank")}>{c.lenderName ?? "—"}</Row>
               <Row label={t("Contractor")}>{c.contractorName ?? "—"}</Row>
-              <Row label={t("Updated")}>{formatDate(c.updatedAt)}</Row>
+              <Row label={t("Updated")}>{formatDate(c.updatedAt, locale)}</Row>
             </CardBody>
           </Card>
         </div>

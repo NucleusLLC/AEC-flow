@@ -151,6 +151,8 @@ export default defineConfig({
       // Spanish keys, placeholders survive, and every nav label is covered in
       // all six languages. Pure data, no React.
       "lib/i18n/full-coverage.test.ts",
+      // Dates in the viewer's language; English unchanged. Pure Intl, no React.
+      "lib/i18n/locale.test.ts",
     ],
     environment: "node",
   },

@@ -3,7 +3,7 @@ import { FileOutput, ArrowUpRight } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { listGeneratedDocuments } from "@/lib/documents/registry";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { SOURCE_LABEL, docLabel, type SourceSystem } from "@/lib/documents/catalog";
 
 export const metadata = { title: "Document Register · AEC-flow" };
@@ -11,6 +11,7 @@ export const metadata = { title: "Document Register · AEC-flow" };
 export default async function DocumentRegisterPage() {
   const docs = await listGeneratedDocuments();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -81,7 +82,7 @@ export default async function DocumentRegisterPage() {
                       {d.generatedInModule ?? "—"}
                       {d.moduleVersion ? <span className="ml-1 text-faint">· {d.moduleVersion}</span> : null}
                     </td>
-                    <td className="px-5 py-3 text-muted">{formatDate(d.createdAt)}</td>
+                    <td className="px-5 py-3 text-muted">{formatDate(d.createdAt, locale)}</td>
                     <td className="px-5 py-3 text-right">
                       {d.renderUrl ? (
                         <Link

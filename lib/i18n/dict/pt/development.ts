@@ -582,4 +582,5 @@ export const development: Dict = {
   "Attach a file or give a link": "Anexe um arquivo ou informe um link",
   "Building permit": "Alvará de construção",
   "Edit building permit": "Editar alvará de construção",
+  "A4 · 210 × 297 mm": "A4 · 210 × 297 mm",
 };

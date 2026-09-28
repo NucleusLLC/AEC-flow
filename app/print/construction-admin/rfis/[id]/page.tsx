@@ -4,7 +4,7 @@ import { CaPrintShell, PrintSection } from "@/components/construction-admin/prin
 import { getRfi } from "@/lib/data/ca/rfis";
 import { RFI_STATUS_LABEL, RFI_PRIORITY_LABEL, DISCIPLINE_LABEL, tCa } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -17,6 +17,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function RfiPrintPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const rfi = await getRfi(id);
   if (!rfi) notFound();
@@ -32,7 +33,7 @@ export default async function RfiPrintPage({ params }: PageProps) {
         { label: t("Project"), value: rfi.projectName },
         { label: t("Discipline"), value: t(DISCIPLINE_LABEL[rfi.discipline]) },
         { label: t("Priority"), value: t(RFI_PRIORITY_LABEL[rfi.priority]) },
-        { label: t("Required by"), value: formatDate(rfi.dateRequired) },
+        { label: t("Required by"), value: formatDate(rfi.dateRequired, locale) },
       ]}
       signatures={[
         { role: t("Submitted by"), name: rfi.submittedBy ?? "" },
@@ -51,7 +52,7 @@ export default async function RfiPrintPage({ params }: PageProps) {
             {rfi.responseBy ? (
               <p className="mt-2 text-[11px] text-gray-500">
                 {fmt(t("Responded by {name}"), { name: rfi.responseBy })}
-                {rfi.dateResponded ? ` · ${formatDate(rfi.dateResponded)}` : ""}
+                {rfi.dateResponded ? ` · ${formatDate(rfi.dateResponded, locale)}` : ""}
               </p>
             ) : null}
           </>
@@ -73,15 +74,15 @@ export default async function RfiPrintPage({ params }: PageProps) {
             </tr>
             <tr className="border-b border-gray-100">
               <td className="py-1.5 pr-3 text-gray-700">{t("Date submitted")}</td>
-              <td className="py-1.5 text-right text-gray-900">{formatDate(rfi.dateSubmitted)}</td>
+              <td className="py-1.5 text-right text-gray-900">{formatDate(rfi.dateSubmitted, locale)}</td>
             </tr>
             <tr className="border-b border-gray-100">
               <td className="py-1.5 pr-3 text-gray-700">{t("Date required")}</td>
-              <td className="py-1.5 text-right text-gray-900">{formatDate(rfi.dateRequired)}</td>
+              <td className="py-1.5 text-right text-gray-900">{formatDate(rfi.dateRequired, locale)}</td>
             </tr>
             <tr className={rfi.linkedChangeOrderId ? "border-b border-gray-100" : ""}>
               <td className="py-1.5 pr-3 text-gray-700">{t("Date responded")}</td>
-              <td className="py-1.5 text-right text-gray-900">{formatDate(rfi.dateResponded)}</td>
+              <td className="py-1.5 text-right text-gray-900">{formatDate(rfi.dateResponded, locale)}</td>
             </tr>
             {rfi.linkedChangeOrderId ? (
               <tr>

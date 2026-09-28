@@ -13,7 +13,7 @@ import {
 } from "@/lib/data/proposals.types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "recent" | "value" | "followup";
@@ -30,6 +30,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | ProposalStatus; label: string }> = [
 
 export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | ProposalStatus>("ALL");
   const [sort, setSort] = useState<SortKey>("recent");
@@ -144,7 +145,7 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
                     {p.followUpDate ? (
                       <span className="inline-flex items-center gap-1 text-muted">
                         <CalendarClock className="h-3.5 w-3.5 text-faint" />
-                        {formatDate(p.followUpDate)}
+                        {formatDate(p.followUpDate, locale)}
                       </span>
                     ) : (
                       <span className="text-faint">—</span>

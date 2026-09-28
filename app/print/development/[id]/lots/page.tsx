@@ -4,7 +4,7 @@ import { DevPrintShell, PrintSection } from "@/components/development/print-shel
 import { getDevelopmentProject, projectCostPerNetM2 } from "@/lib/data/development";
 import { computeLot, rollupLots } from "@/lib/development/calc";
 import { LOT_STATUS_LABEL } from "@/lib/data/development.types";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 
@@ -22,6 +22,7 @@ export default async function LotsPrintPage({ params }: PageProps) {
   const project = await getDevelopmentProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const cur = project.currency;
   const costPerM2 = projectCostPerNetM2(project);
   const totals = rollupLots(project.lots.map((l) => ({ areaM2: l.areaM2, baseLandPricePerM2: l.baseLandPricePerM2, premiumAdjustmentPerM2: l.premiumAdjustmentPerM2, allocatedCostPerM2: costPerM2 })));
@@ -36,7 +37,7 @@ export default async function LotsPrintPage({ params }: PageProps) {
         { label: t("Location"), value: project.location ?? "—" },
         { label: t("Lots"), value: String(project.lots.length) },
         { label: t("Cost / net m²"), value: `${formatCurrency(costPerM2, cur)}` },
-        { label: t("Issued"), value: formatDate(project.updatedAt) },
+        { label: t("Issued"), value: formatDate(project.updatedAt, locale) },
       ]}
     >
       <h1 className="mt-6 text-lg font-bold text-gray-900">{t("Lot Sales Report")}</h1>

@@ -12,7 +12,7 @@ import {
 } from "@/lib/data/meetings.types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const TYPE_FILTERS: Array<{ key: "ALL" | MeetingType; label: string }> = [
@@ -28,6 +28,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"ALL" | MeetingType>("ALL");
   const t = useT();
+  const locale = useDateLocale();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -104,7 +105,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
                   className="group border-b border-border transition-colors even:bg-surface-2/60 hover:bg-surface-2/80"
                 >
                   <td className="whitespace-nowrap px-5 py-2.5 text-muted">
-                    {formatDate(m.meetingDate)}
+                    {formatDate(m.meetingDate, locale)}
                   </td>
                   <td className="px-3 py-2.5">
                     <Link href={`/meetings/${m.id}`} className="block">

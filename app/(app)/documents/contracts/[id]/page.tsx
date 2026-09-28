@@ -9,7 +9,7 @@ import { RevisionHistory } from "@/components/contracts/revision-history";
 import { diffContracts, revisionLabel, type ContractDiff } from "@/lib/contracts/revision";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/contracts/types";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 
@@ -20,6 +20,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const contract = await getContract(id);
   if (!contract) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   // The versions of this agreement, and what changed in this one. The diff is
   // against the version immediately BEFORE this one in the family, not against
@@ -67,7 +68,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               ? ` · ${fmt(t("from {template}"), { template: contract.templateName })}`
               : ""}
             {contract.generatedAt
-              ? ` · ${fmt(t("written {date}"), { date: formatDate(contract.generatedAt.slice(0, 10)) })}`
+              ? ` · ${fmt(t("written {date}"), { date: formatDate(contract.generatedAt.slice(0, 10), locale) })}`
               : ""}
             {family.length > 1 ? ` · ${t(revisionLabel(contract.number))}` : ""}
           </p>

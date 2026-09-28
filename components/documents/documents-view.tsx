@@ -25,7 +25,7 @@ import {
 } from "@/lib/data/documents";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const KIND_META: Record<DocKind, { icon: typeof FileText; color: string; bg: string }> = {
@@ -56,7 +56,7 @@ const KIND_FILTERS: Array<"ALL" | DocKind> = [
   "SPREADSHEET",
 ];
 
-function toPreview(d: DocumentItem, t: (text: string) => string): PreviewDoc {
+function toPreview(d: DocumentItem, t: (text: string) => string, locale: string): PreviewDoc {
   return {
     name: d.name,
     fileType: d.fileType,
@@ -64,7 +64,7 @@ function toPreview(d: DocumentItem, t: (text: string) => string): PreviewDoc {
     meta: [
       { label: t("Project"), value: d.projectName ?? t("Practice") },
       { label: t("Owner"), value: d.owner },
-      { label: t("Updated"), value: formatDate(d.updatedAt) },
+      { label: t("Updated"), value: formatDate(d.updatedAt, locale) },
       { label: t("Version"), value: d.version },
     ],
   };
@@ -72,6 +72,7 @@ function toPreview(d: DocumentItem, t: (text: string) => string): PreviewDoc {
 
 export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const projects = useMemo(
     () =>
       Array.from(
@@ -162,7 +163,7 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
               <Card key={d.id} className="group flex flex-col p-4 transition-colors hover:border-brand/40">
                 <button
                   type="button"
-                  onClick={() => setPreview(toPreview(d, t))}
+                  onClick={() => setPreview(toPreview(d, t, locale))}
                   className="flex items-start gap-3 text-left"
                 >
                   <span
@@ -194,12 +195,12 @@ export function DocumentsView({ documents }: { documents: DocumentItem[] }) {
 
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <span className="truncate text-[11px] text-faint">
-                    {d.owner} · {formatDate(d.updatedAt)}
+                    {d.owner} · {formatDate(d.updatedAt, locale)}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setPreview(toPreview(d, t))}
+                      onClick={() => setPreview(toPreview(d, t, locale))}
                       className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
                     >
                       <Eye className="h-3.5 w-3.5" />

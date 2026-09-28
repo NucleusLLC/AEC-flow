@@ -582,4 +582,5 @@ export const development: Dict = {
   "Attach a file or give a link": "ファイルを添付するかリンクを入力してください",
   "Building permit": "建築確認",
   "Edit building permit": "建築確認を編集",
+  "A4 · 210 × 297 mm": "A4 · 210 × 297 mm",
 };

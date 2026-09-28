@@ -20,7 +20,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/contracts/types";
 import { diffSummary, revisionLabel, type ContractDiff } from "@/lib/contracts/revision";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import type { ContractSummaryDTO } from "@/lib/data/contracts";
 
@@ -38,6 +38,7 @@ export async function RevisionHistory({
 }) {
   if (family.length < 2) return null;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="space-y-4">
@@ -63,7 +64,7 @@ export async function RevisionHistory({
                       </span>
                       <span className="block truncate text-[11px] text-faint">
                         {t(revisionLabel(v.number))}
-                        {v.issuedAt ? ` · ${fmt(t("issued {date}"), { date: formatDate(v.issuedAt.slice(0, 10)) })}` : ""}
+                        {v.issuedAt ? ` · ${fmt(t("issued {date}"), { date: formatDate(v.issuedAt.slice(0, 10), locale) })}` : ""}
                         {v.createdByName ? ` · ${v.createdByName}` : ""}
                       </span>
                     </span>

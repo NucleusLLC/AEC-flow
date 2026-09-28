@@ -52,6 +52,9 @@ import {
   type AiDraftStyle,
 } from "@/lib/general-documents/ai-draft";
 import { useLanguage, useT } from "@/components/i18n/language-provider";
+import { ClientSelect } from "@/components/clients/client-select";
+import { A4Sheet } from "@/components/general-documents/a4-sheet";
+import { ProjectSelect } from "@/components/projects/project-select";
 import { fmt } from "@/lib/i18n/format";
 
 const field =
@@ -65,8 +68,8 @@ export function DocumentComposer({
   mode,
   initial,
   initialType,
-  clients,
-  projects,
+  clients: clientsOnFile,
+  projects: projectsOnFile,
   firmName,
   today,
 }: {
@@ -87,6 +90,10 @@ export function DocumentComposer({
   const [docType, setDocType] = useState(initial?.docType ?? initialType ?? "");
   const [clientId, setClientId] = useState(initial?.clientId ?? "");
   const [projectId, setProjectId] = useState(initial?.projectId ?? "");
+  // Grown in place when a client or project is added from this form, so the
+  // new record is selected and named in the letter without a reload.
+  const [clients, setClients] = useState<PickerOption[]>(clientsOnFile);
+  const [projects, setProjects] = useState<PickerOption[]>(projectsOnFile);
   const [counterpartyName, setCounterpartyName] = useState(initial?.counterpartyName ?? "");
   const [counterpartyAddress, setCounterpartyAddress] = useState(initial?.counterpartyAddress ?? "");
   const [contactName, setContactName] = useState(initial?.contactName ?? "");
@@ -484,28 +491,29 @@ export function DocumentComposer({
               }
             />
             <CardBody className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className={label}>{t("Client")}</label>
-                <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={input}>
-                  <option value="">— none —</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={label}>{t("Project")}</label>
-                <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-                  <option value="">— none —</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <ClientSelect
+                clients={clients}
+                value={clientId}
+                onChange={setClientId}
+                allowEmpty
+                placeholder={t("— none —")}
+                labelClassName={label}
+                onCreated={(c) => setClients((list) => [...list, c])}
+              />
+              <ProjectSelect
+                projects={projects}
+                value={projectId}
+                onChange={setProjectId}
+                allowEmpty
+                placeholder={t("— none —")}
+                labelClassName={label}
+                onCreated={(p) => {
+                  setProjects((list) => [...list, { id: p.id, name: p.projectName }]);
+                  // A new project names its client; pick it too when it is on file.
+                  const owner = clients.find((c) => c.name === p.client);
+                  if (owner && !clientId) setClientId(owner.id);
+                }}
+              />
               {entry.counterpartyLabel ? (
                 <>
                   <div>
@@ -681,13 +689,14 @@ export function DocumentComposer({
               </div>
 
               {bodyOverride === null ? (
-                <div className="space-y-2 rounded-lg border border-border bg-surface-2/40 p-3 text-sm leading-relaxed text-fg">
+                <A4Sheet label={t("A4 · 210 × 297 mm")}>
+                  <div className="space-y-2">
                   {aiBusy ? (
-                    <p className="flex items-center gap-2 text-muted">
+                    <p className="flex items-center gap-2 text-gray-500">
                       <Loader2 className="h-4 w-4 animate-spin" /> {t("Writing…")}
                     </p>
                   ) : paragraphs.length === 0 ? (
-                    <p className="text-muted">
+                    <p className="text-gray-500">
                       {isAi
                         ? t("The document appears here once the AI has written it.")
                         : t("Fill the particulars and the letter appears here.")}
@@ -695,7 +704,8 @@ export function DocumentComposer({
                   ) : (
                     paragraphs.map((p, i) => <p key={i}>{p}</p>)
                   )}
-                </div>
+                  </div>
+                </A4Sheet>
               ) : (
                 <textarea
                   rows={18}

@@ -8,7 +8,7 @@ import { useModule } from "@/components/shell/module-provider";
 import { recordGeneratedDocument } from "@/app/(app)/documents/actions";
 import { docsFor, docLabel, SOURCE_LABEL, type SourceSystem } from "@/lib/documents/catalog";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 interface RecordOption {
@@ -36,6 +36,7 @@ export function DocumentGenerator({
   initialRecordId: string;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const { moduleKey, module } = useModule();
   const [source, setSource] = useState<SourceSystem>(initialSource);
   const records = source === "estimates" ? estimateRecords : scheduleRecords;
@@ -64,8 +65,8 @@ export function DocumentGenerator({
   }
 
   const today = useMemo(
-    () => new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-    [],
+    () => new Date().toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" }),
+    [locale],
   );
 
   const title = record ? `${docLabel(source, docType)} — ${record.label.split(" · ")[0]}` : docLabel(source, docType);

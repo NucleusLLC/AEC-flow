@@ -11,7 +11,7 @@ import { getProjectScheduleSummary } from "@/lib/integrations/schedule/adapter";
 import { ProjectProgrammeStatusCard } from "@/components/projects/project-programme-status";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -53,6 +53,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
   const project = await getProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const rollup = await getProjectModulesRollup(id);
   // `ProjectSchedule.projectId` holds the project ROW ID for everything the app
   // saves, but the in-code demo seeds are keyed by project NUMBER — so try the
@@ -151,9 +152,9 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
             <CardHeader title={t("Details")} />
             <CardBody className="divide-y divide-border py-0">
               <DetailRow label={t("Manager")}>{project.manager}</DetailRow>
-              <DetailRow label={t("Start date")}>{formatDate(project.startDate)}</DetailRow>
-              <DetailRow label={t("Target end")}>{formatDate(project.targetEndDate)}</DetailRow>
-              {project.completedAt ? <DetailRow label={t("Completed")}>{formatDate(project.completedAt)}</DetailRow> : null}
+              <DetailRow label={t("Start date")}>{formatDate(project.startDate, locale)}</DetailRow>
+              <DetailRow label={t("Target end")}>{formatDate(project.targetEndDate, locale)}</DetailRow>
+              {project.completedAt ? <DetailRow label={t("Completed")}>{formatDate(project.completedAt, locale)}</DetailRow> : null}
               <DetailRow label={t("Contract value")}>{formatCurrency(project.value, project.currency)}</DetailRow>
               <DetailRow label={t("Disciplines")}>
                 <span className="flex flex-wrap justify-end gap-1">

@@ -7,7 +7,7 @@ import { SiteInstructionStatusBadge, DisciplineBadge, ImpactBadge } from "@/comp
 import { SiteInstructionStatus } from "@/components/construction-admin/site-instruction-status";
 import { getSiteInstruction } from "@/lib/data/ca/site-instructions";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -28,6 +28,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function SiteInstructionDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const si = await getSiteInstruction(id);
   if (!si) notFound();
@@ -72,7 +73,7 @@ export default async function SiteInstructionDetailPage({ params }: PageProps) {
             <CardBody className="divide-y divide-border py-0">
               <Row label={t("Issued by")}>{si.issuedBy ?? "—"}</Row>
               <Row label={t("Issued to")}>{si.issuedTo ?? "—"}</Row>
-              <Row label={t("Issued")}>{formatDate(si.dateIssued)}</Row>
+              <Row label={t("Issued")}>{formatDate(si.dateIssued, locale)}</Row>
               <Row label={t("Cost impact")}><ImpactBadge level={si.costImpact} /></Row>
               <Row label={t("Schedule impact")}><ImpactBadge level={si.scheduleImpact} /></Row>
               {si.linkedChangeOrderId ? (

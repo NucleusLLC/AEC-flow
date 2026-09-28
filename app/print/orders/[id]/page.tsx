@@ -5,7 +5,7 @@ import { getOrder } from "@/lib/data/orders";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -24,6 +24,7 @@ export default async function OrderPrintPage({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     // See the note on the meetings route: the document is the content, the surface
@@ -33,6 +34,7 @@ export default async function OrderPrintPage({ params }: PageProps) {
     // belongs to, which is precisely what that attribute was added to prevent.
     <PrintSurface backHref={`/orders/${order.id}`} backLabel={t("Back to order")}>
       <OrderDocument
+        locale={locale}
         order={order}
         logoDataUrl={logoDataUrl}
         logo={{ position: logo.position, size: logo.size }}

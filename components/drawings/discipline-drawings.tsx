@@ -22,13 +22,14 @@ import { Badge } from "@/components/ui/badge";
 import { DrawingStatusBadge } from "@/components/drawings/badges";
 import { SHEET_TYPE_LABEL, type SheetType } from "@/lib/drawings/sheet-type";
 import { formatDate } from "@/lib/format";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import { sheetTypeText } from "@/components/drawings/t-context";
 import type { Drawing } from "@/lib/data/drawings.types";
 
 export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [collapsed, setCollapsed] = useState<string[]>([]);
 
   const projects = useMemo(() => {
@@ -105,7 +106,7 @@ export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
                       </span>
                     ) : null}
                     {d.paperSize ? <span className="text-[11px] text-faint">{d.paperSize}</span> : null}
-                    <span className="text-[11px] text-faint">{formatDate(d.uploadedAt)}</span>
+                    <span className="text-[11px] text-faint">{formatDate(d.uploadedAt, locale)}</span>
                     <Badge tone="neutral">{fmt(t("Rev {rev}"), { rev: d.revision })}</Badge>
                     <DrawingStatusBadge status={d.status} />
                     <Link

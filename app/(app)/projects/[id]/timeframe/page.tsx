@@ -5,7 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getProject, DISCIPLINE_LABEL, type PhaseStatus } from "@/lib/data/projects";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -43,6 +43,7 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
   const project = await getProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   // Timeline bounds across all dated phases (+ project start / target end).
   const stamps: number[] = [];
@@ -70,7 +71,7 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
           title={t("Project Timeframe")}
           subtitle={
             project.startDate
-              ? `${formatDate(project.startDate)} → ${formatDate(project.targetEndDate)}`
+              ? `${formatDate(project.startDate, locale)} → ${formatDate(project.targetEndDate, locale)}`
               : t("Phase schedule")
           }
           action={<CalendarClock className="h-4 w-4 text-faint" />}
@@ -86,7 +87,7 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
                     {ph.discipline ? <Badge tone="slate">{t(DISCIPLINE_LABEL[ph.discipline])}</Badge> : null}
                   </div>
                   <div className="mt-0.5 text-[11px] text-faint">
-                    {ph.startDate ? `${formatDate(ph.startDate)} – ${formatDate(ph.endDate)}` : t("Dates TBC")}
+                    {ph.startDate ? `${formatDate(ph.startDate, locale)} – ${formatDate(ph.endDate, locale)}` : t("Dates TBC")}
                   </div>
                 </div>
                 <div className="col-span-6">

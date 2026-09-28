@@ -23,7 +23,7 @@ import { getActivityForClient } from "@/lib/data/activity";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 import { PROPOSAL_STATUS_LABEL } from "@/lib/data/proposals.types";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -71,6 +71,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   if (!client) notFound();
   const activity = await getActivityForClient(client.id);
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   const lifetimeValue = client.proposals
     .filter((p) => p.status === "APPROVED")
@@ -178,7 +179,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     </div>
                     <div className="shrink-0 text-right">
                       <div className="text-sm font-medium text-fg">{formatCurrency(p.value)}</div>
-                      <div className="text-xs text-faint">{formatDate(p.date)}</div>
+                      <div className="text-xs text-faint">{formatDate(p.date, locale)}</div>
                     </div>
                   </div>
                 ))}
@@ -247,7 +248,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                       <div className="text-sm font-medium text-fg">
                         {e.currency} {Math.round(e.amount).toLocaleString()}
                       </div>
-                      <div className="text-xs text-faint">{formatDate(e.date)}</div>
+                      <div className="text-xs text-faint">{formatDate(e.date, locale)}</div>
                     </div>
                   </Link>
                 ))}
