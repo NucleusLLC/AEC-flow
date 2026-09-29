@@ -143,7 +143,12 @@ export default async function BuildingPermitFilePrintPage({
                       ? fmt(t("Due {date}"), { date: militaryDate(l.responseDueAt) })
                       : "—"}
                 </Cell>
-                <Cell>{l.pdf ? t("PDF on file") : "—"}</Cell>
+                <Cell>
+                  {l.pdf ? t("PDF on file") : "—"}
+                  {l.attachments.length > 0
+                    ? ` · ${fmt(t("{count} attachments"), { count: l.attachments.length })}`
+                    : ""}
+                </Cell>
               </tr>
             ))}
           </Table>

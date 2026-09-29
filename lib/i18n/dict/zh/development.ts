@@ -583,4 +583,11 @@ export const development: Dict = {
   "Building permit": "建筑许可",
   "Edit building permit": "编辑建筑许可",
   "A4 · 210 × 297 mm": "A4 · 210 × 297 毫米",
+  "Add attachment": "添加附件",
+  "Attachment": "附件",
+  "Attachments (PDF)": "附件（PDF）",
+  "Delete letter + all files": "删除函件及所有文件",
+  "Enclosures that came with the letter, such as a stamped drawing or a checklist. You can add more later.": "随函附带的文件，例如盖章图纸或核对清单。之后还可以继续添加。",
+  "Remove attachment {name}": "移除附件 {name}",
+  "{count} attachments": "{count} 个附件",
 };

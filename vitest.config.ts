@@ -117,6 +117,8 @@ export default defineConfig({
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
       "lib/building-permits/print-filter.test.ts",
+      // Letter files: the first is the letter, the rest its attachments. Pure.
+      "lib/building-permits/letter-attachments.test.ts",
       // The BBO contained in a proposal price: pure money arithmetic, and the
       // per-milestone split the accounting side adds up every month.
       "lib/proposals/bbo.test.ts",

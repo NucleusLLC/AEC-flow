@@ -13,8 +13,9 @@
  * and expenses; add a client or project from a document; documents on A4.
  * 0.3.0 (28 SEP 2026): dates and "3 days ago" in the viewer's language.
  * 0.4.0 (28 SEP 2026): the whole app in German, Chinese, Japanese and Portuguese.
+ * 0.5.0 (28 SEP 2026): attachments on building-permit letters.
  */
-export const APP_VERSION = "0.4.0";
+export const APP_VERSION = "0.5.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

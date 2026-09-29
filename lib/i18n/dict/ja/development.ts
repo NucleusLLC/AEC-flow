@@ -583,4 +583,11 @@ export const development: Dict = {
   "Building permit": "建築確認",
   "Edit building permit": "建築確認を編集",
   "A4 · 210 × 297 mm": "A4 · 210 × 297 mm",
+  "Add attachment": "添付を追加",
+  "Attachment": "添付",
+  "Attachments (PDF)": "添付（PDF）",
+  "Delete letter + all files": "書簡とすべてのファイルを削除",
+  "Enclosures that came with the letter, such as a stamped drawing or a checklist. You can add more later.": "書簡に同封された資料（押印済み図面やチェックリストなど）。後から追加することもできます。",
+  "Remove attachment {name}": "添付 {name} を削除",
+  "{count} attachments": "添付 {count} 件",
 };

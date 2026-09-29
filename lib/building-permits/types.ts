@@ -326,6 +326,8 @@ export type BuildingPermitCorrespondenceDTO = {
   createdAt: string;
   /** The letter as a PDF, when one was attached. */
   pdf: PermitLetterPdf | null;
+  /** Enclosures that came with the letter — every stored PDF after the first. */
+  attachments: PermitLetterPdf[];
 };
 
 /** Just enough of a letter's stored PDF to link to it — never the storage key. */
@@ -343,6 +345,7 @@ export type PermitLetterSummary = {
   subject: string;
   letterDate: string | null;
   pdf: PermitLetterPdf | null;
+  attachments: PermitLetterPdf[];
 };
 
 export type BuildingPermitApprovalDTO = {

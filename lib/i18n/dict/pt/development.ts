@@ -583,4 +583,11 @@ export const development: Dict = {
   "Building permit": "Alvará de construção",
   "Edit building permit": "Editar alvará de construção",
   "A4 · 210 × 297 mm": "A4 · 210 × 297 mm",
+  "Add attachment": "Adicionar anexo",
+  "Attachment": "Anexo",
+  "Attachments (PDF)": "Anexos (PDF)",
+  "Delete letter + all files": "Excluir ofício + todos os arquivos",
+  "Enclosures that came with the letter, such as a stamped drawing or a checklist. You can add more later.": "Anexos que vieram com o ofício, como um desenho carimbado ou uma lista de verificação. Você pode adicionar mais depois.",
+  "Remove attachment {name}": "Remover anexo {name}",
+  "{count} attachments": "{count} anexos",
 };
