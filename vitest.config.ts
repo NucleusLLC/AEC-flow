@@ -117,6 +117,10 @@ export default defineConfig({
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
       "lib/building-permits/print-filter.test.ts",
+      // Process summary (SITREP): chronology, open actions, the AI dossier, and
+      // the synopsis prompt and parser. Pure; the AI call itself is not tested here.
+      "lib/building-permits/process-summary.test.ts",
+      "lib/building-permits/synopsis.test.ts",
       // Letter files: the first is the letter, the rest its attachments. Pure.
       "lib/building-permits/letter-attachments.test.ts",
       // The BBO contained in a proposal price: pure money arithmetic, and the
