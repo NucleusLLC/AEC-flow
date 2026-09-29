@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { DEFAULT_LANG, isLang, translate, type Lang } from "@/lib/i18n/dictionaries";
+import { dateLocale } from "@/lib/i18n/locale";
 
 const STORAGE_KEY = "aecflow:lang";
 
@@ -19,6 +20,14 @@ const LanguageContext = createContext<LanguageContextValue>({
 
 export function useLanguage(): LanguageContextValue {
   return useContext(LanguageContext);
+}
+
+/**
+ * The Intl locale for dates in the current UI language:
+ * `formatDate(d, useDateLocale())`. English (the first paint) is "en-GB".
+ */
+export function useDateLocale(): string {
+  return dateLocale(useContext(LanguageContext).lang);
 }
 
 /** Convenience hook: `const t = useT();` then `t("Settings")`. */

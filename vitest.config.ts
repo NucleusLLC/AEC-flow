@@ -117,12 +117,21 @@ export default defineConfig({
       "lib/building-permits/enums.test.ts",
       "lib/building-permits/letter-file.test.ts",
       "lib/building-permits/print-filter.test.ts",
+      // Process summary (SITREP): chronology, open actions, the AI dossier, and
+      // the synopsis prompt and parser. Pure; the AI call itself is not tested here.
+      "lib/building-permits/process-summary.test.ts",
+      "lib/building-permits/synopsis.test.ts",
+      // Letter files: the first is the letter, the rest its attachments. Pure.
+      "lib/building-permits/letter-attachments.test.ts",
       // The BBO contained in a proposal price: pure money arithmetic, and the
       // per-milestone split the accounting side adds up every month.
       "lib/proposals/bbo.test.ts",
       // General Documents. The catalogue and its token renderer are pure data
       // and pure string work; the tests include a typo tripwire on every template.
       "lib/general-documents/catalogue.test.ts",
+      // Documents written with AI: the request gate, the prompt, reading the
+      // answer, and the issue gate on blanks. Pure; no network.
+      "lib/general-documents/ai-draft.test.ts",
       // Finance. Invoice arithmetic (exact money, ageing, status from payments)
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
@@ -144,9 +153,12 @@ export default defineConfig({
       // Translation coverage: every literal t() string has Spanish and Dutch.
       // Reads source files as text; no React, no database.
       "lib/i18n/coverage.test.ts",
-      // German, Mandarin, Japanese, Portuguese: menu and chrome only. Every
-      // nav label covered, same keys in all four. Pure data, no React.
-      "lib/i18n/menu-extra.test.ts",
+      // German, Chinese, Japanese, Portuguese: every area has exactly the
+      // Spanish keys, placeholders survive, and every nav label is covered in
+      // all six languages. Pure data, no React.
+      "lib/i18n/full-coverage.test.ts",
+      // Dates in the viewer's language; English unchanged. Pure Intl, no React.
+      "lib/i18n/locale.test.ts",
     ],
     environment: "node",
   },

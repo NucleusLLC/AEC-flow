@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { formatDistanceToNow } from "date-fns";
 import {
   Bug,
   Lightbulb,
@@ -13,7 +12,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useLanguage, useT } from "@/components/i18n/language-provider";
+import { timeAgo } from "@/lib/i18n/relative-time";
 import {
   setBetaReportStatus,
   loadBetaReportScreenshot,
@@ -40,6 +40,8 @@ const STATUS_TONE: Record<BetaReportStatus, Parameters<typeof Badge>[0]["tone"]>
 
 export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) {
   const t = useT();
+  const locale = useDateLocale();
+  const { lang } = useLanguage();
   const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [query, setQuery] = useState("");
@@ -153,8 +155,8 @@ export function BetaReportsView({ reports }: { reports: BetaReportListItem[] }) 
                       {r.reporterEmail ? ` · ${r.reporterEmail}` : ""}
                     </span>
                     <span aria-hidden>•</span>
-                    <span title={new Date(r.createdAt).toLocaleString()}>
-                      {formatDistanceToNow(new Date(r.createdAt), { addSuffix: true })}
+                    <span title={new Date(r.createdAt).toLocaleString(locale)}>
+                      {timeAgo(r.createdAt, lang)}
                     </span>
                     {r.pageUrl ? (
                       <>

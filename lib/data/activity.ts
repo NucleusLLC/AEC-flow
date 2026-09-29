@@ -3,7 +3,9 @@
  * `@/lib/db`; client components use `./activity.types`. See
  * [[aec-prisma-client-boundary]].
  */
-import { formatDistanceToNow } from "date-fns";
+import { timeAgo } from "@/lib/i18n/relative-time";
+import { getServerLang } from "@/lib/i18n/server";
+import type { Lang } from "@/lib/i18n/types";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/data/notifications";
 import { initials } from "@/lib/utils";
@@ -60,7 +62,7 @@ function labelFor(row: ActivityRow): string {
   return row.entityId;
 }
 
-function toEntry(row: ActivityRow): ActivityEntry {
+function toEntry(row: ActivityRow, lang: Lang = "en"): ActivityEntry {
   const actor = row.user?.name ?? "Someone";
   return {
     id: row.id,
@@ -70,7 +72,7 @@ function toEntry(row: ActivityRow): ActivityEntry {
     entityType: row.entityType,
     entityLabel: labelFor(row),
     href: hrefFor(row.entityType, row.entityId),
-    at: formatDistanceToNow(row.createdAt, { addSuffix: true }),
+    at: timeAgo(row.createdAt, lang),
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -81,7 +83,8 @@ export async function getRecentActivity(limit = 50): Promise<ActivityEntry[]> {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
-  return rows.map(toEntry);
+  const lang = await getServerLang();
+  return rows.map((row) => toEntry(row, lang));
 }
 
 export async function getActivityForProject(
@@ -94,7 +97,8 @@ export async function getActivityForProject(
     orderBy: { createdAt: "desc" },
     take: limit,
   });
-  return rows.map(toEntry);
+  const lang = await getServerLang();
+  return rows.map((row) => toEntry(row, lang));
 }
 
 export async function getActivityForClient(
@@ -107,7 +111,8 @@ export async function getActivityForClient(
     orderBy: { createdAt: "desc" },
     take: limit,
   });
-  return rows.map(toEntry);
+  const lang = await getServerLang();
+  return rows.map((row) => toEntry(row, lang));
 }
 
 export type LogActivityInput = {

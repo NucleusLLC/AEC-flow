@@ -12,7 +12,7 @@ import {
 } from "@/lib/data/orders.types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "recent" | "value" | "start";
@@ -28,6 +28,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | OrderStatus; label: string }> = [
 
 export function OrdersView({ orders }: { orders: OrderListItem[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | OrderStatus>("ALL");
   const [sort, setSort] = useState<SortKey>("recent");
@@ -143,7 +144,7 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
                   <td className="px-5 py-3 text-muted">
                     {o.expectedStartDate ? (
                       <span className="whitespace-nowrap text-xs">
-                        {formatDate(o.expectedStartDate)} → {formatDate(o.expectedEndDate)}
+                        {formatDate(o.expectedStartDate, locale)} → {formatDate(o.expectedEndDate, locale)}
                       </span>
                     ) : (
                       <span className="text-faint">{t("Not scheduled")}</span>

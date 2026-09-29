@@ -10,6 +10,10 @@ import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "New document · AEC-flow" };
 
+/** "Write it with AI" runs as a server action from this page; a letter takes
+ *  ten to thirty seconds, so allow well beyond that. */
+export const maxDuration = 120;
+
 export default async function NewGeneralDocumentPage({
   searchParams,
 }: {

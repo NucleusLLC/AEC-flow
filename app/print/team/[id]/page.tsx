@@ -7,7 +7,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 const STATUS_TEXT: Record<string, string> = {
@@ -41,6 +41,7 @@ export default async function TeamMemberSheet({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <PrintSurface backHref={`/team/${m.id}`} backLabel={t("Back to member")}>
@@ -66,7 +67,7 @@ export default async function TeamMemberSheet({ params }: PageProps) {
         <Meta label={t("Status")} value={STATUS_TEXT[m.status] ? t(STATUS_TEXT[m.status]) : m.status.replace(/_/g, " ")} />
         <Meta label={t("Capacity")} value={`${m.capacity}%`} />
         <Meta label={t("Utilisation")} value={`${m.utilisation}%`} />
-        <Meta label={t("Joined")} value={m.joiningDate ? formatDate(m.joiningDate) : "—"} />
+        <Meta label={t("Joined")} value={m.joiningDate ? formatDate(m.joiningDate, locale) : "—"} />
         <Meta label={t("Active Projects")} value={String(m.activeProjects)} />
         <Meta label={t("Annual Leave")} value={fmt(t("{taken}/{total} taken"), { taken: m.annualLeaveTaken, total: m.annualLeaveTotal })} />
       </div>

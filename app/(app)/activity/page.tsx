@@ -3,7 +3,7 @@ import { Activity as ActivityIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { getRecentActivity, type ActivityEntry } from "@/lib/data/activity";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Activity · AEC-flow" };
 
@@ -51,6 +51,7 @@ export default async function ActivityPage() {
   const entries = await getRecentActivity();
   const groups = groupByDay(entries);
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="w-full space-y-6">
@@ -74,7 +75,7 @@ export default async function ActivityPage() {
           {groups.map((g) => (
             <div key={g.day}>
               <div className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-faint">
-                {formatDate(g.day)}
+                {formatDate(g.day, locale)}
               </div>
               <Card>
                 <div className="divide-y divide-border">

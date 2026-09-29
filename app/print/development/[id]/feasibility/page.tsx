@@ -4,7 +4,7 @@ import { DevPrintShell, PrintSection, PrintKv } from "@/components/development/p
 import { getDevelopmentProject } from "@/lib/data/development";
 import { deriveProjectMetrics } from "@/lib/development/metrics";
 import { DEV_PROJECT_TYPE_LABEL } from "@/lib/data/development.types";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
 
@@ -22,6 +22,7 @@ export default async function FeasibilityPrintPage({ params }: PageProps) {
   const project = await getDevelopmentProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const m = deriveProjectMetrics(project);
   const cur = m.currency;
 
@@ -35,7 +36,7 @@ export default async function FeasibilityPrintPage({ params }: PageProps) {
         { label: t("Location"), value: project.location ?? "—" },
         { label: t("Type"), value: t(DEV_PROJECT_TYPE_LABEL[project.projectType]) },
         { label: t("Developer"), value: project.developer ?? "—" },
-        { label: t("Issued"), value: formatDate(project.updatedAt) },
+        { label: t("Issued"), value: formatDate(project.updatedAt, locale) },
       ]}
     >
       <h1 className="mt-6 text-lg font-bold text-gray-900">{t("Development Feasibility Pro-Forma")}</h1>

@@ -247,16 +247,19 @@ export async function addCorrespondenceAction(
   permitId: string,
   input: BuildingPermitCorrespondenceInput,
   pdf?: UploadedLetterPdf | null,
+  attachments: UploadedLetterPdf[] = [],
 ): Promise<PermitActionResult> {
   const parsed = parseCorrespondenceInput(input);
   if (!parsed.ok) {
-    // The PDF is already in the bucket; a letter that will not save must not
-    // leave it there with nothing pointing at it.
-    if (pdf?.storageKey) await discardLetterUpload(permitId, pdf.storageKey).catch(() => {});
+    // The PDFs are already in the bucket; a letter that will not save must not
+    // leave them there with nothing pointing at them.
+    for (const f of [pdf, ...attachments]) {
+      if (f?.storageKey) await discardLetterUpload(permitId, f.storageKey).catch(() => {});
+    }
     return { ok: false, error: issuesToMessage(parsed.issues) };
   }
   try {
-    const row = await addCorrespondence(permitId, parsed.value, pdf ?? null);
+    const row = await addCorrespondence(permitId, parsed.value, pdf ?? null, attachments);
     revalidatePermit(permitId);
     return { ok: true, id: row.id };
   } catch (e) {

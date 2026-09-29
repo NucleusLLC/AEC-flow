@@ -2,9 +2,8 @@ import { notFound } from "next/navigation";
 import { getSchedule } from "@/lib/data/schedule-db";
 import { SchedulePrint } from "@/components/schedule/schedule-print";
 import { getPracticeSettings } from "@/lib/server/practice-config";
-import { SYSTEM_LOCALE } from "@/lib/format";
 import { getFirmIdentity } from "@/lib/server/firm";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata() {
   const t = await getServerT();
@@ -22,8 +21,9 @@ export default async function SchedulePrintPage({
   const { logoDataUrl, logo, footer } = await getPracticeSettings();
   const firm = await getFirmIdentity();
   const companyName = firm.name;
+  const locale = await getServerLocale();
 
-  const generatedAt = new Date().toLocaleDateString(SYSTEM_LOCALE, {
+  const generatedAt = new Date().toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",

@@ -205,6 +205,9 @@ function RegisterTable({
                         </span>{" "}
                         {l.letterRef ?? l.subject}
                         {l.pdf ? " (PDF)" : ""}
+                        {l.attachments.length > 0
+                          ? ` + ${fmt(t("{count} attachments"), { count: l.attachments.length })}`
+                          : ""}
                       </li>
                     ))}
                   </ul>

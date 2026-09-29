@@ -12,7 +12,7 @@ import {
 } from "@/lib/email/attachments";
 import { sendDocumentEmailAction, listEmailHistoryAction, type EmailHistory } from "@/app/(app)/email/actions";
 import type { SendDocumentEmailResult } from "@/lib/server/document-email";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 /**
@@ -596,6 +596,7 @@ function EmailHistoryPanel({
   attachment: string;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const count = history?.entries.length ?? 0;
   return (
     <div className="rounded-lg border border-border">
@@ -628,7 +629,7 @@ function EmailHistoryPanel({
                   <span className="min-w-0">
                     <span className="text-fg">{e.to}</span>
                     {e.cc.length > 0 ? <span className="text-faint"> +{e.cc.length} {t("cc")}</span> : null}
-                    <span className="text-faint"> · {new Date(e.createdAt).toLocaleString()}</span>
+                    <span className="text-faint"> · {new Date(e.createdAt).toLocaleString(locale)}</span>
                     {e.status === "FAILED" && e.error ? (
                       <span className="block text-rose-700">{e.error}</span>
                     ) : null}

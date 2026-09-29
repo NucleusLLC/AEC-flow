@@ -9,7 +9,7 @@ import { PunchStatusBadge } from "@/components/construction-admin/badges";
 import type { PunchListItem, PunchStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { tCa } from "@/lib/ca/labels";
 import { fmt } from "@/lib/i18n/format";
 
@@ -29,6 +29,7 @@ const SUMMARY_STATUSES: PunchStatus[] = ["OPEN", "IN_PROGRESS", "COMPLETED", "VE
 
 export function PunchListView({ items }: { items: PunchListItem[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | "OPEN_ANY" | PunchStatus>("ALL");
   const [project, setProject] = useState<string>("ALL");
@@ -159,7 +160,7 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
                   <td className="px-3 py-3 text-muted">{p.location ?? "—"}</td>
                   <td className="px-3 py-3 text-muted">{p.trade ?? "—"}</td>
                   <td className="px-3 py-3"><PriorityBadge priority={p.priority} /></td>
-                  <td className="px-3 py-3 text-muted">{formatDate(p.dueDate)}</td>
+                  <td className="px-3 py-3 text-muted">{formatDate(p.dueDate, locale)}</td>
                   <td className="px-5 py-3"><PunchStatusBadge status={p.status} /></td>
                 </tr>
               ))}
