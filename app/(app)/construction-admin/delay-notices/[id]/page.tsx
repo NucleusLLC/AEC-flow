@@ -7,7 +7,7 @@ import { DelayStatusBadge } from "@/components/construction-admin/badges";
 import { DelayNoticeDetermination } from "@/components/construction-admin/delay-notice-determination";
 import { getDelayNotice } from "@/lib/data/ca/delay-notices";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -29,6 +29,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function DelayNoticeDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const dn = await getDelayNotice(id);
   if (!dn) notFound();
@@ -80,8 +81,8 @@ export default async function DelayNoticeDetailPage({ params }: PageProps) {
               <Row label={t("Claimed days")}>{fmt(t("{days} d"), { days: dn.claimedDays })}</Row>
               <Row label={t("Approved days")}><span className="font-semibold">{fmt(t("{days} d"), { days: dn.approvedDays })}</span></Row>
               <Row label={t("Cost impact")}>{formatCurrency(dn.costImpact, dn.currency)}</Row>
-              <Row label={t("Delay started")}>{formatDate(dn.dateStarted)}</Row>
-              <Row label={t("Resolved")}>{formatDate(dn.dateResolved)}</Row>
+              <Row label={t("Delay started")}>{formatDate(dn.dateStarted, locale)}</Row>
+              <Row label={t("Resolved")}>{formatDate(dn.dateResolved, locale)}</Row>
             </CardBody>
           </Card>
         </div>

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DEV_DOCUMENT_KIND_LABEL, type DevDocument, type DevDocumentKind } from "@/lib/data/development.types";
 import { formatDate } from "@/lib/format";
 import { uid } from "@/components/projects/dashboard/hooks";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const inputCls =
@@ -16,6 +16,7 @@ const inputCls =
 
 export function DocumentsView({ projectId, documents }: { projectId: string; documents: DevDocument[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [docs, setDocs] = useState<DevDocument[]>(documents);
   const [name, setName] = useState("");
   const [kind, setKind] = useState<DevDocumentKind>("OTHER");
@@ -67,7 +68,7 @@ export function DocumentsView({ projectId, documents }: { projectId: string; doc
                   <span className="truncate text-sm font-medium text-fg">{d.name}</span>
                   <Badge tone="slate">{t(DEV_DOCUMENT_KIND_LABEL[d.kind])}</Badge>
                 </div>
-                <div className="text-[11px] text-faint">{fmt(t("Uploaded {date}"), { date: formatDate(d.uploadedAt) })}</div>
+                <div className="text-[11px] text-faint">{fmt(t("Uploaded {date}"), { date: formatDate(d.uploadedAt, locale) })}</div>
               </div>
               {d.url ? (
                 <a href={d.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"><ExternalLink className="h-3.5 w-3.5" /> {t("Open link")}</a>

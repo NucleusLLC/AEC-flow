@@ -13,7 +13,7 @@ import {
 } from "@/app/(app)/settings/actions";
 import { formatDate } from "@/lib/format";
 import type { ProposalTemplate } from "@/lib/data/settings";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const inputCls =
@@ -29,6 +29,7 @@ export function TemplatesManager({
   canSave: boolean;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const [templates, setTemplates] = useState<ProposalTemplate[]>(initial);
   const [preview, setPreview] = useState<PreviewDoc | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
@@ -47,7 +48,7 @@ export function TemplatesManager({
       { label: "Discipline", value: tpl.discipline },
       { label: "Sections", value: String(tpl.sections) },
       { label: "Default", value: tpl.isDefault ? t("Yes") : t("No") },
-      { label: "Updated", value: formatDate(tpl.updatedAt) },
+      { label: "Updated", value: formatDate(tpl.updatedAt, locale) },
     ],
   });
 
@@ -136,7 +137,7 @@ export function TemplatesManager({
                 </div>
                 <div className="text-xs text-muted">
                   {tpl.discipline} ·{" "}
-                  {fmt(t("{count} sections · updated {date}"), { count: tpl.sections, date: formatDate(tpl.updatedAt) })}
+                  {fmt(t("{count} sections · updated {date}"), { count: tpl.sections, date: formatDate(tpl.updatedAt, locale) })}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">

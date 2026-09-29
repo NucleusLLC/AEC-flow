@@ -125,6 +125,9 @@ export default defineConfig({
       // General Documents. The catalogue and its token renderer are pure data
       // and pure string work; the tests include a typo tripwire on every template.
       "lib/general-documents/catalogue.test.ts",
+      // Documents written with AI: the request gate, the prompt, reading the
+      // answer, and the issue gate on blanks. Pure; no network.
+      "lib/general-documents/ai-draft.test.ts",
       // Finance. Invoice arithmetic (exact money, ageing, status from payments)
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
@@ -146,9 +149,12 @@ export default defineConfig({
       // Translation coverage: every literal t() string has Spanish and Dutch.
       // Reads source files as text; no React, no database.
       "lib/i18n/coverage.test.ts",
-      // German, Mandarin, Japanese, Portuguese: menu and chrome only. Every
-      // nav label covered, same keys in all four. Pure data, no React.
-      "lib/i18n/menu-extra.test.ts",
+      // German, Chinese, Japanese, Portuguese: every area has exactly the
+      // Spanish keys, placeholders survive, and every nav label is covered in
+      // all six languages. Pure data, no React.
+      "lib/i18n/full-coverage.test.ts",
+      // Dates in the viewer's language; English unchanged. Pure Intl, no React.
+      "lib/i18n/locale.test.ts",
     ],
     environment: "node",
   },

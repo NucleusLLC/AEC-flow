@@ -14,7 +14,7 @@ import {
   ACTION_STATUS_LABEL,
   type MeetingRecord,
 } from "@/lib/data/meetings.types";
-import { formatDate } from "@/lib/format";
+import { formatDate, SYSTEM_LOCALE } from "@/lib/format";
 import { DocumentLetterhead, type LetterheadLogo } from "@/components/print/document-letterhead";
 import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
 import { fmt } from "@/lib/i18n/format";
@@ -26,6 +26,7 @@ export function MeetingDocument({
   companyLocation,
   sheet = true,
   t = (text: string) => text,
+  locale = SYSTEM_LOCALE,
 }: {
   meeting: MeetingRecord;
   logo?: LetterheadLogo;
@@ -47,6 +48,8 @@ export function MeetingDocument({
   /** Translator for the labels. Server print routes pass `getServerT()`; the
    *  default leaves the English keys as they are. */
   t?: (text: string) => string;
+  /** Date locale for the labels. Server print routes pass `getServerLocale()`. */
+  locale?: string;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
@@ -60,7 +63,7 @@ export function MeetingDocument({
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{t("Meeting Minutes")}</div>
             <div className="mt-1 text-xs text-gray-600">{t(`${MEETING_TYPE_LABEL[meeting.type]} meeting`)}</div>
-            <div className="text-xs text-gray-500">{formatDate(meeting.meetingDate)}</div>
+            <div className="text-xs text-gray-500">{formatDate(meeting.meetingDate, locale)}</div>
           </div>
         }
       />
@@ -80,7 +83,7 @@ export function MeetingDocument({
         </div>
         <div>
           <div className="text-gray-400">{t("Date")}</div>
-          <div className="font-medium text-gray-900">{formatDate(meeting.meetingDate)}</div>
+          <div className="font-medium text-gray-900">{formatDate(meeting.meetingDate, locale)}</div>
         </div>
         <div>
           <div className="text-gray-400">{t("Location")}</div>
@@ -93,7 +96,7 @@ export function MeetingDocument({
         {meeting.followUpDate ? (
           <div>
             <div className="text-gray-400">{t("Follow-up")}</div>
-            <div className="font-medium text-gray-900">{formatDate(meeting.followUpDate)}</div>
+            <div className="font-medium text-gray-900">{formatDate(meeting.followUpDate, locale)}</div>
           </div>
         ) : null}
       </div>
@@ -149,7 +152,7 @@ export function MeetingDocument({
                 <td className="py-2 pr-3 tabular-nums text-gray-500">{i + 1}</td>
                 <td className="py-2 pr-3 text-gray-900">{item.description || "—"}</td>
                 <td className="py-2 pr-3 text-gray-600">{item.assignee || "—"}</td>
-                <td className="py-2 pr-3 text-gray-600">{formatDate(item.dueDate)}</td>
+                <td className="py-2 pr-3 text-gray-600">{formatDate(item.dueDate, locale)}</td>
                 <td className="py-2 text-gray-600">{t(ACTION_STATUS_LABEL[item.status])}</td>
               </tr>
             ))

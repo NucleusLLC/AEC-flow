@@ -8,7 +8,7 @@ import { LeaveTypeBadge, LeaveStatusBadge } from "@/components/leave/badges";
 import { type LeaveRequest, type LeaveStatus } from "@/lib/data/leave.types";
 import { formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const STATUS_FILTERS: Array<{ key: "ALL" | LeaveStatus; label: string }> = [
@@ -20,6 +20,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | LeaveStatus; label: string }> = [
 
 export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | LeaveStatus>("ALL");
 
@@ -103,7 +104,7 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
                     <LeaveTypeBadge type={r.type} />
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-xs text-muted">
-                    {formatDate(r.startDate)} → {formatDate(r.endDate)}
+                    {formatDate(r.startDate, locale)} → {formatDate(r.endDate, locale)}
                   </td>
                   <td className="px-3 py-3 text-center font-medium text-fg">{r.days}</td>
                   <td className="px-3 py-3">

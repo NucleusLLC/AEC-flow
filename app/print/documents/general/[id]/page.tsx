@@ -53,7 +53,12 @@ export default async function GeneralDocumentPrintPage({
   const isDraft = doc.status === "DRAFT";
 
   return (
-    <PrintSurface backHref={`/documents/general/${doc.id}`} backLabel={doc.number}>
+    <PrintSurface
+      backHref={`/documents/general/${doc.id}`}
+      backLabel={doc.number}
+      paper="A4"
+      orientation="portrait"
+    >
       <DocumentLetterhead
         logo={{
           dataUrl: practice.logoDataUrl,

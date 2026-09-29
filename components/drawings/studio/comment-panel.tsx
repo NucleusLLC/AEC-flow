@@ -31,7 +31,7 @@ import {
   removeCommentAction,
   setCommentStatusAction,
 } from "@/app/(app)/drawings/studio/actions";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const CONTROL =
@@ -64,6 +64,7 @@ export function CommentPanel({
   currentUserId: string;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const [filter, setFilter] = useState<"OPEN" | "ALL">("OPEN");
   const [body, setBody] = useState("");
   const [assignee, setAssignee] = useState("");
@@ -185,7 +186,7 @@ export function CommentPanel({
                 <div className="min-w-0">
                   <p className="text-sm text-fg">{c.body}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-faint">
-                    {c.authorName} · {formatDate(c.createdAt.slice(0, 10))} · {fmt(t("page {page}"), { page: c.page })}
+                    {c.authorName} · {formatDate(c.createdAt.slice(0, 10), locale)} · {fmt(t("page {page}"), { page: c.page })}
                     {c.x !== null ? (
                       <span className="inline-flex items-center gap-0.5">
                         <MapPin className="h-3 w-3" /> {t("pinned")}

@@ -80,10 +80,18 @@ export function formatNumber(value: number): string {
   return new Intl.NumberFormat(SYSTEM_LOCALE).format(value);
 }
 
-export function formatDate(date: Date | string | null | undefined): string {
+/**
+ * `24 Jul 2026`. Pass the viewer's date locale — `await getServerLocale()` in a
+ * server component, `useDateLocale()` in a client one — so the month reads in
+ * their language; without it the date is English.
+ */
+export function formatDate(
+  date: Date | string | null | undefined,
+  locale: string = SYSTEM_LOCALE,
+): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat(SYSTEM_LOCALE, {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",

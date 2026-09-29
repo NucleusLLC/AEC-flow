@@ -16,7 +16,7 @@ import {
 } from "./proposals";
 import { getTeam, summarizeTeam } from "./team";
 import { getWhoIsOut, LEAVE_TYPE_LABEL } from "./leave";
-import { formatCurrencyCompact, formatDate } from "@/lib/format";
+import { formatCurrencyCompact, formatDate, SYSTEM_LOCALE } from "@/lib/format";
 
 export type Trend = { value: number; direction: "up" | "down" | "flat" };
 
@@ -85,7 +85,7 @@ const ACTIVITY_VERB: Record<ProposalStatus, string> = {
   VOID: "voided proposal",
 };
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(locale = SYSTEM_LOCALE): Promise<DashboardData> {
   const [projects, proposals, team, whoIsOut] = await Promise.all([
     getProjects(),
     getProposals(),
@@ -169,7 +169,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       actor: p.owner,
       action: ACTIVITY_VERB[p.status],
       target: `${p.refNumber} · ${p.title}`,
-      at: formatDate(p.createdAt),
+      at: formatDate(p.createdAt, locale),
     }));
 
   const onLeave: LeaveToday[] = whoIsOut.map((w) => ({

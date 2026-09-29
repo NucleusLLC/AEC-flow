@@ -18,7 +18,7 @@ import {
   type DisplayPrefs,
 } from "@/lib/schedule/display-prefs";
 import type { ScheduleHealth, TaskHealth } from "@/lib/data/schedule";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 // Light mode keeps the original soft tints; dark mode uses deep tints (the
@@ -92,6 +92,7 @@ export function StatusBoard({
   display?: DisplayPrefs;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const show = display ?? defaultDisplayPrefs();
   const visibleTiles = countVisibleTiles(show);
   const o = OVERALL[health.overall];
@@ -186,14 +187,14 @@ export function StatusBoard({
           {show.baselineFinish ? (
             <Tile
               label={t("Baseline finish")}
-              value={formatDate(health.baselineFinish)}
+              value={formatDate(health.baselineFinish, locale)}
               sub={t("planned completion")}
             />
           ) : null}
           {show.forecast ? (
             <Tile
               label={t("Forecast finish")}
-              value={formatDate(health.forecastFinish)}
+              value={formatDate(health.forecastFinish, locale)}
               sub={
                 health.finishSlipDays > 0 ? fmt(t("+{count}d slip"), { count: health.finishSlipDays }) : t("on baseline")
               }
@@ -227,7 +228,7 @@ export function StatusBoard({
         ) : null}
 
         {health.attention.length === 0 ? (
-          <p className="text-xs text-muted">{fmt(t("All tasks at or ahead of plan as of {date}."), { date: formatDate(statusDate) })} ✅</p>
+          <p className="text-xs text-muted">{fmt(t("All tasks at or ahead of plan as of {date}."), { date: formatDate(statusDate, locale) })} ✅</p>
         ) : (
           <ul className="space-y-1">
             {health.attention.slice(0, 6).map((h) => (

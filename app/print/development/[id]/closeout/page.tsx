@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { DevPrintShell, PrintSection, PrintKv } from "@/components/development/print-shell";
 import { getDevelopmentProject } from "@/lib/data/development";
 import { deriveProjectMetrics } from "@/lib/development/metrics";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import { formatCurrency, formatDate } from "@/lib/format";
 
@@ -21,6 +21,7 @@ export default async function CloseoutPrintPage({ params }: PageProps) {
   const project = await getDevelopmentProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
   const m = deriveProjectMetrics(project);
   const cur = m.currency;
   const budgetVariance = m.totalProjectCost - m.budgetPaid;
@@ -33,9 +34,9 @@ export default async function CloseoutPrintPage({ params }: PageProps) {
       projectName={project.name}
       meta={[
         { label: t("Location"), value: project.location ?? "—" },
-        { label: t("Target close-out"), value: formatDate(project.targetCloseoutDate) },
+        { label: t("Target close-out"), value: formatDate(project.targetCloseoutDate, locale) },
         { label: t("Developer"), value: project.developer ?? "—" },
-        { label: t("Issued"), value: formatDate(project.updatedAt) },
+        { label: t("Issued"), value: formatDate(project.updatedAt, locale) },
       ]}
     >
       <h1 className="mt-6 text-lg font-bold text-gray-900">{t("Project Close-out Report")}</h1>

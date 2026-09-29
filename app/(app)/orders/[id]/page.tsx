@@ -6,7 +6,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/orders/badges";
 import { getOrder } from "@/lib/data/orders";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -31,6 +31,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const order = await getOrder(id);
   if (!order) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="w-full space-y-6">
@@ -138,9 +139,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
               <DetailRow label={t("Client")}>{order.clientName}</DetailRow>
               <DetailRow label={t("Service")}>{order.serviceType}</DetailRow>
               <DetailRow label={t("Fee")}>{formatCurrency(order.fee, order.currency)}</DetailRow>
-              <DetailRow label={t("Start")}>{formatDate(order.expectedStartDate)}</DetailRow>
-              <DetailRow label={t("End")}>{formatDate(order.expectedEndDate)}</DetailRow>
-              <DetailRow label={t("Created")}>{formatDate(order.createdAt)}</DetailRow>
+              <DetailRow label={t("Start")}>{formatDate(order.expectedStartDate, locale)}</DetailRow>
+              <DetailRow label={t("End")}>{formatDate(order.expectedEndDate, locale)}</DetailRow>
+              <DetailRow label={t("Created")}>{formatDate(order.createdAt, locale)}</DetailRow>
               {order.siteAddress ? (
                 <DetailRow label={t("Site")}>
                   <span className="inline-flex items-center gap-1">

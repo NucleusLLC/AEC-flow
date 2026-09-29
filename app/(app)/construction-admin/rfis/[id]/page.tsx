@@ -7,7 +7,7 @@ import { RfiStatusBadge, RfiPriorityBadge, DisciplineBadge } from "@/components/
 import { RfiRespond } from "@/components/construction-admin/rfi-respond";
 import { getRfi } from "@/lib/data/ca/rfis";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -29,6 +29,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function RfiDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const rfi = await getRfi(id);
   if (!rfi) notFound();
@@ -90,9 +91,9 @@ export default async function RfiDetailPage({ params }: PageProps) {
             <CardBody className="divide-y divide-border py-0">
               <Row label={t("Submitted by")}>{rfi.submittedBy ?? "—"}</Row>
               <Row label={t("Assigned to")}>{rfi.assignedTo ?? "—"}</Row>
-              <Row label={t("Submitted")}>{formatDate(rfi.dateSubmitted)}</Row>
-              <Row label={t("Required by")}>{formatDate(rfi.dateRequired)}</Row>
-              <Row label={t("Responded")}>{formatDate(rfi.dateResponded)}</Row>
+              <Row label={t("Submitted")}>{formatDate(rfi.dateSubmitted, locale)}</Row>
+              <Row label={t("Required by")}>{formatDate(rfi.dateRequired, locale)}</Row>
+              <Row label={t("Responded")}>{formatDate(rfi.dateResponded, locale)}</Row>
               {rfi.linkedChangeOrderId ? (
                 <Row label={t("Linked CO")}>
                   <Link href={`/construction-admin/change-orders/${rfi.linkedChangeOrderId}`} className="inline-flex items-center gap-1 text-brand hover:underline">

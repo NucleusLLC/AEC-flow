@@ -10,7 +10,7 @@
  */
 
 import { ORDER_STATUS_LABEL, type OrderRecord } from "@/lib/data/orders.types";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, SYSTEM_LOCALE } from "@/lib/format";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
 import { fmt } from "@/lib/i18n/format";
@@ -25,6 +25,7 @@ export function OrderDocument({
   companyLocation,
   sheet = true,
   t = identity,
+  locale = SYSTEM_LOCALE,
 }: {
   order: OrderRecord;
   logoDataUrl?: string | null;
@@ -43,6 +44,8 @@ export function OrderDocument({
   sheet?: boolean;
   /** Translator from the print route (getServerT); English when omitted. */
   t?: (text: string) => string;
+  /** Date locale for the labels. Server print routes pass `getServerLocale()`. */
+  locale?: string;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
@@ -97,11 +100,11 @@ export function OrderDocument({
         ) : null}
         <div>
           <div className="text-gray-400">{t("Expected start")}</div>
-          <div className="font-medium text-gray-900">{formatDate(order.expectedStartDate)}</div>
+          <div className="font-medium text-gray-900">{formatDate(order.expectedStartDate, locale)}</div>
         </div>
         <div>
           <div className="text-gray-400">{t("Expected end")}</div>
-          <div className="font-medium text-gray-900">{formatDate(order.expectedEndDate)}</div>
+          <div className="font-medium text-gray-900">{formatDate(order.expectedEndDate, locale)}</div>
         </div>
       </div>
 

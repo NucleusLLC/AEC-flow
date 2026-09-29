@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Globe, Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const KEY = "aecflow:worldclocks";
@@ -30,10 +30,10 @@ const PRESETS: City[] = [
 
 const DEFAULTS: City[] = [PRESETS[0], PRESETS[4], PRESETS[8], PRESETS[9]];
 
-function timeIn(tz: string, now: number): { time: string; day: string } {
+function timeIn(tz: string, now: number, locale: string): { time: string; day: string } {
   try {
-    const time = new Intl.DateTimeFormat([], { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
-    const day = new Intl.DateTimeFormat([], { timeZone: tz, weekday: "short", month: "short", day: "numeric" }).format(now);
+    const time = new Intl.DateTimeFormat(locale, { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+    const day = new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", month: "short", day: "numeric" }).format(now);
     return { time, day };
   } catch {
     return { time: "—", day: "" };
@@ -43,6 +43,7 @@ function timeIn(tz: string, now: number): { time: string; day: string } {
 /** World clocks — live time across chosen cities; add/remove from a preset list. */
 export function WorldClocks() {
   const t = useT();
+  const locale = useDateLocale();
   const [now, setNow] = useState(() => Date.now());
   const [cities, setCities] = useState<City[]>(DEFAULTS);
   const [adding, setAdding] = useState(false);
@@ -120,7 +121,7 @@ export function WorldClocks() {
 
       <ul className="divide-y divide-border">
         {cities.map((c) => {
-          const { time, day } = timeIn(c.tz, now);
+          const { time, day } = timeIn(c.tz, now, locale);
           return (
             <li key={c.tz} className="group flex items-center justify-between py-2">
               <div>

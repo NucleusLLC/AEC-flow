@@ -8,7 +8,7 @@ import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import type { PunchListItem, PunchStatus, PunchPriority } from "@/lib/ca/types";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ project: string }> };
@@ -71,7 +71,7 @@ function Summary({ items, t }: { items: PunchListItem[]; t: (text: string) => st
   );
 }
 
-function ItemsTable({ items, t }: { items: PunchListItem[]; t: (text: string) => string }) {
+function ItemsTable({ items, t, locale }: { items: PunchListItem[]; t: (text: string) => string; locale: string }) {
   return (
     <table className="w-full border-collapse text-[10.5px]">
       <thead>
@@ -95,8 +95,8 @@ function ItemsTable({ items, t }: { items: PunchListItem[]; t: (text: string) =>
             <td className="py-1.5 pr-2 text-gray-700 whitespace-nowrap">{p.responsibleParty ?? "—"}</td>
             <td className={`py-1.5 pr-2 font-medium whitespace-nowrap ${PRIORITY_COLOR[p.priority]}`}>{t(PRIORITY_LABEL[p.priority])}</td>
             <td className={`py-1.5 pr-2 font-medium whitespace-nowrap ${STATUS_COLOR[p.status]}`}>{tCa(t, PUNCH_STATUS_LABEL[p.status])}</td>
-            <td className="py-1.5 pr-2 text-gray-700 whitespace-nowrap">{formatDate(p.dueDate)}</td>
-            <td className="py-1.5 text-gray-700 whitespace-nowrap">{formatDate(p.dateCompleted)}</td>
+            <td className="py-1.5 pr-2 text-gray-700 whitespace-nowrap">{formatDate(p.dueDate, locale)}</td>
+            <td className="py-1.5 text-gray-700 whitespace-nowrap">{formatDate(p.dateCompleted, locale)}</td>
           </tr>
         ))}
       </tbody>
@@ -106,6 +106,7 @@ function ItemsTable({ items, t }: { items: PunchListItem[]; t: (text: string) =>
 
 export default async function PunchListPrintPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { project } = await params;
   const all = project === "all";
   const [items, practice] = await Promise.all([
@@ -146,7 +147,7 @@ export default async function PunchListPrintPage({ params }: PageProps) {
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{docTitle}</div>
             <div className="mt-1 font-mono text-xs text-gray-600">{reportRef}</div>
-            <div className="text-[11px] text-gray-500">{fmt(t("Issued {date}"), { date: formatDate(new Date().toISOString()) })}</div>
+            <div className="text-[11px] text-gray-500">{fmt(t("Issued {date}"), { date: formatDate(new Date().toISOString(), locale) })}</div>
           </div>
         }
       />
@@ -166,7 +167,7 @@ export default async function PunchListPrintPage({ params }: PageProps) {
             <div key={location} className="mt-4 break-inside-avoid">
               <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{location === "Unspecified location" ? t(location) : location}</h3>
               <div className="mt-1">
-                <ItemsTable items={locItems} t={t} />
+                <ItemsTable items={locItems} t={t} locale={locale} />
               </div>
             </div>
           ))}

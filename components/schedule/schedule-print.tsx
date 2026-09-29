@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { X, Printer, FileDown, Maximize2 } from "lucide-react";
 import type { LetterheadLogo } from "@/components/print/document-letterhead";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import {
   DISCIPLINE_LABEL,
@@ -18,7 +18,6 @@ import {
   type Discipline,
 } from "@/lib/data/schedule";
 import { cn } from "@/lib/utils";
-import { SYSTEM_LOCALE } from "@/lib/format";
 import { firmName } from "@/lib/firm-identity";
 import { footerMarginBoxesCss } from "@/lib/documents/footer-boxes";
 
@@ -67,6 +66,7 @@ export function SchedulePrint({
   footerText?: string;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   const [paper, setPaper] = useState<PaperKey>("A3");
   const [orient, setOrient] = useState<Orientation>("landscape");
   const [zoom, setZoom] = useState(0.7);
@@ -134,7 +134,7 @@ export function SchedulePrint({
       const sIso = segStart.toISOString().slice(0, 10);
       const eIso = segEnd.toISOString().slice(0, 10);
       out.push({
-        label: c.toLocaleDateString(SYSTEM_LOCALE, { month: "short", year: "2-digit" }),
+        label: c.toLocaleDateString(locale, { month: "short", year: "2-digit" }),
         left: diffDaysIso(windowStart, sIso) * pxPerDay,
         width: (diffDaysIso(sIso, eIso) + 1) * pxPerDay,
       });
