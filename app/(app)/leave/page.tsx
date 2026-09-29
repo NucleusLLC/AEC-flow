@@ -12,7 +12,7 @@ import {
 } from "@/lib/data/leave";
 import { formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Leave · AEC-flow" };
@@ -25,6 +25,7 @@ export default async function LeavePage() {
   ]);
   const summary = summarizeLeave(requests, holidays);
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   const tiles = [
     { label: t("Pending Requests"), value: String(summary.pendingCount), hint: t("awaiting approval") },
@@ -36,7 +37,7 @@ export default async function LeavePage() {
     },
     {
       label: t("Next Holiday"),
-      value: summary.nextHoliday ? formatDate(summary.nextHoliday.date) : "—",
+      value: summary.nextHoliday ? formatDate(summary.nextHoliday.date, locale) : "—",
       hint: summary.nextHoliday?.name ?? t("none scheduled"),
     },
   ];
@@ -86,7 +87,7 @@ export default async function LeavePage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-fg">{p.name}</div>
-                      <div className="text-xs text-muted">{fmt(t("Back {date}"), { date: formatDate(p.until) })}</div>
+                      <div className="text-xs text-muted">{fmt(t("Back {date}"), { date: formatDate(p.until, locale) })}</div>
                     </div>
                     <LeaveTypeBadge type={p.type} />
                   </div>
@@ -110,7 +111,7 @@ export default async function LeavePage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-fg">{h.name}</div>
-                    <div className="text-xs text-muted">{formatDate(h.date)}</div>
+                    <div className="text-xs text-muted">{formatDate(h.date, locale)}</div>
                   </div>
                   {h.isCompany ? <Badge tone="violet">{t("Company")}</Badge> : <Badge tone="slate">{t("Public")}</Badge>}
                 </div>

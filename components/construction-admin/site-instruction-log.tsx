@@ -8,7 +8,7 @@ import { SiteInstructionStatusBadge, DisciplineBadge, ImpactBadge } from "@/comp
 import type { SiteInstruction, SiteInstructionStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | SiteInstructionStatus; label: string }> = [
@@ -21,6 +21,7 @@ const FILTERS: Array<{ key: "ALL" | SiteInstructionStatus; label: string }> = [
 
 export function SiteInstructionLog({ instructions }: { instructions: SiteInstruction[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | SiteInstructionStatus>("ALL");
 
@@ -88,7 +89,7 @@ export function SiteInstructionLog({ instructions }: { instructions: SiteInstruc
                   <td className="px-3 py-3 text-muted">{s.projectName}</td>
                   <td className="px-3 py-3"><DisciplineBadge discipline={s.discipline} /></td>
                   <td className="px-3 py-3"><ImpactBadge level={s.costImpact} /></td>
-                  <td className="px-3 py-3 text-muted">{formatDate(s.dateIssued)}</td>
+                  <td className="px-3 py-3 text-muted">{formatDate(s.dateIssued, locale)}</td>
                   <td className="px-5 py-3"><SiteInstructionStatusBadge status={s.status} /></td>
                 </tr>
               ))}

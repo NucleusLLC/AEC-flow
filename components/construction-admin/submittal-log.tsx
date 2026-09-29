@@ -8,7 +8,7 @@ import { SubmittalStatusBadge, DisciplineBadge } from "@/components/construction
 import type { Submittal, SubmittalStatus } from "@/lib/ca/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const FILTERS: Array<{ key: "ALL" | SubmittalStatus; label: string }> = [
@@ -22,6 +22,7 @@ const FILTERS: Array<{ key: "ALL" | SubmittalStatus; label: string }> = [
 
 export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | SubmittalStatus>("ALL");
 
@@ -88,8 +89,8 @@ export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
                   </td>
                   <td className="px-3 py-3 text-muted">{s.projectName}</td>
                   <td className="px-3 py-3"><DisciplineBadge discipline={s.discipline} /></td>
-                  <td className="px-3 py-3 text-muted">{formatDate(s.dateRequired)}</td>
-                  <td className="px-3 py-3 text-muted">{formatDate(s.dateSubmitted)}</td>
+                  <td className="px-3 py-3 text-muted">{formatDate(s.dateRequired, locale)}</td>
+                  <td className="px-3 py-3 text-muted">{formatDate(s.dateSubmitted, locale)}</td>
                   <td className="px-5 py-3"><SubmittalStatusBadge status={s.status} /></td>
                 </tr>
               ))}

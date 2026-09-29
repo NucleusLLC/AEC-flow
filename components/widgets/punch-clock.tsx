@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Clock, Play, Square, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 
 type Session = { start: number; end: number };
 const KEY = "aecflow:punchclock";
@@ -15,8 +15,8 @@ function fmtClock(ms: number): string {
   const ss = String(s % 60).padStart(2, "0");
   return `${h}:${m}:${ss}`;
 }
-function fmtTime(t: number): string {
-  return new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function fmtTime(t: number, locale: string): string {
+  return new Date(t).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 function isSameDay(a: number, b: number): boolean {
   const d1 = new Date(a), d2 = new Date(b);
@@ -26,6 +26,7 @@ function isSameDay(a: number, b: number): boolean {
 /** Punch clock — live clock plus a clock-in/out timer with a session log (today). */
 export function PunchClock() {
   const t = useT();
+  const locale = useDateLocale();
   const [now, setNow] = useState(() => Date.now());
   const [clockedInAt, setClockedInAt] = useState<number | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -84,10 +85,10 @@ export function PunchClock() {
 
       <div className="text-center">
         <div className="font-mono text-3xl font-bold tabular-nums text-fg">
-          {new Date(now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+          {new Date(now).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
         </div>
         <div className="mt-0.5 text-xs text-muted">
-          {new Date(now).toLocaleDateString([], { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          {new Date(now).toLocaleDateString(locale, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </div>
       </div>
 
@@ -135,7 +136,7 @@ export function PunchClock() {
           <ul className="space-y-1">
             {todays.map((s, i) => (
               <li key={i} className="flex items-center justify-between rounded-md bg-surface-2/40 px-2 py-1 text-xs text-muted">
-                <span>{fmtTime(s.start)} → {fmtTime(s.end)}</span>
+                <span>{fmtTime(s.start, locale)} → {fmtTime(s.end, locale)}</span>
                 <span className="font-mono tabular-nums text-fg">{fmtClock(s.end - s.start)}</span>
               </li>
             ))}

@@ -4,7 +4,7 @@ import { CaPrintShell, PrintSection } from "@/components/construction-admin/prin
 import { getReport } from "@/lib/data/ca/reports";
 import { CA_REPORT_TYPE_LABEL, CA_REPORT_STATUS_LABEL } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -25,6 +25,7 @@ function Para({ title, body }: { title: string; body: string | null }) {
 
 export default async function ReportPrintPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const r = await getReport(id);
   if (!r) notFound();
@@ -37,7 +38,7 @@ export default async function ReportPrintPage({ params }: PageProps) {
       statusLabel={t(CA_REPORT_STATUS_LABEL[r.status])}
       title={`${r.projectName}`}
       meta={[
-        { label: t("Period"), value: r.reportingPeriodStart ? `${formatDate(r.reportingPeriodStart)} – ${formatDate(r.reportingPeriodEnd)}` : "—" },
+        { label: t("Period"), value: r.reportingPeriodStart ? `${formatDate(r.reportingPeriodStart, locale)} – ${formatDate(r.reportingPeriodEnd, locale)}` : "—" },
         { label: t("Prepared by"), value: r.preparedBy ?? "—" },
         { label: t("Reviewed by"), value: r.reviewedBy ?? "—" },
         { label: t("Weather"), value: r.weatherSummary ?? "—" },

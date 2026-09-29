@@ -8,7 +8,7 @@ import { PunchStatusBadge } from "@/components/construction-admin/badges";
 import { PunchStatus } from "@/components/construction-admin/punch-status";
 import { getPunchItem } from "@/lib/data/ca/punch-list";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -29,6 +29,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function PunchItemDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const item = await getPunchItem(id);
   if (!item) notFound();
@@ -97,9 +98,9 @@ export default async function PunchItemDetailPage({ params }: PageProps) {
             <CardBody className="divide-y divide-border py-0">
               <Row label={t("Trade")}>{item.trade ?? "—"}</Row>
               <Row label={t("Responsible party")}>{item.responsibleParty ?? "—"}</Row>
-              <Row label={t("Identified")}>{formatDate(item.dateIdentified)}</Row>
-              <Row label={t("Due")}>{formatDate(item.dueDate)}</Row>
-              <Row label={t("Completed")}>{formatDate(item.dateCompleted)}</Row>
+              <Row label={t("Identified")}>{formatDate(item.dateIdentified, locale)}</Row>
+              <Row label={t("Due")}>{formatDate(item.dueDate, locale)}</Row>
+              <Row label={t("Completed")}>{formatDate(item.dateCompleted, locale)}</Row>
               <Row label={t("Verified by")}>{item.verifiedBy ?? "—"}</Row>
             </CardBody>
           </Card>

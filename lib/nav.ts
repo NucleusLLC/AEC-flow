@@ -31,6 +31,7 @@ import {
   UploadCloud,
   Mail,
   ScrollText,
+  Sparkles,
   ReceiptText,
   Clock3,
   Wallet,
@@ -98,6 +99,16 @@ export const GENERAL_DOCUMENTS_ITEM: NavItem = {
   label: "General Documents",
   href: "/documents/general",
   icon: ScrollText,
+};
+
+/**
+ * Straight into a General Document written with AI: a short summary in, the
+ * whole letter out. Defined once, beside the register it files into.
+ */
+export const WRITE_WITH_AI_ITEM: NavItem = {
+  label: "Write with AI",
+  href: "/documents/general/new?type=ai_draft",
+  icon: Sparkles,
 };
 
 /**
@@ -209,6 +220,7 @@ export const navSections: NavSection[] = [
       DRAWINGS_REGISTER_ITEM,
       DRAWINGS_INTAKE_ITEM,
       GENERAL_DOCUMENTS_ITEM,
+      WRITE_WITH_AI_ITEM,
       CONTRACTS_ITEM,
       { label: "Documents", href: "/documents", icon: FolderOpen, disabled: true },
     ],

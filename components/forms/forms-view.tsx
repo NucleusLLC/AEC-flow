@@ -8,7 +8,7 @@ import { DocumentPreview, type PreviewDoc } from "@/components/preview/document-
 import { EmailButton } from "@/components/email/email-button";
 import { FORM_CATEGORIES, type FormItem, type FormCategory } from "@/lib/data/forms";
 import { formatDate } from "@/lib/format";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 const CAT_TONE: Record<FormCategory, "blue" | "violet" | "amber" | "red"> = {
@@ -18,7 +18,7 @@ const CAT_TONE: Record<FormCategory, "blue" | "violet" | "amber" | "red"> = {
   Safety: "red",
 };
 
-function toPreview(f: FormItem, t: (text: string) => string): PreviewDoc {
+function toPreview(f: FormItem, t: (text: string) => string, locale: string): PreviewDoc {
   return {
     name: `${f.code} — ${f.name}`,
     fileType: f.fileType,
@@ -27,13 +27,14 @@ function toPreview(f: FormItem, t: (text: string) => string): PreviewDoc {
       { label: t("Category"), value: t(f.category) },
       { label: t("Revision"), value: f.revision },
       { label: t("Fields"), value: String(f.fields) },
-      { label: t("Updated"), value: formatDate(f.updatedAt) },
+      { label: t("Updated"), value: formatDate(f.updatedAt, locale) },
     ],
   };
 }
 
 export function FormsView({ forms }: { forms: FormItem[] }) {
   const t = useT();
+  const locale = useDateLocale();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<"ALL" | FormCategory>("ALL");
   const [preview, setPreview] = useState<PreviewDoc | null>(null);
@@ -91,10 +92,10 @@ export function FormsView({ forms }: { forms: FormItem[] }) {
                 <td className="px-3 py-2"><Badge tone={CAT_TONE[f.category]}>{t(f.category)}</Badge></td>
                 <td className="px-3 py-2 text-center text-[11px] text-muted">{f.revision}</td>
                 <td className="px-3 py-2 text-center text-[11px] font-medium text-muted">{f.fileType}</td>
-                <td className="px-3 py-2 text-center text-[11px] tabular-nums text-muted">{formatDate(f.updatedAt)}</td>
+                <td className="px-3 py-2 text-center text-[11px] tabular-nums text-muted">{formatDate(f.updatedAt, locale)}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-end gap-1">
-                    <button type="button" onClick={() => setPreview(toPreview(f, t))} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-muted hover:text-fg">
+                    <button type="button" onClick={() => setPreview(toPreview(f, t, locale))} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-muted hover:text-fg">
                       <Eye className="h-3.5 w-3.5" /> {t("Preview")}
                     </button>
                     <EmailButton variant="icon" subject={`${f.code} — ${f.name}`} attachment={`${f.code} ${f.name}.${f.fileType.toLowerCase()}`} relatedType="form" relatedId={f.code} />

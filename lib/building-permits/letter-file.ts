@@ -110,3 +110,18 @@ function matchesPrefix(key: string, prefix: string): boolean {
     !key.includes("..")
   );
 }
+
+/**
+ * A letter's stored files, in upload order, split into the letter and its
+ * attachments. The first PDF is the letter; everything after it is an
+ * enclosure — a Public Works letter often arrives with a stamped drawing or a
+ * checklist, and those belong on the letter, not loose on the case file.
+ */
+export function splitLetterFiles<T>(files: readonly T[]): { letter: T | null; attachments: T[] } {
+  return { letter: files[0] ?? null, attachments: files.slice(1) };
+}
+
+/** What an attachment is called on the case file: its filename, without ".pdf". */
+export function attachmentName(filename: string): string {
+  return filename.replace(/\.pdf$/i, "").trim().slice(0, 200) || "Attachment";
+}

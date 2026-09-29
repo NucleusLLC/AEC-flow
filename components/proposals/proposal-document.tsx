@@ -16,7 +16,7 @@ import {
   DISCIPLINE_LABEL,
   type ProposalRecord,
 } from "@/lib/data/proposals.types";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, SYSTEM_LOCALE } from "@/lib/format";
 import { documentFooterLine, firmLocation, firmName } from "@/lib/firm-identity";
 import { DocumentLetterhead, type LetterheadLogo } from "@/components/print/document-letterhead";
 import { fmt } from "@/lib/i18n/format";
@@ -30,6 +30,7 @@ export function ProposalDocument({
   companyLocation,
   sheet = true,
   t = identity,
+  locale = SYSTEM_LOCALE,
 }: {
   proposal: ProposalRecord;
   logo?: LetterheadLogo;
@@ -51,6 +52,8 @@ export function ProposalDocument({
   /** Translator for the document's fixed labels. The print route passes the server
    *  translator, the Preview modal the client one; defaults to English. */
   t?: (text: string) => string;
+  /** Date locale for the labels. Server print routes pass `getServerLocale()`. */
+  locale?: string;
 }) {
   const firm = firmName(companyName);
   const location = firmLocation(companyLocation);
@@ -91,11 +94,11 @@ export function ProposalDocument({
       <div className="mt-4 grid grid-cols-3 gap-4 rounded-md bg-gray-50 px-4 py-3 text-xs print:bg-gray-50">
         <div>
           <div className="text-gray-400">{t("Date issued")}</div>
-          <div className="font-medium text-gray-900">{formatDate(proposal.sentAt ?? proposal.createdAt)}</div>
+          <div className="font-medium text-gray-900">{formatDate(proposal.sentAt ?? proposal.createdAt, locale)}</div>
         </div>
         <div>
           <div className="text-gray-400">{t("Valid until")}</div>
-          <div className="font-medium text-gray-900">{formatDate(proposal.validUntil)}</div>
+          <div className="font-medium text-gray-900">{formatDate(proposal.validUntil, locale)}</div>
         </div>
         <div>
           <div className="text-gray-400">{t("Estimated duration")}</div>
@@ -221,7 +224,7 @@ export function ProposalDocument({
         <p className="text-xs text-gray-500">
           {fmt(
             t("This proposal is valid until {date}. To proceed, please countersign below and return a copy to {firm}."),
-            { date: formatDate(proposal.validUntil), firm },
+            { date: formatDate(proposal.validUntil, locale), firm },
           )}
         </p>
         <div className="mt-8 grid grid-cols-2 gap-10">

@@ -7,7 +7,7 @@ import { ChangeOrderStatusBadge } from "@/components/construction-admin/badges";
 import { getChangeOrder } from "@/lib/data/ca/change-orders";
 import { changeOrderBreakdown } from "@/lib/ca/calc";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -38,6 +38,7 @@ function MoneyRow({ label, value, currency, strong }: { label: string; value: nu
 
 export default async function ChangeOrderDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const co = await getChangeOrder(id);
   if (!co) notFound();
@@ -151,13 +152,13 @@ export default async function ChangeOrderDetailPage({ params }: PageProps) {
               <Row label={t("Architect")}>{co.architect ?? "—"}</Row>
               <Row label={t("Engineer")}>{co.engineer ?? "—"}</Row>
               <Row label={t("Owner")}>{co.owner ?? "—"}</Row>
-              <Row label={t("Requested")}>{formatDate(co.dateRequested)}</Row>
-              <Row label={t("Submitted")}>{formatDate(co.dateSubmitted)}</Row>
-              <Row label={t("Approved")}>{formatDate(co.dateApproved)}</Row>
+              <Row label={t("Requested")}>{formatDate(co.dateRequested, locale)}</Row>
+              <Row label={t("Submitted")}>{formatDate(co.dateSubmitted, locale)}</Row>
+              <Row label={t("Approved")}>{formatDate(co.dateApproved, locale)}</Row>
               <Row label={t("Updated")}>
                 <span className="inline-flex items-center gap-1">
                   <CalendarClock className="h-3.5 w-3.5 text-faint" />
-                  {formatDate(co.updatedAt)}
+                  {formatDate(co.updatedAt, locale)}
                 </span>
               </Row>
             </CardBody>

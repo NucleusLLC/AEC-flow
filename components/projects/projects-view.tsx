@@ -14,7 +14,7 @@ import {
 } from "@/lib/data/projects.types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "status" | "name" | "progress" | "deadline";
@@ -35,6 +35,7 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
   const [priority, setPriority] = useState<"ALL" | Priority>("ALL");
   const [sort, setSort] = useState<SortKey>("status");
   const t = useT();
+  const locale = useDateLocale();
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -175,7 +176,7 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                       )}
                     >
                       {p.isOverdue ? <AlertTriangle className="h-3.5 w-3.5" /> : null}
-                      {formatDate(p.targetEndDate)}
+                      {formatDate(p.targetEndDate, locale)}
                     </span>
                   </td>
                 </tr>

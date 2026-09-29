@@ -5,7 +5,7 @@ import { getProposal } from "@/lib/data/proposals";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -24,6 +24,7 @@ export default async function ProposalPrintPage({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     // This route used to print the proposal's own reference in the bottom-left
@@ -33,6 +34,7 @@ export default async function ProposalPrintPage({ params }: PageProps) {
     // the document's own end-of-document line, both of which are unchanged.
     <PrintSurface backHref={`/proposals/${proposal.id}`} backLabel={t("Back to proposal")}>
       <ProposalDocument
+        locale={locale}
         proposal={proposal}
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
         companyName={companyName}

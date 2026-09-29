@@ -44,7 +44,7 @@ import {
   type BudgetItem,
 } from "@/lib/dashboard";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 export type WidgetControls = {
@@ -70,11 +70,11 @@ const keyOf = (projectId: string, kind: string) => `aec.proj.${projectId}.${kind
 const title = (i: WidgetInstance, tr: (text: string) => string) => i.title ?? tr(widgetMeta(i.type).name);
 
 /* ── time helpers ─────────────────────────────────────────────────────────── */
-function timeIn(tz: string, now: Date) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+function timeIn(tz: string, now: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
 }
-function dateInTz(tz: string, now: Date) {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", day: "2-digit", month: "short" }).format(now);
+function dateInTz(tz: string, now: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: "short", day: "2-digit", month: "short" }).format(now);
 }
 function cityLabel(tz: string) {
   return CITY_PRESETS.find((c) => c.timeZone === tz)?.label ?? tz.split("/").pop()?.replace(/_/g, " ") ?? tz;
@@ -111,6 +111,7 @@ function NotesWidget({ projectId, instance, controls }: Base) {
 /* ── Tasks ────────────────────────────────────────────────────────────────── */
 function TasksWidget({ projectId, instance, controls }: Base) {
   const tr = useT();
+  const locale = useDateLocale();
   const [tasks, setTasks] = useSharedState<TaskItem[]>(keyOf(projectId, "tasks"), []);
   const [text, setText] = useState("");
   const [due, setDue] = useState("");
@@ -137,7 +138,7 @@ function TasksWidget({ projectId, instance, controls }: Base) {
           <li key={t.id} className="group/task flex items-center gap-2">
             <input type="checkbox" checked={t.done} onChange={() => setTasks((p) => p.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} className="h-4 w-4 shrink-0 rounded border-border" />
             <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-faint line-through" : "text-fg"}`}>{t.text}</span>
-            {t.due ? <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">{formatDate(t.due)}</span> : null}
+            {t.due ? <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">{formatDate(t.due, locale)}</span> : null}
             <button type="button" onClick={() => setTasks((p) => p.filter((x) => x.id !== t.id))} className="shrink-0 text-faint opacity-0 hover:text-red-600 group-hover/task:opacity-100" aria-label={tr("Delete task")}>
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -199,6 +200,7 @@ function RemindersWidget({ projectId, instance, controls }: Base) {
 /* ── Agenda (aggregates tasks + reminders) ────────────────────────────────── */
 function AgendaWidget({ projectId, instance, controls }: Base) {
   const tr = useT();
+  const locale = useDateLocale();
   const [tasks] = useSharedState<TaskItem[]>(keyOf(projectId, "tasks"), []);
   const [reminders] = useSharedState<ReminderItem[]>(keyOf(projectId, "reminders"), []);
   const now = useNow(60000);
@@ -214,7 +216,7 @@ function AgendaWidget({ projectId, instance, controls }: Base) {
         {entries.slice(0, 7).map((e) => (
           <li key={`${e.kind}-${e.id}`} className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-2 leading-none">
-              <span className="text-[10px] uppercase text-faint">{new Intl.DateTimeFormat("en-GB", { month: "short" }).format(e.when)}</span>
+              <span className="text-[10px] uppercase text-faint">{new Intl.DateTimeFormat(locale, { month: "short" }).format(e.when)}</span>
               <span className="text-sm font-semibold text-fg">{e.when.getDate()}</span>
             </div>
             <div className="min-w-0 flex-1">
@@ -233,6 +235,7 @@ function AgendaWidget({ projectId, instance, controls }: Base) {
 type Timer = { running: boolean; startedAt: number | null; accumulatedMs: number };
 function ClockWidget({ projectId, instance, controls, onConfigChange }: Base) {
   const tr = useT();
+  const locale = useDateLocale();
   const now = useNow(1000);
   const hour12 = (instance.config?.hour12 as boolean | undefined) ?? false;
   const [timer, setTimer] = useSharedState<Timer>(keyOf(projectId, `timer.${instance.id}`), { running: false, startedAt: null, accumulatedMs: 0 });
@@ -257,9 +260,9 @@ function ClockWidget({ projectId, instance, controls, onConfigChange }: Base) {
     <WidgetFrame title={title(instance, tr)} icon={<Clock className="h-4 w-4" />} settings={settings} {...controls}>
       <div className="text-center">
         <div className="font-mono text-3xl font-semibold tracking-tight text-fg tabular-nums">
-          {now ? new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12 }).format(now) : "--:--:--"}
+          {now ? new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12 }).format(now) : "--:--:--"}
         </div>
-        <div className="mt-0.5 text-xs text-muted">{now ? new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(now) : ""}</div>
+        <div className="mt-0.5 text-xs text-muted">{now ? new Intl.DateTimeFormat(locale, { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(now) : ""}</div>
       </div>
       <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
         <div>
@@ -283,6 +286,7 @@ function ClockWidget({ projectId, instance, controls, onConfigChange }: Base) {
 /* ── World Clocks (configurable) ──────────────────────────────────────────── */
 function WorldClockWidget({ instance, controls, onConfigChange }: Base) {
   const tr = useT();
+  const locale = useDateLocale();
   const now = useNow(1000);
   const cities = (instance.config?.cities as string[] | undefined) ?? ["America/Aruba", "Europe/Amsterdam"];
 
@@ -312,9 +316,9 @@ function WorldClockWidget({ instance, controls, onConfigChange }: Base) {
           <li key={tz} className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-fg">{cityLabel(tz)}</div>
-              <div className="text-[11px] text-faint">{now ? dateInTz(tz, now) : ""}</div>
+              <div className="text-[11px] text-faint">{now ? dateInTz(tz, now, locale) : ""}</div>
             </div>
-            <div className="font-mono text-lg font-semibold text-fg tabular-nums">{now ? timeIn(tz, now) : "--:--"}</div>
+            <div className="font-mono text-lg font-semibold text-fg tabular-nums">{now ? timeIn(tz, now, locale) : "--:--"}</div>
           </li>
         ))}
         {cities.length === 0 ? <li className="py-2 text-center text-xs text-faint">{tr("Pick cities in settings ⚙")}</li> : null}
@@ -364,6 +368,7 @@ function ProgressWidget({ instance, project, controls, onConfigChange }: Base) {
 /* ── Key Stats ────────────────────────────────────────────────────────────── */
 function StatsWidget({ instance, project, controls, onConfigChange }: Base) {
   const tr = useT();
+  const locale = useDateLocale();
   const now = useNow(3600000);
   const daysToEnd =
     project.targetEndDate && now
@@ -371,9 +376,9 @@ function StatsWidget({ instance, project, controls, onConfigChange }: Base) {
       : null;
   const tiles = [
     { key: "value", label: tr("Contract value"), value: formatCurrency(project.value, project.currency) },
-    { key: "end", label: tr("Target end"), value: formatDate(project.targetEndDate) },
+    { key: "end", label: tr("Target end"), value: formatDate(project.targetEndDate, locale) },
     { key: "countdown", label: tr("Countdown"), value: daysToEnd === null ? "—" : daysToEnd >= 0 ? fmt(tr("{count} days"), { count: daysToEnd }) : fmt(tr("{count}d over"), { count: -daysToEnd }) },
-    { key: "started", label: tr("Started"), value: formatDate(project.startDate) },
+    { key: "started", label: tr("Started"), value: formatDate(project.startDate, locale) },
     { key: "number", label: tr("Project no."), value: project.projectNumber },
     { key: "site", label: tr("Site"), value: project.siteAddress ?? "—" },
   ];

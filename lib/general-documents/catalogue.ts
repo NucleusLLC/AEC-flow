@@ -20,6 +20,7 @@
  * (“____”) so a blank is obvious on paper rather than silently empty.
  */
 import type { CatalogueEntry, DocumentCategory } from "./types";
+import { AI_DRAFT_TYPE, aiKindLabel } from "./ai-draft";
 
 /** The party a document is normally addressed to, when it is not the client. */
 const AUTHORITY = "Authority / department";
@@ -819,9 +820,32 @@ export const CATALOGUE: CatalogueEntry[] = [
   },
 ];
 
-/** Every entry, by key. */
+/**
+ * A document written with AI (lib/general-documents/ai-draft.ts).
+ *
+ * Deliberately NOT in `CATALOGUE`: it has no template body — the wording comes
+ * from the model and is stored on the row — so it is not one of the fixed
+ * templates the picker groups and the catalogue tests hold to a standard. It is
+ * in `CATALOGUE_BY_KEY`, because saving, issuing and printing look the type up
+ * there and must accept it.
+ */
+export const AI_DRAFT_ENTRY: CatalogueEntry = {
+  key: AI_DRAFT_TYPE,
+  label: "Document written with AI",
+  category: "CORRESPONDENCE",
+  summary: "Describe what you need in a sentence or two; the AI writes the whole document.",
+  counterpartyLabel: "Addressed to (organisation)",
+  titleTemplate: "",
+  fields: [],
+  body: [],
+  signatures: [{ role: "For {{firmName}}", party: "firm" }],
+  practiceNote:
+    "The AI writes only from what you give it and leaves a blank (__________) for any fact it was not told. Read every line, fill the blanks, and have anything with legal effect checked before you issue it.",
+};
+
+/** Every entry, by key — the templates and the AI draft. */
 export const CATALOGUE_BY_KEY: Record<string, CatalogueEntry> = Object.fromEntries(
-  CATALOGUE.map((e) => [e.key, e]),
+  [...CATALOGUE, AI_DRAFT_ENTRY].map((e) => [e.key, e]),
 );
 
 export function catalogueEntry(key: string): CatalogueEntry | null {
@@ -839,7 +863,11 @@ export function catalogueByCategory(): { category: DocumentCategory; entries: Ca
   return [...groups.entries()].map(([category, entries]) => ({ category, entries }));
 }
 
-/** The label a register shows for a stored key, even one no longer offered. */
-export function docTypeLabel(key: string): string {
-  return CATALOGUE_BY_KEY[key]?.label ?? key;
+/**
+ * The label a register shows for a stored key, even one no longer offered. A
+ * document written with AI is called what the user said it was — a Letter, a
+ * Memorandum — because that is also what its letterhead prints.
+ */
+export function docTypeLabel(key: string, values?: Record<string, string>): string {
+  return aiKindLabel(key, values) ?? CATALOGUE_BY_KEY[key]?.label ?? key;
 }

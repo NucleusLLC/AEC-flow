@@ -35,6 +35,13 @@ import {
   parseGeneralDocumentInput,
 } from "@/lib/general-documents/schema";
 import type { GeneralDocumentInput } from "@/lib/general-documents/types";
+import { requireActor } from "@/lib/server/actor";
+import { draftDocument } from "@/lib/server/document-ai";
+import {
+  draftValues,
+  parseAiDraftRequest,
+  type AiDraft,
+} from "@/lib/general-documents/ai-draft";
 
 export type DocumentActionResult = { ok: true; id: string } | { ok: false; error: string };
 
@@ -92,7 +99,7 @@ export async function issueDocumentAction(
   try {
     const existing = await getGeneralDocument(id);
     if (!existing) return { ok: false, error: "That document could not be found." };
-    const blockers = issueBlockers(existing.docType, existing.values);
+    const blockers = issueBlockers(existing.docType, existing.values, existing.body);
     if (blockers.length > 0) {
       return {
         ok: false,
@@ -153,4 +160,27 @@ export async function deleteDocumentAction(id: string): Promise<DocumentActionRe
   } catch (e) {
     return failure(e, "Failed to delete the document.");
   }
+}
+
+export type DraftWithAiResult =
+  | { ok: true; draft: AiDraft; values: Record<string, string> }
+  | { ok: false; error: string };
+
+/**
+ * Write a document's wording with AI. Nothing is saved here: the draft goes back
+ * to the composer, the user reads and edits it, and "Create draft" stores it
+ * through the same gate as every other document.
+ */
+export async function draftWithAiAction(input: unknown): Promise<DraftWithAiResult> {
+  try {
+    await requireActor();
+  } catch {
+    return { ok: false, error: "You must be signed in." };
+  }
+  const parsed = parseAiDraftRequest(input);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  const result = await draftDocument(parsed.value);
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, draft: result.draft, values: draftValues(parsed.value, result.model) };
 }

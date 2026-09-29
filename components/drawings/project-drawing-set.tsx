@@ -22,7 +22,7 @@ import { DrawingStatusBadge, FileTypeChip } from "@/components/drawings/badges";
 import { DISCIPLINE_LABEL, type Drawing, type Discipline } from "@/lib/data/drawings.types";
 import { SHEET_TYPE_LABEL, type SheetType } from "@/lib/drawings/sheet-type";
 import { formatDate } from "@/lib/format";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import { sheetTypeText } from "@/components/drawings/t-context";
 
@@ -48,6 +48,8 @@ export function ProjectDrawingSet({
   projectId?: string;
 }) {
   const t = useT();
+
+  const locale = useDateLocale();
   const [showSuperseded, setShowSuperseded] = useState(false);
 
   const supersededCount = drawings.filter((d) => d.status === "SUPERSEDED").length;
@@ -127,7 +129,7 @@ export function ProjectDrawingSet({
                     {d.sheetType ? <span>{SHEET_TYPE_LABEL[d.sheetType as SheetType] ? sheetTypeText(t, SHEET_TYPE_LABEL[d.sheetType as SheetType]) : d.sheetType}</span> : null}
                     {d.paperSize ? <span>· {d.paperSize}</span> : null}
                     {d.pageCount && d.pageCount > 1 ? <span>· {fmt(t("{count} pages"), { count: d.pageCount })}</span> : null}
-                    <span>· {formatDate(d.uploadedAt)}</span>
+                    <span>· {formatDate(d.uploadedAt, locale)}</span>
                     <span>· {d.uploadedBy}</span>
                   </div>
                 </div>

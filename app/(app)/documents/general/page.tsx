@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { DocumentRegister } from "@/components/general-documents/document-register";
 import { listGeneralDocuments } from "@/lib/data/general-documents";
 import { ymd } from "@/lib/building-permits/register";
 import { CATALOGUE } from "@/lib/general-documents/catalogue";
+import { AI_DRAFT_TYPE } from "@/lib/general-documents/ai-draft";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
@@ -27,12 +28,20 @@ export default async function GeneralDocumentsPage() {
             )}
           </p>
         </div>
-        <Link
-          href="/documents/general/new"
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <Plus className="h-4 w-4" /> {t("New document")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/documents/general/new?type=${AI_DRAFT_TYPE}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/5 px-3 text-sm font-medium text-brand transition-colors hover:bg-brand/10"
+          >
+            <Sparkles className="h-4 w-4" /> {t("Write with AI")}
+          </Link>
+          <Link
+            href="/documents/general/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <Plus className="h-4 w-4" /> {t("New document")}
+          </Link>
+        </div>
       </div>
 
       {documents.length === 0 ? (

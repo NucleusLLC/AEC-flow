@@ -14,7 +14,7 @@ import {
   getScheduleUrl,
   getSchedulePrintUrl,
 } from "@/lib/integrations/schedule/adapter";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 export const metadata = { title: "Module 3 Dashboard · AEC-flow" };
@@ -66,6 +66,7 @@ export default async function Module3Dashboard() {
   // "Active" schedule = the one for the current estimate's project.
   const sched = est?.found ? await getProjectScheduleSummary(est.projectNumber) : null;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -109,7 +110,7 @@ export default async function Module3Dashboard() {
                     label={t("Cost per m²")}
                     value={est.costPerM2 != null ? formatCurrency(est.costPerM2, est.currency) : "—"}
                   />
-                  <Field label={t("Last modified")} value={formatDate(est.date)} />
+                  <Field label={t("Last modified")} value={formatDate(est.date, locale)} />
                   <Field label={t("Version lock")} value={est.locked ? t("Locked") : t("Unlocked")} />
                 </div>
                 <div className="mt-4">
@@ -148,11 +149,11 @@ export default async function Module3Dashboard() {
                 </div>
                 <div className="divide-y divide-border/60">
                   <Field label={t("Overall progress")} value={`${sched.pctActual}%`} />
-                  <Field label={t("Planned start")} value={formatDate(sched.plannedStart)} />
-                  <Field label={t("Planned finish")} value={formatDate(sched.plannedFinish)} />
+                  <Field label={t("Planned start")} value={formatDate(sched.plannedStart, locale)} />
+                  <Field label={t("Planned finish")} value={formatDate(sched.plannedFinish, locale)} />
                   <Field
                     label={t("Forecast finish")}
-                    value={sched.forecastFinish ? formatDate(sched.forecastFinish) : "—"}
+                    value={sched.forecastFinish ? formatDate(sched.forecastFinish, locale) : "—"}
                   />
                   <Field
                     label={t("Schedule variance")}

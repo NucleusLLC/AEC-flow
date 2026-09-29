@@ -1,11 +1,11 @@
 /** The UI languages. English is the key language and needs no dictionary. */
 export type Lang = "en" | "es" | "nl" | "de" | "zh" | "ja" | "pt";
 
-/** Languages that translate the whole app (one area dictionary each). */
-export type FullLang = "es" | "nl";
+/** Languages whose strings live beside English in each area file (dict/<area>.ts). */
+export type AreaLang = "es" | "nl";
 
-/** Languages that translate the navigation and app chrome only. */
-export type MenuLang = "de" | "zh" | "ja" | "pt";
+/** Languages with one folder of area files each (dict/<lang>/<area>.ts). */
+export type ExtraLang = "de" | "zh" | "ja" | "pt";
 
 export const LANG_CODES: readonly Lang[] = ["en", "es", "nl", "de", "zh", "ja", "pt"];
 
