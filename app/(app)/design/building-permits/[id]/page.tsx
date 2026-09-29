@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Printer } from "lucide-react";
+import { ArrowLeft, FileText, Pencil, Printer } from "lucide-react";
 import { PermitStatusBadge, PermitTypeBadge } from "@/components/building-permits/badges";
 import { PermitCaseFile } from "@/components/building-permits/permit-case-file";
 import { PermitDeleteButton } from "@/components/building-permits/permit-delete-button";
@@ -56,6 +56,12 @@ export default async function BuildingPermitPage({
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Printer className="h-4 w-4" /> {t("Print")}
+          </Link>
+          <Link
+            href={`/print/design/building-permits/${permit.id}/summary`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <FileText className="h-4 w-4" /> {t("Process summary")}
           </Link>
           <Link
             href={`/design/building-permits/${permit.id}/edit`}

@@ -11,7 +11,7 @@ import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt as fmtText } from "@/lib/i18n/format";
 
 type Row = Record<string, unknown>;
@@ -116,6 +116,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
   const title = t(cfg.title);
   const rows = (await cfg.getter()) as Row[];
   const recordsLabel = fmtText(t(rows.length === 1 ? "1 record" : "{count} records"), { count: rows.length });
@@ -135,7 +136,7 @@ export default async function DirectoryPrintPage({ params }: PageProps) {
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{title}</div>
-            <div className="mt-1 text-xs text-gray-500">{recordsLabel} · {formatDate(new Date())}</div>
+            <div className="mt-1 text-xs text-gray-500">{recordsLabel} · {formatDate(new Date(), locale)}</div>
           </div>
         }
       />

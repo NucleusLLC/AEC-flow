@@ -5,7 +5,7 @@ import { getMeeting } from "@/lib/data/meetings";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -24,6 +24,7 @@ export default async function MeetingPrintPage({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     // The document supplies its content; PrintSurface supplies the page. Before
@@ -34,6 +35,7 @@ export default async function MeetingPrintPage({ params }: PageProps) {
     // continuous page with no boundaries and no page numbers.
     <PrintSurface backHref={`/meetings/${meeting.id}`} backLabel={t("Back to meeting")}>
       <MeetingDocument
+        locale={locale}
         meeting={meeting}
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}
         companyName={companyName}

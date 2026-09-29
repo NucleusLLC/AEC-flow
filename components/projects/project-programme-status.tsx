@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import { formatDate } from "@/lib/format";
 import type { ScheduleSummary } from "@/lib/integrations/schedule/adapter";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 /**
@@ -53,6 +53,7 @@ export async function ProjectProgrammeStatusCard({
   scheduleKey: string;
 }) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   // No programme at all: say so once, and offer the way in. The Schedule picker
   // now lists projects without a programme, so the link lands somewhere useful.
   if (!summary.found || summary.taskCount === 0) {
@@ -143,14 +144,14 @@ export async function ProjectProgrammeStatusCard({
 
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <Metric label="SPI" value={summary.spi.toFixed(2)} sub={summary.spi >= 1 ? t("at or above plan") : t("below plan")} />
-          <Metric label={t("Planned finish")} value={summary.plannedFinish ? formatDate(summary.plannedFinish) : "—"} />
+          <Metric label={t("Planned finish")} value={summary.plannedFinish ? formatDate(summary.plannedFinish, locale) : "—"} />
           <Metric
             label={t("Baseline finish")}
-            value={summary.baselineFinish ? formatDate(summary.baselineFinish) : "—"}
+            value={summary.baselineFinish ? formatDate(summary.baselineFinish, locale) : "—"}
           />
           <Metric
             label={t("Forecast finish")}
-            value={summary.forecastFinish ? formatDate(summary.forecastFinish) : "—"}
+            value={summary.forecastFinish ? formatDate(summary.forecastFinish, locale) : "—"}
             sub={slip ? (behind ? t("later than baseline") : t("earlier than baseline")) : undefined}
           />
         </div>

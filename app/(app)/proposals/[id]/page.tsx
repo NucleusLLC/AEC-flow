@@ -23,7 +23,7 @@ import {
   DISCIPLINE_LABEL,
 } from "@/lib/data/proposals";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -63,6 +63,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
   const proposal = await getProposal(id);
   if (!proposal) notFound();
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   const committed = committedFee(proposal);
   const optional = optionalFee(proposal);
@@ -286,11 +287,11 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                   {proposal.revision}
                 </span>
               </DetailRow>
-              <DetailRow label={t("Created")}>{formatDate(proposal.createdAt)}</DetailRow>
-              <DetailRow label={t("Sent")}>{formatDate(proposal.sentAt)}</DetailRow>
-              <DetailRow label={t("Valid until")}>{formatDate(proposal.validUntil)}</DetailRow>
+              <DetailRow label={t("Created")}>{formatDate(proposal.createdAt, locale)}</DetailRow>
+              <DetailRow label={t("Sent")}>{formatDate(proposal.sentAt, locale)}</DetailRow>
+              <DetailRow label={t("Valid until")}>{formatDate(proposal.validUntil, locale)}</DetailRow>
               {proposal.approvedAt ? (
-                <DetailRow label={t("Approved")}>{formatDate(proposal.approvedAt)}</DetailRow>
+                <DetailRow label={t("Approved")}>{formatDate(proposal.approvedAt, locale)}</DetailRow>
               ) : null}
               {proposal.orderNumber ? (
                 <DetailRow label={t("Order")}>
@@ -314,11 +315,11 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                   <CalendarClock className="h-3.5 w-3.5 text-faint" />
                   {t("Follow-up")}
                 </span>
-                <span className="text-sm text-fg">{formatDate(proposal.followUpDate)}</span>
+                <span className="text-sm text-fg">{formatDate(proposal.followUpDate, locale)}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-xs font-medium text-muted">{t("Last contact")}</span>
-                <span className="text-sm text-fg">{formatDate(proposal.lastContactDate)}</span>
+                <span className="text-sm text-fg">{formatDate(proposal.lastContactDate, locale)}</span>
               </div>
               {proposal.followUpNotes ? (
                 <p className="border-t border-border pt-3 text-sm leading-relaxed text-muted">

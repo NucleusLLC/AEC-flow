@@ -4,7 +4,7 @@ import { LogIn, Sparkles } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { getAccount, getBetaMembership } from "@/lib/data/account";
 import { AccountForm } from "@/components/account/account-form";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 export async function generateMetadata() {
@@ -12,11 +12,11 @@ export async function generateMetadata() {
   return { title: `${t("My Account")} · AEC-flow` };
 }
 
-function formatLongDate(iso: string): string {
+function formatLongDate(iso: string, locale: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? iso
-    : d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    : d.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
 export default async function AccountPage() {
@@ -25,6 +25,7 @@ export default async function AccountPage() {
   const account = userId ? await getAccount(userId) : null;
   const beta = userId ? await getBetaMembership(userId) : null;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   return (
     <div className="w-full space-y-6">
@@ -41,7 +42,7 @@ export default async function AccountPage() {
           </div>
           <p className="mt-1.5 text-sm text-muted">
             {beta.betaAccessUntil
-              ? fmt(t("Your free beta access runs until {date}."), { date: formatLongDate(beta.betaAccessUntil) })
+              ? fmt(t("Your free beta access runs until {date}."), { date: formatLongDate(beta.betaAccessUntil, locale) })
               : t("Thanks for testing AEC-flow.")}{" "}
             {t("Keep the feedback coming via the Feedback button on any screen.")}
           </p>

@@ -7,7 +7,7 @@ import { ReportStatusBadge } from "@/components/construction-admin/badges";
 import { getReport } from "@/lib/data/ca/reports";
 import { CA_REPORT_TYPE_LABEL } from "@/lib/ca/labels";
 import { formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -29,6 +29,7 @@ function Section({ title, body }: { title: string; body: string | null }) {
 
 export default async function ReportDetailPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const r = await getReport(id);
   if (!r) notFound();
@@ -50,7 +51,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           <span className="inline-flex items-center gap-1.5 text-sm text-muted">
             <Building2 className="h-3.5 w-3.5" />
             {r.projectName}
-            {r.reportingPeriodStart ? ` · ${formatDate(r.reportingPeriodStart)} – ${formatDate(r.reportingPeriodEnd)}` : ""}
+            {r.reportingPeriodStart ? ` · ${formatDate(r.reportingPeriodStart, locale)} – ${formatDate(r.reportingPeriodEnd, locale)}` : ""}
           </span>
         </div>
         <a
@@ -122,7 +123,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
               <div className="flex items-center justify-between py-2"><span className="text-xs text-muted">{t("Reviewed by")}</span><span className="text-sm text-fg">{r.reviewedBy ?? "—"}</span></div>
               <div className="flex items-center justify-between py-2"><span className="text-xs text-muted">{t("Approved by")}</span><span className="text-sm text-fg">{r.approvedBy ?? "—"}</span></div>
               <div className="flex items-center justify-between py-2"><span className="text-xs text-muted">{t("Weather")}</span><span className="text-sm text-fg">{r.weatherSummary ?? "—"}</span></div>
-              <div className="flex items-center justify-between py-2"><span className="text-xs text-muted">{t("Updated")}</span><span className="text-sm text-fg">{formatDate(r.updatedAt)}</span></div>
+              <div className="flex items-center justify-between py-2"><span className="text-xs text-muted">{t("Updated")}</span><span className="text-sm text-fg">{formatDate(r.updatedAt, locale)}</span></div>
             </CardBody>
           </Card>
         </div>

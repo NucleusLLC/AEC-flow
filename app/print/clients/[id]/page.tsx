@@ -8,7 +8,7 @@ import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
 import { PROPOSAL_STATUS_LABEL } from "@/lib/data/proposals.types";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 const STATUS_LABEL: Record<ClientStatus, string> = {
@@ -50,6 +50,7 @@ export default async function ClientFactSheet({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
   const lifetime = c.proposals.filter((p) => p.status === "APPROVED").reduce((n, p) => n + p.value, 0);
   const pipeline = c.proposals
@@ -66,7 +67,7 @@ export default async function ClientFactSheet({ params }: PageProps) {
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{t("Client Profile")}</div>
-            <div className="mt-1 text-xs text-gray-500">{fmt(t("Client since {date}"), { date: formatDate(c.createdAt) })}</div>
+            <div className="mt-1 text-xs text-gray-500">{fmt(t("Client since {date}"), { date: formatDate(c.createdAt, locale) })}</div>
           </div>
         }
       />
@@ -144,7 +145,7 @@ export default async function ClientFactSheet({ params }: PageProps) {
                 <td className="py-1.5 pr-3 font-mono text-[10px] text-gray-600">{p.ref}</td>
                 <td className="py-1.5 pr-3 text-gray-900">{p.title}</td>
                 <td className="py-1.5 pr-3 text-gray-600">{t(PROPOSAL_STATUS_LABEL[p.status] ?? p.status)}</td>
-                <td className="py-1.5 pr-3 text-gray-600">{formatDate(p.date)}</td>
+                <td className="py-1.5 pr-3 text-gray-600">{formatDate(p.date, locale)}</td>
                 <td className="py-1.5 text-right tabular-nums text-gray-900">{formatCurrency(p.value, currency)}</td>
               </tr>
             ))
@@ -184,7 +185,7 @@ export default async function ClientFactSheet({ params }: PageProps) {
       </table>
 
       <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {companyName} · {c.name} · {t("Client Profile")} · {fmt(t("Generated {date}"), { date: formatDate(new Date()) })}
+        {companyName} · {c.name} · {t("Client Profile")} · {fmt(t("Generated {date}"), { date: formatDate(new Date(), locale) })}
       </div>
     </PrintSurface>
   );

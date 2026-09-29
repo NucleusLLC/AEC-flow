@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Eye, X, Printer } from "lucide-react";
 import type { ProposalRecord } from "@/lib/data/proposals.types";
 import { ProposalDocument } from "./proposal-document";
-import { useT } from "@/components/i18n/language-provider";
+import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
 /**
@@ -24,6 +24,7 @@ export function ProposalPreviewModal({
   printHref?: string;
 }) {
   const t = useT();
+  const locale = useDateLocale();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -88,7 +89,7 @@ export function ProposalPreviewModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-fit rounded-md shadow-2xl">
-          <ProposalDocument proposal={proposal} t={t} />
+          <ProposalDocument proposal={proposal} t={t} locale={locale} />
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import { getSystemCurrency, getPracticeSettings } from "@/lib/server/practice-co
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -71,6 +71,7 @@ export default async function PracticeOverview() {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const tr = await getServerT();
+  const locale = await getServerLocale();
 
   const activeClients = clients.filter((c) => c.status === "ACTIVE").length;
   const prospects = clients.filter((c) => c.status === "PROSPECT").length;
@@ -97,7 +98,7 @@ export default async function PracticeOverview() {
         details={
           <div className="text-right">
             <div className="text-sm font-semibold uppercase tracking-wide text-gray-900">{tr("Practice Overview")}</div>
-            <div className="mt-1 text-xs text-gray-500">{formatDate(new Date())}</div>
+            <div className="mt-1 text-xs text-gray-500">{formatDate(new Date(), locale)}</div>
           </div>
         }
       />
@@ -127,7 +128,7 @@ export default async function PracticeOverview() {
       </div>
 
       <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {companyName} · {tr("Practice Overview")} · {fmt(tr("Generated {date}"), { date: formatDate(new Date()) })} · {tr("Figures from live data")}
+        {companyName} · {tr("Practice Overview")} · {fmt(tr("Generated {date}"), { date: formatDate(new Date(), locale) })} · {tr("Figures from live data")}
       </div>
     </PrintSurface>
   );

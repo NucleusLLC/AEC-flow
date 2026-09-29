@@ -316,7 +316,10 @@ export async function* generateContract(input: GenerateInput): AsyncGenerator<Ge
     const stream = client.messages.stream({
       model: CONTRACT_MODEL,
       max_tokens: MAX_TOKENS,
-      thinking: { type: "enabled", budget_tokens: 4_000 },
+      // Opus 5 rejects `budget_tokens` with a 400; adaptive is the only on-mode.
+      // "summarized" keeps the reasoning text this generator streams to the screen
+      // (Opus 5 omits it by default, which would read as a long silent pause).
+      thinking: { type: "adaptive", display: "summarized" },
       messages: [
         {
           role: "user",

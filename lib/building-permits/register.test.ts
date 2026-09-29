@@ -324,7 +324,7 @@ describe("filterPermits over letters", () => {
   it("finds a permit by a letter's reference", () => {
     const p = permit({
       letters: [
-        { id: "l1", direction: "INCOMING", letterRef: "DOW/2026/481", subject: "Missing sections", letterDate: null, pdf: null },
+        { id: "l1", direction: "INCOMING", letterRef: "DOW/2026/481", subject: "Missing sections", letterDate: null, pdf: null, attachments: [] },
       ],
     });
     expect(filterPermits([p], { q: "dow/2026/481" })).toHaveLength(1);

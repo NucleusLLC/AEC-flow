@@ -6,7 +6,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 import {
   PROJECT_STATUS_LABEL,
@@ -48,8 +48,9 @@ export default async function ProjectFactSheet({ params }: PageProps) {
   const firm = await getFirmIdentity();
   const companyName = firm.name;
   const t = await getServerT();
+  const locale = await getServerLocale();
 
-  const dash = (s: string | null) => (s ? formatDate(s) : "—");
+  const dash = (s: string | null) => (s ? formatDate(s, locale) : "—");
 
   return (
     <PrintSurface backHref={`/projects/${p.id}`} backLabel={t("Back to project")}>
@@ -146,7 +147,7 @@ export default async function ProjectFactSheet({ params }: PageProps) {
       </table>
 
       <div className="mt-8 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
-        {companyName} · {p.projectNumber} · {p.name} · {fmt(t("Generated {date}"), { date: formatDate(new Date()) })}
+        {companyName} · {p.projectNumber} · {p.name} · {fmt(t("Generated {date}"), { date: formatDate(new Date(), locale) })}
       </div>
     </PrintSurface>
   );

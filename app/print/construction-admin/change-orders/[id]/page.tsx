@@ -5,7 +5,7 @@ import { getChangeOrder } from "@/lib/data/ca/change-orders";
 import { changeOrderBreakdown } from "@/lib/ca/calc";
 import { CHANGE_ORDER_STATUS_LABEL, tCa } from "@/lib/ca/labels";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ChangeOrderPrintPage({ params }: PageProps) {
   const t = await getServerT();
+  const locale = await getServerLocale();
   const { id } = await params;
   const co = await getChangeOrder(id);
   if (!co) notFound();
@@ -46,8 +47,8 @@ export default async function ChangeOrderPrintPage({ params }: PageProps) {
       meta={[
         { label: t("Project"), value: co.projectName },
         { label: t("Contractor"), value: co.contractor ?? "—" },
-        { label: t("Requested"), value: formatDate(co.dateRequested) },
-        { label: t("Approved"), value: formatDate(co.dateApproved) },
+        { label: t("Requested"), value: formatDate(co.dateRequested, locale) },
+        { label: t("Approved"), value: formatDate(co.dateApproved, locale) },
       ]}
       signatures={[
         { role: t("Contractor"), name: co.contractor ?? "" },

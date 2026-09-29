@@ -29,7 +29,9 @@ import {
   buildDocumentKey,
   buildLetterKey,
   isDocumentKeyForPermit,
+  attachmentName,
   isLetterKeyForPermit,
+  splitLetterFiles,
   validateLetterPdf,
   validatePermitFile,
 } from "@/lib/building-permits/letter-file";
@@ -196,10 +198,21 @@ function meetingDto(r: MeetingRow): BuildingPermitMeetingDTO {
   };
 }
 
-/** The letter's PDF — the first stored file on it — without its storage key. */
-function letterPdf(r: Pick<CorrespondenceRow, "documents">): PermitLetterPdf | null {
-  const doc = r.documents[0];
-  return doc ? { documentId: doc.id, filename: doc.filename, sizeBytes: doc.sizeBytes } : null;
+/**
+ * The letter's PDF and its attachments, without storage keys. The first stored
+ * file is the letter; the rest are its enclosures (splitLetterFiles).
+ */
+function letterFiles(r: Pick<CorrespondenceRow, "documents">): {
+  pdf: PermitLetterPdf | null;
+  attachments: PermitLetterPdf[];
+} {
+  const files: PermitLetterPdf[] = r.documents.map((d) => ({
+    documentId: d.id,
+    filename: d.filename,
+    sizeBytes: d.sizeBytes,
+  }));
+  const { letter, attachments } = splitLetterFiles(files);
+  return { pdf: letter, attachments };
 }
 
 function correspondenceDto(r: CorrespondenceRow): BuildingPermitCorrespondenceDTO {
@@ -218,7 +231,7 @@ function correspondenceDto(r: CorrespondenceRow): BuildingPermitCorrespondenceDT
     respondedAt: ymd(r.respondedAt),
     createdByName: r.createdByName,
     createdAt: r.createdAt.toISOString(),
-    pdf: letterPdf(r),
+    ...letterFiles(r),
   };
 }
 
@@ -325,7 +338,7 @@ function summaryDto(r: PermitRow): BuildingPermitSummaryDTO {
       letterRef: c.letterRef,
       subject: c.subject,
       letterDate: ymd(c.letterDate ?? c.receivedAt),
-      pdf: letterPdf(c),
+      ...letterFiles(c),
     })),
     updatedAt: r.updatedAt.toISOString(),
   };
@@ -756,13 +769,15 @@ async function recordLetterPdf(
   letterDate: Date | null,
   pdf: UploadedLetterPdf,
   uploadedByName: string | null,
+  /** An enclosure is named after its file, so the case file tells it from the letter. */
+  asAttachment = false,
 ): Promise<void> {
   const file = await confirmLetterPdf(permitId, pdf);
   await prisma.buildingPermitDocument.create({
     data: {
       permitId,
       correspondenceId,
-      name: subject,
+      name: asAttachment ? `${subject} — ${attachmentName(file.filename)}` : subject,
       category: "LETTER",
       storageKey: file.storageKey,
       filename: file.filename,
@@ -791,19 +806,36 @@ export async function discardLetterUpload(permitId: string, storageKey: string):
   if (!recorded) await deleteObject(key).catch(() => {});
 }
 
-/** Attach a PDF to a letter already on the file. Returns the permit id. */
+/**
+ * Attach a PDF to a letter already on the file. The first one becomes the
+ * letter; any after that are its attachments. Returns the permit id.
+ */
 export async function attachLetterPdf(
   correspondenceId: string,
   pdf: UploadedLetterPdf,
 ): Promise<string> {
   const letter = await prisma.buildingPermitCorrespondence.findFirst({
     where: { id: correspondenceId },
-    select: { id: true, permitId: true, subject: true, letterDate: true },
+    select: {
+      id: true,
+      permitId: true,
+      subject: true,
+      letterDate: true,
+      _count: { select: { documents: { where: { NOT: { storageKey: null } } } } },
+    },
   });
   if (!letter) throw new PermitNotFoundError();
   await requirePermit(letter.permitId);
   const who = await actor();
-  await recordLetterPdf(letter.permitId, letter.id, letter.subject, letter.letterDate, pdf, who.name);
+  await recordLetterPdf(
+    letter.permitId,
+    letter.id,
+    letter.subject,
+    letter.letterDate,
+    pdf,
+    who.name,
+    letter._count.documents > 0,
+  );
   return letter.permitId;
 }
 
@@ -835,12 +867,16 @@ export async function addCorrespondence(
   permitId: string,
   input: BuildingPermitCorrespondenceInput,
   pdf?: UploadedLetterPdf | null,
+  attachments: UploadedLetterPdf[] = [],
 ): Promise<BuildingPermitCorrespondenceDTO> {
   await requirePermit(permitId);
   const who = await actor();
-  // Check the PDF BEFORE the letter is written, so a bad upload never leaves a
-  // letter behind that the user believes carries its PDF.
-  if (pdf) await confirmLetterPdf(permitId, pdf);
+  // With no letter PDF, the first attachment is the letter: the first stored
+  // file on a letter always is (splitLetterFiles).
+  const files = [...(pdf ? [pdf] : []), ...attachments];
+  // Check every PDF BEFORE the letter is written, so a bad upload never leaves
+  // a letter behind that the user believes carries its files.
+  for (const f of files) await confirmLetterPdf(permitId, f);
   const row = await prisma.buildingPermitCorrespondence.create({
     data: {
       permitId,
@@ -857,13 +893,15 @@ export async function addCorrespondence(
       createdByName: who.name,
     },
   });
-  if (pdf) {
-    try {
-      await recordLetterPdf(permitId, row.id, row.subject, row.letterDate, pdf, who.name);
-    } catch (e) {
-      await prisma.buildingPermitCorrespondence.deleteMany({ where: { id: row.id } });
-      throw e;
+  try {
+    for (const [i, f] of files.entries()) {
+      await recordLetterPdf(permitId, row.id, row.subject, row.letterDate, f, who.name, i > 0);
     }
+  } catch (e) {
+    // Files already recorded go with the letter; their stored objects first.
+    await deleteStoredObjects({ correspondenceId: row.id });
+    await prisma.buildingPermitCorrespondence.deleteMany({ where: { id: row.id } });
+    throw e;
   }
   const saved = await prisma.buildingPermitCorrespondence.findFirst({
     where: { id: row.id },

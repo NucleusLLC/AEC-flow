@@ -2,7 +2,7 @@ import { Mail, Lock } from "lucide-react";
 import { listEmailLog } from "@/lib/data/email-log";
 import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
-import { getServerT } from "@/lib/i18n/server";
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata() {
   const t = await getServerT();
@@ -31,6 +31,7 @@ export default async function EmailLogPage() {
    * administers members, and the owner's own account is a DIRECTOR, so a gate on
    * ADMIN alone would lock him out of his own audit trail. */
   const t = await getServerT();
+  const locale = await getServerLocale();
   let allowed = false;
   try {
     const actor = await requireActor();
@@ -95,7 +96,7 @@ export default async function EmailLogPage() {
               {entries.map((e) => (
                 <tr key={e.id} className="border-b border-border/60 align-top last:border-0">
                   <td className="whitespace-nowrap px-3 py-2 text-xs text-muted">
-                    {e.createdAt.toLocaleString()}
+                    {e.createdAt.toLocaleString(locale)}
                   </td>
                   <td className="px-3 py-2">
                     <span
