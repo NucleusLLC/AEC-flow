@@ -94,7 +94,9 @@ describe("i18n dictionaries", () => {
     expect(empty).toEqual([]);
   });
 
-  it("every literal t() string in the app has Spanish and Dutch", () => {
+  // It reads every source file in the app, so it outgrows the 5s default on a
+  // busy machine as the app grows (seen at 9-17s locally). Generous, not tight.
+  it("every literal t() string in the app has Spanish and Dutch", { timeout: 60_000 }, () => {
     const missing: string[] = [];
     for (const [key, file] of literalKeys()) {
       for (const lang of ["es", "nl"] as const) {
