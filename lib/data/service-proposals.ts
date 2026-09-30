@@ -239,9 +239,14 @@ function toDto(p: FullProposal): ServiceProposalDTO {
 
 export async function listServiceProposals(opts?: {
   projectId?: string;
+  clientId?: string;
 }): Promise<ServiceProposalListItem[]> {
   const rows = await prisma.serviceProposal.findMany({
-    where: { deletedAt: null, ...(opts?.projectId ? { projectId: opts.projectId } : {}) },
+    where: {
+      deletedAt: null,
+      ...(opts?.projectId ? { projectId: opts.projectId } : {}),
+      ...(opts?.clientId ? { clientId: opts.clientId } : {}),
+    },
     // The tax rows come along so the contained BBO on each list row is the
     // proposal's own figure rather than an assumed rate.
     include: { taxes: { orderBy: { sortOrder: "asc" } } },

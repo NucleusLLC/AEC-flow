@@ -482,4 +482,7 @@ export const proposals: Dict = {
   "Add client": "顧客を追加",
   "Client name": "顧客名",
   "Showing {shown} of {total} clients": "顧客 {total}件中 {shown}件を表示",
+  "Add email": "メールを追加",
+  "No email on file": "メール未登録",
+  "No service proposals yet.": "業務提案書はまだありません。",
 };

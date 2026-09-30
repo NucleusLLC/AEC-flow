@@ -216,11 +216,14 @@ export function ServiceProposalForm({
   projects,
   mode,
   initial,
+  initialClientId,
 }: {
   clients: Option[];
   projects: Option[];
   mode: "new" | "edit";
   initial?: ServiceProposalDTO;
+  /** A new proposal started from a client's page arrives with that client chosen. */
+  initialClientId?: string;
 }) {
   const t = useT();
   const router = useRouter();
@@ -250,7 +253,7 @@ export function ServiceProposalForm({
    *  existing one it is prefilled and editable — a clash is refused by the server, which sends
    *  the rejection back on the `number` path so the input below turns red. */
   const [number, setNumber] = useState(initial?.number ?? "");
-  const [clientId, setClientId] = useState(init?.clientId ?? "");
+  const [clientId, setClientId] = useState(init?.clientId ?? initialClientId ?? "");
   const [projectId, setProjectId] = useState(init?.projectId ?? "");
   const [contactName, setContactName] = useState(init?.contactName ?? "");
   const [contactEmail, setContactEmail] = useState(init?.contactEmail ?? "");
