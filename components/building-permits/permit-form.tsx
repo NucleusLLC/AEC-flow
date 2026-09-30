@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { currencyOptions, getSystemCurrency } from "@/lib/format";
+import { DEFAULT_REVISION_LEAD_DAYS } from "@/lib/building-permits/revision-reminder";
 import {
   PERMIT_STATUSES,
   PERMIT_STATUS_LABEL,
@@ -103,6 +104,13 @@ export function PermitForm({
   const [expiresAt, setExpiresAt] = useState(initial?.expiresAt ?? "");
   const [targetDecisionAt, setTargetDecisionAt] = useState(initial?.targetDecisionAt ?? "");
 
+  // Revision deadline (lib/building-permits/revision-reminder.ts)
+  const [revisionDueAt, setRevisionDueAt] = useState(initial?.revisionDueAt ?? "");
+  const [revisionReminderDays, setRevisionReminderDays] = useState(
+    String(initial?.revisionReminderDays ?? DEFAULT_REVISION_LEAD_DAYS),
+  );
+  const [revisionNote, setRevisionNote] = useState(initial?.revisionNote ?? "");
+
   // Money
   const [estimatedValue, setEstimatedValue] = useState(initial?.estimatedValue?.toString() ?? "");
   const [currency, setCurrency] = useState(initial?.currency ?? getSystemCurrency());
@@ -158,6 +166,9 @@ export function PermitForm({
       issuedAt: text(issuedAt),
       expiresAt: text(expiresAt),
       targetDecisionAt: text(targetDecisionAt),
+      revisionDueAt: text(revisionDueAt),
+      revisionReminderDays: number(revisionReminderDays),
+      revisionNote: text(revisionNote),
 
       feeAmount: number(feeAmount),
       feePaidAt: text(feePaidAt),
@@ -392,6 +403,42 @@ export function PermitForm({
           <div>
             <label className={label}>{t("Target decision")}</label>
             <input type="date" value={targetDecisionAt} onChange={(e) => setTargetDecisionAt(e.target.value)} className={field} />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title={t("Revision deadline")}
+          subtitle={t(
+            "When the authority asks for a revised submission by a date. The dashboard starts blinking the set number of days before it, and stops once a new version is recorded.",
+          )}
+        />
+        <CardBody className="grid gap-4 sm:grid-cols-4">
+          <div>
+            <label className={label}>{t("Revision due")}</label>
+            <input type="date" value={revisionDueAt} onChange={(e) => setRevisionDueAt(e.target.value)} className={field} />
+          </div>
+          <div>
+            <label className={label}>{t("Remind (days before)")}</label>
+            <input
+              type="number"
+              min={0}
+              max={90}
+              step={1}
+              value={revisionReminderDays}
+              onChange={(e) => setRevisionReminderDays(e.target.value)}
+              className={`${field} font-mono`}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={label}>{t("What to revise")}</label>
+            <input
+              value={revisionNote}
+              onChange={(e) => setRevisionNote(e.target.value)}
+              placeholder={t("e.g. Revised site plan and fire escape per DOW letter")}
+              className={field}
+            />
           </div>
         </CardBody>
       </Card>

@@ -16,8 +16,10 @@
  * 0.5.0 (28 SEP 2026): attachments on building-permit letters.
  * 0.6.0 (29 SEP 2026): permit Process Summary (SITREP) with an AI synopsis, on A4.
  * 0.6.1 (29 SEP 2026): fix — the contract generator ran into a 400 on Opus 5.
+ * 0.7.0 (29 SEP 2026): permit revision deadline with a blinking dashboard reminder
+ *   (needs prisma/sql/0024_permit_revision_reminder.sql applied first).
  */
-export const APP_VERSION = "0.6.1";
+export const APP_VERSION = "0.7.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

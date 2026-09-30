@@ -401,6 +401,13 @@ export type BuildingPermitSummaryDTO = {
   issuedAt: string | null;
   expiresAt: string | null;
   targetDecisionAt: string | null;
+  /** The authority's deadline for a revised submission (revision-reminder.ts). */
+  revisionDueAt: string | null;
+  revisionReminderDays: number;
+  revisionNote: string | null;
+  /** ISO timestamps: when the deadline was set, and when the newest version was recorded. */
+  revisionSetAt: string | null;
+  latestSubmissionRecordedAt: string | null;
   responsibleName: string | null;
   /** Counts, so the register can say "3 letters, 1 unanswered" without a join. */
   submissionCount: number;
@@ -474,6 +481,9 @@ export type BuildingPermitInput = {
   issuedAt?: string | null;
   expiresAt?: string | null;
   targetDecisionAt?: string | null;
+  revisionDueAt?: string | null;
+  revisionReminderDays?: number | null;
+  revisionNote?: string | null;
   feeAmount?: number | null;
   feePaidAt?: string | null;
   responsibleId?: string | null;
