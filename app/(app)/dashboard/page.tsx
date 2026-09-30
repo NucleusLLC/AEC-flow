@@ -11,6 +11,9 @@ import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import { getDashboardData, type Trend } from "@/lib/data/dashboard";
 import { getRecentActivity } from "@/lib/data/activity";
+import { listRevisionReminders } from "@/lib/data/building-permits";
+import { ymd } from "@/lib/building-permits/register";
+import { RevisionReminders } from "@/components/building-permits/revision-reminders";
 import { formatCurrencyCompact, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
@@ -40,6 +43,7 @@ function TrendPill({ trend }: { trend?: Trend }) {
 export default async function DashboardPage() {
   const { stats, pipeline, projects, onLeave } = await getDashboardData();
   const recentActivity = await getRecentActivity(8);
+  const revisionReminders = await listRevisionReminders(ymd(new Date()));
   const session = await getServerSession(authOptions);
   const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? "";
   const beta = session?.user?.id ? await getBetaMembership(session.user.id) : null;
@@ -98,6 +102,9 @@ export default async function DashboardPage() {
           {t("View reports")}
         </Link>
       </div>
+
+      {/* Building permit revision deadlines inside their warning window */}
+      <RevisionReminders reminders={revisionReminders} t={t} />
 
       {/* Stat tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
