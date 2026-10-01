@@ -27,6 +27,7 @@ import {
 } from "@/app/(app)/design/service-proposals/actions";
 import { saveClient } from "@/app/(app)/clients/actions";
 import type { ClientWriteInput } from "@/lib/data/clients.types";
+import { validateNewClient, type NewClientErrors, type NewClientField } from "@/lib/clients/new-client";
 import { saveProject } from "@/app/(app)/projects/actions";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -269,6 +270,8 @@ export function ServiceProposalForm({
   const [newClientEmail, setNewClientEmail] = useState("");
   const [newClientMobile, setNewClientMobile] = useState("");
   const [newClientError, setNewClientError] = useState<string | null>(null);
+  // CLIENT NAME, EMAIL and CELL NUMBER — each refused field is marked in place.
+  const [newClientErrors, setNewClientErrors] = useState<NewClientErrors>({});
   const [clientPending, startClient] = useTransition();
 
   const clientOptions = useMemo(() => {
@@ -282,6 +285,7 @@ export function ServiceProposalForm({
     setNewClientEmail("");
     setNewClientMobile("");
     setNewClientError(null);
+    setNewClientErrors({});
   }
 
   function onClientChange(value: string) {
@@ -379,11 +383,24 @@ export function ServiceProposalForm({
   }
 
   function saveNewClient() {
-    const name = newClientName.trim();
-    if (!name) {
-      setNewClientError(t("Client name is required."));
+    // Mirror of the server rule (lib/clients/new-client.ts) so the marks
+    // appear before the round trip; `saveClient` applies it again.
+    const checked = validateNewClient({
+      name: newClientName,
+      email: newClientEmail,
+      mobile: newClientMobile,
+    });
+    if (!checked.ok) {
+      const marks: NewClientErrors = {};
+      for (const [k, v] of Object.entries(checked.errors) as [NewClientField, string][]) {
+        marks[k] = t(v);
+      }
+      setNewClientErrors(marks);
+      setNewClientError(null);
       return;
     }
+    const { name, email, mobile } = checked;
+    setNewClientErrors({});
     setNewClientError(null);
     // Same server action the /clients/new form uses, so tenant scoping,
     // validation and activity logging all stay in one place.
@@ -391,9 +408,9 @@ export function ServiceProposalForm({
       name,
       companyName: newClientCompany.trim() || null,
       contactPerson: null,
-      email: newClientEmail.trim() || null,
+      email,
       phone: null,
-      mobile: newClientMobile.trim() || null,
+      mobile,
       website: null,
       taxNumber: null,
       type: "PRIVATE",
@@ -405,11 +422,17 @@ export function ServiceProposalForm({
     startClient(async () => {
       const res = await saveClient("new", payload);
       if (!res.ok) {
-        setNewClientError(res.error);
+        if (res.fieldErrors && Object.values(res.fieldErrors).some(Boolean)) {
+          setNewClientErrors(res.fieldErrors);
+        } else {
+          setNewClientError(res.error);
+        }
         return;
       }
       setAddedClients((p) => [...p, { id: res.id, name }]);
       setClientId(res.id);
+      // The proposal goes to this client — take its email(s) unless one is typed.
+      if (!contactEmail.trim()) setContactEmail(email);
       setNewClientOpen(false);
       resetNewClient();
     });
@@ -787,15 +810,50 @@ export function ServiceProposalForm({
               {newClientOpen ? (
                 <div className="mt-2 space-y-2 rounded-lg border border-border bg-surface-2/30 p-3">
                   <p className="text-xs font-medium text-muted">{t("New client")}</p>
-                  <input
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    onKeyDown={onNewClientKeyDown}
-                    className={field}
-                    placeholder={t("Client name *")}
-                    aria-label={t("New client name")}
-                    autoFocus
-                  />
+                  <div>
+                    <label htmlFor="sp-new-client-name" className={label}>{t("CLIENT NAME")} *</label>
+                    <input
+                      id="sp-new-client-name"
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                      onKeyDown={onNewClientKeyDown}
+                      className={`${field} ${newClientErrors.name ? fieldInvalid : ""}`}
+                      aria-invalid={newClientErrors.name ? true : undefined}
+                      placeholder={t("e.g. Emaar Developments")}
+                      autoFocus
+                    />
+                    <FieldError msg={newClientErrors.name} />
+                  </div>
+                  <div>
+                    <label htmlFor="sp-new-client-email" className={label}>{t("EMAIL")} *</label>
+                    <input
+                      id="sp-new-client-email"
+                      type="email"
+                      autoComplete="email"
+                      value={newClientEmail}
+                      onChange={(e) => setNewClientEmail(e.target.value)}
+                      onKeyDown={onNewClientKeyDown}
+                      className={`${field} ${newClientErrors.email ? fieldInvalid : ""}`}
+                      aria-invalid={newClientErrors.email ? true : undefined}
+                      placeholder="projects@client.ae"
+                    />
+                    <FieldError msg={newClientErrors.email} />
+                  </div>
+                  <div>
+                    <label htmlFor="sp-new-client-mobile" className={label}>{t("CELL NUMBER")} *</label>
+                    <input
+                      id="sp-new-client-mobile"
+                      type="tel"
+                      autoComplete="tel"
+                      value={newClientMobile}
+                      onChange={(e) => setNewClientMobile(e.target.value)}
+                      onKeyDown={onNewClientKeyDown}
+                      className={`${field} ${newClientErrors.mobile ? fieldInvalid : ""}`}
+                      aria-invalid={newClientErrors.mobile ? true : undefined}
+                      placeholder="+297 560 0000"
+                    />
+                    <FieldError msg={newClientErrors.mobile} />
+                  </div>
                   <input
                     value={newClientCompany}
                     onChange={(e) => setNewClientCompany(e.target.value)}
@@ -803,25 +861,6 @@ export function ServiceProposalForm({
                     className={field}
                     placeholder={t("Legal / company name")}
                     aria-label={t("New client company name")}
-                  />
-                  <input
-                    type="email"
-                    value={newClientEmail}
-                    onChange={(e) => setNewClientEmail(e.target.value)}
-                    onKeyDown={onNewClientKeyDown}
-                    className={field}
-                    placeholder={t("Email")}
-                    aria-label={t("New client email")}
-                  />
-                  <input
-                    type="tel"
-                    autoComplete="tel"
-                    value={newClientMobile}
-                    onChange={(e) => setNewClientMobile(e.target.value)}
-                    onKeyDown={onNewClientKeyDown}
-                    className={field}
-                    placeholder={t("Cell phone")}
-                    aria-label={t("New client cell phone")}
                   />
                   {newClientError ? (
                     <div className="flex items-start gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/5 px-2.5 py-2 text-xs text-rose-700 dark:text-rose-400">

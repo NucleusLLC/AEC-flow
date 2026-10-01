@@ -35,8 +35,10 @@
  * 0.11.2 (1 OCT 2026): fix — every practice could read every practice's beta reports;
  *   a request with no session borrowed a director's identity; two AI actions and the
  *   CSV export did not check who was asking.
+ * 0.12.1 (1 OCT 2026): feat — every New Client (the client page and each inline
+ *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
  */
-export const APP_VERSION = "0.12.0";
+export const APP_VERSION = "0.12.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -58,7 +58,12 @@ export type CreatableField = {
 
 export type CreatableResult =
   | { ok: true; option: CreatableOption }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /** Per-field messages keyed by `CreatableField.name`, shown under each input. */
+      fieldErrors?: Record<string, string | undefined>;
+    };
 
 /**
  * The declarative create path: a handful of fields and the action that consumes
@@ -72,6 +77,13 @@ export type CreatableSpec = {
   hint?: string;
   fields: CreatableField[];
   submitLabel?: string;
+  /**
+   * Client-side mirror of the action's own checks, run before the round trip.
+   * Returns a message (i18n key) per failing field, or nothing when the draft
+   * is fine. The action stays the gate; this only puts the error beside the
+   * field sooner.
+   */
+  validate?: (draft: Record<string, string>) => Record<string, string | undefined> | null;
   /**
    * Runs the existing server action. Must resolve to the created record's real
    * id — the picker only selects it once the write is confirmed.
@@ -161,6 +173,7 @@ export function CreatableSelect({
   const [open, setOpen] = useState(options.length === 0 && !allowEmpty && !value);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
   const [pending, start] = useTransition();
   const selectRef = useRef<HTMLSelectElement>(null);
   // Bumped on a successful create. The focus move has to happen in an effect
@@ -211,6 +224,7 @@ export function CreatableSelect({
     onCreated?.(option);
     setDraft({});
     setError(null);
+    setFieldErrors({});
     setOpen(false);
     setFocusTick((n) => n + 1);
   }
@@ -218,6 +232,7 @@ export function CreatableSelect({
   function handleSelect(next: string) {
     if (next === ADD_NEW) {
       setError(null);
+      setFieldErrors({});
       setOpen(true);
       return;
     }
@@ -226,11 +241,23 @@ export function CreatableSelect({
 
   function submitDraft() {
     if (!create) return;
-    const missing = create.fields.find((f) => f.required && !draft[f.name]?.trim());
-    if (missing) {
-      setError(fmt(t("{field} is required."), { field: missing.label }));
+    // Every field is checked at once, so the user sees all of what is wrong.
+    const marks: Record<string, string | undefined> = {};
+    for (const f of create.fields) {
+      if (f.required && !draft[f.name]?.trim()) {
+        marks[f.name] = fmt(t("{field} is required."), { field: f.label });
+      }
+    }
+    const checked = create.validate?.(draft) ?? {};
+    for (const [k, v] of Object.entries(checked)) {
+      if (v && !marks[k]) marks[k] = t(v);
+    }
+    if (Object.values(marks).some(Boolean)) {
+      setFieldErrors(marks);
+      setError(null);
       return;
     }
+    setFieldErrors({});
     setError(null);
     start(async () => {
       const trimmed: Record<string, string> = {};
@@ -238,8 +265,14 @@ export function CreatableSelect({
       const res = await create.submit(trimmed);
       // Surface the action's own message verbatim — it carries the real reason
       // (a seat limit, a duplicate email) which no generic wording preserves.
+      // When it names fields, the message goes beside each field instead.
       if (!res.ok) {
-        setError(res.error);
+        if (res.fieldErrors && Object.values(res.fieldErrors).some(Boolean)) {
+          setFieldErrors(res.fieldErrors);
+          setError(null);
+        } else {
+          setError(res.error);
+        }
         return;
       }
       accept(res.option);
@@ -301,7 +334,10 @@ export function CreatableSelect({
               {create.hint ? <p className="mt-0.5 text-xs text-muted">{create.hint}</p> : null}
 
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {create.fields.map((f) => (
+                {create.fields.map((f) => {
+                  const fieldError = fieldErrors[f.name];
+                  const errorId = `${panelId}-${f.name}-error`;
+                  return (
                   <label
                     key={f.name}
                     className={`block text-xs text-muted${f.wide ? " sm:col-span-2" : ""}`}
@@ -310,6 +346,10 @@ export function CreatableSelect({
                     {f.required ? null : <span className="text-faint"> {t("(optional)")}</span>}
                     <input
                       type={f.type ?? "text"}
+                      name={f.name}
+                      autoComplete={f.type === "tel" ? "tel" : f.type === "email" ? "email" : undefined}
+                      aria-invalid={fieldError ? true : undefined}
+                      aria-describedby={fieldError ? errorId : undefined}
                       value={draft[f.name] ?? ""}
                       onChange={(e) =>
                         setDraft((prev) => ({ ...prev, [f.name]: e.target.value }))
@@ -323,10 +363,21 @@ export function CreatableSelect({
                           submitDraft();
                         }
                       }}
-                      className={fieldClass}
+                      className={`${fieldClass}${fieldError ? " border-red-500" : ""}`}
                     />
+                    {fieldError ? (
+                      <span
+                        id={errorId}
+                        role="alert"
+                        className="mt-1 flex items-start gap-1 text-xs text-red-500"
+                      >
+                        <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                        {t(fieldError)}
+                      </span>
+                    ) : null}
                   </label>
-                ))}
+                  );
+                })}
               </div>
 
               {error ? (
@@ -353,6 +404,7 @@ export function CreatableSelect({
                   onClick={() => {
                     setOpen(false);
                     setError(null);
+                    setFieldErrors({});
                   }}
                   disabled={pending}
                   className="inline-flex h-8 items-center rounded-lg border border-border bg-surface px-3 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"

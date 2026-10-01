@@ -56,6 +56,7 @@ import { ClientSelect } from "@/components/clients/client-select";
 import { A4Sheet } from "@/components/general-documents/a4-sheet";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { fmt } from "@/lib/i18n/format";
+import { primaryAddress } from "@/lib/email/recipients";
 
 const field =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -498,7 +499,12 @@ export function DocumentComposer({
                 allowEmpty
                 placeholder={t("— none —")}
                 labelClassName={label}
-                onCreated={(c) => setClients((list) => [...list, c])}
+                onCreated={(c) => {
+                  setClients((list) => [...list, { id: c.id, name: c.name }]);
+                  // A new client always carries an email — address the document
+                  // to it (the first, when there are two) unless one is typed.
+                  if (!contactEmail.trim()) setContactEmail(primaryAddress(c.email));
+                }}
               />
               <ProjectSelect
                 projects={projects}
