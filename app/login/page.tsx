@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 import { getServerT } from "@/lib/i18n/server";
+import { LEGAL_PATHS } from "@/lib/legal/policy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -42,6 +43,11 @@ export default async function LoginPage() {
 
         <p className="mt-4 text-center text-xs text-faint">
           AEC-flow · {t("Architecture · Engineering · Project Management")}
+        </p>
+        <p className="mt-2 text-center text-xs text-faint">
+          <Link href={LEGAL_PATHS.terms} className="hover:text-fg hover:underline">{t("Terms of Service")}</Link>
+          {" · "}
+          <Link href={LEGAL_PATHS.privacy} className="hover:text-fg hover:underline">{t("Privacy Policy")}</Link>
         </p>
       </div>
     </div>

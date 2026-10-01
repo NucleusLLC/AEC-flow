@@ -20,8 +20,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { LEGAL_PATHS } from "@/lib/legal/policy";
 
 const ENFORCE = process.env.AUTH_ENFORCE === "true";
+
+/** The Terms and the Privacy Policy: public on every host, signed in or not. */
+function isLegalPath(pathname: string): boolean {
+  return pathname === LEGAL_PATHS.terms || pathname === LEGAL_PATHS.privacy;
+}
 
 /** True for the public beta subdomain (beta.* or bet.*). */
 function isBetaHost(req: NextRequest): boolean {
@@ -57,6 +63,7 @@ export async function proxy(req: NextRequest) {
     const publicOnBeta =
       pathname === "/signup" ||
       pathname === "/login" ||
+      isLegalPath(pathname) ||
       pathname.startsWith("/api/") ||
       pathname.startsWith("/_next") ||
       pathname.startsWith("/favicon") ||
@@ -81,5 +88,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/auth|login|signup|invite|forgot-password|reset-password|verify-email|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/auth|login|signup|invite|forgot-password|reset-password|verify-email|terms|privacy|_next/static|_next/image|favicon.ico).*)"],
 };

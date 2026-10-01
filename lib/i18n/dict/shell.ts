@@ -472,6 +472,13 @@ export const shell: AreaDict = {
     "Download {type}": "Descargar {type}",
     "This file could not be opened": "No se pudo abrir este archivo",
     "Opening {name}…": "Abriendo {name}…",
+    // Terms of Service and Privacy Policy
+    "Terms of Service": "Términos del servicio",
+    "Privacy Policy": "Política de privacidad",
+    "Last updated {date}": "Última actualización: {date}",
+    "This document is in English, and the English text is the one that applies.": "Este documento está en inglés, y el texto en inglés es el que se aplica.",
+    "I agree to the Terms of Service and the Privacy Policy.": "Acepto los Términos del servicio y la Política de privacidad.",
+    "Please accept the Terms of Service and Privacy Policy.": "Acepte los Términos del servicio y la Política de privacidad.",
   },
   nl: {
     "{count} at risk": "{count} met risico",
@@ -939,5 +946,12 @@ export const shell: AreaDict = {
     "Download {type}": "{type} downloaden",
     "This file could not be opened": "Dit bestand kon niet worden geopend",
     "Opening {name}…": "{name} openen…",
+    // Terms of Service and Privacy Policy
+    "Terms of Service": "Servicevoorwaarden",
+    "Privacy Policy": "Privacybeleid",
+    "Last updated {date}": "Laatst bijgewerkt {date}",
+    "This document is in English, and the English text is the one that applies.": "Dit document is in het Engels, en de Engelse tekst is de tekst die geldt.",
+    "I agree to the Terms of Service and the Privacy Policy.": "Ik ga akkoord met de Servicevoorwaarden en het Privacybeleid.",
+    "Please accept the Terms of Service and Privacy Policy.": "Ga akkoord met de Servicevoorwaarden en het Privacybeleid.",
   },
 };

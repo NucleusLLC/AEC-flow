@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getServerT } from "@/lib/i18n/server";
+import { LEGAL_PATHS } from "@/lib/legal/policy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -201,6 +202,8 @@ export default async function BetaPortalPage() {
           <div className="flex items-center gap-4">
             <Link href="/login" className="hover:text-fg">{t("Sign in")}</Link>
             <Link href="/signup" className="hover:text-fg">{t("Join the beta")}</Link>
+            <Link href={LEGAL_PATHS.terms} className="hover:text-fg">{t("Terms of Service")}</Link>
+            <Link href={LEGAL_PATHS.privacy} className="hover:text-fg">{t("Privacy Policy")}</Link>
           </div>
         </div>
       </footer>

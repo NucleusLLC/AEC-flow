@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { acceptInviteAction } from "@/app/invite/[token]/actions";
 import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { LEGAL_PATHS } from "@/lib/legal/policy";
 
 export function AcceptInviteForm({ token, email }: { token: string; email: string }) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -20,7 +23,7 @@ export function AcceptInviteForm({ token, email }: { token: string; email: strin
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await acceptInviteAction(token, name, password);
+      const res = await acceptInviteAction(token, name, password, acceptedTerms);
       if (!res.ok) {
         setError(res.error);
         return;
@@ -58,6 +61,18 @@ export function AcceptInviteForm({ token, email }: { token: string; email: strin
           className={field}
         />
       </div>
+      <label className="flex items-start gap-2 text-xs text-muted">
+        <input type="checkbox" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
+        <span>
+          {t("I agree to the Terms of Service and the Privacy Policy.")}
+          <span className="mt-1 block">
+            <Link href={LEGAL_PATHS.terms} target="_blank" className="font-medium text-brand hover:underline">{t("Terms of Service")}</Link>
+            {" · "}
+            <Link href={LEGAL_PATHS.privacy} target="_blank" className="font-medium text-brand hover:underline">{t("Privacy Policy")}</Link>
+          </span>
+        </span>
+      </label>
       {error ? <p className="text-xs text-rose-600">{t(error)}</p> : null}
       <button
         type="submit"

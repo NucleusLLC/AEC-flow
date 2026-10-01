@@ -466,4 +466,11 @@ export const shell: Dict = {
   "Download {type}": "{type} をダウンロード",
   "This file could not be opened": "このファイルを開けませんでした",
   "Opening {name}…": "{name} を開いています…",
+  // Terms of Service and Privacy Policy
+  "Terms of Service": "利用規約",
+  "Privacy Policy": "プライバシーポリシー",
+  "Last updated {date}": "最終更新日：{date}",
+  "This document is in English, and the English text is the one that applies.": "この文書は英語で書かれており、英語の本文が適用されます。",
+  "I agree to the Terms of Service and the Privacy Policy.": "利用規約とプライバシーポリシーに同意します。",
+  "Please accept the Terms of Service and Privacy Policy.": "利用規約とプライバシーポリシーに同意してください。",
 };
