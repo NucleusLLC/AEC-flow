@@ -425,6 +425,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           onPush={pushFromTakeoff}
           onGoToEstimate={() => setTab("estimate")}
           normSet={normSet}
+          onNormTaskAdded={(task) => setNormSet((ns) => [...ns, task])}
           rows={takeoff}
           setRows={editTakeoff}
           section={takeoffSection}
