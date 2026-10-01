@@ -61,7 +61,7 @@ function Field({
 const MAX_FILE_BYTES = 1_000_000;
 
 /**
- * Practice profile editor + logo upload. Profile persists to the org config file
+ * Practice profile editor + logo upload. Profile persists to the practice's AppConfig row
  * via `savePracticeProfileAction`; the logo is read client-side as a data URL and
  * stored through `saveLogoAction`. Read-only with a sign-in prompt when !canSave.
  */

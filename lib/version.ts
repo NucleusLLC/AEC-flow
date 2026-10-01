@@ -28,8 +28,10 @@
  *   Policy (a banner; it asks, never blocks), and again whenever a version changes.
  * 0.11.0 (1 OCT 2026): accounting export — invoices, invoice lines, payments, approved
  *   time and approved expenses as CSV for a period (Admin / Director only).
+ * 0.11.1 (1 OCT 2026): fix — any member could change or remove the firm's AI key,
+ *   letterhead, logo, currency and document font; now Admin / Director only.
  */
-export const APP_VERSION = "0.11.0";
+export const APP_VERSION = "0.11.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

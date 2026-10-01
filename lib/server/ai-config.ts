@@ -1,11 +1,13 @@
 /**
  * Server-only app config — currently just the Anthropic API key used by the
- * AI-Fetch feature. Persisted to a gitignored JSON file at the project root and
- * read per-request, so a key saved in Settings takes effect without a restart.
+ * AI features. Persisted in the practice's AppConfig row in Postgres
+ * (lib/server/app-config-store.ts) and read per-request, so a key saved in
+ * Settings takes effect without a restart. Only an Admin or a Director may
+ * change it (app/(app)/settings/actions.ts).
  *
  * Resolution order: process.env.ANTHROPIC_API_KEY (deploy-managed) wins over the
  * key saved through the Settings UI. NEVER import this from a client component —
- * it touches the filesystem and would hold a secret.
+ * it reads the database and would hold a secret.
  */
 import { readAppConfig, writeAppConfig } from "./app-config-store";
 

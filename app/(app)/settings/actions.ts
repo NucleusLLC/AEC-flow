@@ -33,7 +33,8 @@ import {
 } from "@/lib/data/proposal-templates";
 import { setMemberRole, setMemberStatus, createTeamMember } from "@/lib/data/team";
 import { setMemberPassword } from "@/lib/server/password";
-import { requireMemberAdmin, type Actor } from "@/lib/server/actor";
+import { requireActor, requireMemberAdmin, type Actor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 import { getMemberAccessSnapshot } from "@/lib/server/member-access";
 import { checkMemberWrite } from "@/lib/team/member-write-policy";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
@@ -49,6 +50,25 @@ export type ActionResult<T = undefined> =
 async function requireUser(): Promise<string | null> {
   const session = await getServerSession(authOptions);
   return session?.user?.id ?? null;
+}
+
+const FIRM_SETTINGS_FORBIDDEN = "Only an Admin or a Director can change the practice's settings.";
+
+/**
+ * Settings that belong to the whole practice — the letterhead, logo, currency,
+ * document font and the AI key the firm pays for — may be changed only by the
+ * people who manage it: ADMIN, DIRECTOR or the founder, the same set that
+ * manages members (canManagePasswords). Signed in is not enough: any member
+ * could otherwise swap the firm's AI key for their own, or remove it.
+ * Returns an error message, or null when the caller may proceed.
+ */
+async function firmSettingsDenied(): Promise<string | null> {
+  try {
+    const actor = await requireActor();
+    return canManagePasswords(actor.role, actor.isFounder) ? null : FIRM_SETTINGS_FORBIDDEN;
+  } catch (e) {
+    return e instanceof Error ? e.message : "You must be signed in.";
+  }
 }
 
 function fail(e: unknown, fallback: string): { ok: false; error: string } {
@@ -80,7 +100,8 @@ export async function savePreferencesAction(prefs: Preferences): Promise<PrefAct
 /* ------------------------------------------------------------------ */
 
 export async function savePracticeProfileAction(profile: PracticeProfile): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to save the practice profile." };
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await savePracticeProfile(profile);
     revalidatePath("/settings");
@@ -91,7 +112,8 @@ export async function savePracticeProfileAction(profile: PracticeProfile): Promi
 }
 
 export async function saveLogoAction(dataUrl: string): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to upload a logo." };
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await saveLogo(dataUrl);
     revalidatePath("/settings");
@@ -102,7 +124,8 @@ export async function saveLogoAction(dataUrl: string): Promise<ActionResult> {
 }
 
 export async function removeLogoAction(): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to manage the logo." };
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await removeLogo();
     revalidatePath("/settings");
@@ -113,7 +136,8 @@ export async function removeLogoAction(): Promise<ActionResult> {
 }
 
 export async function saveLogoSettingsAction(logo: LogoSettings): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to change the logo settings." };
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await saveLogoSettings(logo);
     revalidatePath("/", "layout"); // every document reads the logo placement
@@ -124,7 +148,8 @@ export async function saveLogoSettingsAction(logo: LogoSettings): Promise<Action
 }
 
 export async function saveSystemCurrencyAction(currency: string): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to change the system currency." };
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await saveSystemCurrency(currency);
     revalidatePath("/", "layout"); // every module reads the system currency
@@ -160,7 +185,8 @@ export async function saveFooterAction(footer: FooterSettings): Promise<ActionRe
  * unlicensed or renderer-unsupported face from ever being stored.
  */
 export async function saveDocumentFontAction(fontId: string): Promise<ActionResult> {
-  if (!(await requireUser())) return { ok: false, error: "Sign in to change the document font." };
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await saveDocumentFontId(fontId);
     // Documents render outside this route, so revalidate the whole tree — the
@@ -360,6 +386,8 @@ export async function setMemberPasswordAction(
 
 /** Save (or, with an empty string, clear) the Anthropic API key. */
 export async function saveAnthropicApiKeyAction(key: string): Promise<KeyActionResult> {
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
   try {
     await setAnthropicApiKey(key);
     revalidatePath("/settings");
@@ -375,6 +403,9 @@ export async function clearAnthropicApiKeyAction(): Promise<KeyActionResult> {
 
 /** Make a tiny live call to confirm the active key authenticates. */
 export async function testAnthropicKeyAction(): Promise<{ ok: boolean; message: string }> {
+  // A live call is billed to the firm's key.
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, message: denied };
   const apiKey = await getAnthropicApiKey();
   if (!apiKey) return { ok: false, message: "No API key configured yet." };
   try {
