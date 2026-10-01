@@ -30,8 +30,11 @@
  *   time and approved expenses as CSV for a period (Admin / Director only).
  * 0.11.1 (1 OCT 2026): fix — any member could change or remove the firm's AI key,
  *   letterhead, logo, currency and document font; now Admin / Director only.
+ * 0.11.2 (1 OCT 2026): fix — every practice could read every practice's beta reports;
+ *   a request with no session borrowed a director's identity; two AI actions and the
+ *   CSV export did not check who was asking.
  */
-export const APP_VERSION = "0.11.1";
+export const APP_VERSION = "0.11.2";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

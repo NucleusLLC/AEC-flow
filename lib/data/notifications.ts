@@ -13,21 +13,17 @@ import type { NotificationItem } from "./notifications.types";
 export * from "./notifications.types";
 
 /**
- * The user whose notifications we show. Uses the signed-in user when present;
- * since the auth wall is opt-in (AUTH_ENFORCE), fall back to the practice
- * director so the feed has an owner in the open demo.
+ * The signed-in user's id, or null.
+ *
+ * It used to fall back to the oldest DIRECTOR in the database — of ANY
+ * company — and then to any user at all, so the open demo had an owner. That
+ * let a request with no session act as somebody else: mark their
+ * notifications read, file a beta report in their name, and be credited in
+ * the activity log. Every caller already handles null.
  */
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await getServerSession(authOptions);
-  if (session?.user?.id) return session.user.id;
-  const director = await prisma.user.findFirst({
-    where: { role: "DIRECTOR" },
-    orderBy: { createdAt: "asc" },
-    select: { id: true },
-  });
-  if (director) return director.id;
-  const anyUser = await prisma.user.findFirst({ select: { id: true } });
-  return anyUser?.id ?? null;
+  return session?.user?.id ?? null;
 }
 
 export async function getNotificationsForCurrentUser(): Promise<NotificationItem[]> {

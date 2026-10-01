@@ -25,10 +25,12 @@ export function Topbar({
   notifications,
   collapsed = false,
   onToggleSidebar,
+  isFounder = false,
 }: {
   notifications: NotificationItem[];
   collapsed?: boolean;
   onToggleSidebar?: () => void;
+  isFounder?: boolean;
 }) {
   const title = usePageTitle();
   const currentQ = useSearchParams().get("q") ?? "";
@@ -36,7 +38,7 @@ export function Topbar({
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6 print:hidden">
-      <MobileNav />
+      <MobileNav isFounder={isFounder} />
 
       {/* When the sidebar is collapsed (desktop full-screen), show a burger to
           reopen it + the AEC-flow brand (the sidebar brand is hidden). */}

@@ -6,7 +6,8 @@ import {
   updateBetaReportStatus,
   getBetaReportScreenshot,
 } from "@/lib/data/beta-reports";
-import { getCurrentUserId } from "@/lib/data/notifications";
+import { requireActor } from "@/lib/server/actor";
+import { isCurrentUserFounder } from "@/lib/server/founder";
 import {
   MAX_SCREENSHOT_CHARS,
   type BetaReportInput,
@@ -20,8 +21,10 @@ export type SubmitBetaReportResult =
 /**
  * Persist a beta-tester's Bug/Wish report. Never throws to the client — returns
  * a tagged result so the widget can show a success or inline error state.
- * The reporter id is resolved server-side (signed-in user, else null) so the
- * widget only has to pass the display name/email it already knows.
+ * The reporter is always the signed-in user, read from the database: the
+ * widget's name/email/id fields are ignored, so nobody can file a report in
+ * someone else's name (reports are shared across every company, and the
+ * founder reads them as coming from that person).
  */
 export async function submitBetaReport(
   input: BetaReportInput,
@@ -41,8 +44,13 @@ export async function submitBetaReport(
       };
     }
 
-    const reporterId = input.reporterId ?? (await getCurrentUserId());
-    const id = await createBetaReport({ ...input, reporterId });
+    const actor = await requireActor();
+    const id = await createBetaReport({
+      ...input,
+      reporterId: actor.id,
+      reporterName: actor.name,
+      reporterEmail: actor.email,
+    });
     revalidatePath("/beta-reports");
     return { ok: true, id };
   } catch (e) {
@@ -51,11 +59,15 @@ export async function submitBetaReport(
   }
 }
 
-/** Admin triage: change a report's status. */
+/**
+ * Founder triage: change a report's status. Reports are not company-scoped
+ * (they come from every practice), so only the founder may touch them.
+ */
 export async function setBetaReportStatus(
   id: string,
   status: BetaReportStatus,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!(await isCurrentUserFounder())) return { ok: false, error: "Only the AEC-flow founder can triage reports." };
   try {
     await updateBetaReportStatus(id, status);
     revalidatePath("/beta-reports");
@@ -65,7 +77,8 @@ export async function setBetaReportStatus(
   }
 }
 
-/** Lazily load one report's screenshot for the admin lightbox. */
+/** Lazily load one report's screenshot for the founder's lightbox. A screenshot shows another practice's screen. */
 export async function loadBetaReportScreenshot(id: string): Promise<string | null> {
+  if (!(await isCurrentUserFounder())) return null;
   return getBetaReportScreenshot(id);
 }

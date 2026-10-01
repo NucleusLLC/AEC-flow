@@ -10,7 +10,7 @@ import { ModuleSwitcher } from "@/components/shell/module-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
 
-export function MobileNav() {
+export function MobileNav({ isFounder = false }: { isFounder?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { module } = useModule();
@@ -71,7 +71,7 @@ export function MobileNav() {
                     </div>
                   ) : null}
                   <ul className="space-y-0.5">
-                    {section.items.map((item) => {
+                    {section.items.filter((item) => isFounder || !item.founderOnly).map((item) => {
                       const Icon = item.icon;
                       if (item.disabled) {
                         return (
