@@ -20,8 +20,10 @@
  *   (needs prisma/sql/0024_permit_revision_reminder.sql applied first).
  * 0.7.1 (30 SEP 2026): fix — a client's Service Proposals now show on the client page;
  *   a client with no email says so, with a link to add one.
+ * 0.8.0 (1 OCT 2026): Terms of Service and Privacy Policy; sign-up and invites ask
+ *   for agreement and record which versions were accepted.
  */
-export const APP_VERSION = "0.7.1";
+export const APP_VERSION = "0.8.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
