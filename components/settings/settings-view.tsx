@@ -108,11 +108,11 @@ export function SettingsView({
       </div>
 
       {tab === "practice" ? (
-        <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave} canEditFooter={isFounder} />
+        <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave && canManagePasswords} canEditFooter={isFounder} />
       ) : null}
 
       {tab === "documentControl" ? (
-        <DocumentControlForm initialFontId={documentFontId} canSave={canSave} />
+        <DocumentControlForm initialFontId={documentFontId} canSave={canSave && canManagePasswords} />
       ) : null}
 
       {tab === "templates" ? (
@@ -127,12 +127,15 @@ export function SettingsView({
         <PreferencesForm preferences={preferences} canSave={canSave} />
       ) : null}
 
-      {tab === "integrations" ? <IntegrationsTab initial={keyStatus} /> : null}
+      {/* Practice-wide settings (letterhead, logo, currency, font, AI key) are for
+       * the people who manage the practice — the same gate as members, enforced
+       * again in app/(app)/settings/actions.ts. */}
+      {tab === "integrations" ? <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} /> : null}
     </div>
   );
 }
 
-function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
+function IntegrationsTab({ initial, canManage }: { initial: AnthropicKeyStatus; canManage: boolean }) {
   const t = useT();
   const [status, setStatus] = useState<AnthropicKeyStatus>(initial);
   const [key, setKey] = useState("");
@@ -209,6 +212,10 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
           <p className="text-xs text-muted">
             {t("A key is set via the ANTHROPIC_API_KEY environment variable, which takes precedence. Remove it from the environment to manage the key here instead.")}
           </p>
+        ) : !canManage ? (
+          <p className="text-xs text-muted">
+            {t("Only an Admin or a Director can change the practice's settings.")}
+          </p>
         ) : (
           <>
             <label className="block">
@@ -223,7 +230,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
                 className="mt-1 h-9 w-full rounded-lg border border-border bg-surface px-3 font-mono text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
               />
               <span className="mt-1 block text-[11px] text-faint">
-                {t("Stored server-side in a local config file (gitignored), never exposed to the browser. Get a key from console.anthropic.com → API Keys.")}
+                {t("Saved on the server with your practice's settings and never sent to the browser. Get a key from console.anthropic.com → API Keys.")}
               </span>
             </label>
 
@@ -259,7 +266,7 @@ function IntegrationsTab({ initial }: { initial: AnthropicKeyStatus }) {
         )}
 
         {/* env-managed keys can still be tested */}
-        {envManaged ? (
+        {envManaged && canManage ? (
           <button
             type="button"
             onClick={test}
