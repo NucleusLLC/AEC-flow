@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, Trash2, ArrowRightToLine, Ruler, Save, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,11 @@ import {
 } from "@/lib/data/estimates.types";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { AddNormTaskDialog } from "./add-norm-task-dialog";
+import { methodForUnit } from "@/lib/estimates/norm-task-draft";
+
+/** The dropdown value that opens ADD NEW instead of linking a task. */
+const ADD_NEW = "__add_new__";
 
 const METHOD_UNIT: Record<Method, string> = { area: "m²", volume: "m³", linear: "m", count: "no" };
 const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -39,6 +45,7 @@ export function TakeoffView({
   onSave,
   saving = false,
   saved = false,
+  onNormTaskAdded,
 }: {
   onPush: (sectionName: string, items: Omit<EstimateItem, "id">[]) => void;
   onGoToEstimate: () => void;
@@ -51,10 +58,14 @@ export function TakeoffView({
   onSave: () => void;
   saving?: boolean;
   saved?: boolean;
+  /** A task created through ADD NEW: append it to the workspace's Norm Set. */
+  onNormTaskAdded?: (task: NormSetTask) => void;
 }) {
   const t = useT();
   const trades = normTrades(normSet);
   const normById = (id: string) => normSet.find((n) => n.id === id);
+  // The take-off row ADD NEW was opened from, or null when the form is closed.
+  const [addFor, setAddFor] = useState<string | null>(null);
 
   const patch = (id: string, p: Partial<TakeoffRow>) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...p } : r)));
@@ -72,13 +83,21 @@ export function TakeoffView({
 
   // When a Norm Set task is linked, fix the unit and prefill the description.
   const linkNorm = (id: string, normId: string) => {
-    const n = normById(normId);
+    if (normId === ADD_NEW) {
+      setAddFor(id);
+      return;
+    }
+    linkTask(id, normById(normId));
+  };
+  // Takes the task itself, so a task ADD NEW has just created links before the
+  // Norm Set prop carrying it has re-rendered.
+  const linkTask = (id: string, n: NormSetTask | undefined) => {
     setRows((rs) =>
       rs.map((r) => {
         if (r.id !== id) return r;
         if (!n) return { ...r, normId: "" };
-        const method: Method = n.unit === "m³" ? "volume" : n.unit === "m" || n.unit === "lm" ? "linear" : n.unit === "no" || n.unit === "set" ? "count" : "area";
-        return { ...r, normId, unit: n.unit, method, desc: r.desc || n.task };
+        const method: Method = methodForUnit(n.unit);
+        return { ...r, normId: n.id, unit: n.unit, method, desc: r.desc || n.task };
       }),
     );
   };
@@ -109,8 +128,22 @@ export function TakeoffView({
     onGoToEstimate();
   };
 
+  const addRowDesc = addFor ? rows.find((r) => r.id === addFor)?.desc ?? "" : "";
+
   return (
     <div className="space-y-4">
+      {addFor && onNormTaskAdded ? (
+        <AddNormTaskDialog
+          trades={trades}
+          initialTask={addRowDesc}
+          onClose={() => setAddFor(null)}
+          onAdded={(task) => {
+            onNormTaskAdded(task);
+            linkTask(addFor, task);
+            setAddFor(null);
+          }}
+        />
+      ) : null}
       <Card className="flex flex-wrap items-center gap-3 px-4 py-3">
         <div className="inline-flex items-center gap-1.5 text-sm font-semibold text-fg">
           <Ruler className="h-4 w-4 text-brand" /> {t("Quantity Take-Off")}
@@ -190,6 +223,7 @@ export function TakeoffView({
                     <td className="px-2 py-1">
                       <select value={r.normId} onChange={(e) => linkNorm(r.id, e.target.value)} className="w-full min-w-[150px] rounded border border-border bg-surface px-1 py-0.5 text-xs text-fg outline-none focus:ring-1 focus:ring-brand/30">
                         <option value="">{t("— none —")}</option>
+                        {onNormTaskAdded ? <option value={ADD_NEW}>{t("＋ ADD NEW…")}</option> : null}
                         {trades.map((trade) => (
                           <optgroup key={trade} label={trade}>
                             {normSet.filter((n) => n.trade === trade).map((n) => (

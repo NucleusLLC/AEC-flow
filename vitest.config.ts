@@ -34,6 +34,7 @@ export default defineConfig({
       // as every entry above: the module is pure, and it decides which fields
       // travel -- the part of that feature that can silently be wrong.
       "lib/estimates/copy-lines.test.ts",
+      "lib/estimates/norm-task-draft.test.ts",
       "lib/estimates/section-sources.test.ts",
       // New client: CLIENT NAME, EMAIL and CELL NUMBER. Pure rule shared by
       // saveClient and every create form. Named file, same reason as above.
