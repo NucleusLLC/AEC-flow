@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useLayoutEffect, Fragment } from "react";
-import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug, TriangleAlert, Copy } from "lucide-react";
+import { Plus, Trash2, Save, Printer, Check, Eye, X, FileDown, ChevronUp, ChevronDown, ChevronRight, MoreHorizontal, Database, ImagePlus, Bug, TriangleAlert, Copy, Import } from "lucide-react";
 import { EstimatePrintDoc, printFit, type PrintControl } from "./estimate-print-doc";
 import type { GrandTotalRow } from "@/lib/estimates/pagination-engine";
 import { computeSections, type ScheduleConfig, type PaymentConfig } from "@/lib/estimates/budget-timeline";
@@ -12,6 +12,7 @@ import { EmailButton } from "@/components/email/email-button";
 import { firmName } from "@/lib/firm-identity";
 import { SectionCopy } from "./section-copy";
 import { CopyTasksDialog } from "./copy-tasks-dialog";
+import { CopySectionOverDialog } from "./copy-section-over-dialog";
 import {
   ESTIMATE_UNITS,
   type CostEstimate,
@@ -306,6 +307,8 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
   const [selSections, setSelSections] = useState<Set<string>>(new Set());
   const [selItems, setSelItems] = useState<Set<string>>(new Set());
   const [copyOpen, setCopyOpen] = useState(false);
+  // "Copy Section over": pull sections in from another Job Order's estimate.
+  const [copyOverOpen, setCopyOverOpen] = useState(false);
 
   const sectionState = (cat: EstimateCategory): "all" | "some" | "none" => {
     if (selSections.has(cat.id)) return "all";
@@ -815,6 +818,18 @@ ${!preview ? `@media print {
           onCopied={() => clearSelection()}
         />
       ) : null}
+      {copyOverOpen ? (
+        <CopySectionOverDialog
+          targetEstimateId={est.id}
+          targetCurrency={est.currency}
+          newId={newId}
+          onClose={() => setCopyOverOpen(false)}
+          onCopy={(cats) => {
+            setEst((e) => ({ ...e, categories: [...e.categories, ...cats] }));
+            setSaved(false);
+          }}
+        />
+      ) : null}
 
       {/* Header / meta — editing controls; hidden in preview & print (preview shows the centered line above). */}
       {!preview && (
@@ -875,6 +890,18 @@ ${!preview ? `@media print {
               className={`${ghostBtn} no-print disabled:cursor-not-allowed disabled:opacity-40`}
             >
               <Copy className="h-4 w-4" /> {t("Copy to project")}
+            </button>
+            {/* COPY SECTION OVER — the reverse of "Copy to project": pull sections
+                from another Job Order's estimate into this one. A locked version is
+                frozen, so the button says so instead of copying into it. */}
+            <button
+              type="button"
+              onClick={() => setCopyOverOpen(true)}
+              disabled={est.locked}
+              title={est.locked ? t("This version is locked. Unlock it before making changes.") : t("Copy sections over from another Job Order's estimate")}
+              className={`${ghostBtn} no-print disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              <Import className="h-4 w-4" /> {t("Copy Section over")}
             </button>
             <button onClick={onSave} type="button" disabled={saving} className={brandBtn}><Save className="h-4 w-4" /> {saving ? t("Saving…") : t("Save")}</button>
             <div className="relative">
