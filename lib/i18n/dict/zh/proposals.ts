@@ -482,4 +482,7 @@ export const proposals: Dict = {
   "Add client": "添加客户",
   "Client name": "客户名称",
   "Showing {shown} of {total} clients": "显示 {shown} / {total} 个客户",
+  "Add email": "添加邮箱",
+  "No email on file": "未登记邮箱",
+  "No service proposals yet.": "暂无服务建议书。",
 };

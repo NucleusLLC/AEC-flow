@@ -482,4 +482,7 @@ export const proposals: Dict = {
   "Add client": "Kunden hinzufügen",
   "Client name": "Kundenname",
   "Showing {shown} of {total} clients": "{shown} von {total} Kunden angezeigt",
+  "Add email": "E-Mail hinzufügen",
+  "No email on file": "Keine E-Mail hinterlegt",
+  "No service proposals yet.": "Noch keine Leistungsangebote.",
 };

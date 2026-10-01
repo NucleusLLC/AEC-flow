@@ -19,6 +19,8 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import { ClientTypeBadge, ClientStatusBadge } from "@/components/clients/badges";
 import { getClient, type ProposalStatus } from "@/lib/data/clients";
+import { listServiceProposals } from "@/lib/data/service-proposals";
+import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { getActivityForClient } from "@/lib/data/activity";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
@@ -70,6 +72,10 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const client = await getClient(id);
   if (!client) notFound();
   const activity = await getActivityForClient(client.id);
+  // Service Proposals are a separate record from the Proposals list above, so
+  // they are read on their own; without this a client's Service Proposal never
+  // appeared on the client page.
+  const serviceProposals = await listServiceProposals({ clientId: client.id });
   const t = await getServerT();
   const locale = await getServerLocale();
 
@@ -189,6 +195,47 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             )}
           </Card>
 
+          {/* Service Proposals */}
+          <Card>
+            <CardHeader
+              title={t("Service Proposals")}
+              subtitle={fmt(t("{count} total"), { count: serviceProposals.length })}
+              action={
+                <Link
+                  href={`/design/service-proposals/new?client=${client.id}`}
+                  className="text-xs font-medium text-brand hover:underline"
+                >
+                  {t("New")}
+                </Link>
+              }
+            />
+            {serviceProposals.length ? (
+              <div className="divide-y divide-border">
+                {serviceProposals.map((p) => (
+                  <Link
+                    key={p.id}
+                    href={`/design/service-proposals/${p.id}`}
+                    className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-surface-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-faint">{p.number}</span>
+                        <ServiceProposalStatusBadge status={p.status} />
+                      </div>
+                      <div className="mt-0.5 truncate text-sm font-medium text-fg">{p.title}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-sm font-medium text-fg">{formatCurrency(p.grandTotal, p.currency)}</div>
+                      <div className="text-xs text-faint">{formatDate(p.createdAt, locale)}</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <CardBody className="text-sm text-muted">{t("No service proposals yet.")}</CardBody>
+            )}
+          </Card>
+
           {/* Projects */}
           <Card>
             <CardHeader
@@ -302,7 +349,17 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                     {client.email}
                   </a>
                 </InfoRow>
-              ) : null}
+              ) : (
+                // Proposals, minutes and letters are emailed from the app; a client
+                // with no address cannot receive any of them, so say so here.
+                <InfoRow icon={Mail}>
+                  <span className="text-amber-700 dark:text-amber-400">{t("No email on file")}</span>
+                  {" · "}
+                  <Link href={`/clients/${client.id}/edit`} className="font-medium text-brand hover:underline">
+                    {t("Add email")}
+                  </Link>
+                </InfoRow>
+              )}
               {client.phone ? <InfoRow icon={Phone}>{client.phone}</InfoRow> : null}
               {client.mobile ? (
                 <InfoRow icon={Smartphone}>

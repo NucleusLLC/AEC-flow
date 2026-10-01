@@ -8,9 +8,15 @@ import { getServerT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "New Service Proposal · AEC-flow" };
 
-export default async function NewServiceProposalPage() {
+export default async function NewServiceProposalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string }>;
+}) {
   const t = await getServerT();
-  const [clients, projects] = await Promise.all([getClients(), getProjects()]);
+  const [{ client: askedClient }, clients, projects] = await Promise.all([searchParams, getClients(), getProjects()]);
+  // Started from a client's page: preselect that client, if it is one of ours.
+  const initialClientId = clients.some((c) => c.id === askedClient) ? askedClient : undefined;
 
   return (
     <div className="w-full space-y-6">
@@ -31,6 +37,7 @@ export default async function NewServiceProposalPage() {
         clients={clients.map((c) => ({ id: c.id, name: c.name }))}
         projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         mode="new"
+        initialClientId={initialClientId}
       />
     </div>
   );
