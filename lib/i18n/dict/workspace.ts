@@ -689,6 +689,21 @@ export const workspace: AreaDict = {
       "Añadir ciudad",
     "Add a city to start.":
       "Añada una ciudad para empezar.",
+    // Accounting export
+    "Accounting export": "Exportación contable",
+    "CSV files for your accountant or bookkeeping software: ISO dates, plain amounts with the currency in its own column, drafts left out.": "Archivos CSV para su contable o su software de contabilidad: fechas ISO, importes simples con la moneda en su propia columna, sin borradores.",
+    "Invoice lines": "Líneas de factura",
+    "Payments": "Pagos",
+    "Approved time": "Tiempo aprobado",
+    "Approved expenses": "Gastos aprobados",
+    "One row per invoice issued in the period: net, tax, total, paid and outstanding.": "Una fila por factura emitida en el periodo: neto, impuesto, total, pagado y pendiente.",
+    "Every line of those invoices, with milestone, quantity, rate and tax flag.": "Cada línea de esas facturas, con hito, cantidad, tarifa e indicador de impuesto.",
+    "Payments received in the period, whatever date the invoice was issued.": "Pagos recibidos en el periodo, sea cual sea la fecha de emisión de la factura.",
+    "Approved hours with the charge and cost rates as they were, and what was invoiced.": "Horas aprobadas con las tarifas de venta y de coste tal como eran, y lo facturado.",
+    "Approved expenses with markup, reimbursement and what was invoiced.": "Gastos aprobados con recargo, reembolso y lo facturado.",
+    "The start date is not a valid date.": "La fecha de inicio no es una fecha válida.",
+    "The end date is not a valid date.": "La fecha de fin no es una fecha válida.",
+    "The end date is before the start date.": "La fecha de fin es anterior a la fecha de inicio.",
   },
   nl: {
     "Team Members":
@@ -1373,5 +1388,20 @@ export const workspace: AreaDict = {
       "Stad toevoegen",
     "Add a city to start.":
       "Voeg een stad toe om te beginnen.",
+    // Accounting export
+    "Accounting export": "Boekhoudexport",
+    "CSV files for your accountant or bookkeeping software: ISO dates, plain amounts with the currency in its own column, drafts left out.": "CSV-bestanden voor uw accountant of boekhoudpakket: ISO-datums, kale bedragen met de valuta in een eigen kolom, zonder concepten.",
+    "Invoice lines": "Factuurregels",
+    "Payments": "Betalingen",
+    "Approved time": "Goedgekeurde uren",
+    "Approved expenses": "Goedgekeurde onkosten",
+    "One row per invoice issued in the period: net, tax, total, paid and outstanding.": "Eén regel per factuur uitgegeven in de periode: netto, belasting, totaal, betaald en openstaand.",
+    "Every line of those invoices, with milestone, quantity, rate and tax flag.": "Elke regel van die facturen, met mijlpaal, aantal, tarief en belastingvlag.",
+    "Payments received in the period, whatever date the invoice was issued.": "Betalingen ontvangen in de periode, ongeacht de factuurdatum.",
+    "Approved hours with the charge and cost rates as they were, and what was invoiced.": "Goedgekeurde uren met de verkoop- en kostprijstarieven zoals ze waren, en wat gefactureerd is.",
+    "Approved expenses with markup, reimbursement and what was invoiced.": "Goedgekeurde onkosten met opslag, vergoeding en wat gefactureerd is.",
+    "The start date is not a valid date.": "De begindatum is geen geldige datum.",
+    "The end date is not a valid date.": "De einddatum is geen geldige datum.",
+    "The end date is before the start date.": "De einddatum ligt vóór de begindatum.",
   },
 };

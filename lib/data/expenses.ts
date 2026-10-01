@@ -201,6 +201,19 @@ export async function listExpenses(filter?: ExpenseFilter): Promise<ExpenseDTO[]
   return rows.map((r) => toDTO(r as Row));
 }
 
+/**
+ * Approved entries in a date range for the accounting export, not capped (the
+ * screen list stops at 1,000). Who may call this is decided by the export route.
+ */
+export async function listApprovedExpensesForExport(range: { from?: string; to?: string }): Promise<ExpenseDTO[]> {
+  const rows = await prisma.expense.findMany({
+    where: whereFrom({ status: "APPROVED", from: range.from, to: range.to }),
+    orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    select: SELECT,
+  });
+  return rows.map((r) => toDTO(r as Row));
+}
+
 export async function getExpense(id: string): Promise<ExpenseDTO | null> {
   const row = await prisma.expense.findFirst({ where: { id, deletedAt: null }, select: SELECT });
   return row ? toDTO(row as Row) : null;

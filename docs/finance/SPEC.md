@@ -151,4 +151,6 @@ those are receivables' numbers, and mixing the two double-counts the same job.
 - Receipt images on an expense.
 - Credit notes. A negative line amount is refused rather than quietly
   accepted as one.
-- Any accounting export, and any billing provider.
+- Any billing provider. (The accounting export — invoices, lines, payments,
+  approved time and expenses as CSV for a period — shipped in 0.11.0:
+  lib/finance/export.ts, app/api/export/finance/[kind]/route.ts.)

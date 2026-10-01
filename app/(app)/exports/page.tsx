@@ -8,6 +8,9 @@ import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
+import { AccountingExport } from "@/components/exports/accounting-export";
+import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 
 export const metadata = { title: "Data Export · AEC-flow" };
 
@@ -21,6 +24,11 @@ export default async function ExportsPage() {
     getLeaveRequests(),
   ]);
   const t = await getServerT();
+  // Money and other people's hours: the accounting export is for approvers only,
+  // and its route checks the same gate again.
+  const actor = await requireActor().catch(() => null);
+  const canExportAccounts = actor ? canManagePasswords(actor.role, actor.isFounder) : false;
+  const today = new Date().toISOString().slice(0, 10);
 
   const datasets = [
     { entity: "clients", label: t("Clients"), icon: Users, count: clients.length, desc: t("Client directory with contacts, type, pipeline & lifetime value.") },
@@ -92,6 +100,8 @@ export default async function ExportsPage() {
           );
         })}
       </div>
+
+      {canExportAccounts ? <AccountingExport defaultFrom={`${today.slice(0, 4)}-01-01`} defaultTo={today} /> : null}
     </div>
   );
 }

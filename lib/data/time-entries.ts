@@ -203,6 +203,19 @@ export async function listTimeEntries(filter?: TimeFilter): Promise<TimeEntryDTO
   return rows.map((r) => toDTO(r as Row));
 }
 
+/**
+ * Approved entries in a date range for the accounting export, not capped (the
+ * screen list stops at 1,000). Who may call this is decided by the export route.
+ */
+export async function listApprovedTimeForExport(range: { from?: string; to?: string }): Promise<TimeEntryDTO[]> {
+  const rows = await prisma.timeEntry.findMany({
+    where: whereFrom({ status: "APPROVED", from: range.from, to: range.to }),
+    orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    select: SELECT,
+  });
+  return rows.map((r) => toDTO(r as Row));
+}
+
 /** One person's week, Monday to Sunday, for the timesheet grid. */
 export async function listWeek(
   date: string,
