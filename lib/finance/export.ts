@@ -1,0 +1,287 @@
+/**
+ * Accounting export: the practice's invoices, invoice lines, payments, approved
+ * time and approved expenses as CSV files an accountant or a bookkeeping
+ * package can import.
+ *
+ * Pure: DTOs in, a table out, a CSV string out. The route that serves it is
+ * app/api/export/finance/[kind]/route.ts; who may download is decided there.
+ *
+ * Format decisions, each one because an import broke without it:
+ *  - Dates are ISO (YYYY-MM-DD). A spreadsheet reads them as dates in every
+ *    locale; "01/10/2026" means January in one and October in the other.
+ *  - Money is a plain decimal with two places and a dot, no thousands
+ *    separator and no currency symbol. The currency has its own column, and
+ *    nothing is converted or summed across currencies.
+ *  - A cell that a spreadsheet would run as a formula (=, +, @, a tab, or a
+ *    minus not followed by a number) gets a leading apostrophe. A client name
+ *    is typed by a user; it must not become a formula on the accountant's PC.
+ *  - UTF-8 with a byte-order mark, so Excel shows "Café Oranjestad", not
+ *    "CafÃ© Oranjestad"; CRLF line ends.
+ *  - Drafts are left out: a draft invoice is not in the books. Voided invoices
+ *    are kept, with their status, because their number was issued.
+ */
+import type { ExpenseDTO, InvoiceDTO, TimeEntryDTO } from "./types";
+
+export const EXPORT_KINDS = ["invoices", "invoice-lines", "payments", "time", "expenses"] as const;
+export type ExportKind = (typeof EXPORT_KINDS)[number];
+
+export function isExportKind(v: string): v is ExportKind {
+  return (EXPORT_KINDS as readonly string[]).includes(v);
+}
+
+export type DateRange = { from: string | null; to: string | null };
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function validDate(s: string): boolean {
+  if (!ISO_DATE.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
+/**
+ * Reads ?from=&to= into a range. Either end may be open. Returns an error
+ * message (an English key, translated by the caller) for a bad date or a
+ * range that ends before it starts.
+ */
+export function parseRange(
+  from: string | null | undefined,
+  to: string | null | undefined,
+): { ok: true; range: DateRange } | { ok: false; error: string } {
+  const f = from?.trim() || null;
+  const t = to?.trim() || null;
+  if (f && !validDate(f)) return { ok: false, error: "The start date is not a valid date." };
+  if (t && !validDate(t)) return { ok: false, error: "The end date is not a valid date." };
+  if (f && t && f > t) return { ok: false, error: "The end date is before the start date." };
+  return { ok: true, range: { from: f, to: t } };
+}
+
+/** Inclusive on both ends; compares the YYYY-MM-DD part only. */
+export function inRange(date: string | null | undefined, range: DateRange): boolean {
+  if (!date) return !range.from && !range.to;
+  const d = date.slice(0, 10);
+  if (range.from && d < range.from) return false;
+  if (range.to && d > range.to) return false;
+  return true;
+}
+
+export type Cell = string | number | boolean | null | undefined;
+export type Table = { columns: string[]; rows: Cell[][] };
+
+export function money(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "";
+  // Add then remove a tiny epsilon so 1.005 rounds the way a person expects.
+  const r = Math.round((n + Math.sign(n) * 1e-9) * 100) / 100;
+  return (Object.is(r, -0) ? 0 : r).toFixed(2);
+}
+
+function day(s: string | null | undefined): string {
+  return s ? s.slice(0, 10) : "";
+}
+
+// ── Tables ─────────────────────────────────────────────────────────────────
+
+/** Issued, part-paid, paid and voided invoices whose issue date is in range. */
+export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
+  const rows = invoices
+    .filter((i) => i.status !== "DRAFT" && inRange(i.issueDate, range))
+    .sort(byIssueThenNumber)
+    .map((i) => [
+      i.number,
+      i.status,
+      day(i.issueDate),
+      day(i.dueDate),
+      i.clientName,
+      i.projectName ?? "",
+      i.proposalNumber ?? "",
+      i.title ?? "",
+      i.currency,
+      money(i.subtotal),
+      i.taxName ?? "",
+      i.taxPercent,
+      i.taxMode,
+      money(i.taxTotal),
+      money(i.total),
+      money(i.paid),
+      money(i.status === "VOID" ? 0 : i.outstanding),
+      day(i.voidedAt),
+    ]);
+  return {
+    columns: [
+      "Invoice number", "Status", "Issue date", "Due date", "Client", "Project", "Proposal",
+      "Title", "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Total", "Paid",
+      "Outstanding", "Voided on",
+    ],
+    rows,
+  };
+}
+
+/** Every line of the invoices in `invoicesTable`, in invoice order. */
+export function invoiceLinesTable(invoices: InvoiceDTO[], range: DateRange): Table {
+  const rows: Cell[][] = [];
+  for (const i of invoices.filter((x) => x.status !== "DRAFT" && inRange(x.issueDate, range)).sort(byIssueThenNumber)) {
+    for (const l of [...i.lines].sort((a, b) => a.sortOrder - b.sortOrder)) {
+      rows.push([
+        i.number,
+        i.status,
+        day(i.issueDate),
+        i.clientName,
+        i.projectName ?? "",
+        l.description,
+        l.milestoneName ?? "",
+        l.quantity ?? "",
+        money(l.unitRate),
+        money(l.amount),
+        l.taxable ? "Yes" : "No",
+        i.currency,
+      ]);
+    }
+  }
+  return {
+    columns: [
+      "Invoice number", "Invoice status", "Issue date", "Client", "Project", "Description",
+      "Milestone", "Quantity", "Unit rate", "Amount", "Taxable", "Currency",
+    ],
+    rows,
+  };
+}
+
+/** Payments received in range, whatever date their invoice was issued. */
+export function paymentsTable(invoices: InvoiceDTO[], range: DateRange): Table {
+  const rows: Cell[][] = [];
+  for (const i of invoices) {
+    if (i.status === "DRAFT") continue;
+    for (const p of i.payments) {
+      if (!inRange(p.paidAt, range)) continue;
+      rows.push([
+        day(p.paidAt),
+        i.number,
+        i.clientName,
+        i.projectName ?? "",
+        money(p.amount),
+        i.currency,
+        p.method,
+        p.reference ?? "",
+        p.recordedByName ?? "",
+      ]);
+    }
+  }
+  rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || String(a[1]).localeCompare(String(b[1])));
+  return {
+    columns: [
+      "Paid on", "Invoice number", "Client", "Project", "Amount", "Currency", "Method",
+      "Reference", "Recorded by",
+    ],
+    rows,
+  };
+}
+
+/** Approved time in range: hours, the rates as they were, and billing state. */
+export function timeTable(entries: TimeEntryDTO[], range: DateRange): Table {
+  const rows = entries
+    .filter((e) => e.status === "APPROVED" && inRange(e.date, range))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.userName.localeCompare(b.userName))
+    .map((e) => [
+      e.date,
+      e.userName,
+      e.projectName ?? "",
+      e.phaseName ?? "",
+      e.description ?? "",
+      e.hours,
+      e.billable ? "Yes" : "No",
+      money(e.chargeRate),
+      money(e.costRate),
+      e.currency,
+      money(e.value),
+      money(e.costRate === null ? null : e.hours * e.costRate),
+      e.invoiceNumber ?? "",
+      day(e.invoicedAt),
+    ]);
+  return {
+    columns: [
+      "Date", "Person", "Project", "Phase", "Description", "Hours", "Billable", "Charge rate",
+      "Cost rate", "Currency", "Charge value", "Cost", "Invoice number", "Invoiced on",
+    ],
+    rows,
+  };
+}
+
+/** Approved expenses in range, with markup, reimbursement and billing state. */
+export function expensesTable(expenses: ExpenseDTO[], range: DateRange): Table {
+  const rows = expenses
+    .filter((e) => e.status === "APPROVED" && inRange(e.date, range))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.userName.localeCompare(b.userName))
+    .map((e) => [
+      e.date,
+      e.userName,
+      e.projectName ?? "",
+      e.category,
+      e.vendor ?? "",
+      e.description,
+      money(e.amount),
+      e.currency,
+      e.billable ? "Yes" : "No",
+      e.markupPercent,
+      money(e.chargeable),
+      e.reimbursable ? "Yes" : "No",
+      day(e.reimbursedAt),
+      e.invoiceNumber ?? "",
+      day(e.invoicedAt),
+    ]);
+  return {
+    columns: [
+      "Date", "Person", "Project", "Category", "Vendor", "Description", "Amount", "Currency",
+      "Billable", "Markup %", "Chargeable", "Reimbursable", "Reimbursed on", "Invoice number",
+      "Invoiced on",
+    ],
+    rows,
+  };
+}
+
+function byIssueThenNumber(a: InvoiceDTO, b: InvoiceDTO): number {
+  return (a.issueDate ?? "").localeCompare(b.issueDate ?? "") || a.number.localeCompare(b.number);
+}
+
+// ── CSV ────────────────────────────────────────────────────────────────────
+
+/** A user-typed value a spreadsheet would execute. Numbers are left alone. */
+function guardFormula(s: string): string {
+  return /^[=+@\t\r]/.test(s) || /^-(?![\d.])/.test(s) ? `'${s}` : s;
+}
+
+export function csvCell(v: Cell): string {
+  if (v === null || v === undefined) return "";
+  const s = typeof v === "string" ? guardFormula(v) : String(v);
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export const BOM = "﻿";
+
+export function toCsv(table: Table): string {
+  const lines = [table.columns.map(csvCell).join(","), ...table.rows.map((r) => r.map(csvCell).join(","))];
+  return `${BOM}${lines.join("\r\n")}\r\n`;
+}
+
+/** "accounting-invoices-2026-01-01-to-2026-03-31.csv"; open ends say "start" / "today". */
+export function exportFilename(kind: ExportKind, range: DateRange, today: string): string {
+  return `accounting-${kind}-${range.from ?? "start"}-to-${range.to ?? today}.csv`;
+}
+
+export function buildTable(
+  kind: ExportKind,
+  data: { invoices?: InvoiceDTO[]; time?: TimeEntryDTO[]; expenses?: ExpenseDTO[] },
+  range: DateRange,
+): Table {
+  switch (kind) {
+    case "invoices":
+      return invoicesTable(data.invoices ?? [], range);
+    case "invoice-lines":
+      return invoiceLinesTable(data.invoices ?? [], range);
+    case "payments":
+      return paymentsTable(data.invoices ?? [], range);
+    case "time":
+      return timeTable(data.time ?? [], range);
+    case "expenses":
+      return expensesTable(data.expenses ?? [], range);
+  }
+}

@@ -295,6 +295,21 @@ export async function getInvoice(idOrNumber: string): Promise<InvoiceDTO | null>
   return row ? invoiceDto(row as unknown as InvoiceRow) : null;
 }
 
+/**
+ * Every invoice that is in the books — everything but drafts — with its lines
+ * and payments, for the accounting export (lib/finance/export.ts filters by
+ * date). Not capped: an export that silently stopped at N rows would be worse
+ * than none. Who may call this is decided by the export route.
+ */
+export async function listInvoicesForExport(): Promise<InvoiceDTO[]> {
+  const rows = await prisma.invoice.findMany({
+    where: { deletedAt: null, status: { not: "DRAFT" } },
+    include: CHILDREN,
+    orderBy: [{ issueDate: "asc" }, { number: "asc" }],
+  });
+  return (rows as unknown as InvoiceRow[]).map(invoiceDto);
+}
+
 /** Every number ever used, soft-deleted included, so one is never reused. */
 async function allNumbers(): Promise<string[]> {
   const rows = await prisma.invoice.findMany({ select: { number: true } });

@@ -167,6 +167,9 @@ export default defineConfig({
       // Error tracking: the one-line log record and what it must never contain
       // (tokens, emails, keys). Pure, runtime-neutral.
       "lib/observability/error-record.test.ts",
+      // Accounting export: date ranges, drafts left out, money format, and the
+      // spreadsheet-formula guard on user-typed cells. Pure.
+      "lib/finance/export.test.ts",
     ],
     environment: "node",
   },

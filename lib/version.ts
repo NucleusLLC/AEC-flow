@@ -26,8 +26,10 @@
  *   [aecflow-error] line in the Vercel logs; error pages report and offer Bug/Wish.
  * 0.10.0 (1 OCT 2026): existing accounts are asked to accept the Terms and Privacy
  *   Policy (a banner; it asks, never blocks), and again whenever a version changes.
+ * 0.11.0 (1 OCT 2026): accounting export — invoices, invoice lines, payments, approved
+ *   time and approved expenses as CSV for a period (Admin / Director only).
  */
-export const APP_VERSION = "0.10.0";
+export const APP_VERSION = "0.11.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
