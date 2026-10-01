@@ -35,6 +35,9 @@ export default defineConfig({
       // travel -- the part of that feature that can silently be wrong.
       "lib/estimates/copy-lines.test.ts",
       "lib/estimates/section-sources.test.ts",
+      // New client: CLIENT NAME, EMAIL and CELL NUMBER. Pure rule shared by
+      // saveClient and every create form. Named file, same reason as above.
+      "lib/clients/new-client.test.ts",
       // Named file, not a `lib/schedule/**` sweep: the schedule module's other
       // code is protected and untested, and a directory glob here would be the
       // first step toward re-collecting the node:test suites described above.

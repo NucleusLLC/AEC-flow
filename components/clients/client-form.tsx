@@ -12,10 +12,23 @@ import {
 } from "@/lib/data/clients.types";
 import { saveClient } from "@/app/(app)/clients/actions";
 import { useT } from "@/components/i18n/language-provider";
+import { validateNewClient, type NewClientErrors, type NewClientField } from "@/lib/clients/new-client";
 
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
 const labelClass = "mb-1 block text-xs font-medium text-muted";
+const invalidClass = " border-red-500 focus:border-red-500 focus:ring-red-500/15";
+
+/** The message under a field the server or the mirror check refused. */
+function FieldError({ id, msg }: { id: string; msg?: string }) {
+  if (!msg) return null;
+  return (
+    <p id={id} role="alert" className="mt-1 flex items-start gap-1 text-xs text-red-600">
+      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+      {msg}
+    </p>
+  );
+}
 
 const TYPES = Object.keys(CLIENT_TYPE_LABEL) as ClientType[];
 const STATUS_LABEL: Record<ClientStatus, string> = {
@@ -59,6 +72,13 @@ export function ClientForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // CLIENT NAME, EMAIL and CELL NUMBER are required on CREATE only — a client
+  // from before the rule may lack email or cell and must still save on edit.
+  const isNew = mode === "new";
+  const [fieldErrors, setFieldErrors] = useState<NewClientErrors>({});
+  const fieldErr = (f: NewClientField) => fieldErrors[f];
+  const invalid = (f: NewClientField) =>
+    fieldErrors[f] ? { "aria-invalid": true as const, "aria-describedby": `${f}-error` } : {};
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -93,11 +113,28 @@ export function ClientForm({
     };
 
     setError(null);
+    if (isNew) {
+      // Same rules the server applies — shown beside the fields before the trip.
+      const checked = validateNewClient(payload);
+      if (!checked.ok) {
+        const marks: NewClientErrors = {};
+        for (const [k, v] of Object.entries(checked.errors) as [NewClientField, string][]) {
+          marks[k] = t(v);
+        }
+        setFieldErrors(marks);
+        const first = (["name", "email", "mobile"] as const).find((f) => marks[f]);
+        if (first) document.getElementById(first)?.focus();
+        return;
+      }
+    }
+    setFieldErrors({});
     startTransition(async () => {
       const res = await saveClient(mode, payload);
       if (res.ok) {
         router.push(`/clients/${res.id}`);
         router.refresh();
+      } else if (res.fieldErrors && Object.values(res.fieldErrors).some(Boolean)) {
+        setFieldErrors(res.fieldErrors);
       } else {
         setError(res.error);
         if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -106,7 +143,7 @@ export function ClientForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={onSubmit} noValidate className="space-y-6">
       {error ? (
         <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-red-200 bg-red-50 px-5 py-4">
           <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-500 text-white">
@@ -125,9 +162,63 @@ export function ClientForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className={labelClass} htmlFor="name">
-              {t("Client name *")}
+              {t("CLIENT NAME")} *
             </label>
-            <input id="name" name="name" required className={inputClass} placeholder={t("e.g. Emaar Developments")} defaultValue={initial?.name} />
+            <input
+              id="name"
+              name="name"
+              required
+              className={inputClass + (fieldErr("name") ? invalidClass : "")}
+              placeholder={t("e.g. Emaar Developments")}
+              defaultValue={initial?.name}
+              {...invalid("name")}
+            />
+            <FieldError id="name-error" msg={fieldErr("name")} />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="email">
+              {t("EMAIL")}
+              {isNew ? " *" : null}
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              /* Two addresses are normal here: a married couple, two partners in
+               * a firm. Without `multiple` the browser refuses the second one. */
+              multiple
+              required={isNew}
+              autoComplete="email"
+              className={inputClass + (fieldErr("email") ? invalidClass : "")}
+              placeholder="her@example.com, him@example.com"
+              defaultValue={initial?.email}
+              {...invalid("email")}
+            />
+            {fieldErr("email") ? (
+              <FieldError id="email-error" msg={fieldErr("email")} />
+            ) : (
+              <p className="mt-1 text-xs text-faint">
+                {t("More than one? Separate them with a comma.")}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="mobile">
+              {t("CELL NUMBER")}
+              {isNew ? " *" : null}
+            </label>
+            <input
+              id="mobile"
+              name="mobile"
+              type="tel"
+              autoComplete="tel"
+              required={isNew}
+              className={inputClass + (fieldErr("mobile") ? invalidClass : "")}
+              placeholder="+297 560 0000"
+              defaultValue={initial?.mobile}
+              {...invalid("mobile")}
+            />
+            <FieldError id="mobile-error" msg={fieldErr("mobile")} />
           </div>
           <div>
             <label className={labelClass} htmlFor="companyName">
@@ -142,35 +233,10 @@ export function ClientForm({
             <input id="contactPerson" name="contactPerson" className={inputClass} placeholder={t("e.g. Layla Hassan")} defaultValue={initial?.contactPerson} />
           </div>
           <div>
-            <label className={labelClass} htmlFor="email">
-              {t("Email")}
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              /* Two addresses are normal here: a married couple, two partners in
-               * a firm. Without `multiple` the browser refuses the second one. */
-              multiple
-              className={inputClass}
-              placeholder="her@example.com, him@example.com"
-              defaultValue={initial?.email}
-            />
-            <p className="mt-1 text-xs text-faint">
-              {t("More than one? Separate them with a comma.")}
-            </p>
-          </div>
-          <div>
             <label className={labelClass} htmlFor="phone">
               {t("Phone")}
             </label>
             <input id="phone" name="phone" className={inputClass} placeholder="+971 4 000 0000" defaultValue={initial?.phone} />
-          </div>
-          <div>
-            <label className={labelClass} htmlFor="mobile">
-              {t("Cell phone")}
-            </label>
-            <input id="mobile" name="mobile" type="tel" autoComplete="tel" className={inputClass} placeholder="+297 560 0000" defaultValue={initial?.mobile} />
           </div>
           <div>
             <label className={labelClass} htmlFor="website">

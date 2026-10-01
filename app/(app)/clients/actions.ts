@@ -5,26 +5,53 @@ import { createClient, updateClient, getClients } from "@/lib/data/clients";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import type { ClientWriteInput } from "@/lib/data/clients.types";
 import { getServerT } from "@/lib/i18n/server";
+import { requireActor } from "@/lib/server/actor";
+import { firstNewClientError, validateNewClient, type NewClientErrors } from "@/lib/clients/new-client";
 
 export type SaveClientResult =
   | { ok: true; id: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; fieldErrors?: NewClientErrors };
 
 /**
  * Persist a client (create or update) and revalidate the affected routes.
  * Returns a tagged result so the client form can redirect on success or show
  * the error inline on failure — never throws to the client.
+ *
+ * A NEW client must carry CLIENT NAME, EMAIL and CELL NUMBER — every "add a
+ * client" control in the app ends here, so this is the one gate that holds.
+ * `fieldErrors` (translated) lets each form mark the field itself. An EDIT
+ * only needs a name: clients from before the rule may have no email or cell.
  */
 export async function saveClient(
   mode: "new" | "edit",
   input: ClientWriteInput,
 ): Promise<SaveClientResult> {
-  if (!input.name?.trim()) {
+  try {
+    await requireActor();
+  } catch {
     const t = await getServerT();
-    return { ok: false, error: t("Client name is required.") };
+    return { ok: false, error: t("You must be signed in.") };
+  }
+  let cleaned: ClientWriteInput;
+  if (mode === "new") {
+    const checked = validateNewClient(input);
+    if (!checked.ok) {
+      const t = await getServerT();
+      const fieldErrors: NewClientErrors = {};
+      for (const [k, v] of Object.entries(checked.errors) as [keyof NewClientErrors, string][]) {
+        fieldErrors[k] = t(v);
+      }
+      return { ok: false, error: firstNewClientError(fieldErrors) ?? "", fieldErrors };
+    }
+    cleaned = { ...input, name: checked.name, email: checked.email, mobile: checked.mobile };
+  } else {
+    if (!input.name?.trim()) {
+      const t = await getServerT();
+      return { ok: false, error: t("Client name is required.") };
+    }
+    cleaned = { ...input, name: input.name.trim() };
   }
   try {
-    const cleaned = { ...input, name: input.name.trim() };
     const { id } = mode === "new" ? await createClient(cleaned) : await updateClient(cleaned);
     revalidatePath("/clients");
     revalidatePath(`/clients/${id}`);
@@ -36,7 +63,7 @@ export async function saveClient(
         entityType: "client",
         entityId: id,
         clientId: id,
-        meta: input.name ? { label: input.name } : undefined,
+        meta: cleaned.name ? { label: cleaned.name } : undefined,
       });
     }
     return { ok: true, id };
@@ -59,6 +86,7 @@ export async function saveClient(
  * until a user actually opens a create form.
  */
 export async function listClientOptions(): Promise<{ id: string; name: string }[]> {
+  await requireActor();
   const clients = await getClients();
   return clients.map((c) => ({ id: c.id, name: c.name }));
 }
