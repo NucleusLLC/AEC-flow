@@ -476,4 +476,10 @@ export const shell: Dict = {
   // Error pages
   "Report this problem": "报告此问题",
   "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "此页面遇到意外错误。请重试；如果问题持续出现，请告诉我们下方的参考编号。",
+  // Accept the Terms banner
+  "AEC-flow now has Terms of Service and a Privacy Policy. Please read them and accept.": "AEC-flow 现已发布服务条款和隐私政策。请阅读并接受。",
+  "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "服务条款或隐私政策已更新。请阅读并接受新版本。",
+  "I accept": "我接受",
+  "Accepted — thank you": "已接受 — 谢谢",
+  "Could not save. Please try again.": "无法保存。请重试。",
 };

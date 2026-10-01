@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { needsVerification } from "@/lib/account-security/verification-token";
 import { VerifyEmailBanner } from "@/components/account/verify-email-banner";
+import { AcceptTermsBanner } from "@/components/account/accept-terms-banner";
+import { termsStatus } from "@/lib/legal/policy";
 import { cookies, headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -88,10 +90,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const me = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { email: true, emailVerifiedAt: true, status: true },
+        select: { email: true, emailVerifiedAt: true, status: true, preferences: true },
       })
     : null;
   const unverifiedEmail = me && needsVerification(me) ? me.email : null;
+  // Accounts made before the Terms existed, or before their latest version.
+  const terms = me ? termsStatus(me.preferences) : "current";
 
   // Seed the System Currency for server-rendered formatting this request…
   setSystemCurrency(systemCurrency);
@@ -111,6 +115,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
          * shipped was backfilled as confirmed, so this is only ever seen by
          * someone who signed up after it. */}
         {unverifiedEmail ? <VerifyEmailBanner email={unverifiedEmail} /> : null}
+        {terms !== "current" ? <AcceptTermsBanner status={terms} /> : null}
         {content}
       </AppShell>
       {/* Global ⌘K / Ctrl+K command palette (renders null until opened). */}

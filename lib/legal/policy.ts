@@ -58,3 +58,26 @@ export function termsAcceptance(now: Date) {
 }
 
 export const TERMS_NOT_ACCEPTED = "Please accept the Terms of Service and Privacy Policy.";
+
+/**
+ * Where an account stands against the current Terms and Privacy Policy:
+ *  - "current"  — it accepted both current versions;
+ *  - "never"    — it has no acceptance on record (every account made before
+ *                 the pages existed, on 1 Oct 2026);
+ *  - "outdated" — it accepted an earlier version of either.
+ */
+export type TermsStatus = "current" | "never" | "outdated";
+
+export function termsStatus(preferences: unknown): TermsStatus {
+  const p = preferences && typeof preferences === "object" ? (preferences as Record<string, unknown>) : {};
+  if (typeof p.termsVersion !== "string" && typeof p.privacyVersion !== "string") return "never";
+  return p.termsVersion === TERMS_VERSION && p.privacyVersion === PRIVACY_VERSION ? "current" : "outdated";
+}
+
+/** The account's preferences with today's acceptance recorded; every other key kept. */
+export function withTermsAcceptance(preferences: unknown, now: Date): Record<string, unknown> {
+  const p = preferences && typeof preferences === "object" && !Array.isArray(preferences)
+    ? (preferences as Record<string, unknown>)
+    : {};
+  return { ...p, ...termsAcceptance(now) };
+}

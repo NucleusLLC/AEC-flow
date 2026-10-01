@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { updateProfile, type ProfileInput } from "@/lib/data/account";
+import { acceptCurrentTerms, updateProfile, type ProfileInput } from "@/lib/data/account";
 import { changeOwnPassword } from "@/lib/server/password";
 import { logActivity } from "@/lib/data/activity";
 import { headers } from "next/headers";
@@ -74,4 +74,16 @@ export async function resendVerificationAction(): Promise<ActionResult> {
   const ip = clientIpFrom((name) => h.get(name) ?? undefined);
   await issueEmailVerification(userId, ip);
   return { ok: true };
+}
+
+/** The signed-in user accepts the current Terms of Service and Privacy Policy. */
+export async function acceptTermsAction(): Promise<ActionResult> {
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: "You must be signed in." };
+  try {
+    await acceptCurrentTerms(userId);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Could not save. Please try again." };
+  }
 }
