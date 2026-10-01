@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, RotateCw } from "lucide-react";
+import { AlertTriangle, Bug, RotateCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useT } from "@/components/i18n/language-provider";
+import { openBetaReport } from "@/components/beta-report/open-beta-report";
+import { bugReportPrefill } from "@/lib/observability/error-record";
+import { reportClientError } from "@/lib/observability/report-client-error";
+import { APP_VERSION } from "@/lib/version";
 
 /**
  * Group-level error boundary for /(app) routes. Catches render/data errors so a
- * single failing page doesn't blank the whole shell. Becomes load-bearing once
- * the data layer hits a live database and queries can throw.
+ * single failing page doesn't blank the whole shell.
+ *
+ * The error is logged twice over: the server already logged it under its digest
+ * (instrumentation.ts), and this reports what the browser saw, under the same
+ * digest. "Report this problem" opens the Bug/Wish widget with the ref filled
+ * in, so a report in /beta-reports leads straight to the log line.
  */
 export default function AppError({
   error,
@@ -19,9 +27,19 @@ export default function AppError({
 }) {
   const t = useT();
   useEffect(() => {
-    // Surface for debugging; wire to a real logger when available.
     console.error(error);
+    reportClientError(error, "boundary", error.digest);
   }, [error]);
+
+  const report = () =>
+    openBetaReport(
+      bugReportPrefill({
+        message: error.message,
+        digest: error.digest,
+        path: window.location.pathname,
+        version: APP_VERSION,
+      }),
+    );
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -36,14 +54,24 @@ export default function AppError({
         {error.digest ? (
           <p className="font-mono text-[11px] text-faint">ref: {error.digest}</p>
         ) : null}
-        <button
-          type="button"
-          onClick={reset}
-          className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <RotateCw className="h-4 w-4" />
-          {t("Try again")}
-        </button>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <RotateCw className="h-4 w-4" />
+            {t("Try again")}
+          </button>
+          <button
+            type="button"
+            onClick={report}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <Bug className="h-4 w-4" />
+            {t("Report this problem")}
+          </button>
+        </div>
       </Card>
     </div>
   );

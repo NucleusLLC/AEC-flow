@@ -164,6 +164,9 @@ export default defineConfig({
       // Terms and Privacy: the version stamp an account records, and that the
       // proxy keeps both pages reachable signed out and on the beta host.
       "lib/legal/policy.test.ts",
+      // Error tracking: the one-line log record and what it must never contain
+      // (tokens, emails, keys). Pure, runtime-neutral.
+      "lib/observability/error-record.test.ts",
     ],
     environment: "node",
   },

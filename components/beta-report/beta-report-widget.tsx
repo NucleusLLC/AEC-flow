@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { submitBetaReport } from "@/app/(app)/beta-reports/actions";
-import { BETA_REPORT_OPEN_EVENT } from "@/components/beta-report/open-beta-report";
+import { BETA_REPORT_OPEN_EVENT, type BetaReportPrefill } from "@/components/beta-report/open-beta-report";
 import { MAX_SCREENSHOT_CHARS, type BetaReportKind } from "@/lib/data/beta-reports.types";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -71,7 +71,18 @@ export function BetaReportWidget() {
 
   // Opened from the sidebar / mobile drawer, which live in a different subtree.
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (ev: Event) => {
+      // An error page opens the widget with the error already described.
+      const prefill = (ev as CustomEvent<BetaReportPrefill | undefined>).detail;
+      // Checked, not trusted: anything else dispatched on this event opens it blank.
+      if (prefill && typeof prefill.title === "string" && typeof prefill.description === "string") {
+        setKind("BUG");
+        setTitle(prefill.title);
+        setDescription(prefill.description);
+        setPhase("form");
+      }
+      setOpen(true);
+    };
     window.addEventListener(BETA_REPORT_OPEN_EVENT, onOpen);
     return () => window.removeEventListener(BETA_REPORT_OPEN_EVENT, onOpen);
   }, []);

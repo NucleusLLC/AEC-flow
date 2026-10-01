@@ -8,6 +8,9 @@
  */
 export const BETA_REPORT_OPEN_EVENT = "beta-report:open";
 
-export function openBetaReport() {
-  window.dispatchEvent(new CustomEvent(BETA_REPORT_OPEN_EVENT));
+/** Optional text to start the report with — an error page fills in what it knows. */
+export type BetaReportPrefill = { title: string; description: string };
+
+export function openBetaReport(prefill?: BetaReportPrefill) {
+  window.dispatchEvent(new CustomEvent<BetaReportPrefill | undefined>(BETA_REPORT_OPEN_EVENT, { detail: prefill }));
 }

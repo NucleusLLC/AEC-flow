@@ -473,4 +473,7 @@ export const shell: Dict = {
   "This document is in English, and the English text is the one that applies.": "本文件为英文版本，以英文文本为准。",
   "I agree to the Terms of Service and the Privacy Policy.": "我同意服务条款和隐私政策。",
   "Please accept the Terms of Service and Privacy Policy.": "请接受服务条款和隐私政策。",
+  // Error pages
+  "Report this problem": "报告此问题",
+  "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "此页面遇到意外错误。请重试；如果问题持续出现，请告诉我们下方的参考编号。",
 };
