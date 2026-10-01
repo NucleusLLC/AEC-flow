@@ -17,6 +17,7 @@ import { validateNewPassword } from "@/lib/password-policy";
 import { hitRateLimit } from "@/lib/server/rate-limit";
 import { RATE_LIMITS, clientIpFrom, tooManyAttemptsMessage } from "@/lib/account-security/rate-limit-policy";
 import { issueEmailVerification } from "@/lib/server/email-verification";
+import { TERMS_NOT_ACCEPTED, termsAcceptance } from "@/lib/legal/policy";
 
 /** Free beta-access length, in months. (Local: a "use server" file may only
  * export async functions, so this stays module-private.) */
@@ -35,6 +36,7 @@ export async function registerBetaTester(input: {
   password: string;
   code: string;
   agreed: boolean;
+  acceptedTerms: boolean;
 }): Promise<SignupResult> {
   // Declared outside the try so the catch can hand a reserved code back to the pool.
   let claimedCodeId: string | null = null;
@@ -56,6 +58,9 @@ export async function registerBetaTester(input: {
     }
     if (!input.agreed) {
       return { ok: false, error: "Please agree to share feedback during the beta." };
+    }
+    if (!input.acceptedTerms) {
+      return { ok: false, error: TERMS_NOT_ACCEPTED };
     }
 
     // Counted only once the form is filled in properly, so a typo round-trip does
@@ -171,6 +176,8 @@ export async function registerBetaTester(input: {
           betaSignedUpAt: now.toISOString(),
           betaAccessUntil: accessUntil.toISOString(),
           betaFeedbackAgreed: true,
+          // When, and which versions of, the Terms and Privacy Policy they accepted.
+          ...termsAcceptance(now),
           betaSignupIp: signupIp,
           betaSignupCountry: signupCountry,
           betaUserAgent: userAgent,

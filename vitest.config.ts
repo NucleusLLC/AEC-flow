@@ -161,6 +161,9 @@ export default defineConfig({
       "lib/i18n/full-coverage.test.ts",
       // Dates in the viewer's language; English unchanged. Pure Intl, no React.
       "lib/i18n/locale.test.ts",
+      // Terms and Privacy: the version stamp an account records, and that the
+      // proxy keeps both pages reachable signed out and on the beta host.
+      "lib/legal/policy.test.ts",
     ],
     environment: "node",
   },

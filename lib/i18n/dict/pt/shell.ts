@@ -466,4 +466,11 @@ export const shell: Dict = {
   "Download {type}": "Baixar {type}",
   "This file could not be opened": "Não foi possível abrir este arquivo",
   "Opening {name}…": "Abrindo {name}…",
+  // Terms of Service and Privacy Policy
+  "Terms of Service": "Termos de Serviço",
+  "Privacy Policy": "Política de Privacidade",
+  "Last updated {date}": "Última atualização: {date}",
+  "This document is in English, and the English text is the one that applies.": "Este documento está em inglês, e é o texto em inglês que se aplica.",
+  "I agree to the Terms of Service and the Privacy Policy.": "Concordo com os Termos de Serviço e a Política de Privacidade.",
+  "Please accept the Terms of Service and Privacy Policy.": "Aceite os Termos de Serviço e a Política de Privacidade.",
 };

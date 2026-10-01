@@ -9,6 +9,7 @@ import { registerBetaTester } from "@/app/signup/actions";
 import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { LEGAL_PATHS } from "@/lib/legal/policy";
 
 const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -24,6 +25,7 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,7 +34,7 @@ export function SignupForm() {
     setLoading(true);
     setError(null);
 
-    const res = await registerBetaTester({ name, email, company, password, code, agreed });
+    const res = await registerBetaTester({ name, email, company, password, code, agreed, acceptedTerms });
     if (!res.ok) {
       setError(res.error);
       setLoading(false);
@@ -98,6 +100,19 @@ export function SignupForm() {
           className="mt-0.5 h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
         <span>
           {t("I understand my 6 months of free beta access comes with sharing feedback — reporting bugs and wishes via the in-app Feedback button.")}
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-xs text-muted">
+        <input type="checkbox" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
+        <span>
+          {t("I agree to the Terms of Service and the Privacy Policy.")}
+          <span className="mt-1 block">
+            <Link href={LEGAL_PATHS.terms} target="_blank" className="font-medium text-brand hover:underline">{t("Terms of Service")}</Link>
+            {" · "}
+            <Link href={LEGAL_PATHS.privacy} target="_blank" className="font-medium text-brand hover:underline">{t("Privacy Policy")}</Link>
+          </span>
         </span>
       </label>
 

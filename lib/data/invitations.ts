@@ -16,6 +16,7 @@ import { recordEmailAttempt } from "@/lib/data/email-log";
 import { requireActor } from "@/lib/server/actor";
 import { validateNewPassword } from "@/lib/password-policy";
 import type { UserRole } from "@prisma/client";
+import { TERMS_NOT_ACCEPTED, termsAcceptance } from "@/lib/legal/policy";
 
 const INVITE_TTL_DAYS = 14;
 
@@ -190,11 +191,17 @@ export async function getInvitationByToken(token: string): Promise<InviteInfo | 
 type AcceptResult = { ok: true; email: string } | { ok: false; error: string };
 
 /** Unauthenticated: the invitee sets their name + password and joins the company. */
-export async function acceptInvitation(token: string, name: string, password: string): Promise<AcceptResult> {
+export async function acceptInvitation(
+  token: string,
+  name: string,
+  password: string,
+  acceptedTerms: boolean,
+): Promise<AcceptResult> {
   const inv = await prisma.invitation.findUnique({ where: { token } });
   if (!inv || inv.status !== "PENDING") return { ok: false, error: "This invite is no longer valid." };
   if (inv.expiresAt && inv.expiresAt.getTime() < Date.now()) return { ok: false, error: "This invite has expired." };
   if (!name.trim()) return { ok: false, error: "Enter your name." };
+  if (!acceptedTerms) return { ok: false, error: TERMS_NOT_ACCEPTED };
   const policy = validateNewPassword(password);
   if (!policy.ok) return { ok: false, error: policy.error.replace(/^New password/, "Password") };
 
@@ -220,6 +227,8 @@ export async function acceptInvitation(token: string, name: string, password: st
         role: inv.role,
         status: "ACTIVE",
         companyId: inv.companyId,
+        // When, and which versions of, the Terms and Privacy Policy they accepted.
+        preferences: termsAcceptance(new Date()),
       },
     }),
     prisma.invitation.update({ where: { id: inv.id }, data: { status: "ACCEPTED", acceptedAt: new Date() } }),

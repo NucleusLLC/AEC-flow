@@ -22,13 +22,16 @@ async function main() {
   // clean any prior run
   await prisma.user.deleteMany({ where: { email: EMAIL } });
 
-  const base = { name: "ZZZ Verify Tester", email: EMAIL, company: "Test Co", password: "supersecret1" };
+  const base = { name: "ZZZ Verify Tester", email: EMAIL, company: "Test Co", password: "supersecret1", acceptedTerms: true };
 
   const badCode = await registerBetaTester({ ...base, code: "WRONG-CODE", agreed: true });
   check("wrong code rejected", badCode.ok === false);
 
   const notAgreed = await registerBetaTester({ ...base, code: CODE, agreed: false });
   check("must agree to feedback", notAgreed.ok === false);
+
+  const noTerms = await registerBetaTester({ ...base, code: CODE, agreed: true, acceptedTerms: false });
+  check("must accept terms and privacy", noTerms.ok === false);
 
   const ok = await registerBetaTester({ ...base, code: CODE, agreed: true });
   check("valid signup succeeds", ok.ok === true);
@@ -40,6 +43,7 @@ async function main() {
   const prefs = (u?.preferences ?? {}) as Record<string, unknown>;
   check("flagged as beta tester", prefs.betaTester === true);
   check("feedback agreement recorded", prefs.betaFeedbackAgreed === true);
+  check("terms acceptance recorded", typeof prefs.termsAcceptedAt === "string" && typeof prefs.termsVersion === "string");
   const until = typeof prefs.betaAccessUntil === "string" ? new Date(prefs.betaAccessUntil) : null;
   const signed = typeof prefs.betaSignedUpAt === "string" ? new Date(prefs.betaSignedUpAt) : null;
   let months = 0;
