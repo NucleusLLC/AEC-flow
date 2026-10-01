@@ -11,6 +11,7 @@ import { getUserPreferences } from "@/lib/data/preferences";
 import { pickDashboardBackgroundIndex } from "@/lib/dashboard/backgrounds";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { BetaReportWidget } from "@/components/beta-report/beta-report-widget";
+import { ClientErrorListener } from "@/components/observability/client-error-listener";
 import { SystemCurrencyInit } from "@/components/shell/system-currency-init";
 import { FirmIdentityInit } from "@/components/shell/firm-identity-init";
 import { getNotificationsForCurrentUser } from "@/lib/data/notifications";
@@ -116,6 +117,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <CommandPalette />
       {/* Floating BETA-Report widget — Bug/Wish feedback with optional screenshot. */}
       <BetaReportWidget />
+      <ClientErrorListener />
     </>
   );
 }

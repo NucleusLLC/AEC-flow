@@ -479,6 +479,9 @@ export const shell: AreaDict = {
     "This document is in English, and the English text is the one that applies.": "Este documento está en inglés, y el texto en inglés es el que se aplica.",
     "I agree to the Terms of Service and the Privacy Policy.": "Acepto los Términos del servicio y la Política de privacidad.",
     "Please accept the Terms of Service and Privacy Policy.": "Acepte los Términos del servicio y la Política de privacidad.",
+    // Error pages
+    "Report this problem": "Informar de este problema",
+    "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "Esta página encontró un error inesperado. Inténtelo de nuevo; si sigue ocurriendo, indíquenos la referencia de abajo.",
   },
   nl: {
     "{count} at risk": "{count} met risico",
@@ -953,5 +956,8 @@ export const shell: AreaDict = {
     "This document is in English, and the English text is the one that applies.": "Dit document is in het Engels, en de Engelse tekst is de tekst die geldt.",
     "I agree to the Terms of Service and the Privacy Policy.": "Ik ga akkoord met de Servicevoorwaarden en het Privacybeleid.",
     "Please accept the Terms of Service and Privacy Policy.": "Ga akkoord met de Servicevoorwaarden en het Privacybeleid.",
+    // Error pages
+    "Report this problem": "Dit probleem melden",
+    "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "Deze pagina liep tegen een onverwachte fout aan. Probeer het opnieuw; blijft het gebeuren, geef ons dan de referentie hieronder door.",
   },
 };

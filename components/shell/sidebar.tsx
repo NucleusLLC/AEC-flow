@@ -159,7 +159,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
       <div className="border-t border-white/10 px-3 py-2">
         <button
           type="button"
-          onClick={openBetaReport}
+          onClick={() => openBetaReport()}
           className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-fg transition-colors hover:bg-sidebar-2/60 hover:text-white"
         >
           <MessageSquarePlus

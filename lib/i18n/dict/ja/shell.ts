@@ -473,4 +473,7 @@ export const shell: Dict = {
   "This document is in English, and the English text is the one that applies.": "この文書は英語で書かれており、英語の本文が適用されます。",
   "I agree to the Terms of Service and the Privacy Policy.": "利用規約とプライバシーポリシーに同意します。",
   "Please accept the Terms of Service and Privacy Policy.": "利用規約とプライバシーポリシーに同意してください。",
+  // Error pages
+  "Report this problem": "この問題を報告",
+  "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "このページで予期しないエラーが発生しました。もう一度お試しください。繰り返し発生する場合は、下の参照番号をお知らせください。",
 };

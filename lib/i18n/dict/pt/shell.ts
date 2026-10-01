@@ -473,4 +473,7 @@ export const shell: Dict = {
   "This document is in English, and the English text is the one that applies.": "Este documento está em inglês, e é o texto em inglês que se aplica.",
   "I agree to the Terms of Service and the Privacy Policy.": "Concordo com os Termos de Serviço e a Política de Privacidade.",
   "Please accept the Terms of Service and Privacy Policy.": "Aceite os Termos de Serviço e a Política de Privacidade.",
+  // Error pages
+  "Report this problem": "Comunicar este problema",
+  "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "Esta página encontrou um erro inesperado. Tente novamente; se continuar a acontecer, indique-nos a referência abaixo.",
 };

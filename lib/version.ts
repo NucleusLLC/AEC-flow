@@ -22,8 +22,10 @@
  *   a client with no email says so, with a link to add one.
  * 0.8.0 (1 OCT 2026): Terms of Service and Privacy Policy; sign-up and invites ask
  *   for agreement and record which versions were accepted.
+ * 0.9.0 (1 OCT 2026): error tracking — every server and browser error is one
+ *   [aecflow-error] line in the Vercel logs; error pages report and offer Bug/Wish.
  */
-export const APP_VERSION = "0.8.0";
+export const APP_VERSION = "0.9.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
@@ -34,7 +36,12 @@ export const APP_VERSION = "0.8.0";
  */
 export const VERSION_COLOR = "#08E8DE";
 
+/** The deploy's short commit, or "" when running locally. Server-side only. */
+export function appBuildId(): string {
+  return (process.env.APP_BUILD || process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "").trim();
+}
+
 export function appVersionLabel(): string {
-  const build = (process.env.APP_BUILD || process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "").trim();
+  const build = appBuildId();
   return build ? `v${APP_VERSION} · ${build}` : `v${APP_VERSION} · dev`;
 }
