@@ -1,6 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { requireActor } from "@/lib/server/actor";
 import { getAnthropicApiKey } from "@/lib/server/ai-config";
 
 /** Structured article the AI returns — mirrors the editable fields of WikiArticle. */
@@ -81,6 +82,12 @@ const SYSTEM = [
  * Never throws to the client — returns a tagged result.
  */
 export async function aiFetchWikiArticle(topic: string): Promise<AiWikiResult> {
+  // A billed call: only for a signed-in, active member.
+  try {
+    await requireActor();
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
+  }
   const t = topic.trim();
   if (!t) return { ok: false, error: "Enter a topic to fetch." };
   const apiKey = await getAnthropicApiKey();

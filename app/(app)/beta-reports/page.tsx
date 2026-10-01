@@ -2,11 +2,16 @@ import { Bug, Lightbulb, Inbox, MessageSquarePlus } from "lucide-react";
 import { getServerT } from "@/lib/i18n/server";
 import { Card } from "@/components/ui/card";
 import { BetaReportsView } from "@/components/beta-report/beta-reports-view";
+import { notFound } from "next/navigation";
 import { getBetaReports, summarizeBetaReports } from "@/lib/data/beta-reports";
+import { isCurrentUserFounder } from "@/lib/server/founder";
 
 export const metadata = { title: "Beta Reports · AEC-flow" };
 
 export default async function BetaReportsPage() {
+  // Every practice's reports, with reporter names, emails and screenshots of
+  // their screens: the founder's inbox, not a page for members.
+  if (!(await isCurrentUserFounder())) notFound();
   const t = await getServerT();
   const reports = await getBetaReports();
   const summary = await summarizeBetaReports(reports);

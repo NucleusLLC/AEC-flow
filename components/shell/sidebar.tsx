@@ -76,7 +76,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
               </div>
             ) : null}
             <ul className="space-y-0.5">
-              {section.items.map((item) => {
+              {section.items.filter((item) => isFounder || !item.founderOnly).map((item) => {
                 const Icon = item.icon;
                 if (item.disabled) {
                   return (

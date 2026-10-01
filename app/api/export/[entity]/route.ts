@@ -12,6 +12,7 @@ import { getProposals } from "@/lib/data/proposals";
 import { getOrders } from "@/lib/data/orders";
 import { getTeam } from "@/lib/data/team";
 import { getLeaveRequests } from "@/lib/data/leave";
+import { requireActor } from "@/lib/server/actor";
 
 const GETTERS: Record<string, () => Promise<unknown[]>> = {
   clients: getClients,
@@ -49,6 +50,16 @@ function toCsv(rows: Record<string, unknown>[]): string {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ entity: string }> }) {
   const { entity } = await params;
+  // Checked here as well as in proxy.ts: with AUTH_ENFORCE off, the team
+  // export fell back to the founder company's directory for anyone.
+  try {
+    await requireActor();
+  } catch {
+    return new Response(JSON.stringify({ error: "You must be signed in." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const getter = GETTERS[entity];
   if (!getter) {
     return new Response(JSON.stringify({ error: `Unknown export: ${entity}` }), {

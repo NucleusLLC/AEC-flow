@@ -46,6 +46,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Grayed-out "coming soon" — visible in the nav but not navigable during the beta. */
   disabled?: boolean;
+  /** Shown to the AEC-flow founder only (the page itself also refuses everyone else). */
+  founderOnly?: boolean;
 };
 
 export type NavSection = {
@@ -249,7 +251,8 @@ export const navSections: NavSection[] = [
       { label: "Imports", href: "/imports", icon: Upload, disabled: true },
       { label: "Exports", href: "/exports", icon: Download, disabled: true },
       { label: "Widgets", href: "/widgets", icon: LayoutGrid },
-      { label: "Beta Reports", href: "/beta-reports", icon: Bug },
+      // Every practice's Bug/Wish reports: the founder's inbox.
+      { label: "Beta Reports", href: "/beta-reports", icon: Bug, founderOnly: true },
     ],
   },
 ];
