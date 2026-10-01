@@ -7,7 +7,51 @@ import {
   TERMS_VERSION,
   formatVersionDate,
   termsAcceptance,
+  termsStatus,
+  withTermsAcceptance,
 } from "./policy";
+
+describe("termsStatus", () => {
+  it("is 'never' for an account made before the pages existed", () => {
+    expect(termsStatus(null)).toBe("never");
+    expect(termsStatus({})).toBe("never");
+    expect(termsStatus({ betaTester: true, dashboardBackground: true })).toBe("never");
+    expect(termsStatus("garbage")).toBe("never");
+  });
+
+  it("is 'current' only when both current versions were accepted", () => {
+    expect(termsStatus({ termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION })).toBe("current");
+  });
+
+  it("is 'outdated' when either one is an earlier version", () => {
+    expect(termsStatus({ termsVersion: "2020-01-01", privacyVersion: PRIVACY_VERSION })).toBe("outdated");
+    expect(termsStatus({ termsVersion: TERMS_VERSION, privacyVersion: "2020-01-01" })).toBe("outdated");
+    expect(termsStatus({ termsVersion: TERMS_VERSION })).toBe("outdated");
+  });
+});
+
+describe("withTermsAcceptance", () => {
+  it("records today's acceptance and keeps every other preference", () => {
+    const at = new Date("2026-10-02T08:00:00Z");
+    const next = withTermsAcceptance(
+      { dashboardBackground: true, betaSignupIp: "1.2.3.4", termsVersion: "2020-01-01" },
+      at,
+    );
+    expect(next).toEqual({
+      dashboardBackground: true,
+      betaSignupIp: "1.2.3.4",
+      termsAcceptedAt: "2026-10-02T08:00:00.000Z",
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    });
+    expect(termsStatus(next)).toBe("current");
+  });
+
+  it("starts from nothing when preferences are missing or not an object", () => {
+    expect(termsStatus(withTermsAcceptance(null, new Date()))).toBe("current");
+    expect(termsStatus(withTermsAcceptance([1, 2], new Date()))).toBe("current");
+  });
+});
 
 describe("legal versions", () => {
   it("are ISO dates that print as a plain English date", () => {

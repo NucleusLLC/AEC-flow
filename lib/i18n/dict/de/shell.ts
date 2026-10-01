@@ -476,4 +476,10 @@ export const shell: Dict = {
   // Error pages
   "Report this problem": "Dieses Problem melden",
   "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "Auf dieser Seite ist ein unerwarteter Fehler aufgetreten. Versuchen Sie es erneut; wenn es weiter passiert, nennen Sie uns die Referenz unten.",
+  // Accept the Terms banner
+  "AEC-flow now has Terms of Service and a Privacy Policy. Please read them and accept.": "AEC-flow hat jetzt Nutzungsbedingungen und eine Datenschutzerklärung. Bitte lesen und akzeptieren Sie sie.",
+  "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "Die Nutzungsbedingungen oder die Datenschutzerklärung haben sich geändert. Bitte lesen und akzeptieren Sie die neue Fassung.",
+  "I accept": "Ich stimme zu",
+  "Accepted — thank you": "Akzeptiert — vielen Dank",
+  "Could not save. Please try again.": "Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.",
 };

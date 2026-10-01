@@ -482,6 +482,12 @@ export const shell: AreaDict = {
     // Error pages
     "Report this problem": "Informar de este problema",
     "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "Esta página encontró un error inesperado. Inténtelo de nuevo; si sigue ocurriendo, indíquenos la referencia de abajo.",
+    // Accept the Terms banner
+    "AEC-flow now has Terms of Service and a Privacy Policy. Please read them and accept.": "AEC-flow ya tiene Términos del servicio y una Política de privacidad. Léalos y acéptelos.",
+    "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "Los Términos del servicio o la Política de privacidad han cambiado. Lea y acepte la nueva versión.",
+    "I accept": "Acepto",
+    "Accepted — thank you": "Aceptado — gracias",
+    "Could not save. Please try again.": "No se pudo guardar. Inténtelo de nuevo.",
   },
   nl: {
     "{count} at risk": "{count} met risico",
@@ -959,5 +965,11 @@ export const shell: AreaDict = {
     // Error pages
     "Report this problem": "Dit probleem melden",
     "This page hit an unexpected error. Try again; if it keeps happening, tell us the reference below.": "Deze pagina liep tegen een onverwachte fout aan. Probeer het opnieuw; blijft het gebeuren, geef ons dan de referentie hieronder door.",
+    // Accept the Terms banner
+    "AEC-flow now has Terms of Service and a Privacy Policy. Please read them and accept.": "AEC-flow heeft nu Servicevoorwaarden en een Privacybeleid. Lees ze en ga akkoord.",
+    "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "De Servicevoorwaarden of het Privacybeleid zijn gewijzigd. Lees de nieuwe versie en ga akkoord.",
+    "I accept": "Ik ga akkoord",
+    "Accepted — thank you": "Geaccepteerd — dank u",
+    "Could not save. Please try again.": "Opslaan is niet gelukt. Probeer het opnieuw.",
   },
 };

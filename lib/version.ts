@@ -24,8 +24,10 @@
  *   for agreement and record which versions were accepted.
  * 0.9.0 (1 OCT 2026): error tracking — every server and browser error is one
  *   [aecflow-error] line in the Vercel logs; error pages report and offer Bug/Wish.
+ * 0.10.0 (1 OCT 2026): existing accounts are asked to accept the Terms and Privacy
+ *   Policy (a banner; it asks, never blocks), and again whenever a version changes.
  */
-export const APP_VERSION = "0.9.0";
+export const APP_VERSION = "0.10.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

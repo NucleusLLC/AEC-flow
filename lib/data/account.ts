@@ -5,7 +5,9 @@
  * [[aec-prisma-client-boundary]]); client code goes through the server actions in
  * `app/(app)/account/actions.ts`. Password changes live in `lib/server/password.ts`.
  */
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { withTermsAcceptance } from "@/lib/legal/policy";
 
 export type AccountProfile = {
   id: string;
@@ -96,3 +98,18 @@ export async function updateProfile(userId: string, input: ProfileInput): Promis
  * company scoping and the role gate are enforced in one reviewable place. Nothing
  * in this file hashes or compares a password any more.
  */
+
+/**
+ * Records that the user accepted the current Terms of Service and Privacy
+ * Policy, keeping every other preference. Read-modify-write on the user's own
+ * row: the only other writers of `preferences` are this user's own settings
+ * screens, which cannot run in the same instant as this click.
+ */
+export async function acceptCurrentTerms(userId: string, now: Date = new Date()): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { preferences: true } });
+  if (!user) throw new Error("User not found.");
+  await prisma.user.update({
+    where: { id: userId },
+    data: { preferences: withTermsAcceptance(user.preferences, now) as Prisma.InputJsonValue },
+  });
+}
