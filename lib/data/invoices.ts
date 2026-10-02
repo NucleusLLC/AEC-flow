@@ -310,6 +310,28 @@ export async function listInvoicesForExport(): Promise<InvoiceDTO[]> {
   return (rows as unknown as InvoiceRow[]).map(invoiceDto);
 }
 
+/**
+ * Every invoice in the books (drafts left out) with its payments, optionally for
+ * one client — what receivables by client and the Statement of Account read.
+ * VOID invoices come back too, marked VOID, and the pure code in
+ * lib/finance/receivables.ts leaves them out; that decision lives in one place.
+ * Who may call this is decided by lib/data/receivables.ts.
+ */
+export async function listInvoicesOnBooks(
+  filter: { clientId?: string } = {},
+): Promise<InvoiceDTO[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      deletedAt: null,
+      status: { not: "DRAFT" },
+      ...(filter.clientId ? { clientId: filter.clientId } : {}),
+    },
+    include: CHILDREN,
+    orderBy: [{ issueDate: "asc" }, { number: "asc" }],
+  });
+  return (rows as unknown as InvoiceRow[]).map(invoiceDto);
+}
+
 /** Every number ever used, soft-deleted included, so one is never reused. */
 async function allNumbers(): Promise<string[]> {
   const rows = await prisma.invoice.findMany({ select: { number: true } });

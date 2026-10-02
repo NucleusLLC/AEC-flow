@@ -186,6 +186,7 @@ export default defineConfig({
       "lib/projects/development.test.ts",
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
+      "lib/finance/receivables.test.ts",
     ],
     environment: "node",
   },
