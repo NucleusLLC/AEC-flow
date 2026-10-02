@@ -2,7 +2,7 @@
  * Accounting export.
  *
  * GET /api/export/finance/<kind>?from=YYYY-MM-DD&to=YYYY-MM-DD  →  CSV attachment
- *   kind: invoices | invoice-lines | payments | time | expenses
+ *   kind: invoices | invoice-lines | payments | credit-notes | time | expenses
  *
  * Money, rates and other people's hours are not for every member: only the
  * people who approve time and expenses (Admin, Director, the founder — the
@@ -13,6 +13,7 @@
 import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import { listInvoicesForExport } from "@/lib/data/invoices";
+import { listCreditNotesForExport } from "@/lib/data/credit-notes";
 import { listApprovedTimeForExport } from "@/lib/data/time-entries";
 import { listApprovedExpensesForExport } from "@/lib/data/expenses";
 import { buildTable, exportFilename, isExportKind, parseRange, toCsv } from "@/lib/finance/export";
@@ -44,13 +45,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
   const { range } = parsed;
 
   const needsInvoices = kind === "invoices" || kind === "invoice-lines" || kind === "payments";
-  const [invoices, time, expenses] = await Promise.all([
+  const [invoices, creditNotes, time, expenses] = await Promise.all([
     needsInvoices ? listInvoicesForExport() : Promise.resolve([]),
+    kind === "credit-notes" ? listCreditNotesForExport() : Promise.resolve([]),
     kind === "time" ? listApprovedTimeForExport({ from: range.from ?? undefined, to: range.to ?? undefined }) : Promise.resolve([]),
     kind === "expenses" ? listApprovedExpensesForExport({ from: range.from ?? undefined, to: range.to ?? undefined }) : Promise.resolve([]),
   ]);
 
-  const csv = toCsv(buildTable(kind, { invoices, time, expenses }, range));
+  const csv = toCsv(buildTable(kind, { invoices, creditNotes, time, expenses }, range));
   const today = new Date().toISOString().slice(0, 10);
   return new Response(csv, {
     headers: {

@@ -2,6 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  CREDIT_NOTE_STATUSES,
+  CREDIT_NOTE_STATUS_LABEL,
+  CREDIT_NOTE_STATUS_TONE,
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABEL,
   FINANCE_APPROVAL_LABEL,
@@ -38,6 +41,12 @@ function schemaEnum(name: string): string[] {
 describe("the enum unions match prisma/schema.prisma", () => {
   it("InvoiceStatus", () => {
     expect([...INVOICE_STATUSES].sort()).toEqual(schemaEnum("InvoiceStatus").sort());
+  });
+
+  it("CreditNoteStatus", () => {
+    expect([...CREDIT_NOTE_STATUSES].sort()).toEqual(schemaEnum("CreditNoteStatus").sort());
+    expect(Object.keys(CREDIT_NOTE_STATUS_LABEL).sort()).toEqual(schemaEnum("CreditNoteStatus").sort());
+    expect(Object.keys(CREDIT_NOTE_STATUS_TONE).sort()).toEqual(schemaEnum("CreditNoteStatus").sort());
   });
 
   it("InvoicePaymentMethod", () => {

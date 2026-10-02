@@ -10,7 +10,7 @@
  *   · an invoice with no lines — a document asking for nothing;
  *   · a line with no description — a charge nobody can query;
  *   · a negative line amount — a credit dressed as a charge (credit notes are
- *     their own thing and are not in this release);
+ *     their own document, `creditNoteInputSchema` below);
  *   · a payment of zero or less — "received nothing" is not a receipt;
  *   · a due date before the issue date;
  *   · a tax percentage outside 0–100.
@@ -138,6 +138,33 @@ export const invoicePaymentSchema = z.object({
   reference: optionalText(120),
   notes: optionalText(2000, "The notes"),
 });
+
+/**
+ * A credit note. What it refuses, and why:
+ *   · no reason — a credit nobody can explain to an auditor or to the client;
+ *   · no lines, or a line that does not say which invoice line it credits — a
+ *     credit note can only take back what its invoice charged;
+ *   · a line of zero or less — a credit of nothing, or a charge in disguise.
+ * The ceiling (never more than the invoice still owes) is NOT here: it needs
+ * the invoice's payments and other credits, so the data layer checks it with
+ * `checkCreditNote` in lib/finance/calc.ts.
+ */
+export const creditNoteLineSchema = z.object({
+  invoiceLineId: z.string().trim().min(1, "Say which invoice line is being credited").max(120),
+  amount: amount("A credit amount").refine((n) => n > 0, "A credit amount has to be more than zero"),
+});
+
+export const creditNoteInputSchema = z.object({
+  invoiceId: z.string().trim().min(1, "Say which invoice is being credited").max(120),
+  date: dateOnly,
+  reason: z.string().trim().min(1, "Give the reason for the credit").max(1000),
+  notes: optionalText(4000, "The notes"),
+  lines: z.array(creditNoteLineSchema).min(1, "Credit at least one line"),
+});
+
+export function parseCreditNoteInput(data: unknown) {
+  return parse(creditNoteInputSchema, data);
+}
 
 export type ParseResult<T> =
   | { ok: true; value: T }

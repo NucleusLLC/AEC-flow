@@ -2,10 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import {
+  CREDIT_NOTE_STATUS_LABEL,
+  CREDIT_NOTE_STATUS_TONE,
   FINANCE_APPROVAL_LABEL,
   FINANCE_APPROVAL_TONE,
   INVOICE_STATUS_LABEL,
   INVOICE_STATUS_TONE,
+  type CreditNoteStatus,
   type FinanceApprovalStatus,
   type InvoiceStatus,
 } from "@/lib/finance/types";
@@ -42,4 +45,10 @@ export function BilledBadge({ invoiceNumber }: { invoiceNumber: string | null })
   const t = useT();
   if (!invoiceNumber) return null;
   return <Badge tone="violet">{fmt(t("Billed on {number}"), { number: invoiceNumber })}</Badge>;
+}
+
+/** A credit note is DRAFT, ISSUED or VOID — chosen, never derived. */
+export function CreditNoteStatusBadge({ status }: { status: CreditNoteStatus }) {
+  const t = useT();
+  return <Badge tone={CREDIT_NOTE_STATUS_TONE[status]}>{t(CREDIT_NOTE_STATUS_LABEL[status])}</Badge>;
 }

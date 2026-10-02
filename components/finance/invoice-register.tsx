@@ -83,13 +83,15 @@ export function InvoiceRegister({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Tile
           label={t("Billed")}
           value={money(summary.billed)}
           note={fmt(t("{count} issued"), { count: summary.count })}
         />
         <Tile label={t("Received")} value={money(summary.paid)} />
+        {/* Issued credit notes: billed − received − credited = outstanding. */}
+        <Tile label={t("Credited")} value={money(summary.credited)} />
         <Tile label={t("Outstanding")} value={money(summary.outstanding)} />
         <Tile
           label={t("Overdue")}
