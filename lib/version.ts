@@ -39,8 +39,11 @@
  *   dropdown is typed in, saved to the firm's Norm Set and linked to the row.
  * 0.12.1 (1 OCT 2026): feat — every New Client (the client page and each inline
  *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
+ * 0.13.0 (2 OCT 2026): feat — Finance RECEIVABLES: who owes what by client, aged Current /
+ *   1–30 / 31–60 / 61–90 / 90+ per currency; each client's Statement of Account (running
+ *   balance for a period) on screen, printed on A4 and emailed as a link. No SQL.
  */
-export const APP_VERSION = "0.12.2";
+export const APP_VERSION = "0.13.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

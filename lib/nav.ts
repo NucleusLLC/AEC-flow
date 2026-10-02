@@ -33,6 +33,7 @@ import {
   ScrollText,
   Sparkles,
   ReceiptText,
+  HandCoins,
   Clock3,
   Wallet,
   TrendingUp,
@@ -138,6 +139,16 @@ export const INVOICES_ITEM: NavItem = {
 };
 
 /**
+ * Receivables by client and each client's Statement of Account, beside the
+ * invoice register in both sidebars for the same reason as the register itself.
+ */
+export const RECEIVABLES_ITEM: NavItem = {
+  label: "Receivables",
+  href: "/finance/receivables",
+  icon: HandCoins,
+};
+
+/**
  * Time and expenses, defined here for the same reason as the invoice register:
  * they appear both in this list and in Module 1's sidebar, and a finance
  * section called one thing in one module and another elsewhere is a feature the
@@ -229,7 +240,7 @@ export const navSections: NavSection[] = [
   },
   {
     title: "Finance",
-    items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM],
+    items: [INVOICES_ITEM, RECEIVABLES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM],
   },
   {
     title: "People",
