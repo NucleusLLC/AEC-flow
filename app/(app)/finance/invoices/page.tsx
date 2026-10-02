@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getServerT } from "@/lib/i18n/server";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { HandCoins, Plus } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { InvoiceRegister } from "@/components/finance/invoice-register";
 import { listInvoices } from "@/lib/data/invoices";
@@ -26,12 +26,20 @@ export default async function InvoicesPage() {
             {t("What the practice has billed, what has come in, and what is still owed.")}
           </p>
         </div>
-        <Link
-          href="/finance/invoices/new"
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <Plus className="h-4 w-4" /> {t("New invoice")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/finance/receivables"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <HandCoins className="h-4 w-4" /> {t("Receivables by client")}
+          </Link>
+          <Link
+            href="/finance/invoices/new"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <Plus className="h-4 w-4" /> {t("New invoice")}
+          </Link>
+        </div>
       </div>
 
       {invoices.length === 0 ? (
