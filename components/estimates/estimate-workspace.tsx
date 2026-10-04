@@ -32,6 +32,7 @@ import {
 } from "@/app/(app)/estimates/actions";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { normalizeCoverFit, type CoverFit } from "@/lib/estimates/cover-fit";
 
 type TabKey = "estimate" | "budget" | "takeoff" | "rebar" | "normset" | "prices" | "general" | "wiki";
 
@@ -93,6 +94,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   // Cover page — toggle + the project image/rendering. Persisted per-estimate.
   const [coverOn, setCoverOn] = useState<boolean>(() => estimate.budget?.cover?.on ?? false);
   const [coverImage, setCoverImage] = useState<string | null>(() => estimate.budget?.cover?.image ?? null);
+  // How the image sits in its frame: original proportions, or a fixed ratio with a chosen crop.
+  const [coverFit, setCoverFit] = useState<CoverFit>(() => normalizeCoverFit(estimate.budget?.cover?.fit));
   const seq = useRef(100);
   const newId = (p: string) => `${p}-${seq.current++}`;
 
@@ -113,9 +116,9 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
       fx: { usd: usdSecondary, rate: usdRate },
       gcActive,
       rebar,
-      cover: { on: coverOn, image: coverImage },
+      cover: { on: coverOn, image: coverImage, fit: coverFit },
     }),
-    [schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, gcActive, rebar, coverOn, coverImage],
+    [schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, gcActive, rebar, coverOn, coverImage, coverFit],
   );
 
   // Explicit Save on the Take-Off tab. It writes the WHOLE estimate through the same
@@ -404,6 +407,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           setCoverOn={setCoverOn}
           coverImage={coverImage}
           setCoverImage={setCoverImage}
+          coverFit={coverFit}
+          setCoverFit={setCoverFit}
           logoDataUrl={logoDataUrl}
           footer={footer}
           newId={newId}

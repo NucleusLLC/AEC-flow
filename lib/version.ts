@@ -35,12 +35,12 @@
  * 0.11.2 (1 OCT 2026): fix — every practice could read every practice's beta reports;
  *   a request with no session borrowed a director's identity; two AI actions and the
  *   CSV export did not check who was asking.
- * 0.12.2 (1 OCT 2026): feat — Take-Off "ADD NEW": an item missing from the Norm Set
+ * 0.12.4 (1 OCT 2026): feat — Take-Off "ADD NEW": an item missing from the Norm Set
  *   dropdown is typed in, saved to the firm's Norm Set and linked to the row.
  * 0.12.1 (1 OCT 2026): feat — every New Client (the client page and each inline
  *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
  */
-export const APP_VERSION = "0.12.3";
+export const APP_VERSION = "0.12.4";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -14,6 +14,8 @@ import { useEffect, useMemo } from "react";
 import type { CostEstimate } from "@/lib/data/estimates";
 import { sumGeneralConditions, type GeneralConditionItem } from "@/lib/data/general-conditions";
 import { calcItem } from "@/lib/estimates/calc";
+import { normalizeCoverFit, type CoverFit } from "@/lib/estimates/cover-fit";
+import { CoverImageFrame } from "./cover-image-frame";
 import {
   computeSchedule,
   computeDraws,
@@ -241,6 +243,8 @@ export interface EstimatePrintDocProps {
   /** Cover page — a leading title page with the project's headline facts + a rendering. */
   coverPage?: boolean;
   coverImage?: string | null;
+  /** How the cover image sits in its frame (original proportions, or a ratio + crop). */
+  coverFit?: CoverFit;
   /** Pre-formatted grand total for the cover (carries the dual-currency string when on). */
   coverTotalDisplay?: string;
   /**
@@ -846,6 +850,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
           profile={profile}
           est={est}
           image={props.coverImage ?? null}
+          fit={normalizeCoverFit(props.coverFit)}
           logoDataUrl={props.logoDataUrl}
           totalDisplay={props.coverTotalDisplay ?? `${est.currency} ${props.nf0(0)}`}
           footerText={props.footerText}
@@ -1030,6 +1035,7 @@ function CoverPage({
   profile,
   est,
   image,
+  fit,
   logoDataUrl,
   totalDisplay,
   footerText,
@@ -1042,6 +1048,7 @@ function CoverPage({
   profile: ReturnType<typeof getTextSizeProfile>;
   est: CostEstimate;
   image: string | null;
+  fit: CoverFit;
   logoDataUrl?: string | null;
   totalDisplay: string;
   footerText?: string;
@@ -1090,12 +1097,8 @@ function CoverPage({
       {/* Hero image / rendering — the visual anchor. Placeholder frame when none uploaded. */}
       <div style={{ flex: "1 1 auto", minHeight: 0, marginTop: 18, marginBottom: 18 }}>
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element -- data URL, print context
-          <img
-            src={image}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0", display: "block" }}
-          />
+          // Never stretched: whole image at its own proportions, or cropped into the chosen ratio.
+          <CoverImageFrame image={image} fit={fit} frameStyle={{ borderRadius: 6, border: "1px solid #e2e8f0" }} />
         ) : (
           <div style={{ width: "100%", height: "100%", borderRadius: 6, border: "1px dashed #cbd5e1", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13 }}>
             {t("Project image / rendering")}

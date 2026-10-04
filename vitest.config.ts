@@ -175,6 +175,7 @@ export default defineConfig({
       // Accounting export: date ranges, drafts left out, money format, and the
       // spreadsheet-formula guard on user-typed cells. Pure.
       "lib/finance/export.test.ts",
+      "lib/estimates/cover-fit.test.ts",
     ],
     environment: "node",
   },
