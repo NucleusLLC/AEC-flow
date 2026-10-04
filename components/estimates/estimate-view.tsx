@@ -1430,11 +1430,11 @@ ${!preview ? `@media print {
                         />
                         <span className="rounded bg-slate-300/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-muted" title={t("Share of direct cost")}>{nf0(direct > 0 ? (ct.total / direct) * 100 : 0)}%</span>
                         <span className="no-print ml-auto flex items-center text-faint">
-                          <button type="button" onClick={() => moveCategory(cat.id, -1)} aria-label={t("Move section up")} className="flex h-5 w-4 items-center justify-center hover:text-brand">
-                            <ChevronUp className="h-3.5 w-3.5" />
+                          <button type="button" onClick={() => moveCategory(cat.id, -1)} aria-label={t("Move section up")} title={t("Move section up")} className="flex h-5 w-4 items-center justify-center text-red-600 hover:text-red-500">
+                            <svg viewBox="0 0 10 8" className="h-2.5 w-3" aria-hidden="true"><polygon points="5,0 10,8 0,8" fill="currentColor" /></svg>
                           </button>
-                          <button type="button" onClick={() => moveCategory(cat.id, 1)} aria-label={t("Move section down")} className="flex h-5 w-4 items-center justify-center hover:text-brand">
-                            <ChevronDown className="h-3.5 w-3.5" />
+                          <button type="button" onClick={() => moveCategory(cat.id, 1)} aria-label={t("Move section down")} title={t("Move section down")} className="flex h-5 w-4 items-center justify-center text-red-600 hover:text-red-500">
+                            <svg viewBox="0 0 10 8" className="h-2.5 w-3" aria-hidden="true"><polygon points="0,0 10,0 5,8" fill="currentColor" /></svg>
                           </button>
                         </span>
                         <select
