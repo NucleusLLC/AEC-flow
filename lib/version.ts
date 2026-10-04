@@ -40,7 +40,7 @@
  * 0.12.1 (1 OCT 2026): feat — every New Client (the client page and each inline
  *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
  */
-export const APP_VERSION = "0.12.2";
+export const APP_VERSION = "0.12.3";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
