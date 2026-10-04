@@ -42,6 +42,8 @@ import { calcItem, sum, ZERO, pocPct, type Totals } from "@/lib/estimates/calc";
 import { saveEstimateAction, saveTemplatesAction } from "@/app/(app)/estimates/actions";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { CoverFitControls } from "./cover-fit-controls";
+import type { CoverFit } from "@/lib/estimates/cover-fit";
 
 const nf0 = (n: number) => Math.round(n).toLocaleString("en-US");
 const nf2 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -102,6 +104,9 @@ type EstimateViewProps = {
   setCoverOn: (v: boolean) => void;
   coverImage: string | null;
   setCoverImage: (v: string | null) => void;
+  /** How the image sits in its cover frame — original proportions, or a ratio + crop. */
+  coverFit: CoverFit;
+  setCoverFit: (v: CoverFit) => void;
   logoDataUrl?: string | null;
   footer?: FooterSettings;
   newId: (p: string) => string;
@@ -111,7 +116,7 @@ type EstimateViewProps = {
   setPreview: (v: boolean) => void;
 };
 
-export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, budget, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, coverOn, setCoverOn, coverImage, setCoverImage, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
+export function EstimateView({ est, setEst, templates, setTemplates, activeTemplate, setActiveTemplate, normSet, generalConditions, gcActive, setGcActive, materials, equipment, schedule, payment, budget, takeoff, takeoffSection, usdSecondary, setUsdSecondary, usdRate, setUsdRate, coverOn, setCoverOn, coverImage, setCoverImage, coverFit, setCoverFit, logoDataUrl, footer, newId, preview, setPreview }: EstimateViewProps) {
   const t = useT();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -233,6 +238,8 @@ export function EstimateView({ est, setEst, templates, setTemplates, activeTempl
         }
         ctx.drawImage(img, 0, 0, w, h);
         setCoverImage(canvas.toDataURL("image/jpeg", 0.85));
+        // A new image starts centred at zoom 1 in the same frame; its own ratio drives the crop maths.
+        setCoverFit({ ...coverFit, x: 50, y: 50, zoom: 1, imageRatio: w / h });
       };
       img.onerror = () => setCoverErr(t("That image couldn't be read."));
       img.src = reader.result as string;
@@ -1140,8 +1147,7 @@ ${!preview ? `@media print {
                         <div className="mt-1.5 border-t border-border pt-1.5">
                           {coverImage ? (
                             <div className="space-y-1.5">
-                              {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview */}
-                              <img src={coverImage} alt={t("Cover")} className="h-20 w-full rounded-md border border-border object-cover" />
+                              <CoverFitControls image={coverImage} fit={coverFit} onChange={setCoverFit} />
                               <div className="flex gap-1.5">
                                 <label className="flex-1 cursor-pointer rounded-md border border-border bg-surface px-2 py-1 text-center text-[11px] font-medium text-fg hover:bg-surface-2">
                                   {t("Replace")}
@@ -2166,6 +2172,7 @@ ${!preview ? `@media print {
                 importedAmount={importedAmount}
                 coverPage={coverOn}
                 coverImage={coverImage}
+                coverFit={coverFit}
                 coverTotalDisplay={dualMoney(grandTotal)}
                 usdSecondary={usdSecondary}
                 usdRate={usdRate}

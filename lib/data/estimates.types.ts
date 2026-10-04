@@ -9,6 +9,8 @@
  * See [[aec-prisma-client-boundary]].
  */
 
+import type { CoverFit } from "@/lib/estimates/cover-fit";
+
 export type EstimateStatus = "draft" | "in_review" | "approved";
 
 /**
@@ -132,7 +134,7 @@ export type EstimateBudget = {
    * `budget` because it's per-estimate content, not a firm-wide print preference — a
    * rendering belongs to this project.
    */
-  cover?: { on?: boolean; image?: string | null };
+  cover?: { on?: boolean; image?: string | null; fit?: CoverFit };
 };
 
 /**
