@@ -57,7 +57,15 @@ export async function proxy(req: NextRequest) {
   // (lib/officedash/access.ts), else it sends the visitor to /login. Letting it
   // through here is what keeps the login page off the TV.
   if (pathname === "/officedash") {
-    return NextResponse.next();
+    // Opened once with ?k=…, the TV keeps the key in a cookie, so the plain
+    // address (and the Sigma board's handover) never needs it again. The page
+    // still checks the key on every load; a wrong one goes to /login.
+    const k = req.nextUrl.searchParams.get("k");
+    const res = NextResponse.next();
+    if (k && /^[A-Za-z0-9_-]{16,200}$/.test(k)) {
+      res.cookies.set("officedash_key", k, { httpOnly: true, secure: true, sameSite: "lax", path: "/officedash", maxAge: 60 * 60 * 24 * 400 });
+    }
+    return res;
   }
 
   // Beta subdomain: it's the portal, not the app.
