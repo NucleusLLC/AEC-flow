@@ -19,8 +19,12 @@ const PERMIT_ROWS = 7;
 const CHASE_ROWS = 7;
 /** DEADLINES shown on the strip of sheet OD-02; the rest are counted. */
 const DEADLINE_CHIPS = 5;
-/** Where the TV goes after its dwell (app/officedash/page.tsx sets the dwell). `www.` does not resolve for Sigma. */
-const HANDOVER_URL = "https://sigma-cms.com/officedash";
+/**
+ * Where the TV goes after its dwell (app/officedash/page.tsx sets the dwell): the Nucleus
+ * development board, which hands on to sigma-cms.com/officedash, which comes back here.
+ * The TV key is not passed on — this board is public and Nucleus has no use for it.
+ */
+const HANDOVER_URL = "https://nucleus-apps.vercel.app/officedash";
 /** Same relay the Sigma board reads: world headlines + AI & innovation news, CORS-open. */
 const NEWS_URL = "https://cimgpycjczatjzltgscf.supabase.co/functions/v1/tv-news";
 /** Fresh data every 2 minutes; a full reload every 30 as a backstop for a TV left on for weeks. */
@@ -150,7 +154,7 @@ type Screen = "projects" | "permits";
 
 /**
  * The TV's run: PROJECTS for `dwell` s, then BUILDING PERMITS for `permitDwell` s,
- * then the Sigma board (which hands back after its own 20 s). `dwell` 0 stays put
+ * then the Nucleus board (Nucleus 30 s, then Sigma, then back here). `dwell` 0 stays put
  * on the screen named by `pin`, for checking one screen without the clock.
  */
 function useRun(dwell: number, permitDwell: number, pin: Screen, next: string) {
@@ -174,7 +178,6 @@ export function OfficeBoard({
   dwell,
   permitDwell,
   pin,
-  tvKey,
 }: {
   board: Board;
   firmName: string;
@@ -182,11 +185,11 @@ export function OfficeBoard({
   dwell: number;
   permitDwell: number;
   pin: Screen;
-  /** The TV key this board was opened with, passed on so the Sigma board can hand back without a login. */
+  /** The TV key this board was opened with. No longer passed on: the handover goes to Nucleus. */
   tvKey: string | null;
 }) {
   const clock = useClock(timeZone);
-  const screen = useRun(dwell, permitDwell, pin, tvKey ? `${HANDOVER_URL}?k=${encodeURIComponent(tvKey)}` : HANDOVER_URL);
+  const screen = useRun(dwell, permitDwell, pin, HANDOVER_URL);
   const projectPages = useMemo(() => pages(board.projects, PROJECT_ROWS), [board.projects]);
   const permitPages = useMemo(() => pages(board.permits, PERMIT_ROWS), [board.permits]);
   // Every page of a list gets shown inside its screen's time: 21 projects over 20 s is three pages of ~6 s.

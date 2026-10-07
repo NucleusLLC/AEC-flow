@@ -56,8 +56,11 @@
  *   reply / respond, or OTHER typed in) with its date. Yellow on the Dashboard and the Office Dash,
  *   red inside 14 days, blinking red inside 3 and when overdue; MET takes it off.
  *   Needs prisma/sql/0027_permit_deadlines.sql.
+ * 0.15.1 (7 OCT 2026): /officedash hands over to the Nucleus development board
+ *   (nucleus-apps.vercel.app/officedash) instead of Sigma; the loop is now
+ *   AEC-flow -> Nucleus -> Sigma -> AEC-flow.
  */
-export const APP_VERSION = "0.15.0";
+export const APP_VERSION = "0.15.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
