@@ -1,7 +1,6 @@
 import {
   LayoutDashboard,
   Users,
-  FileText,
   ClipboardList,
   FolderKanban,
   Map,
@@ -185,7 +184,6 @@ export const navSections: NavSection[] = [
       { label: "Meeting Minutes", href: "/meetings", icon: NotebookPen },
       { label: "Estimates", href: "/estimates", icon: Calculator },
       { label: "Cost Database", href: "/cost-database", icon: Database, disabled: true },
-      { label: "Proposals", href: "/proposals", icon: FileText },
       { label: "Orders", href: "/orders", icon: ClipboardList, disabled: true },
     ],
   },

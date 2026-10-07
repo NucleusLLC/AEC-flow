@@ -10,7 +10,6 @@ import {
   FolderOpen,
   FileStack,
   Calculator,
-  FileText,
   HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,7 +28,6 @@ export function ProjectTabBar({ projectId }: { projectId: string }) {
     { label: "Documents", href: `${base}/documents`, icon: FolderOpen },
     { label: "Drawings", href: `${base}/drawings`, icon: FileStack },
     { label: "Estimates", href: `${base}/estimates`, icon: Calculator },
-    { label: "Proposals", href: `${base}/proposals`, icon: FileText },
     { label: "Construction Admin", href: `${base}/construction-admin`, icon: HardHat },
   ];
 
