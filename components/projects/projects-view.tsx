@@ -19,19 +19,23 @@ import { fmt } from "@/lib/i18n/format";
 
 type SortKey = "status" | "name" | "progress" | "deadline";
 
-const STATUS_FILTERS: Array<{ key: "ALL" | ProjectStatus; label: string }> = [
+type StatusFilter = "ALL" | ProjectStatus | "ARCHIVED";
+
+/** "All" and each status show live projects only; archived ones sit behind their own chip. */
+const STATUS_FILTERS: Array<{ key: StatusFilter; label: string }> = [
   { key: "ALL", label: "All" },
   { key: "ACTIVE", label: "Active" },
   { key: "ON_HOLD", label: "On hold" },
   { key: "COMPLETED", label: "Completed" },
   { key: "CANCELLED", label: "Cancelled" },
+  { key: "ARCHIVED", label: "Archived" },
 ];
 
 const PRIORITIES: Priority[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 
 export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<"ALL" | ProjectStatus>("ALL");
+  const [status, setStatus] = useState<StatusFilter>("ALL");
   const [priority, setPriority] = useState<"ALL" | Priority>("ALL");
   const [sort, setSort] = useState<SortKey>("status");
   const t = useT();
@@ -40,7 +44,12 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = projects.filter((p) => {
-      if (status !== "ALL" && p.status !== status) return false;
+      if (status === "ARCHIVED") {
+        if (!p.archivedAt) return false;
+      } else {
+        if (p.archivedAt) return false;
+        if (status !== "ALL" && p.status !== status) return false;
+      }
       if (priority !== "ALL" && p.priority !== priority) return false;
       if (!q) return true;
       const haystack = [p.name, p.projectNumber, p.clientName, p.manager]
@@ -157,7 +166,13 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                   <td className="px-3 py-3 text-muted">{p.clientName}</td>
                   <td className="px-3 py-3 text-muted">{p.manager}</td>
                   <td className="px-3 py-3">
-                    <StatusBadge status={p.status} />
+                    {p.archivedAt ? (
+                      <span className="inline-flex items-center rounded-md border border-[#5c6633] bg-[#4b5320] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#e4e8dc]">
+                        {t("ARCHIVED")}
+                      </span>
+                    ) : (
+                      <StatusBadge status={p.status} />
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     <PriorityBadge priority={p.priority} />

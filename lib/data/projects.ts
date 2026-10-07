@@ -72,6 +72,7 @@ export async function getProjects(): Promise<ProjectListItem[]> {
         targetEndDate,
         value: Number(p.contractValue ?? 0),
         isOverdue: isOverdue({ targetEndDate, status: p.status as ProjectStatus }),
+        archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
       };
     })
     .sort((a, b) => {
@@ -142,6 +143,7 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
     phases,
     team,
     activity: [],
+    archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
   };
 }
 

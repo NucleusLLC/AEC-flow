@@ -43,8 +43,11 @@
  *   under Drawings, deliverables under Design Register.
  * 0.12.6 (6 OCT 2026): Design "Engineering" and "Interior Design" removed from the
  *   sidebar, as Architecture was in 0.12.5.
+ * 0.13.1 (6 OCT 2026): feat — Projects ARCHIVE / RESTORE and DELETE. Archived projects leave
+ *   the list and the tiles; DELETE only on an archived project nothing else points at,
+ *   confirmed by typing the project number. Needs prisma/sql/0026_project_archive.sql.
  */
-export const APP_VERSION = "0.12.6";
+export const APP_VERSION = "0.13.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
