@@ -52,8 +52,11 @@
  * 0.14.1 (7 OCT 2026): /officedash runs like the Sigma board: projects 20 s (larger names), a
  *   full Building Permits sheet 10 s, then sigma-cms.com/officedash. Sigma's stats + news
  *   bar along the bottom.
+ * 0.14.2 (7 OCT 2026): /officedash hands over to the Nucleus development board
+ *   (nucleus-apps.vercel.app/officedash) instead of Sigma; the loop is now
+ *   AEC-flow -> Nucleus -> Sigma -> AEC-flow.
  */
-export const APP_VERSION = "0.14.1";
+export const APP_VERSION = "0.14.2";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
