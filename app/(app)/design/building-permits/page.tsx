@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { listBuildingPermits, listPermitAuthorities } from "@/lib/data/building-permits";
 import { ymd } from "@/lib/building-permits/register";
@@ -27,13 +27,6 @@ export default async function BuildingPermitRegisterPage() {
 
   return (
     <div className="w-full space-y-6">
-      <Link
-        href="/design"
-        className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {t("Design Register")}
-      </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

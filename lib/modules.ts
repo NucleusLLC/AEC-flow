@@ -137,7 +137,6 @@ const MODULE_1: AppModule = {
     {
       title: "Design",
       items: [
-        { label: "Design Register", href: "/design", icon: FileStack },
         { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
         BUILDING_PERMITS_ITEM,
       ],
