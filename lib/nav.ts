@@ -174,7 +174,6 @@ export const navSections: NavSection[] = [
   {
     title: "Design",
     items: [
-      { label: "Design Register", href: "/design", icon: FileStack },
       { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
       BUILDING_PERMITS_ITEM,
     ],
