@@ -16,6 +16,8 @@ import { randomUUID } from "node:crypto";
 import { getServerSession } from "next-auth";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { deadlineDto } from "@/lib/data/permit-deadlines";
+import { sortDeadlines } from "@/lib/building-permits/deadlines";
 import { authOptions } from "@/lib/auth";
 import { nextPermitReference } from "@/lib/building-permits/register";
 import {
@@ -157,6 +159,8 @@ const CHILD_INCLUDE = {
   },
   approvals: { orderBy: [{ decidedAt: "desc" }, { createdAt: "desc" }] },
   documents: { orderBy: [{ documentDate: "desc" }, { createdAt: "desc" }] },
+  // Open DEADLINES only — a met one is off the case file and the boards.
+  deadlines: { where: { metAt: null }, orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] },
 } satisfies Prisma.BuildingPermitInclude;
 
 type PermitRow = Prisma.BuildingPermitGetPayload<{ include: typeof CHILD_INCLUDE }>;
@@ -369,6 +373,7 @@ function permitDto(r: PermitRow): BuildingPermitDTO {
     correspondence: r.correspondence.map(correspondenceDto),
     approvals: r.approvals.map(approvalDto),
     documents: r.documents.map(documentDto),
+    deadlines: sortDeadlines(r.deadlines.map(deadlineDto)),
   };
 }
 

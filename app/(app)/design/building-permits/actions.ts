@@ -59,6 +59,13 @@ import type {
   BuildingPermitMeetingInput,
   BuildingPermitSubmissionInput,
 } from "@/lib/building-permits/types";
+import { checkDeadlineInput, type DeadlineField } from "@/lib/building-permits/deadlines";
+import {
+  createPermitDeadline,
+  deletePermitDeadline,
+  markPermitDeadlineMet,
+  PermitDeadlineNotFoundError,
+} from "@/lib/data/permit-deadlines";
 
 export type PermitActionResult = { ok: true; id: string } | { ok: false; error: string };
 
@@ -103,7 +110,8 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
   if (
     e instanceof PermitReferenceInUseError ||
     e instanceof PermitNotFoundError ||
-    e instanceof PermitLetterFileError
+    e instanceof PermitLetterFileError ||
+    e instanceof PermitDeadlineNotFoundError
   ) {
     return { ok: false, error: e.message };
   }
@@ -222,6 +230,61 @@ export async function deleteMeetingAction(
     return { ok: true, id };
   } catch (e) {
     return failure(e, "Failed to delete the meeting.");
+  }
+}
+
+// ── Deadlines ──────────────────────────────────────────────────────────────
+
+export type PermitDeadlineActionResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string; errors?: Partial<Record<DeadlineField, string>> };
+
+/** A deadline shows on the dashboards too, so they go stale with the case file. */
+function revalidateDeadline(permitId: string): void {
+  revalidatePermit(permitId);
+  revalidatePath("/dashboard");
+  revalidatePath("/modules/design");
+  revalidatePath("/officedash");
+}
+
+export async function addPermitDeadlineAction(
+  permitId: string,
+  input: unknown,
+): Promise<PermitDeadlineActionResult> {
+  const check = checkDeadlineInput(input);
+  if (!check.ok) return { ok: false, error: "Check the highlighted fields.", errors: check.errors };
+  try {
+    const row = await createPermitDeadline(permitId, check.value);
+    revalidateDeadline(permitId);
+    return { ok: true, id: row.id };
+  } catch (e) {
+    return failure(e, "Failed to save the deadline.");
+  }
+}
+
+export async function markPermitDeadlineMetAction(
+  permitId: string,
+  id: string,
+): Promise<PermitActionResult> {
+  try {
+    await markPermitDeadlineMet(id);
+    revalidateDeadline(permitId);
+    return { ok: true, id };
+  } catch (e) {
+    return failure(e, "Failed to mark the deadline met.");
+  }
+}
+
+export async function deletePermitDeadlineAction(
+  permitId: string,
+  id: string,
+): Promise<PermitActionResult> {
+  try {
+    await deletePermitDeadline(id);
+    revalidateDeadline(permitId);
+    return { ok: true, id };
+  } catch (e) {
+    return failure(e, "Failed to delete the deadline.");
   }
 }
 

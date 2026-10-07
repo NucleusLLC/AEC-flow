@@ -52,8 +52,12 @@
  * 0.14.1 (7 OCT 2026): /officedash runs like the Sigma board: projects 20 s (larger names), a
  *   full Building Permits sheet 10 s, then sigma-cms.com/officedash. Sigma's stats + news
  *   bar along the bottom.
+ * 0.15.0 (7 OCT 2026): feat — Building Permit DEADLINE: set a deadline on a permit (submit review,
+ *   reply / respond, or OTHER typed in) with its date. Yellow on the Dashboard and the Office Dash,
+ *   red inside 14 days, blinking red inside 3 and when overdue; MET takes it off.
+ *   Needs prisma/sql/0027_permit_deadlines.sql.
  */
-export const APP_VERSION = "0.14.1";
+export const APP_VERSION = "0.15.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

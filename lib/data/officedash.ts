@@ -7,12 +7,15 @@
  */
 import { prisma } from "@/lib/db";
 import { listBuildingPermits } from "@/lib/data/building-permits";
+import { listOpenPermitDeadlines } from "@/lib/data/permit-deadlines";
+import { deadlineLabel } from "@/lib/building-permits/deadlines";
 import { isClosedStatus } from "@/lib/building-permits/types";
 import { daysWithAuthority, permitVersion } from "@/lib/building-permits/register";
 import {
   buildBoard,
   PIPELINE_STAGE,
   type Board,
+  type BoardDeadline,
   type BoardPermit,
   type BoardProject,
   type BoardProposal,
@@ -27,7 +30,7 @@ export function officeToday(timeZone = process.env.OFFICE_TIME_ZONE || "America/
 }
 
 export async function getOfficeBoard(today = officeToday()): Promise<Board> {
-  const [projects, proposals, permits, tasks] = await Promise.all([
+  const [projects, proposals, permits, tasks, openDeadlines] = await Promise.all([
     prisma.project.findMany({
       where: { archivedAt: null, status: { in: ["ACTIVE", "ON_HOLD"] } },
       include: {
@@ -45,7 +48,17 @@ export async function getOfficeBoard(today = officeToday()): Promise<Board> {
       where: { status: { not: "DONE" }, kind: "TASK" },
       select: { id: true, title: true, assignee: true, dueDate: true, projectId: true, priority: true },
     }),
+    listOpenPermitDeadlines(),
   ]);
+
+  const boardDeadlines: BoardDeadline[] = openDeadlines.map((d) => ({
+    id: d.id,
+    permitId: d.permitId,
+    reference: d.reference,
+    title: d.title,
+    label: deadlineLabel(d),
+    date: d.dueDate,
+  }));
 
   const projectName = new Map(projects.map((p) => [p.id, p.name]));
 
@@ -87,6 +100,7 @@ export async function getOfficeBoard(today = officeToday()): Promise<Board> {
       openResponseDueAt: p.openResponseDueAt,
       revisionDueAt: p.revisionDueAt,
       targetDecisionAt: p.targetDecisionAt,
+      deadlines: boardDeadlines.filter((d) => d.permitId === p.id).map((d) => ({ label: d.label, date: d.date })),
     }));
 
   const boardTasks: BoardTask[] = tasks.map((t) => ({
@@ -98,5 +112,12 @@ export async function getOfficeBoard(today = officeToday()): Promise<Board> {
     priority: t.priority,
   }));
 
-  return buildBoard({ today, projects: boardProjects, proposals: boardProposals, permits: boardPermits, tasks: boardTasks });
+  return buildBoard({
+    today,
+    projects: boardProjects,
+    proposals: boardProposals,
+    permits: boardPermits,
+    tasks: boardTasks,
+    deadlines: boardDeadlines,
+  });
 }

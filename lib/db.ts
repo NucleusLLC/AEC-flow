@@ -61,6 +61,7 @@ const TENANT_MODELS = new Set<string>([
 
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
+  "BuildingPermitDeadline",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

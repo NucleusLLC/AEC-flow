@@ -8,11 +8,15 @@
  * 1. Engaged projects (ACTIVE, then ON_HOLD), late ones first.
  * 2. Service proposals not signed yet, by stage, and who to chase (oldest first).
  * 3. Building permits still open: submitted, days with the authority, and the
- *    nearest deadline (a letter to answer, a revision to resubmit, or the
- *    decision the authority promised).
+ *    nearest deadline (a letter to answer, a revision to resubmit, the decision
+ *    the authority promised, or a DEADLINE set on the file). Every open DEADLINE
+ *    also shows on its own strip, yellow / red / blinking red by the permit
+ *    module's rule (lib/building-permits/deadlines.ts).
  * 4. ORDERS — open tasks plus actions worked out from the records above, most
  *    urgent first. Until the team logs tasks, the derived orders carry the board.
  */
+
+import { daysUntil, deadlineState, type DeadlineState } from "@/lib/building-permits/deadlines";
 
 export type BoardProject = {
   id: string;
@@ -52,7 +56,22 @@ export type BoardPermit = {
   openResponseDueAt: string | null;
   revisionDueAt: string | null;
   targetDecisionAt: string | null;
+  /** Open DEADLINES set on the file (the case file's DEADLINE button). */
+  deadlines: { label: string; date: string }[];
 };
+
+/** One open DEADLINE on a permit file. `label` is already the military label. */
+export type BoardDeadline = {
+  id: string;
+  permitId: string;
+  reference: string;
+  title: string;
+  label: string;
+  /** YYYY-MM-DD */
+  date: string;
+};
+
+export type DeadlineRow = BoardDeadline & { days: number; state: DeadlineState };
 
 export type BoardTask = {
   id: string;
@@ -67,9 +86,10 @@ export type Lamp = "green" | "amber" | "red" | "off";
 
 export type ProjectRow = BoardProject & { lamp: Lamp; late: boolean; daysToTarget: number | null };
 
-export type DeadlineKind = "REPLY" | "REVISION" | "DECISION";
+export type DeadlineKind = "REPLY" | "REVISION" | "DECISION" | "DEADLINE";
 export type PermitRow = BoardPermit & {
-  deadline: { kind: DeadlineKind; date: string; days: number } | null;
+  /** `label` and `state` are set when the nearest is a DEADLINE set on the file. */
+  deadline: { kind: DeadlineKind; date: string; days: number; label?: string; state?: DeadlineState } | null;
   urgency: "late" | "soon" | "ok" | "none";
 };
 
@@ -80,11 +100,23 @@ export type Order = { severity: "red" | "amber" | "info"; text: string; detail: 
 
 export type Board = {
   today: string;
-  counts: { engaged: number; late: number; onHold: number; unsigned: number; permitsOpen: number; tasksOpen: number };
+  counts: {
+    engaged: number;
+    late: number;
+    onHold: number;
+    unsigned: number;
+    permitsOpen: number;
+    tasksOpen: number;
+    /** Open DEADLINES, and how many of them are red or blinking. */
+    deadlines: number;
+    deadlinesRed: number;
+  };
   projects: ProjectRow[];
   pipeline: Record<PipelineStage, number>;
   chase: ChaseRow[];
   permits: PermitRow[];
+  /** Every open DEADLINE, soonest first. */
+  deadlines: DeadlineRow[];
   orders: Order[];
 };
 
@@ -126,15 +158,27 @@ function projectRow(p: BoardProject, today: string): ProjectRow {
 
 /** The nearest unmet deadline on a permit, with what kind it is. */
 export function permitDeadline(p: BoardPermit, today: string): PermitRow["deadline"] {
-  const options: { kind: DeadlineKind; date: string | null }[] = [
+  const options: { kind: DeadlineKind; date: string | null; label?: string }[] = [
     { kind: "REPLY", date: p.openResponseDueAt },
     { kind: "REVISION", date: p.revisionDueAt },
     { kind: "DECISION", date: p.targetDecisionAt },
+    ...(p.deadlines ?? []).map((d) => ({ kind: "DEADLINE" as const, date: d.date, label: d.label })),
   ];
   const best = options
-    .filter((o): o is { kind: DeadlineKind; date: string } => Boolean(o.date))
-    .sort((a, b) => a.date.localeCompare(b.date))[0];
-  return best ? { kind: best.kind, date: best.date.slice(0, 10), days: daysBetween(today, best.date) } : null;
+    .filter((o): o is { kind: DeadlineKind; date: string; label?: string } => Boolean(o.date))
+    .sort((a, b) => a.date.slice(0, 10).localeCompare(b.date.slice(0, 10)))[0];
+  if (!best) return null;
+  const date = best.date.slice(0, 10);
+  const out: NonNullable<PermitRow["deadline"]> = { kind: best.kind, date, days: daysBetween(today, date) };
+  if (best.kind === "DEADLINE") Object.assign(out, { label: best.label, state: deadlineState(date, today) });
+  return out;
+}
+
+/** Every open DEADLINE with its days and colour, soonest first. */
+export function deadlineRows(deadlines: BoardDeadline[], today: string): DeadlineRow[] {
+  return deadlines
+    .map((d) => ({ ...d, date: d.date.slice(0, 10), days: daysUntil(today, d.date), state: deadlineState(d.date, today) }))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.reference.localeCompare(b.reference) || a.label.localeCompare(b.label));
 }
 
 function permitRow(p: BoardPermit, today: string): PermitRow {
@@ -176,8 +220,11 @@ export function buildBoard(input: {
   proposals: BoardProposal[];
   permits: BoardPermit[];
   tasks: BoardTask[];
+  /** Every open DEADLINE in the practice (optional so older callers still build). */
+  deadlines?: BoardDeadline[];
 }): Board {
   const { today } = input;
+  const deadlines = deadlineRows(input.deadlines ?? [], today);
   const projects = input.projects
     .map((p) => projectRow(p, today))
     .sort(
@@ -216,7 +263,22 @@ export function buildBoard(input: {
         .join(" · "),
     });
   }
+  // Red and blinking DEADLINES are orders of their own, one per deadline.
+  for (const d of deadlines.filter((x) => x.state !== "YELLOW")) {
+    orders.push({
+      severity: "red",
+      text: `${d.label} — permit ${d.reference}`,
+      detail: `${d.days < 0 ? `${-d.days}D OVERDUE` : d.days === 0 ? "TODAY" : `in ${d.days}D`} · ${mil(d.date)}`,
+    });
+  }
   for (const p of permits) {
+    // A DEADLINE set on the file already has its own order above.
+    if (p.deadline?.kind === "DEADLINE") {
+      if (p.daysIn !== null && p.daysIn >= CHASE_PERMIT_AFTER_DAYS && p.deadline.state === "YELLOW") {
+        orders.push({ severity: "info", text: `CHASE AUTHORITY — permit ${p.reference}`, detail: `${p.daysIn}D with ${p.authority ?? "the authority"}` });
+      }
+      continue;
+    }
     if (p.deadline && p.urgency !== "ok") {
       const what = p.deadline.kind === "REPLY" ? "ANSWER LETTER" : p.deadline.kind === "REVISION" ? "RESUBMIT" : "DECISION DUE";
       orders.push({
@@ -256,11 +318,14 @@ export function buildBoard(input: {
       unsigned: chase.length,
       permitsOpen: permits.length,
       tasksOpen: input.tasks.length,
+      deadlines: deadlines.length,
+      deadlinesRed: deadlines.filter((d) => d.state !== "YELLOW").length,
     },
     projects,
     pipeline,
     chase,
     permits,
+    deadlines,
     orders,
   };
 }

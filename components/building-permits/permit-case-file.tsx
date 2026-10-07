@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * The live half of a permit case file: the four numbers, the versions log, the
- * letters, the staged approvals, the meeting minutes and the loose files.
+ * The live half of a permit case file: the four numbers, the DEADLINES, the
+ * versions log, the letters, the staged approvals, the meeting minutes and the loose files.
  *
  * WHY THIS COMPONENT OWNS THE DATA. Everything here changes as the user works,
  * and `router.refresh()` after a write does not reliably repaint this page —
@@ -20,6 +20,7 @@ import { useCallback, useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmailButton } from "@/components/email/email-button";
 import { PermitApprovals } from "@/components/building-permits/permit-approvals";
+import { PermitDeadlines } from "@/components/building-permits/permit-deadlines";
 import { PermitCorrespondence } from "@/components/building-permits/permit-correspondence";
 import { PermitDocuments } from "@/components/building-permits/permit-documents";
 import { PermitMeetings } from "@/components/building-permits/permit-meetings";
@@ -96,6 +97,13 @@ export function PermitCaseFile({
       </div>
 
       {staleError ? <p className="text-sm text-red-600">{staleError}</p> : null}
+
+      <PermitDeadlines
+        permitId={permit.id}
+        deadlines={permit.deadlines}
+        today={today}
+        onChanged={reload}
+      />
 
       <Card>
         <CardHeader
