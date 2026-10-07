@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { buildBoard, chaseList, daysBetween, mil, pages, permitDeadline, type BoardPermit, type BoardProject } from "./board";
+import {
+  buildBoard,
+  chaseList,
+  daysBetween,
+  deadlineRows,
+  mil,
+  pages,
+  permitDeadline,
+  type BoardDeadline,
+  type BoardPermit,
+  type BoardProject,
+} from "./board";
 
 const TODAY = "2026-10-07";
 
@@ -30,6 +41,7 @@ const permit = (o: Partial<BoardPermit>): BoardPermit => ({
   openResponseDueAt: null,
   revisionDueAt: null,
   targetDecisionAt: null,
+  deadlines: [],
   ...o,
 });
 
@@ -120,6 +132,78 @@ describe("permits", () => {
     expect(texts).toContain("RESUBMIT — permit SOON");
     expect(texts).toContain("CHASE AUTHORITY — permit OLD");
     expect(texts.some((t) => t.includes("LATER"))).toBe(false);
+  });
+});
+
+describe("permit DEADLINES", () => {
+  const dl = (o: Partial<BoardDeadline>): BoardDeadline => ({
+    id: o.label ?? "d",
+    permitId: "bp",
+    reference: "BP-2026-001",
+    title: "New house",
+    label: "DEADLINE TO SUBMIT REVIEW",
+    date: "2026-11-06",
+    ...o,
+  });
+
+  it("colours each one yellow / red / blink and sorts soonest first", () => {
+    const rows = deadlineRows(
+      [
+        dl({ label: "YELLOW 30", date: "2026-11-06" }),
+        dl({ label: "RED 10", date: "2026-10-17" }),
+        dl({ label: "BLINK 2", date: "2026-10-09" }),
+        dl({ label: "BLINK -1", date: "2026-10-06" }),
+        dl({ label: "RED 14", date: "2026-10-21" }),
+        dl({ label: "YELLOW 15", date: "2026-10-22" }),
+      ],
+      TODAY,
+    );
+    expect(rows.map((r) => [r.label, r.days, r.state])).toEqual([
+      ["BLINK -1", -1, "BLINK"],
+      ["BLINK 2", 2, "BLINK"],
+      ["RED 10", 10, "RED"],
+      ["RED 14", 14, "RED"],
+      ["YELLOW 15", 15, "YELLOW"],
+      ["YELLOW 30", 30, "YELLOW"],
+    ]);
+  });
+
+  it("take part in NEXT DEADLINE when they are the nearest", () => {
+    const p = permit({
+      targetDecisionAt: "2026-12-01",
+      deadlines: [{ label: "FIRE SIGN-OFF", date: "2026-10-09" }],
+    });
+    expect(permitDeadline(p, TODAY)).toEqual({ kind: "DEADLINE", date: "2026-10-09", days: 2, label: "FIRE SIGN-OFF", state: "BLINK" });
+    // A nearer letter still wins.
+    expect(permitDeadline({ ...p, openResponseDueAt: "2026-10-08" }, TODAY)).toMatchObject({ kind: "REPLY", days: 1 });
+  });
+
+  it("puts red and blinking ones on the board and in the orders, yellow ones not in the orders", () => {
+    const b = buildBoard({
+      today: TODAY,
+      projects: [],
+      proposals: [],
+      tasks: [],
+      permits: [permit({ id: "bp", deadlines: [{ label: "DEADLINE TO REPLY / RESPOND", date: "2026-10-06" }] })],
+      deadlines: [
+        dl({ label: "DEADLINE TO REPLY / RESPOND", date: "2026-10-06" }),
+        dl({ label: "DEADLINE TO SUBMIT REVIEW", date: "2026-10-17" }),
+        dl({ label: "FIRE SIGN-OFF", date: "2026-11-06" }),
+      ],
+    });
+    expect(b.deadlines.map((d) => d.state)).toEqual(["BLINK", "RED", "YELLOW"]);
+    expect(b.counts).toMatchObject({ deadlines: 3, deadlinesRed: 2 });
+    expect(b.orders.filter((o) => o.text.includes("BP-2026-001")).map((o) => [o.severity, o.text, o.detail])).toEqual([
+      ["red", "DEADLINE TO REPLY / RESPOND — permit BP-2026-001", "1D OVERDUE · 06 OCT 2026"],
+      ["red", "DEADLINE TO SUBMIT REVIEW — permit BP-2026-001", "in 10D · 17 OCT 2026"],
+    ]);
+    expect(b.permits[0].deadline).toMatchObject({ kind: "DEADLINE", state: "BLINK" });
+  });
+
+  it("is empty when nothing is set", () => {
+    const b = buildBoard({ today: TODAY, projects: [], proposals: [], tasks: [], permits: [] });
+    expect(b.deadlines).toEqual([]);
+    expect(b.counts).toMatchObject({ deadlines: 0, deadlinesRed: 0 });
   });
 });
 

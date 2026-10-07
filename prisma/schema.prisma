@@ -2810,6 +2810,7 @@ model BuildingPermit {
   correspondence BuildingPermitCorrespondence[]
   approvals      BuildingPermitApproval[]
   documents      BuildingPermitDocument[]
+  deadlines      BuildingPermitDeadline[]
 
   @@unique([companyId, reference])
   @@index([companyId, status])
@@ -2968,6 +2969,40 @@ model BuildingPermitDocument {
   @@index([companyId, category])
   @@index([correspondenceId])
   @@map("building_permit_documents")
+}
+
+enum PermitDeadlineKind {
+  SUBMIT_REVIEW
+  REPLY
+  OTHER
+}
+
+/// A dated deadline on a permit file (lib/building-permits/deadlines.ts): yellow on
+/// the dashboards while it is more than 14 days away, red inside 14, blinking red
+/// inside 3 days and once it has passed. Several per permit. Marking it met
+/// (metAt) takes it off the boards; the row stays as the record.
+model BuildingPermitDeadline {
+  companyId String?
+  id        String  @id @default(cuid())
+  permitId  String
+
+  kind    PermitDeadlineKind
+  /// What the deadline is, typed by hand — required when kind is OTHER (<= 120 chars).
+  label   String?
+  /// The calendar day it falls due (UTC midnight, like every permit date).
+  dueDate DateTime @db.Date
+  metAt   DateTime?
+
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  permit BuildingPermit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, dueDate])
+  @@index([permitId])
+  @@map("building_permit_deadlines")
 }
 
 /// A single-use link proving somebody can receive mail at the address they signed
