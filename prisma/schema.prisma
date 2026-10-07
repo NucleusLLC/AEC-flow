@@ -466,6 +466,10 @@ model Project {
   targetEndDate DateTime?
   completedAt   DateTime?
   progressPct   Int           @default(0)
+  /// Set when the project is archived (hidden from the Projects list, nothing else touched).
+  archivedAt    DateTime?
+  /// Who archived it — a user id, kept loose so removing the user never blocks.
+  archivedById  String?
   contractValue Decimal?
   currency      String        @default("AWG")
   notes         String?

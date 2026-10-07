@@ -68,6 +68,8 @@ export type ProjectRecord = {
   phases: ProjectPhase[];
   team: ProjectTeamMember[];
   activity: ProjectActivity[];
+  /** ISO timestamp when archived, else null. See lib/projects/lifecycle.ts. */
+  archivedAt: string | null;
 };
 
 /** Lean row — what the list page consumes. */
@@ -87,6 +89,8 @@ export type ProjectListItem = {
   targetEndDate: string | null;
   value: number;
   isOverdue: boolean;
+  /** ISO timestamp when archived, else null. Archived projects leave the list and the tiles. */
+  archivedAt: string | null;
 };
 
 export type ProjectsSummary = {
@@ -151,7 +155,8 @@ export type ProjectWriteInput = {
   currency?: string;
 };
 
-export function summarizeProjects(list: ProjectListItem[]): ProjectsSummary {
+export function summarizeProjects(all: ProjectListItem[]): ProjectsSummary {
+  const list = all.filter((p) => !p.archivedAt);
   const active = list.filter((p) => p.status === "ACTIVE");
   const avgProgress =
     active.length > 0 ? Math.round(active.reduce((n, p) => n + p.progressPct, 0) / active.length) : 0;
