@@ -5,6 +5,9 @@ import { StatusBadge, PriorityBadge } from "@/components/ui/badge";
 import { ProjectTabBar } from "@/components/projects/project-tab-bar";
 import { getProject } from "@/lib/data/projects";
 import { getServerT } from "@/lib/i18n/server";
+import { ProjectLifecycleButtons } from "@/components/projects/project-lifecycle-buttons";
+import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 
 type LayoutProps = { children: React.ReactNode; params: Promise<{ id: string }> };
 
@@ -13,6 +16,8 @@ export default async function ProjectWorkspaceLayout({ children, params }: Layou
   const project = await getProject(id);
   if (!project) notFound();
   const t = await getServerT();
+  const actor = await requireActor().catch(() => null);
+  const canManage = actor ? canManagePasswords(actor.role, actor.isFounder) : false;
 
   return (
     <div className="w-full space-y-5">
@@ -36,12 +41,21 @@ export default async function ProjectWorkspaceLayout({ children, params }: Layou
             {project.clientName}
           </Link>
         </div>
-        <Link
-          href={`/projects/${project.id}/overview`}
-          className="inline-flex h-9 shrink-0 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-        >
-          {t("Project details")}
-        </Link>
+        <div className="flex flex-wrap items-start justify-end gap-2">
+          <Link
+            href={`/projects/${project.id}/overview`}
+            className="inline-flex h-9 shrink-0 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            {t("Project details")}
+          </Link>
+          <ProjectLifecycleButtons
+            projectId={project.id}
+            projectNumber={project.projectNumber}
+            projectName={project.name}
+            archivedAt={project.archivedAt}
+            canManage={canManage}
+          />
+        </div>
       </div>
 
       <ProjectTabBar projectId={project.id} />

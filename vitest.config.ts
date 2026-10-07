@@ -176,6 +176,8 @@ export default defineConfig({
       // spreadsheet-formula guard on user-typed cells. Pure.
       "lib/finance/export.test.ts",
       "lib/estimates/cover-fit.test.ts",
+      // Project archive/delete: confirmation match, link list, refusal order. Pure.
+      "lib/projects/lifecycle.test.ts",
     ],
     environment: "node",
   },

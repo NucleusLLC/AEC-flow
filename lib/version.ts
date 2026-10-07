@@ -39,8 +39,11 @@
  *   dropdown is typed in, saved to the firm's Norm Set and linked to the row.
  * 0.12.1 (1 OCT 2026): feat — every New Client (the client page and each inline
  *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
+ * 0.13.1 (6 OCT 2026): feat — Projects ARCHIVE / RESTORE and DELETE. Archived projects leave
+ *   the list and the tiles; DELETE only on an archived project nothing else points at,
+ *   confirmed by typing the project number. Needs prisma/sql/0026_project_archive.sql.
  */
-export const APP_VERSION = "0.12.4";
+export const APP_VERSION = "0.13.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
