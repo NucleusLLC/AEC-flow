@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireActor } from "@/lib/server/actor";
 import { getCurrentCompany, isLicenseExpired } from "@/lib/server/tenant";
@@ -37,12 +38,14 @@ export default async function OfficeDashPage({
   const actor = await requireActor().catch(() => null);
   let tvKey: string | null = null;
   if (!actor) {
-    if (!officeKeyMatches(q.k)) redirect("/login?callbackUrl=/officedash");
+    // The key from the link, or the one this TV remembered from its first visit (proxy.ts).
+    const key = q.k ?? (await cookies()).get("officedash_key")?.value;
+    if (!officeKeyMatches(key)) redirect("/login?callbackUrl=/officedash");
     const companyId = await officeKeyCompanyId();
     if (!companyId) redirect("/login?callbackUrl=/officedash");
     // Before any scoped query: every read below is this practice's, nobody else's.
     companyOverride().companyId = companyId;
-    tvKey = q.k!;
+    tvKey = key!;
   } else {
     const company = await getCurrentCompany();
     if (isLicenseExpired(company)) redirect("/expired");
