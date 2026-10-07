@@ -1,0 +1,118 @@
+/*
+ * Office Dash — B2 SITREP in dark blue: smoked navy glass over an axonometric
+ * massing study. One 16:9 stage, letterboxed to any screen; every size is in cqw
+ * (1cqw = 1% of the stage width), so a 32" office TV and a 4K wall read the same.
+ * Deliberately one dark look — it is a wall screen, not a themed page.
+ */
+.screen {
+  --bg: #050b17;
+  --glass: rgba(12, 26, 52, 0.42);
+  --glass-edge: rgba(130, 170, 255, 0.2);
+  --glass-hi: rgba(200, 220, 255, 0.14);
+  --ink: #b8c7e0;
+  --ink-hi: #eef3fc;
+  --ink-lo: #7186a8;
+  --rule: rgba(130, 170, 255, 0.3);
+  --rule-lo: rgba(130, 170, 255, 0.09);
+  --chip: rgba(4, 10, 22, 0.4);
+  --green: #74d68f;
+  --amber: #f0b44a;
+  --red: #ff5f52;
+  --red-hi: #ffaba2;
+  --r: 1.1cqw;
+  color-scheme: dark;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(120% 90% at 30% 0%, #0d1e3d 0%, #050b17 60%, #02060e 100%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-family: var(--od-body), "Arial Narrow", Arial, sans-serif;
+  color: var(--ink);
+  cursor: none;
+}
+.stage {
+  container-type: inline-size;
+  position: relative;
+  width: min(100vw, calc(100vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+.art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ui {
+  position: absolute;
+  inset: 1.2cqw;
+  display: grid;
+  grid-template-rows: 5.4cqw minmax(0, 1fr) 13.8cqw 3.2cqw;
+  gap: 0.9cqw;
+}
+.glass {
+  background: var(--glass);
+  border: 0.1cqw solid var(--glass-edge);
+  border-radius: var(--r);
+  backdrop-filter: blur(1.4cqw) saturate(140%);
+  -webkit-backdrop-filter: blur(1.4cqw) saturate(140%);
+  box-shadow: inset 0 0.1cqw 0 var(--glass-hi), 0 1.2cqw 3cqw rgba(0, 0, 0, 0.4);
+  min-height: 0;
+  min-width: 0;
+}
+
+/* header + title block */
+.head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 1.6cqw; padding: 0 1.4cqw; overflow: hidden; }
+.title { font-family: var(--od-stencil), monospace; font-size: 1.9cqw; letter-spacing: 0.12em; color: var(--ink-hi); white-space: nowrap; }
+.kpis { display: flex; gap: 1.1cqw; overflow: hidden; font-family: var(--od-mono), monospace; font-size: 0.74cqw; color: var(--ink-lo); letter-spacing: 0.06em; white-space: nowrap; }
+.kpis b { color: var(--ink-hi); font-weight: 600; font-size: 1.25cqw; margin-right: 0.35cqw; }
+.clock { text-align: right; white-space: nowrap; line-height: 1.15; font-family: var(--od-mono), monospace; font-variant-numeric: tabular-nums; }
+.clock b { display: block; font-size: 2cqw; color: var(--ink-hi); font-weight: 600; }
+.clock span { font-size: 0.85cqw; color: var(--ink-lo); letter-spacing: 0.14em; }
+.titleBlock { font-family: var(--od-mono), monospace; font-size: 0.68cqw; color: var(--ink-lo); border-left: 0.1cqw solid var(--glass-edge); padding-left: 1.2cqw; line-height: 1.5; letter-spacing: 0.08em; white-space: nowrap; }
+.titleBlock b { color: var(--ink-hi); font-weight: 600; }
+
+/* panels */
+.mid { display: grid; grid-template-columns: minmax(0, 1fr) 30cqw; gap: 0.9cqw; min-height: 0; }
+.panel, .permits { padding: 0.6cqw 1.2cqw 0.6cqw; overflow: hidden; }
+.panelHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.2cqw; }
+.panelHead h2 { margin: 0; font-family: var(--od-stencil), monospace; font-weight: 400; font-size: 1.1cqw; letter-spacing: 0.16em; color: var(--ink-hi); }
+.pager { font-family: var(--od-mono), monospace; font-size: 0.75cqw; color: var(--ink-lo); letter-spacing: 0.12em; }
+
+.table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.98cqw; line-height: 1.2; }
+.table th { text-align: left; color: var(--ink-lo); font-family: var(--od-mono), monospace; font-weight: 600; font-size: 0.7cqw; letter-spacing: 0.14em; padding: 0.4cqw 0.45cqw; border-bottom: 0.12cqw solid var(--rule); white-space: nowrap; }
+.table td { padding: 0.38cqw 0.45cqw; border-bottom: 0.06cqw solid var(--rule-lo); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.right { text-align: right !important; }
+.job { font-family: var(--od-mono), monospace; font-size: 0.85cqw; color: var(--ink-lo) !important; }
+.name { color: var(--ink-hi) !important; font-weight: 600; font-size: 1.04cqw; letter-spacing: 0.02em; }
+.monoCell { font-family: var(--od-mono), monospace; font-size: 0.85cqw; font-variant-numeric: tabular-nums; }
+.lateRow .name { color: var(--red-hi) !important; }
+.empty { text-align: center; padding: 2cqw 0 !important; color: var(--ink-lo) !important; font-family: var(--od-mono), monospace; font-size: 0.9cqw; letter-spacing: 0.14em; }
+
+.lamp { display: inline-block; width: 0.72cqw; height: 0.72cqw; border-radius: 50%; margin-right: 0.55cqw; vertical-align: -0.02cqw; background: currentColor; box-shadow: 0 0 0.7cqw currentColor; }
+.lampG { color: var(--green); }
+.lampA { color: var(--amber); }
+.lampR { color: var(--red); }
+.lampO { color: var(--ink-lo); box-shadow: none; opacity: 0.6; }
+
+.prog { display: grid; grid-template-columns: 1fr 3cqw; align-items: center; gap: 0.5cqw; font-family: var(--od-mono), monospace; font-size: 0.8cqw; }
+.bar { height: 0.55cqw; background: rgba(130, 170, 255, 0.12); border-radius: 1cqw; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 1cqw; background: linear-gradient(90deg, #1d3d7a, #8fb8ff); box-shadow: 0 0 0.8cqw rgba(143, 184, 255, 0.55); }
+
+/* pipeline */
+.side { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 0.8cqw; padding: 0.6cqw 1.2cqw 0.8cqw; overflow: hidden; }
+.pipe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5cqw; }
+.pipe div { padding: 0.5cqw 0.3cqw; text-align: center; border-radius: 0.6cqw; background: var(--chip); border: 0.08cqw solid var(--glass-edge); }
+.pipe b { display: block; font-family: var(--od-mono), monospace; font-size: 2.1cqw; color: var(--ink-hi); font-weight: 600; }
+.pipe span { display: block; white-space: nowrap; font-family: var(--od-mono), monospace; font-size: 0.58cqw; color: var(--ink-lo); letter-spacing: 0.1em; }
+.chase { display: grid; gap: 0.45cqw; align-content: start; overflow: hidden; }
+.chase > div { line-height: 1.2; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6cqw; padding-bottom: 0.4cqw; border-bottom: 0.06cqw solid var(--rule-lo); font-size: 1cqw; color: var(--ink-hi); }
+.chase small { display: block; font-family: var(--od-mono), monospace; color: var(--ink-lo); font-size: 0.68cqw; letter-spacing: 0.06em; }
+.ellip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.age { font-family: var(--od-mono), monospace; font-size: 1cqw; color: var(--amber); align-self: center; }
+
+/* footer orders */
+.foot { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.4cqw; padding: 0 1.4cqw; font-size: 0.95cqw; white-space: nowrap; overflow: hidden; }
+.footLabel { font-family: var(--od-stencil), monospace; letter-spacing: 0.14em; color: var(--ink-hi); }
+.orders { display: flex; gap: 2cqw; overflow: hidden; color: var(--ink); }
+.orders i { font-style: normal; font-family: var(--od-mono), monospace; color: var(--ink-lo); margin-right: 0.4cqw; }
+.legend { display: flex; gap: 1.2cqw; font-family: var(--od-mono), monospace; font-size: 0.7cqw; color: var(--ink-lo); }
+
+.red { color: var(--red) !important; }
+.amber { color: var(--amber) !important; }

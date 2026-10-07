@@ -46,8 +46,11 @@
  * 0.13.1 (6 OCT 2026): feat — Projects ARCHIVE / RESTORE and DELETE. Archived projects leave
  *   the list and the tiles; DELETE only on an archived project nothing else points at,
  *   confirmed by typing the project number. Needs prisma/sql/0026_project_archive.sql.
+ * 0.14.0 (7 OCT 2026): feat — /officedash, the office TV board (SITREP, dark blue): engaged
+ *   projects, unsigned proposals to chase, open building permits with days in and the
+ *   next deadline, and the day's orders. Refreshes itself; sign in once on the TV.
  */
-export const APP_VERSION = "0.13.1";
+export const APP_VERSION = "0.14.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
