@@ -24,8 +24,6 @@ import {
   ListChecks,
   ShoppingCart,
   Boxes,
-  PencilRuler,
-  Sofa,
   FileSignature,
   UploadCloud,
   Mail,
@@ -179,8 +177,6 @@ export const navSections: NavSection[] = [
       { label: "Design Register", href: "/design", icon: FileStack },
       { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
       BUILDING_PERMITS_ITEM,
-      { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
-      { label: "Interior Design", href: "/design/interior", icon: Sofa },
     ],
   },
   {

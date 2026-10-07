@@ -41,8 +41,10 @@
  *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
  * 0.12.5 (6 OCT 2026): Design "Architecture" removed from the sidebar; drawings live
  *   under Drawings, deliverables under Design Register.
+ * 0.12.6 (6 OCT 2026): Design "Engineering" and "Interior Design" removed from the
+ *   sidebar, as Architecture was in 0.12.5.
  */
-export const APP_VERSION = "0.12.5";
+export const APP_VERSION = "0.12.6";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
