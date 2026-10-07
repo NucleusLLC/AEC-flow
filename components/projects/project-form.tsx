@@ -240,7 +240,7 @@ export function ProjectForm({
             <label className={labelClass} htmlFor="value">
               {fmt(t("Contract value ({currency})"), { currency: getSystemCurrency() })}
             </label>
-            <input id="value" name="value" type="number" min="0" step="1000" className={inputClass} placeholder="0" defaultValue={initial?.value ? initial.value : undefined} />
+            <input id="value" name="value" type="number" min="0" step="0.01" className={inputClass} placeholder="0" defaultValue={initial?.value ? initial.value : undefined} />
           </div>
 
           <div className="sm:col-span-2">

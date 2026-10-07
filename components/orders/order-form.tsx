@@ -140,7 +140,7 @@ export function OrderForm({
             <label className={labelClass} htmlFor="fee">
               {t("Fee")} ({getSystemCurrency()})
             </label>
-            <input id="fee" name="fee" type="number" min="0" step="1000" className={inputClass} placeholder="0" defaultValue={initial?.fee ?? ""} />
+            <input id="fee" name="fee" type="number" min="0" step="0.01" className={inputClass} placeholder="0" defaultValue={initial?.fee ?? ""} />
           </div>
           <div>
             <label className={labelClass} htmlFor="status">
