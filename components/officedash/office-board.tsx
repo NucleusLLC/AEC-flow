@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Barlow_Condensed, JetBrains_Mono, Saira_Stencil_One } from "next/font/google";
-import { mil, pages, type Board, type Lamp, type PermitRow, type PipelineStage } from "@/lib/officedash/board";
+import { mil, pages, type Board, type DeadlineRow, type Lamp, type PermitRow, type PipelineStage } from "@/lib/officedash/board";
+import type { DeadlineState } from "@/lib/building-permits/deadlines";
 import s from "./office-board.module.css";
 
 // Real fallbacks (not next/font's metric-adjusted Arial): if Google Fonts cannot be
@@ -16,6 +17,8 @@ const mono = JetBrains_Mono({ weight: ["400", "600", "700"], subsets: ["latin"],
 const PROJECT_ROWS = 9;
 const PERMIT_ROWS = 7;
 const CHASE_ROWS = 7;
+/** DEADLINES shown on the strip of sheet OD-02; the rest are counted. */
+const DEADLINE_CHIPS = 5;
 /**
  * Where the TV goes after its dwell (app/officedash/page.tsx sets the dwell): the Nucleus
  * development board, which hands on to sigma-cms.com/officedash, which comes back here.
@@ -130,11 +133,21 @@ function useKeepFresh() {
 
 const lampClass: Record<Lamp, string> = { green: s.lampG, amber: s.lampA, red: s.lampR, off: s.lampO };
 
+const dlClass: Record<DeadlineState, string> = { YELLOW: s.dlYellow, RED: s.dlRed, BLINK: s.dlBlink };
+
+function dlWhen(days: number) {
+  return days < 0 ? `${-days}D OVERDUE` : days === 0 ? "TODAY" : `IN ${days}D`;
+}
+
 function deadlineText(p: PermitRow) {
-  if (!p.deadline) return { label: "—", cls: "" };
+  if (!p.deadline) return { label: "—", cls: "", chip: "" };
   const d = p.deadline.days;
+  // A DEADLINE set on the file shows in its own colour: yellow, red or blinking red.
+  if (p.deadline.kind === "DEADLINE" && p.deadline.state) {
+    return { label: `${p.deadline.label ?? "DEADLINE"} ${mil(p.deadline.date)} · ${dlWhen(d)}`, cls: "", chip: `${s.cellChip} ${dlClass[p.deadline.state]}` };
+  }
   const when = d < 0 ? `${-d}D LATE` : d === 0 ? "TODAY" : `IN ${d}D`;
-  return { label: `${p.deadline.kind} ${mil(p.deadline.date)} · ${when}`, cls: p.urgency === "late" ? s.red : p.urgency === "soon" ? s.amber : "" };
+  return { label: `${p.deadline.kind} ${mil(p.deadline.date)} · ${when}`, cls: p.urgency === "late" ? s.red : p.urgency === "soon" ? s.amber : "", chip: "" };
 }
 
 type Screen = "projects" | "permits";
@@ -210,6 +223,7 @@ export function OfficeBoard({
                 <span><b>{counts.permitsOpen}</b>OPEN FILES</span>
                 <span><b className={board.permits.some((p) => p.urgency === "late") ? s.red : ""}>{board.permits.filter((p) => p.urgency === "late").length}</b>DEADLINE MISSED</span>
                 <span><b>{board.permits.filter((p) => p.urgency === "soon").length}</b>DUE ≤ 7 D</span>
+                <span><b className={counts.deadlinesRed ? s.red : ""}>{counts.deadlines}</b>DEADLINES</span>
               </span>
             )}
             <span className={s.clock}>
@@ -341,7 +355,7 @@ function PermitsScreen({ board, page, pageNo, pageCount }: { board: Board; page:
     { k: "DEADLINE MISSED", v: String(late), cls: late ? s.red : "" },
   ];
   return (
-    <div className={s.permitScreen}>
+    <div className={`${s.permitScreen} ${board.deadlines.length ? s.permitScreenDl : ""}`}>
       <div className={s.tiles}>
         {tiles.map((t) => (
           <div key={t.k} className={`${s.glass} ${s.tile}`}>
@@ -351,6 +365,7 @@ function PermitsScreen({ board, page, pageNo, pageCount }: { board: Board; page:
           </div>
         ))}
       </div>
+      {board.deadlines.length ? <DeadlineStrip deadlines={board.deadlines} /> : null}
       <section className={`${s.glass} ${s.panel}`}>
         <div className={s.panelHead}>
           <h2>BUILDING PERMITS — OPEN FILES</h2>
@@ -391,7 +406,7 @@ function PermitsScreen({ board, page, pageNo, pageCount }: { board: Board; page:
                   <td className={s.monoCell}>{p.version ? `V${p.version}` : "—"}</td>
                   <td className={s.monoCell}>{p.submittedAt ? mil(p.submittedAt) : "NOT YET"}</td>
                   <td className={`${s.right} ${s.monoCell}`}>{p.daysIn ?? "—"}</td>
-                  <td className={`${s.monoCell} ${dl.cls}`}>{dl.label}</td>
+                  <td className={`${s.monoCell} ${dl.cls}`}>{dl.chip ? <span className={dl.chip}>{dl.label}</span> : dl.label}</td>
                 </tr>
               );
             })}
@@ -404,6 +419,32 @@ function PermitsScreen({ board, page, pageNo, pageCount }: { board: Board; page:
         </table>
       </section>
     </div>
+  );
+}
+
+/** The DEADLINES strip on OD-02: every open deadline set on a permit file, soonest first. */
+function DeadlineStrip({ deadlines }: { deadlines: DeadlineRow[] }) {
+  const shown = deadlines.slice(0, DEADLINE_CHIPS);
+  const more = deadlines.length - shown.length;
+  return (
+    <section className={`${s.glass} ${s.dlStrip}`}>
+      <div className={s.panelHead}>
+        <h2>DEADLINES</h2>
+        <span className={s.pager}>YELLOW &gt; 14 D · RED ≤ 14 D · BLINK ≤ 3 D / OVERDUE</span>
+      </div>
+      <div className={s.dlList}>
+        {shown.map((d) => (
+          <div key={d.id} className={`${s.dl} ${dlClass[d.state]}`} data-deadline-state={d.state}>
+            <b>{dlWhen(d.days)}</b>
+            <span>{d.label}</span>
+            <small>
+              {d.reference} · {mil(d.date)}
+            </small>
+          </div>
+        ))}
+        {more > 0 ? <span className={s.dlMore}>+{more} MORE</span> : null}
+      </div>
+    </section>
   );
 }
 

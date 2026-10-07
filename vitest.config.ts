@@ -124,6 +124,8 @@ export default defineConfig({
       "lib/building-permits/print-filter.test.ts",
       // Revision deadline: when the dashboard starts blinking, and when it stops. Pure.
       "lib/building-permits/revision-reminder.test.ts",
+      // Permit DEADLINES: yellow, red inside 14 days, blinking inside 3. Pure.
+      "lib/building-permits/deadlines.test.ts",
       // Process summary (SITREP): chronology, open actions, the AI dossier, and
       // the synopsis prompt and parser. Pure; the AI call itself is not tested here.
       "lib/building-permits/process-summary.test.ts",

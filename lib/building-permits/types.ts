@@ -7,6 +7,8 @@
  * exactly; `lib/building-permits/enums.test.ts` fails the build if they drift.
  */
 
+import type { PermitDeadlineDTO } from "./deadlines";
+
 export type BuildingPermitType =
   | "NEW_BUILD"
   | "RENOVATION"
@@ -446,6 +448,8 @@ export type BuildingPermitDTO = BuildingPermitSummaryDTO & {
   correspondence: BuildingPermitCorrespondenceDTO[];
   approvals: BuildingPermitApprovalDTO[];
   documents: BuildingPermitDocumentDTO[];
+  /** Open (unmet) DEADLINES, soonest first (lib/building-permits/deadlines.ts). */
+  deadlines: PermitDeadlineDTO[];
 };
 
 // ── Write inputs ───────────────────────────────────────────────────────────

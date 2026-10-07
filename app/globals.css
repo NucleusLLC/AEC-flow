@@ -646,3 +646,26 @@ body,
     box-shadow: 0 0 8px 1px currentColor;
   }
 }
+
+/*
+ * Permit DEADLINES (lib/building-permits/deadlines.ts): a chip or row inside
+ * three days of its deadline, or past it, blinks red. Reduced motion keeps it
+ * solid red — the colour and the "2D OVERDUE" text still carry the message.
+ */
+@keyframes deadline-blink {
+  0%, 49%   { background-color: #dc2626; color: #fff; box-shadow: 0 0 0 0 transparent, 0 0 12px 2px rgba(220, 38, 38, 0.7); }
+  50%, 100% { background-color: #7f1d1d; color: #fecaca; box-shadow: 0 0 0 0 transparent; }
+}
+
+.deadline-blink {
+  background-color: #dc2626;
+  color: #fff;
+  animation: deadline-blink 0.9s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deadline-blink {
+    animation: none;
+    box-shadow: 0 0 8px 1px rgba(220, 38, 38, 0.6);
+  }
+}

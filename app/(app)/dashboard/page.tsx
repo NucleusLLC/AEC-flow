@@ -14,6 +14,8 @@ import { getRecentActivity } from "@/lib/data/activity";
 import { listRevisionReminders } from "@/lib/data/building-permits";
 import { ymd } from "@/lib/building-permits/register";
 import { RevisionReminders } from "@/components/building-permits/revision-reminders";
+import { listOpenPermitDeadlines } from "@/lib/data/permit-deadlines";
+import { PermitDeadlineBoard } from "@/components/building-permits/permit-deadline-board";
 import { formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
@@ -43,7 +45,11 @@ function TrendPill({ trend }: { trend?: Trend }) {
 export default async function DashboardPage() {
   const { stats, projects, onLeave } = await getDashboardData();
   const recentActivity = await getRecentActivity(8);
-  const revisionReminders = await listRevisionReminders(ymd(new Date()));
+  const today = ymd(new Date());
+  const [revisionReminders, permitDeadlines] = await Promise.all([
+    listRevisionReminders(today),
+    listOpenPermitDeadlines(),
+  ]);
   const session = await getServerSession(authOptions);
   const firstName = session?.user?.name?.trim().split(/\s+/)[0] ?? "";
   const beta = session?.user?.id ? await getBetaMembership(session.user.id) : null;
@@ -103,6 +109,9 @@ export default async function DashboardPage() {
 
       {/* Building permit revision deadlines inside their warning window */}
       <RevisionReminders reminders={revisionReminders} t={t} />
+
+      {/* PERMIT DEADLINES: yellow, red inside 14 days, blinking red inside 3 */}
+      <PermitDeadlineBoard deadlines={permitDeadlines} today={today} t={t} />
 
       {/* Stat tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
