@@ -18,9 +18,8 @@ export const metadata: Metadata = { title: "SITREP · AEC-flow" };
  * /officedash — the office TV board. Outside the (app) group on purpose: no
  * sidebar, no top bar, just the board filling the screen.
  *
- * Two ways in: a signed-in member sees their own practice; the TV opens it with
- * the secret key (`?k=…`, lib/officedash/access.ts) and never sees a login page.
- * Anyone else is sent to /login.
+ * Open to anyone (owner's decision): a signed-in member sees their own practice,
+ * everyone else sees the founder practice's board. No login page, ever.
  *
  * The TV's run: projects for 20 s, building permits for 10 s, then the Sigma
  * board, which flips back here after its own 20 s.
@@ -38,14 +37,16 @@ export default async function OfficeDashPage({
   const actor = await requireActor().catch(() => null);
   let tvKey: string | null = null;
   if (!actor) {
-    // The key from the link, or the one this TV remembered from its first visit (proxy.ts).
+    // PUBLIC by the owner's decision (7 OCT 2026, chosen over the secret-key link):
+    // the office TV must never see a login page, whatever browser it runs. Anyone with
+    // the address sees the board of OFFICEDASH_COMPANY_ID / the founder practice.
+    // A known key is still passed along the Sigma handover, harmlessly.
     const key = q.k ?? (await cookies()).get("officedash_key")?.value;
-    if (!officeKeyMatches(key)) redirect("/login?callbackUrl=/officedash");
     const companyId = await officeKeyCompanyId();
     if (!companyId) redirect("/login?callbackUrl=/officedash");
     // Before any scoped query: every read below is this practice's, nobody else's.
     companyOverride().companyId = companyId;
-    tvKey = key!;
+    tvKey = officeKeyMatches(key) ? key! : null;
   } else {
     const company = await getCurrentCompany();
     if (isLicenseExpired(company)) redirect("/expired");
