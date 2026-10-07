@@ -60,10 +60,28 @@ export async function proxy(req: NextRequest) {
     // Opened once with ?k=…, the TV keeps the key in a cookie, so the plain
     // address (and the Sigma board's handover) never needs it again. The page
     // still checks the key on every load; a wrong one goes to /login.
+    // www.aec-flow.com is served too, and a cookie set there is not seen on the bare
+    // domain (or the other way round): send the TV to one host, query intact.
+    const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "").toLowerCase();
+    if (host === "www.aec-flow.com") {
+      const to = req.nextUrl.clone();
+      to.host = "aec-flow.com";
+      to.port = "";
+      to.protocol = "https";
+      return NextResponse.redirect(to, 308);
+    }
     const k = req.nextUrl.searchParams.get("k");
     const res = NextResponse.next();
     if (k && /^[A-Za-z0-9_-]{16,200}$/.test(k)) {
-      res.cookies.set("officedash_key", k, { httpOnly: true, secure: true, sameSite: "lax", path: "/officedash", maxAge: 60 * 60 * 24 * 400 });
+      res.cookies.set("officedash_key", k, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/officedash",
+        maxAge: 60 * 60 * 24 * 400,
+        // Shared by aec-flow.com and www.aec-flow.com, so either address works on the TV.
+        ...(host.endsWith("aec-flow.com") ? { domain: "aec-flow.com" } : {}),
+      });
     }
     return res;
   }
