@@ -39,8 +39,10 @@
  *   dropdown is typed in, saved to the firm's Norm Set and linked to the row.
  * 0.12.1 (1 OCT 2026): feat — every New Client (the client page and each inline
  *   "add a client" in other sections) asks for CLIENT NAME, EMAIL and CELL NUMBER.
+ * 0.12.5 (6 OCT 2026): Design "Architecture" removed from the sidebar; drawings live
+ *   under Drawings, deliverables under Design Register.
  */
-export const APP_VERSION = "0.12.4";
+export const APP_VERSION = "0.12.5";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

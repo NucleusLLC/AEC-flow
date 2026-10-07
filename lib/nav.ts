@@ -24,7 +24,6 @@ import {
   ListChecks,
   ShoppingCart,
   Boxes,
-  Building2,
   PencilRuler,
   Sofa,
   FileSignature,
@@ -179,7 +178,6 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Design Register", href: "/design", icon: FileStack },
       { label: "Service Proposals", href: "/design/service-proposals", icon: FileSignature },
-      { label: "Architecture", href: "/design/architecture", icon: Building2 },
       BUILDING_PERMITS_ITEM,
       { label: "Engineering", href: "/design/engineering", icon: PencilRuler },
       { label: "Interior Design", href: "/design/interior", icon: Sofa },
