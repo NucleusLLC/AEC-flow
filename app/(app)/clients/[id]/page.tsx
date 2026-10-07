@@ -8,9 +8,7 @@ import {
   Globe,
   MapPin,
   Hash,
-  Plus,
   Pencil,
-  FileText,
   FolderKanban,
   Calculator,
 } from "lucide-react";
@@ -18,13 +16,12 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import { ClientTypeBadge, ClientStatusBadge } from "@/components/clients/badges";
-import { getClient, type ProposalStatus } from "@/lib/data/clients";
+import { getClient } from "@/lib/data/clients";
 import { listServiceProposals } from "@/lib/data/service-proposals";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { getActivityForClient } from "@/lib/data/activity";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
-import { PROPOSAL_STATUS_LABEL } from "@/lib/data/proposals.types";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
 
@@ -34,16 +31,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const t = await getServerT();
   return { title: `${client?.name ?? t("Client")} · AEC-flow` };
 }
-
-const proposalTone: Record<ProposalStatus, Parameters<typeof Badge>[0]["tone"]> = {
-  DRAFT: "slate",
-  SENT: "blue",
-  PENDING: "amber",
-  APPROVED: "green",
-  ON_HOLD: "amber",
-  REJECTED: "red",
-  VOID: "slate",
-};
 
 const estimateTone: Record<string, Parameters<typeof Badge>[0]["tone"]> = {
   DRAFT: "slate",
@@ -140,13 +127,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             <Pencil className="h-4 w-4" />
             {t("Edit")}
           </Link>
-          <Link
-            href="/proposals/new"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-          >
-            <Plus className="h-4 w-4" />
-            {t("New Proposal")}
-          </Link>
         </div>
       </div>
 
@@ -163,38 +143,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main column */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Proposals */}
-          <Card>
-            <CardHeader
-              title={t("Proposals")}
-              subtitle={fmt(t("{count} total"), { count: client.proposals.length })}
-              action={<FileText className="h-4 w-4 text-faint" />}
-            />
-            {client.proposals.length ? (
-              <div className="divide-y divide-border">
-                {client.proposals.map((p) => (
-                  <div key={p.id} className="flex items-center gap-4 px-5 py-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[11px] text-faint">{p.ref}</span>
-                        <Badge tone={proposalTone[p.status]}>
-                          {t(PROPOSAL_STATUS_LABEL[p.status] ?? p.status.replace(/_/g, " ")).toLowerCase()}
-                        </Badge>
-                      </div>
-                      <div className="mt-0.5 truncate text-sm font-medium text-fg">{p.title}</div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-sm font-medium text-fg">{formatCurrency(p.value)}</div>
-                      <div className="text-xs text-faint">{formatDate(p.date, locale)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <CardBody className="text-sm text-muted">{t("No proposals yet.")}</CardBody>
-            )}
-          </Card>
-
           {/* Service Proposals */}
           <Card>
             <CardHeader

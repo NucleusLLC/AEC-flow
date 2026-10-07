@@ -14,7 +14,7 @@ import { getRecentActivity } from "@/lib/data/activity";
 import { listRevisionReminders } from "@/lib/data/building-permits";
 import { ymd } from "@/lib/building-permits/register";
 import { RevisionReminders } from "@/components/building-permits/revision-reminders";
-import { formatCurrencyCompact, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 
 export async function generateMetadata() {
@@ -41,7 +41,7 @@ function TrendPill({ trend }: { trend?: Trend }) {
 }
 
 export default async function DashboardPage() {
-  const { stats, pipeline, projects, onLeave } = await getDashboardData();
+  const { stats, projects, onLeave } = await getDashboardData();
   const recentActivity = await getRecentActivity(8);
   const revisionReminders = await listRevisionReminders(ymd(new Date()));
   const session = await getServerSession(authOptions);
@@ -54,8 +54,6 @@ export default async function DashboardPage() {
     betaUntil && !Number.isNaN(betaUntil.getTime())
       ? Math.max(0, Math.ceil((betaUntil.getTime() - nowMs) / 86_400_000))
       : null;
-  const pipelineTotal = pipeline.reduce((sum, s) => sum + s.value, 0);
-  const pipelineMax = Math.max(...pipeline.map((s) => s.value));
   const t = await getServerT();
   const locale = await getServerLocale();
 
@@ -192,41 +190,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Proposals pipeline */}
-        <Card className="lg:col-span-2">
-          <CardHeader
-            title={t("Proposals Pipeline")}
-            subtitle={fmt(t("{amount} across {count} proposals"), {
-              amount: formatCurrencyCompact(pipelineTotal),
-              count: pipeline.reduce((n, s) => n + s.count, 0),
-            })}
-            action={
-              <Link href="/proposals" className="text-xs font-medium text-brand hover:underline">
-                {t("View all")}
-              </Link>
-            }
-          />
-          <CardBody className="space-y-4">
-            {pipeline.map((stage) => (
-              <div key={stage.stage}>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="font-medium text-fg">
-                    {t(stage.stage)} <span className="text-faint">· {stage.count}</span>
-                  </span>
-                  <span className="text-muted">{formatCurrencyCompact(stage.value)}</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                  <div
-                    className="h-full rounded-full bg-brand"
-                    style={{ width: `${(stage.value / pipelineMax) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-6">
         {/* Recent activity — real ActivityLog feed */}
         <Card>
           <CardHeader
