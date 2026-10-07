@@ -45,6 +45,9 @@
   display: grid;
   /* header · projects + pipeline · permits · stats row · news bar (Sigma's bottom banner) */
   grid-template-rows: 5.4cqw minmax(0, 1fr) 3.9cqw 9.4cqw;
+  /* One column that never grows past the stage: the news ticker is max-content wide
+     and would otherwise stretch every row off the right edge of the TV. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.9cqw;
 }
 /* The news relay is down: give its row back to the board. */
@@ -136,7 +139,7 @@
  * proportions (its vh sizes × 0.5625 = cqw on a 16:9 stage), so the two boards
  * read as one system when the TV flips between them.
  */
-.stats { display: flex; background: #111a2b; border: 0.11cqw solid #3a4a66; border-radius: 0.68cqw; overflow: hidden; min-height: 0; }
+.stats { min-width: 0; display: flex; background: #111a2b; border: 0.11cqw solid #3a4a66; border-radius: 0.68cqw; overflow: hidden; min-height: 0; }
 .statsLab { flex: none; background: #e0b85a; color: #111; padding: 0 1.1cqw; display: flex; align-items: center; font-size: 1.24cqw; font-weight: 800; letter-spacing: 0.1em; font-family: var(--od-body), sans-serif; }
 .statsWin { flex: 1; min-width: 0; overflow: hidden; mask-image: linear-gradient(90deg, transparent 0, #000 3%, #000 97%, transparent 100%); }
 .statsTrack { display: flex; align-items: center; height: 100%; width: max-content; will-change: transform; animation: odScroll 120s linear infinite; }
@@ -150,7 +153,7 @@
 .warnV { color: #fb923c !important; }
 .statsSep { width: 0.56cqw; height: 0.56cqw; transform: rotate(45deg); background: #e0b85a; flex: none; }
 
-.news { display: flex; gap: 0.7cqw; min-height: 0; }
+.news { display: flex; gap: 0.7cqw; min-height: 0; min-width: 0; overflow: hidden; }
 .newsFeat { flex: 0 0 42%; position: relative; border-radius: 0.81cqw; overflow: hidden; background: linear-gradient(100deg, #7f1d1d, #b91c1c 55%, #dc2626); box-shadow: 0 0 0 0.11cqw #ef4444 inset; }
 .newsTop { background: linear-gradient(100deg, #0f2747, #1e3a8a); box-shadow: 0 0 0 0.11cqw #3b82f6 inset; }
 .newsSlide { position: absolute; inset: 0; display: flex; align-items: stretch; animation: odIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -165,7 +168,7 @@
 .newsDots { position: absolute; right: 0.8cqw; bottom: 0.47cqw; display: flex; gap: 0.35cqw; }
 .newsDots i { width: 0.54cqw; height: 0.54cqw; border-radius: 50%; background: rgba(255, 255, 255, 0.35); }
 .newsDots i.on { background: #fff; }
-.newsTick { flex: 1; min-width: 0; display: flex; background: #0f1522; border: 0.11cqw solid #263042; border-radius: 0.81cqw; overflow: hidden; }
+.newsTick { flex: 1 1 0; min-width: 0; display: flex; background: #0f1522; border: 0.11cqw solid #263042; border-radius: 0.81cqw; overflow: hidden; }
 .newsLab { flex: none; background: #1e293b; color: #e2e8f0; padding: 0 1cqw; display: flex; flex-direction: column; justify-content: center; line-height: 1.1; border-right: 0.11cqw solid #263042; }
 .newsLab b { font-size: 1.42cqw; font-weight: 800; letter-spacing: 0.08em; }
 .newsLab span { font-size: 0.95cqw; font-weight: 700; color: #94a3b8; letter-spacing: 0.1em; }
