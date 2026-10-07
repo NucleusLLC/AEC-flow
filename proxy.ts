@@ -53,6 +53,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // The office TV board decides for itself: a session, or its secret key
+  // (lib/officedash/access.ts), else it sends the visitor to /login. Letting it
+  // through here is what keeps the login page off the TV.
+  if (pathname === "/officedash") {
+    return NextResponse.next();
+  }
+
   // Beta subdomain: it's the portal, not the app.
   if (isBetaHost(req)) {
     if (pathname === "/") {

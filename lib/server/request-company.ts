@@ -14,6 +14,10 @@ import { cache } from "react";
  * otherwise cycle: db → this → auth → db).
  */
 export const currentCompanyId = cache(async (): Promise<string | null | undefined> => {
+  // The office TV board opened with its secret key has no session; it names its
+  // company for that one request (app/officedash/page.tsx). Nothing else sets it.
+  const override = companyOverride().companyId;
+  if (override) return override;
   try {
     const [{ getServerSession }, { authOptions }] = await Promise.all([
       import("next-auth"),
@@ -26,3 +30,10 @@ export const currentCompanyId = cache(async (): Promise<string | null | undefine
     return undefined;
   }
 });
+
+/**
+ * Per-request company for a screen with no session — only the office TV board
+ * after its secret key checks out (lib/officedash/access.ts). Set it BEFORE the
+ * request's first scoped query: `currentCompanyId` is memoised per request.
+ */
+export const companyOverride = cache((): { companyId: string | null } => ({ companyId: null }));

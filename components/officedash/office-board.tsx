@@ -140,17 +140,17 @@ type Screen = "projects" | "permits";
  * then the Sigma board (which hands back after its own 20 s). `dwell` 0 stays put
  * on the screen named by `pin`, for checking one screen without the clock.
  */
-function useRun(dwell: number, permitDwell: number, pin: Screen) {
+function useRun(dwell: number, permitDwell: number, pin: Screen, next: string) {
   const [screen, setScreen] = useState<Screen>(dwell > 0 ? "projects" : pin);
   useEffect(() => {
     if (dwell <= 0) return;
     const toPermits = window.setTimeout(() => setScreen("permits"), dwell * 1000);
-    const toSigma = window.setTimeout(() => window.location.assign(HANDOVER_URL), (dwell + permitDwell) * 1000);
+    const toSigma = window.setTimeout(() => window.location.assign(next), (dwell + permitDwell) * 1000);
     return () => {
       window.clearTimeout(toPermits);
       window.clearTimeout(toSigma);
     };
-  }, [dwell, permitDwell]);
+  }, [dwell, permitDwell, next]);
   return screen;
 }
 
@@ -161,6 +161,7 @@ export function OfficeBoard({
   dwell,
   permitDwell,
   pin,
+  tvKey,
 }: {
   board: Board;
   firmName: string;
@@ -168,9 +169,11 @@ export function OfficeBoard({
   dwell: number;
   permitDwell: number;
   pin: Screen;
+  /** The TV key this board was opened with, passed on so the Sigma board can hand back without a login. */
+  tvKey: string | null;
 }) {
   const clock = useClock(timeZone);
-  const screen = useRun(dwell, permitDwell, pin);
+  const screen = useRun(dwell, permitDwell, pin, tvKey ? `${HANDOVER_URL}?k=${encodeURIComponent(tvKey)}` : HANDOVER_URL);
   const projectPages = useMemo(() => pages(board.projects, PROJECT_ROWS), [board.projects]);
   const permitPages = useMemo(() => pages(board.permits, PERMIT_ROWS), [board.permits]);
   // Every page of a list gets shown inside its screen's time: 21 projects over 20 s is three pages of ~6 s.
