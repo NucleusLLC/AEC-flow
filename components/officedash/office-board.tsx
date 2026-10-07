@@ -6,9 +6,11 @@ import { Barlow_Condensed, JetBrains_Mono, Saira_Stencil_One } from "next/font/g
 import { mil, pages, type Board, type Lamp, type PermitRow, type PipelineStage } from "@/lib/officedash/board";
 import s from "./office-board.module.css";
 
-const stencil = Saira_Stencil_One({ weight: "400", subsets: ["latin"], variable: "--od-stencil" });
-const body = Barlow_Condensed({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--od-body" });
-const mono = JetBrains_Mono({ weight: ["400", "600", "700"], subsets: ["latin"], variable: "--od-mono" });
+// Real fallbacks (not next/font's metric-adjusted Arial): if Google Fonts cannot be
+// reached at build time the board still reads as stencil / condensed / monospace.
+const stencil = Saira_Stencil_One({ weight: "400", subsets: ["latin"], variable: "--od-stencil", fallback: ["Impact", "sans-serif"], adjustFontFallback: false });
+const body = Barlow_Condensed({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--od-body", fallback: ["Arial Narrow", "Arial", "sans-serif"], adjustFontFallback: false });
+const mono = JetBrains_Mono({ weight: ["400", "600", "700"], subsets: ["latin"], variable: "--od-mono", fallback: ["Consolas", "Menlo", "monospace"], adjustFontFallback: false });
 
 /** Rows per page and seconds per page — the board rotates when a list is longer. */
 const PROJECT_ROWS = 11;

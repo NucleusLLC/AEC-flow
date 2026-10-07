@@ -43,7 +43,7 @@
   position: absolute;
   inset: 1.2cqw;
   display: grid;
-  grid-template-rows: 5.4cqw minmax(0, 1fr) 13.2cqw 3.2cqw;
+  grid-template-rows: 5.4cqw minmax(0, 1fr) 13.8cqw 3.2cqw;
   gap: 0.9cqw;
 }
 .glass {
@@ -58,11 +58,11 @@
 }
 
 /* header + title block */
-.head { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 2cqw; padding: 0 1.6cqw; }
-.title { font-family: var(--od-stencil), monospace; font-size: 2.1cqw; letter-spacing: 0.12em; color: var(--ink-hi); white-space: nowrap; }
-.kpis { display: flex; gap: 1.5cqw; font-family: var(--od-mono), monospace; font-size: 0.85cqw; color: var(--ink-lo); letter-spacing: 0.1em; white-space: nowrap; }
-.kpis b { color: var(--ink-hi); font-weight: 600; font-size: 1.3cqw; margin-right: 0.4cqw; }
-.clock { text-align: right; font-family: var(--od-mono), monospace; font-variant-numeric: tabular-nums; }
+.head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 1.6cqw; padding: 0 1.4cqw; overflow: hidden; }
+.title { font-family: var(--od-stencil), monospace; font-size: 1.9cqw; letter-spacing: 0.12em; color: var(--ink-hi); white-space: nowrap; }
+.kpis { display: flex; gap: 1.1cqw; overflow: hidden; font-family: var(--od-mono), monospace; font-size: 0.74cqw; color: var(--ink-lo); letter-spacing: 0.06em; white-space: nowrap; }
+.kpis b { color: var(--ink-hi); font-weight: 600; font-size: 1.25cqw; margin-right: 0.35cqw; }
+.clock { text-align: right; white-space: nowrap; line-height: 1.15; font-family: var(--od-mono), monospace; font-variant-numeric: tabular-nums; }
 .clock b { display: block; font-size: 2cqw; color: var(--ink-hi); font-weight: 600; }
 .clock span { font-size: 0.85cqw; color: var(--ink-lo); letter-spacing: 0.14em; }
 .titleBlock { font-family: var(--od-mono), monospace; font-size: 0.68cqw; color: var(--ink-lo); border-left: 0.1cqw solid var(--glass-edge); padding-left: 1.2cqw; line-height: 1.5; letter-spacing: 0.08em; white-space: nowrap; }
@@ -75,8 +75,8 @@
 .panelHead h2 { margin: 0; font-family: var(--od-stencil), monospace; font-weight: 400; font-size: 1.1cqw; letter-spacing: 0.16em; color: var(--ink-hi); }
 .pager { font-family: var(--od-mono), monospace; font-size: 0.75cqw; color: var(--ink-lo); letter-spacing: 0.12em; }
 
-.table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.98cqw; }
-.table th { text-align: left; color: var(--ink-lo); font-family: var(--od-mono), monospace; font-weight: 600; font-size: 0.7cqw; letter-spacing: 0.14em; padding: 0.4cqw 0.45cqw; border-bottom: 0.12cqw solid var(--rule); }
+.table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.98cqw; line-height: 1.2; }
+.table th { text-align: left; color: var(--ink-lo); font-family: var(--od-mono), monospace; font-weight: 600; font-size: 0.7cqw; letter-spacing: 0.14em; padding: 0.4cqw 0.45cqw; border-bottom: 0.12cqw solid var(--rule); white-space: nowrap; }
 .table td { padding: 0.38cqw 0.45cqw; border-bottom: 0.06cqw solid var(--rule-lo); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
 .right { text-align: right !important; }
 .job { font-family: var(--od-mono), monospace; font-size: 0.85cqw; color: var(--ink-lo) !important; }
@@ -100,9 +100,9 @@
 .pipe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5cqw; }
 .pipe div { padding: 0.5cqw 0.3cqw; text-align: center; border-radius: 0.6cqw; background: var(--chip); border: 0.08cqw solid var(--glass-edge); }
 .pipe b { display: block; font-family: var(--od-mono), monospace; font-size: 2.1cqw; color: var(--ink-hi); font-weight: 600; }
-.pipe span { font-family: var(--od-mono), monospace; font-size: 0.6cqw; color: var(--ink-lo); letter-spacing: 0.1em; }
+.pipe span { display: block; white-space: nowrap; font-family: var(--od-mono), monospace; font-size: 0.58cqw; color: var(--ink-lo); letter-spacing: 0.1em; }
 .chase { display: grid; gap: 0.45cqw; align-content: start; overflow: hidden; }
-.chase > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6cqw; padding-bottom: 0.4cqw; border-bottom: 0.06cqw solid var(--rule-lo); font-size: 1cqw; color: var(--ink-hi); }
+.chase > div { line-height: 1.2; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.6cqw; padding-bottom: 0.4cqw; border-bottom: 0.06cqw solid var(--rule-lo); font-size: 1cqw; color: var(--ink-hi); }
 .chase small { display: block; font-family: var(--od-mono), monospace; color: var(--ink-lo); font-size: 0.68cqw; letter-spacing: 0.06em; }
 .ellip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .age { font-family: var(--od-mono), monospace; font-size: 1cqw; color: var(--amber); align-self: center; }
