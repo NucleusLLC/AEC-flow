@@ -166,7 +166,13 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                   <td className="px-3 py-3 text-muted">{p.clientName}</td>
                   <td className="px-3 py-3 text-muted">{p.manager}</td>
                   <td className="px-3 py-3">
-                    <StatusBadge status={p.status} />
+                    {p.archivedAt ? (
+                      <span className="inline-flex items-center rounded-md border border-[#5c6633] bg-[#4b5320] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#e4e8dc]">
+                        {t("ARCHIVED")}
+                      </span>
+                    ) : (
+                      <StatusBadge status={p.status} />
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     <PriorityBadge priority={p.priority} />

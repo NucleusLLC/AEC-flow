@@ -46,7 +46,9 @@ export function ProjectLifecycleButtons({
 
   useEffect(() => setArchived(archivedAt), [archivedAt]);
 
-  const stamp = archived ? militaryDate(archived.slice(0, 10)) : null;
+  // Server renders the UTC day; the browser swaps in its own after mount, so the two never disagree mid-hydration.
+  const [stamp, setStamp] = useState<string | null>(archived ? militaryDate(archived.slice(0, 10)) : null);
+  useEffect(() => setStamp(archived ? militaryDate(localYmd(archived)) : null), [archived]);
 
   const toggle = async () => {
     setBusy(true);
@@ -133,6 +135,13 @@ export function ProjectLifecycleButtons({
       ) : null}
     </div>
   );
+}
+
+/** The viewer’s own calendar day — slicing the UTC timestamp shows tomorrow after 20:00 in Aruba. */
+function localYmd(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 function DeleteProjectDialog({
