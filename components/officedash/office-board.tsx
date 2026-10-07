@@ -12,11 +12,14 @@ const stencil = Saira_Stencil_One({ weight: "400", subsets: ["latin"], variable:
 const body = Barlow_Condensed({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--od-body", fallback: ["Arial Narrow", "Arial", "sans-serif"], adjustFontFallback: false });
 const mono = JetBrains_Mono({ weight: ["400", "600", "700"], subsets: ["latin"], variable: "--od-mono", fallback: ["Consolas", "Menlo", "monospace"], adjustFontFallback: false });
 
-/** Rows per page and seconds per page — the board rotates when a list is longer. */
-const PROJECT_ROWS = 11;
-const PERMIT_ROWS = 4;
-const CHASE_ROWS = 6;
-const ROTATE_SECONDS = 15;
+/** Rows per page — the board rotates when a list is longer. */
+const PROJECT_ROWS = 9;
+const PERMIT_ROWS = 7;
+const CHASE_ROWS = 7;
+/** Where the TV goes after its dwell (app/officedash/page.tsx sets the dwell). `www.` does not resolve for Sigma. */
+const HANDOVER_URL = "https://sigma-cms.com/officedash";
+/** Same relay the Sigma board reads: world headlines + AI & innovation news, CORS-open. */
+const NEWS_URL = "https://cimgpycjczatjzltgscf.supabase.co/functions/v1/tv-news";
 /** Fresh data every 2 minutes; a full reload every 30 as a backstop for a TV left on for weeks. */
 const REFRESH_MS = 120_000;
 const RELOAD_MS = 30 * 60_000;
@@ -37,9 +40,13 @@ const PERMIT_STATUS: Record<string, string> = {
 function useClock(timeZone: string) {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
+    // First paint after mount (the server's clock is UTC), then every second.
+    const first = window.setTimeout(() => setNow(new Date()), 0);
     const id = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(id);
+    };
   }, []);
   if (!now) return { time: "----", date: "" };
   const part = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone, ...o }).format(now);
@@ -48,14 +55,47 @@ function useClock(timeZone: string) {
   return { time, date };
 }
 
-/** One tick per ROTATE_SECONDS; each list takes its page from it. */
-function useTick() {
+/** One tick per `seconds`; each list takes its page from it. */
+function useTick(seconds: number) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const id = window.setInterval(() => setTick((t) => t + 1), ROTATE_SECONDS * 1000);
+    const id = window.setInterval(() => setTick((t) => t + 1), seconds * 1000);
+    return () => window.clearInterval(id);
+  }, [seconds]);
+  return tick;
+}
+
+
+type NewsItem = { title: string; img: string; src: string; t: number; breaking: boolean };
+const HOT_WORDS = /\b(breaking|killed|dead|deaths?|earthquake|tsunami|explosion|blast|attack|shooting|war|missile|strike[sd]?|crash|hurricane|evacuat\w*|emergency|coup|assassinat\w*)\b/i;
+const isHot = (x: NewsItem) => x.breaking || (HOT_WORDS.test(x.title) && (!Number.isFinite(x.t) || Date.now() - x.t < 12 * 3_600_000));
+function ago(t: number) {
+  const m = Math.round((Date.now() - t) / 60_000);
+  if (!(m >= 0)) return "";
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h} h ago` : "";
+}
+
+/** World + AI headlines from the shared relay, every 10 minutes. A dead feed returns nothing and the bar hides. */
+function useNews() {
+  const [news, setNews] = useState<{ world: NewsItem[]; ai: NewsItem[] }>({ world: [], ai: [] });
+  useEffect(() => {
+    const clean = (rows: unknown): NewsItem[] =>
+      (Array.isArray(rows) ? rows : [])
+        .filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object" && (x as { title?: unknown }).title))
+        .map((x) => ({ title: String(x.title), img: String(x.img ?? ""), src: String(x.src ?? ""), t: x.t ? +new Date(String(x.t)) : NaN, breaking: Boolean(x.breaking) }));
+    const load = () =>
+      fetch(NEWS_URL, { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => j && setNews({ world: clean(j.world), ai: clean(j.ai) }))
+        .catch(() => undefined);
+    void load();
+    const id = window.setInterval(load, 10 * 60_000);
     return () => window.clearInterval(id);
   }, []);
-  return tick;
+  return news;
 }
 
 function useKeepFresh() {
@@ -93,13 +133,52 @@ function deadlineText(p: PermitRow) {
   return { label: `${p.deadline.kind} ${mil(p.deadline.date)} · ${when}`, cls: p.urgency === "late" ? s.red : p.urgency === "soon" ? s.amber : "" };
 }
 
-export function OfficeBoard({ board, firmName, timeZone }: { board: Board; firmName: string; timeZone: string }) {
-  const clock = useClock(timeZone);
-  const tick = useTick();
-  useKeepFresh();
+type Screen = "projects" | "permits";
 
+/**
+ * The TV's run: PROJECTS for `dwell` s, then BUILDING PERMITS for `permitDwell` s,
+ * then the Sigma board (which hands back after its own 20 s). `dwell` 0 stays put
+ * on the screen named by `pin`, for checking one screen without the clock.
+ */
+function useRun(dwell: number, permitDwell: number, pin: Screen) {
+  const [screen, setScreen] = useState<Screen>(dwell > 0 ? "projects" : pin);
+  useEffect(() => {
+    if (dwell <= 0) return;
+    const toPermits = window.setTimeout(() => setScreen("permits"), dwell * 1000);
+    const toSigma = window.setTimeout(() => window.location.assign(HANDOVER_URL), (dwell + permitDwell) * 1000);
+    return () => {
+      window.clearTimeout(toPermits);
+      window.clearTimeout(toSigma);
+    };
+  }, [dwell, permitDwell]);
+  return screen;
+}
+
+export function OfficeBoard({
+  board,
+  firmName,
+  timeZone,
+  dwell,
+  permitDwell,
+  pin,
+}: {
+  board: Board;
+  firmName: string;
+  timeZone: string;
+  dwell: number;
+  permitDwell: number;
+  pin: Screen;
+}) {
+  const clock = useClock(timeZone);
+  const screen = useRun(dwell, permitDwell, pin);
   const projectPages = useMemo(() => pages(board.projects, PROJECT_ROWS), [board.projects]);
   const permitPages = useMemo(() => pages(board.permits, PERMIT_ROWS), [board.permits]);
+  // Every page of a list gets shown inside its screen's time: 21 projects over 20 s is three pages of ~6 s.
+  const ownTime = screen === "projects" ? dwell : permitDwell;
+  const ownPages = screen === "projects" ? projectPages.length : permitPages.length;
+  const tick = useTick(ownTime > 0 ? Math.max(4, Math.floor(ownTime / ownPages)) : 15);
+  useKeepFresh();
+  const news = useNews();
   const projectPage = tick % projectPages.length;
   const permitPage = tick % permitPages.length;
   const { counts } = board;
@@ -108,22 +187,31 @@ export function OfficeBoard({ board, firmName, timeZone }: { board: Board; firmN
     <div className={`${s.screen} ${stencil.variable} ${body.variable} ${mono.variable}`}>
       <div className={s.stage}>
         <Axonometric />
-        <div className={s.ui}>
+        <div className={`${s.ui} ${news.world.length || news.ai.length ? "" : s.noNews}`}>
           <header className={`${s.glass} ${s.head}`}>
-            <span className={s.title}>SITREP · {firmName.toUpperCase()}</span>
-            <span className={s.kpis}>
-              <span><b>{counts.engaged}</b>ENGAGED</span>
-              <span><b className={counts.late ? s.red : ""}>{counts.late}</b>PAST TARGET</span>
-              <span><b>{counts.onHold}</b>ON HOLD</span>
-              <span><b>{counts.unsigned}</b>UNSIGNED</span>
-              <span><b>{counts.permitsOpen}</b>PERMITS OPEN</span>
+            <span className={s.title}>
+              {screen === "projects" ? "SITREP" : "PERMITS"} · {firmName.toUpperCase()}
             </span>
+            {screen === "projects" ? (
+              <span className={s.kpis}>
+                <span><b>{counts.engaged}</b>ENGAGED</span>
+                <span><b className={counts.late ? s.red : ""}>{counts.late}</b>PAST TARGET</span>
+                <span><b>{counts.onHold}</b>ON HOLD</span>
+                <span><b>{counts.unsigned}</b>UNSIGNED</span>
+              </span>
+            ) : (
+              <span className={s.kpis}>
+                <span><b>{counts.permitsOpen}</b>OPEN FILES</span>
+                <span><b className={board.permits.some((p) => p.urgency === "late") ? s.red : ""}>{board.permits.filter((p) => p.urgency === "late").length}</b>DEADLINE MISSED</span>
+                <span><b>{board.permits.filter((p) => p.urgency === "soon").length}</b>DUE ≤ 7 D</span>
+              </span>
+            )}
             <span className={s.clock}>
               <b>{clock.time} HRS</b>
               <span>{clock.date}</span>
             </span>
             <span className={s.titleBlock}>
-              SHEET <b>OD-01</b>
+              SHEET <b>{screen === "projects" ? "OD-01" : "OD-02"}</b> OF <b>02</b>
               <br />
               SCALE <b>NTS</b> · REV <b>{mil(board.today)}</b>
               <br />
@@ -131,161 +219,312 @@ export function OfficeBoard({ board, firmName, timeZone }: { board: Board; firmN
             </span>
           </header>
 
-          <div className={s.mid}>
-            <section className={`${s.glass} ${s.panel}`}>
-              <div className={s.panelHead}>
-                <h2>ENGAGED PROJECTS</h2>
-                {projectPages.length > 1 ? <span className={s.pager}>PAGE {projectPage + 1}/{projectPages.length}</span> : null}
-              </div>
-              <table className={s.table}>
-                <colgroup>
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "27%" }} />
-                  <col style={{ width: "20%" }} />
-                  <col style={{ width: "15%" }} />
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "8%" }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>JOB</th>
-                    <th>PROJECT</th>
-                    <th>CLIENT</th>
-                    <th>PHASE</th>
-                    <th>PROGRESS</th>
-                    <th className={s.right}>T-MINUS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projectPages[projectPage].map((p) => (
-                    <tr key={p.id} className={p.late ? s.lateRow : ""}>
-                      <td className={s.job}>
-                        <span className={`${s.lamp} ${lampClass[p.lamp]}`} />
-                        {p.number}
-                      </td>
-                      <td className={s.name}>{p.name.toUpperCase()}</td>
-                      <td>{p.client}</td>
-                      <td>{p.status === "ON_HOLD" ? "ON HOLD" : (p.phase ?? "No phase")}</td>
-                      <td>
-                        <div className={s.prog}>
-                          <div className={s.bar}>
-                            <i style={{ width: `${Math.max(p.progressPct, 1.5)}%` }} />
-                          </div>
-                          <span>{p.progressPct}%</span>
-                        </div>
-                      </td>
-                      <td className={`${s.right} ${s.monoCell} ${p.late ? s.red : ""}`}>
-                        {p.daysToTarget === null ? "—" : p.daysToTarget < 0 ? `${p.daysToTarget}D` : `+${p.daysToTarget}D`}
-                      </td>
-                    </tr>
-                  ))}
-                  {board.projects.length === 0 ? (
+          {screen === "projects" ? (
+            <div className={s.mid}>
+              <section className={`${s.glass} ${s.panel}`}>
+                <div className={s.panelHead}>
+                  <h2>ENGAGED PROJECTS</h2>
+                  {projectPages.length > 1 ? <span className={s.pager}>PAGE {projectPage + 1}/{projectPages.length}</span> : null}
+                </div>
+                <table className={`${s.table} ${s.big}`}>
+                  <colgroup>
+                    <col style={{ width: "13%" }} />
+                    <col style={{ width: "31%" }} />
+                    <col style={{ width: "19%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "15%" }} />
+                    <col style={{ width: "8%" }} />
+                  </colgroup>
+                  <thead>
                     <tr>
-                      <td colSpan={6} className={s.empty}>NO ENGAGED PROJECTS</td>
+                      <th>JOB</th>
+                      <th>PROJECT</th>
+                      <th>CLIENT</th>
+                      <th>PHASE</th>
+                      <th>PROGRESS</th>
+                      <th className={s.right}>T-MINUS</th>
                     </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </section>
+                  </thead>
+                  <tbody>
+                    {projectPages[projectPage].map((p) => (
+                      <tr key={p.id} className={p.late ? s.lateRow : ""}>
+                        <td className={s.job}>
+                          <span className={`${s.lamp} ${lampClass[p.lamp]}`} />
+                          {p.number}
+                        </td>
+                        <td className={s.name}>{p.name.toUpperCase()}</td>
+                        <td>{p.client}</td>
+                        <td>{p.status === "ON_HOLD" ? "ON HOLD" : (p.phase ?? "No phase")}</td>
+                        <td>
+                          <div className={s.prog}>
+                            <div className={s.bar}>
+                              <i style={{ width: `${Math.max(p.progressPct, 1.5)}%` }} />
+                            </div>
+                            <span>{p.progressPct}%</span>
+                          </div>
+                        </td>
+                        <td className={`${s.right} ${s.monoCell} ${p.late ? s.red : ""}`}>
+                          {p.daysToTarget === null ? "—" : p.daysToTarget < 0 ? `${p.daysToTarget}D` : `+${p.daysToTarget}D`}
+                        </td>
+                      </tr>
+                    ))}
+                    {board.projects.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className={s.empty}>NO ENGAGED PROJECTS</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </section>
 
-            <aside className={`${s.glass} ${s.side}`}>
-              <div className={s.panelHead}>
-                <h2>UNSIGNED PIPELINE</h2>
-                <span className={s.pager}>FOLLOW UP</span>
-              </div>
-              <div className={s.pipe}>
-                {STAGES.map((st) => (
-                  <div key={st}>
-                    <b>{board.pipeline[st]}</b>
-                    <span>{st}</span>
-                  </div>
-                ))}
-              </div>
-              <div className={s.chase}>
-                {board.chase.slice(0, CHASE_ROWS).map((c) => (
-                  <div key={`${c.number}-${c.stage}`}>
-                    <span className={s.ellip}>
-                      {c.client}
-                      <small>
-                        {c.number} · {c.stage}
-                        {c.copies > 1 ? ` · ${c.copies} COPIES` : ""}
-                      </small>
-                    </span>
-                    <span className={`${s.age} ${c.waited > 14 ? s.red : ""}`}>{c.waited}D</span>
-                  </div>
-                ))}
-                {board.chase.length === 0 ? <div className={s.empty}>NOTHING WAITING ON A SIGNATURE</div> : null}
-              </div>
-            </aside>
-          </div>
-
-          <section className={`${s.glass} ${s.permits}`}>
-            <div className={s.panelHead}>
-              <h2>BUILDING PERMITS</h2>
-              {permitPages.length > 1 ? <span className={s.pager}>PAGE {permitPage + 1}/{permitPages.length}</span> : <span className={s.pager}>OPEN FILES</span>}
+              <aside className={`${s.glass} ${s.side}`}>
+                <div className={s.panelHead}>
+                  <h2>UNSIGNED PIPELINE</h2>
+                  <span className={s.pager}>FOLLOW UP</span>
+                </div>
+                <div className={s.pipe}>
+                  {STAGES.map((st) => (
+                    <div key={st}>
+                      <b>{board.pipeline[st]}</b>
+                      <span>{st}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className={`${s.chase} ${s.chaseBig}`}>
+                  {board.chase.slice(0, CHASE_ROWS).map((c) => (
+                    <div key={`${c.number}-${c.stage}`}>
+                      <span className={s.ellip}>
+                        {c.client}
+                        <small>
+                          {c.number} · {c.stage}
+                          {c.copies > 1 ? ` · ${c.copies} COPIES` : ""}
+                        </small>
+                      </span>
+                      <span className={`${s.age} ${c.waited > 14 ? s.red : ""}`}>{c.waited}D</span>
+                    </div>
+                  ))}
+                  {board.chase.length === 0 ? <div className={s.empty}>NOTHING WAITING ON A SIGNATURE</div> : null}
+                </div>
+              </aside>
             </div>
-            <table className={s.table}>
-              <colgroup>
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "13%" }} />
-                <col style={{ width: "5%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "26%" }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>REF</th>
-                  <th>PROJECT / FILE</th>
-                  <th>STATUS</th>
-                  <th>VER</th>
-                  <th>SUBMITTED</th>
-                  <th className={s.right}>DAYS IN</th>
-                  <th>NEXT DEADLINE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {permitPages[permitPage].map((p) => {
-                  const dl = deadlineText(p);
-                  return (
-                    <tr key={p.id}>
-                      <td className={s.job}>{p.reference}</td>
-                      <td className={s.name}>{(p.project ?? p.title).toUpperCase()}</td>
-                      <td>{PERMIT_STATUS[p.status] ?? p.status}</td>
-                      <td className={s.monoCell}>{p.version ? `V${p.version}` : "—"}</td>
-                      <td className={s.monoCell}>{p.submittedAt ? mil(p.submittedAt) : "NOT YET"}</td>
-                      <td className={`${s.right} ${s.monoCell}`}>{p.daysIn ?? "—"}</td>
-                      <td className={`${s.monoCell} ${dl.cls}`}>{dl.label}</td>
-                    </tr>
-                  );
-                })}
-                {board.permits.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className={s.empty}>NO OPEN PERMIT FILES</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </section>
+          ) : (
+            <PermitsScreen board={board} page={permitPages[permitPage]} pageNo={permitPage} pageCount={permitPages.length} />
+          )}
 
-          <footer className={`${s.glass} ${s.foot}`}>
-            <span className={s.footLabel}>ORDERS</span>
-            <span className={s.orders}>
-              {board.orders.slice(0, 4).map((o, i) => (
-                <span key={i} className={o.severity === "red" ? s.red : o.severity === "amber" ? s.amber : ""}>
-                  <i>{String(i + 1).padStart(2, "0")}</i>
-                  {o.text}
-                </span>
-              ))}
-              {board.orders.length === 0 ? <span>ALL CLEAR</span> : null}
-            </span>
-            <span className={s.legend}>
-              <span><span className={`${s.lamp} ${s.lampG}`} />ON TRACK</span>
-              <span><span className={`${s.lamp} ${s.lampA}`} />NO PHASE</span>
-              <span><span className={`${s.lamp} ${s.lampR}`} />LATE</span>
-            </span>
-          </footer>
+          <StatsBar board={board} />
+          <NewsBar world={news.world} ai={news.ai} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Sheet OD-02: every open permit file — when it went in, how long it has been there, what is due next. */
+function PermitsScreen({ board, page, pageNo, pageCount }: { board: Board; page: PermitRow[]; pageNo: number; pageCount: number }) {
+  const atAuthority = board.permits.filter((p) => p.daysIn !== null);
+  const avg = atAuthority.length ? Math.round(atAuthority.reduce((n, p) => n + (p.daysIn ?? 0), 0) / atAuthority.length) : null;
+  const longest = atAuthority.reduce<PermitRow | null>((a, p) => ((p.daysIn ?? -1) > (a?.daysIn ?? -1) ? p : a), null);
+  const late = board.permits.filter((p) => p.urgency === "late").length;
+  const soon = board.permits.filter((p) => p.urgency === "soon").length;
+  const tiles: { k: string; v: string; x?: string; cls?: string }[] = [
+    { k: "OPEN FILES", v: String(board.permits.length) },
+    { k: "WITH THE AUTHORITY", v: String(atAuthority.length), x: `${board.permits.length - atAuthority.length} not submitted` },
+    { k: "AVERAGE DAYS IN", v: avg === null ? "—" : `${avg} D` },
+    { k: "LONGEST", v: longest ? `${longest.daysIn} D` : "—", x: longest?.reference, cls: longest && (longest.daysIn ?? 0) >= 60 ? s.amber : "" },
+    { k: "DUE ≤ 7 DAYS", v: String(soon), cls: soon ? s.amber : "" },
+    { k: "DEADLINE MISSED", v: String(late), cls: late ? s.red : "" },
+  ];
+  return (
+    <div className={s.permitScreen}>
+      <div className={s.tiles}>
+        {tiles.map((t) => (
+          <div key={t.k} className={`${s.glass} ${s.tile}`}>
+            <span>{t.k}</span>
+            <b className={t.cls}>{t.v}</b>
+            {t.x ? <small>{t.x}</small> : null}
+          </div>
+        ))}
+      </div>
+      <section className={`${s.glass} ${s.panel}`}>
+        <div className={s.panelHead}>
+          <h2>BUILDING PERMITS — OPEN FILES</h2>
+          {pageCount > 1 ? <span className={s.pager}>PAGE {pageNo + 1}/{pageCount}</span> : <span className={s.pager}>RED = DEADLINE MISSED · AMBER = DUE ≤ 7 D</span>}
+        </div>
+        <table className={`${s.table} ${s.big}`}>
+          <colgroup>
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "24%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "21%" }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>REF</th>
+              <th>PROJECT / FILE</th>
+              <th>AUTHORITY</th>
+              <th>STATUS</th>
+              <th>VER</th>
+              <th>SUBMITTED</th>
+              <th className={s.right}>DAYS IN</th>
+              <th>NEXT DEADLINE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {page.map((p) => {
+              const dl = deadlineText(p);
+              return (
+                <tr key={p.id} className={p.urgency === "late" ? s.lateRow : ""}>
+                  <td className={s.job}>{p.reference}</td>
+                  <td className={s.name}>{(p.project ?? p.title).toUpperCase()}</td>
+                  <td>{p.authority ?? "—"}</td>
+                  <td>{PERMIT_STATUS[p.status] ?? p.status}</td>
+                  <td className={s.monoCell}>{p.version ? `V${p.version}` : "—"}</td>
+                  <td className={s.monoCell}>{p.submittedAt ? mil(p.submittedAt) : "NOT YET"}</td>
+                  <td className={`${s.right} ${s.monoCell}`}>{p.daysIn ?? "—"}</td>
+                  <td className={`${s.monoCell} ${dl.cls}`}>{dl.label}</td>
+                </tr>
+              );
+            })}
+            {board.permits.length === 0 ? (
+              <tr>
+                <td colSpan={8} className={s.empty}>NO OPEN PERMIT FILES</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Gold-label scrolling row of firm numbers, as on the Sigma board, with the day's
+ * orders riding along after the numbers. The track is doubled so the loop is seamless.
+ */
+function StatsBar({ board }: { board: Board }) {
+  const { counts } = board;
+  const active = board.projects.filter((p) => p.status === "ACTIVE");
+  const avg = active.length ? Math.round(active.reduce((n, p) => n + p.progressPct, 0) / active.length) : 0;
+  const longest = board.permits.reduce<PermitRow | null>((a, p) => ((p.daysIn ?? -1) > (a?.daysIn ?? -1) ? p : a), null);
+  const items: { k: string; v: string; cls?: string; x?: string }[] = [
+    { k: "Engaged projects", v: String(counts.engaged) },
+    { k: "Past target", v: String(counts.late), cls: counts.late ? s.warnV : s.goodV },
+    { k: "Average progress", v: `${avg}%` },
+    { k: "Unsigned proposals", v: String(counts.unsigned), cls: s.goldV, x: `${board.pipeline["TO SEND"]} to send · ${board.pipeline["WITH CLIENT"]} with client` },
+    { k: "Open permits", v: String(counts.permitsOpen) },
+    ...(longest?.daysIn != null ? [{ k: "Longest with authority", v: `${longest.daysIn} D`, cls: longest.daysIn >= 60 ? s.warnV : undefined, x: longest.reference }] : []),
+    { k: "Open tasks", v: String(counts.tasksOpen) },
+    ...board.orders.slice(0, 8).map((o, i) => ({ k: `Order ${String(i + 1).padStart(2, "0")}`, v: o.text, cls: o.severity === "red" ? s.warnV : o.severity === "amber" ? s.goldV : undefined })),
+  ];
+  const one = items.map((it, i) => (
+    <span key={i} className={s.statsRun}>
+      <span className={s.statsIt}>
+        <span className={s.statsK}>{it.k}</span>
+        <span className={`${s.statsV} ${it.cls ?? ""}`}>{it.v}</span>
+        {it.x ? <span className={s.statsX}>{it.x}</span> : null}
+      </span>
+      <span className={s.statsSep} />
+    </span>
+  ));
+  return (
+    <div className={s.stats}>
+      <div className={s.statsLab}>AEC-FLOW STATS</div>
+      <div className={s.statsWin}>
+        <div className={s.statsTrack} style={{ animationDuration: `${Math.max(40, items.length * 7)}s` }}>
+          {one}
+          {one}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Bottom news bar, as on the Sigma board: a red BREAKING panel (blue TOP STORY when
+ * nothing is breaking) rotating one story every 10 s, and a slow AI & innovation ticker.
+ */
+function NewsBar({ world, ai }: { world: NewsItem[]; ai: NewsItem[] }) {
+  const L = world.slice(0, 24);
+  const A = ai.slice(0, 16);
+  const hot = L.filter(isHot).slice(0, 6);
+  const feat = hot.length ? hot : L.slice(0, 5);
+  const tick = A.length ? A : L.filter((x) => !feat.includes(x));
+  const [fi, setFi] = useState(0);
+  useEffect(() => {
+    if (feat.length < 2) return;
+    const id = window.setInterval(() => setFi((n) => n + 1), 10_000);
+    return () => window.clearInterval(id);
+  }, [feat.length]);
+  if (!L.length && !A.length) return null;
+  const x = feat.length ? feat[fi % feat.length] : null;
+  const run = tick.map((n, i) => (
+    <span key={i} className={s.newsRun}>
+      <span className={s.newsIt}>
+        {n.img ? (
+          // eslint-disable-next-line @next/next/no-img-element -- remote news photos from many hosts, not worth an image loader
+          <img src={n.img} alt="" onError={(e) => (e.currentTarget.style.display = "none")} />
+        ) : null}
+        <span className={s.newsTx}>
+          <span className={s.newsTt}>{n.title}</span>
+          <span className={s.newsTm}>
+            <b>{n.src || "WORLD"}</b> · {ago(n.t)}
+          </span>
+        </span>
+      </span>
+      <span className={s.newsSep} />
+    </span>
+  ));
+  return (
+    <div className={s.news}>
+      {x ? (
+        <div className={`${s.newsFeat} ${hot.length ? "" : s.newsTop}`}>
+          <div key={fi} className={s.newsSlide}>
+            {x.img ? (
+              // eslint-disable-next-line @next/next/no-img-element -- see above
+              <img src={x.img} alt="" onError={(e) => (e.currentTarget.style.display = "none")} />
+            ) : null}
+            <div className={s.newsBx}>
+              <span className={s.newsTag}>
+                <i />
+                {hot.length ? "BREAKING" : "TOP STORY"}
+              </span>
+              <div className={s.newsHl}>{x.title}</div>
+              <div className={s.newsMt}>
+                {x.src || "WORLD"}
+                {ago(x.t) ? ` · ${ago(x.t)}` : ""}
+              </div>
+            </div>
+          </div>
+          <div className={s.newsDots}>
+            {feat.map((_, i) => (
+              <i key={i} className={i === fi % feat.length ? s.on : ""} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <div className={s.newsTick}>
+        <div className={s.newsLab}>
+          {A.length ? (
+            <>
+              <b>AI</b>
+              <span>INNOVATION</span>
+            </>
+          ) : (
+            <>
+              <b>WORLD</b>
+              <span>NEWS</span>
+            </>
+          )}
+        </div>
+        <div className={s.newsWin}>
+          <div className={s.newsTrack} style={{ animationDuration: `${Math.max(60, tick.length * 14)}s` }}>
+            {run}
+            {run}
+          </div>
         </div>
       </div>
     </div>

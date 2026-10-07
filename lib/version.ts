@@ -49,8 +49,11 @@
  * 0.14.0 (7 OCT 2026): feat — /officedash, the office TV board (SITREP, dark blue): engaged
  *   projects, unsigned proposals to chase, open building permits with days in and the
  *   next deadline, and the day's orders. Refreshes itself; sign in once on the TV.
+ * 0.14.1 (7 OCT 2026): /officedash runs like the Sigma board: projects 20 s (larger names), a
+ *   full Building Permits sheet 10 s, then sigma-cms.com/officedash. Sigma's stats + news
+ *   bar along the bottom.
  */
-export const APP_VERSION = "0.14.0";
+export const APP_VERSION = "0.14.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
