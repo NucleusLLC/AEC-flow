@@ -186,6 +186,9 @@ export default defineConfig({
       "lib/projects/development.test.ts",
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
+      // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with
+      // today, the overall %, chip and phase colours, and a sanity check on the seeded data. Pure.
+      "lib/progressdash/timeline.test.ts",
     ],
     environment: "node",
   },

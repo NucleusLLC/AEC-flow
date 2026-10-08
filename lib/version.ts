@@ -69,8 +69,12 @@
  *   STANDARD PHASES; project progress = equal-weighted average of the phases. The timesheet asks
  *   for the PHASE once a project is chosen, and the phase screen shows hours by phase and person.
  *   No SQL.
+ * 0.21.0 (8 OCT 2026): feat — /progressdash, the AEC-FLOW · BUILD TIMELINE office-TV board
+ *   (public, like /officedash): build phases with a Gantt of the days worked since 14 SEP, the
+ *   releases, WORKING ON NOW and MISSING, the stats strip and news. The TV run now goes
+ *   /officedash -> /progressdash (30 s) -> Nucleus. Content is lib/progressdash/data.ts. No SQL.
  */
-export const APP_VERSION = "0.18.0";
+export const APP_VERSION = "0.21.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

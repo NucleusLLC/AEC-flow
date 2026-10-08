@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Barlow_Condensed, JetBrains_Mono, Saira_Stencil_One } from "next/font/google";
 import { mil, pages, type Board, type DeadlineRow, type Lamp, type PermitRow, type PipelineStage } from "@/lib/officedash/board";
 import type { DeadlineState } from "@/lib/building-permits/deadlines";
+import { ago, isHot, useKeepFresh, useNews, type NewsItem } from "./tv-hooks";
 import s from "./office-board.module.css";
 
 // Real fallbacks (not next/font's metric-adjusted Arial): if Google Fonts cannot be
@@ -20,17 +20,12 @@ const CHASE_ROWS = 6;
 /** DEADLINES shown on the strip of sheet OD-02; the rest are counted. */
 const DEADLINE_CHIPS = 5;
 /**
- * Where the TV goes after its dwell (app/officedash/page.tsx sets the dwell): the Nucleus
- * development board, which hands on to sigma-cms.com/officedash, which comes back here.
- * The TV key is not passed on — this board is public and Nucleus has no use for it.
+ * Where the TV goes after its dwell (app/officedash/page.tsx sets the dwell): AEC-flow's
+ * own BUILD TIMELINE board (/progressdash, 30 s), which hands on to the Nucleus board,
+ * then LOC8 and Sigma, which comes back here. The TV key is not passed on — both boards
+ * are public.
  */
-const HANDOVER_URL = "https://nucleus-apps.vercel.app/officedash";
-/** Same relay the Sigma board reads: world headlines + AI & innovation news, CORS-open. */
-const NEWS_URL = "https://cimgpycjczatjzltgscf.supabase.co/functions/v1/tv-news";
-/** Fresh data every 2 minutes; a full reload every 30 as a backstop for a TV left on for weeks. */
-const REFRESH_MS = 120_000;
-const RELOAD_MS = 30 * 60_000;
-
+const HANDOVER_URL = "/progressdash";
 const STAGES: PipelineStage[] = ["DRAFT", "TO SEND", "WITH CLIENT", "REVISE"];
 const PERMIT_STATUS: Record<string, string> = {
   DRAFT: "DRAFT",
@@ -73,64 +68,6 @@ function useTick(seconds: number) {
 }
 
 
-type NewsItem = { title: string; img: string; src: string; t: number; breaking: boolean };
-const HOT_WORDS = /\b(breaking|killed|dead|deaths?|earthquake|tsunami|explosion|blast|attack|shooting|war|missile|strike[sd]?|crash|hurricane|evacuat\w*|emergency|coup|assassinat\w*)\b/i;
-const isHot = (x: NewsItem) => x.breaking || (HOT_WORDS.test(x.title) && (!Number.isFinite(x.t) || Date.now() - x.t < 12 * 3_600_000));
-function ago(t: number) {
-  const m = Math.round((Date.now() - t) / 60_000);
-  if (!(m >= 0)) return "";
-  if (m < 1) return "just now";
-  if (m < 60) return `${m} min ago`;
-  const h = Math.round(m / 60);
-  return h < 24 ? `${h} h ago` : "";
-}
-
-/** World + AI headlines from the shared relay, every 10 minutes. A dead feed returns nothing and the bar hides. */
-function useNews() {
-  const [news, setNews] = useState<{ world: NewsItem[]; ai: NewsItem[] }>({ world: [], ai: [] });
-  useEffect(() => {
-    const clean = (rows: unknown): NewsItem[] =>
-      (Array.isArray(rows) ? rows : [])
-        .filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object" && (x as { title?: unknown }).title))
-        .map((x) => ({ title: String(x.title), img: String(x.img ?? ""), src: String(x.src ?? ""), t: x.t ? +new Date(String(x.t)) : NaN, breaking: Boolean(x.breaking) }));
-    const load = () =>
-      fetch(NEWS_URL, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((j) => j && setNews({ world: clean(j.world), ai: clean(j.ai) }))
-        .catch(() => undefined);
-    void load();
-    const id = window.setInterval(load, 10 * 60_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return news;
-}
-
-function useKeepFresh() {
-  const router = useRouter();
-  useEffect(() => {
-    const soft = window.setInterval(() => router.refresh(), REFRESH_MS);
-    const hard = window.setTimeout(() => window.location.reload(), RELOAD_MS);
-    // Keep the TV awake where the browser allows it; ignore a refusal.
-    let lock: { release: () => Promise<void> } | null = null;
-    const wake = async () => {
-      try {
-        lock = await (navigator as unknown as { wakeLock?: { request: (t: "screen") => Promise<typeof lock> } }).wakeLock?.request("screen") ?? null;
-      } catch {
-        lock = null;
-      }
-    };
-    void wake();
-    const onVisible = () => document.visibilityState === "visible" && void wake();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.clearInterval(soft);
-      window.clearTimeout(hard);
-      document.removeEventListener("visibilitychange", onVisible);
-      void lock?.release().catch(() => undefined);
-    };
-  }, [router]);
-}
-
 const lampClass: Record<Lamp, string> = { green: s.lampG, amber: s.lampA, red: s.lampR, off: s.lampO };
 
 const dlClass: Record<DeadlineState, string> = { YELLOW: s.dlYellow, RED: s.dlRed, BLINK: s.dlBlink };
@@ -154,18 +91,18 @@ type Screen = "projects" | "permits";
 
 /**
  * The TV's run: PROJECTS for `dwell` s, then BUILDING PERMITS for `permitDwell` s,
- * then the Nucleus board (Nucleus 30 s, then Sigma, then back here). `dwell` 0 stays put
- * on the screen named by `pin`, for checking one screen without the clock.
+ * then the PROGRESS board (/progressdash, 30 s), then Nucleus, LOC8, Sigma and back here.
+ * `dwell` 0 stays put on the screen named by `pin`, for checking one screen without the clock.
  */
 function useRun(dwell: number, permitDwell: number, pin: Screen, next: string) {
   const [screen, setScreen] = useState<Screen>(dwell > 0 ? "projects" : pin);
   useEffect(() => {
     if (dwell <= 0) return;
     const toPermits = window.setTimeout(() => setScreen("permits"), dwell * 1000);
-    const toSigma = window.setTimeout(() => window.location.assign(next), (dwell + permitDwell) * 1000);
+    const toNext = window.setTimeout(() => window.location.assign(next), (dwell + permitDwell) * 1000);
     return () => {
       window.clearTimeout(toPermits);
-      window.clearTimeout(toSigma);
+      window.clearTimeout(toNext);
     };
   }, [dwell, permitDwell, next]);
   return screen;
@@ -185,7 +122,7 @@ export function OfficeBoard({
   dwell: number;
   permitDwell: number;
   pin: Screen;
-  /** The TV key this board was opened with. No longer passed on: the handover goes to Nucleus. */
+  /** The TV key this board was opened with. No longer passed on: the handover goes to /progressdash. */
   tvKey: string | null;
 }) {
   const clock = useClock(timeZone);
