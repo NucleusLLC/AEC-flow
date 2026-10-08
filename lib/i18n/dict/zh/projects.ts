@@ -1,6 +1,8 @@
 import type { Dict } from "../../types";
 
 export const projects: Dict = {
+  "Move action item up": "上移行动项",
+  "Move action item down": "下移行动项",
   "ARCHIVE": "归档",
   "ARCHIVED": "已归档",
   "RESTORE": "恢复",

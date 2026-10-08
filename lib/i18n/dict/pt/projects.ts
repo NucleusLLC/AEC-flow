@@ -1,6 +1,8 @@
 import type { Dict } from "../../types";
 
 export const projects: Dict = {
+  "Move action item up": "Mover ação para cima",
+  "Move action item down": "Mover ação para baixo",
   "ARCHIVE": "ARQUIVAR",
   "ARCHIVED": "ARQUIVADO",
   "RESTORE": "RESTAURAR",

@@ -8,6 +8,8 @@ import type { AreaDict } from "../types";
 
 export const projects: AreaDict = {
   es: {
+    "Move action item up": "Subir acción",
+    "Move action item down": "Bajar acción",
     "ARCHIVE": "ARCHIVAR",
     "ARCHIVED": "ARCHIVADO",
     "RESTORE": "RESTAURAR",
@@ -677,6 +679,8 @@ export const projects: AreaDict = {
     "The type of architecture project is 80 characters at most.": "El tipo de proyecto de arquitectura tiene como máximo 80 caracteres.",
   },
   nl: {
+    "Move action item up": "Actiepunt omhoog",
+    "Move action item down": "Actiepunt omlaag",
     "ARCHIVE": "ARCHIVEREN",
     "ARCHIVED": "GEARCHIVEERD",
     "RESTORE": "HERSTELLEN",
