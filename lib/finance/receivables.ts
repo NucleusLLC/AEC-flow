@@ -2,7 +2,8 @@
  * Receivables by client and the client Statement of Account. PURE — no Prisma,
  * no React, no I/O.
  *
- * NOTHING HERE IS A SECOND RULE. What an invoice still owes is `settlement`,
+ * NOTHING HERE IS A SECOND RULE. What an invoice still owes is `invoiceBalance`
+ * (payments AND issued credit notes — the same function every other screen uses),
  * which bucket a debt falls in is `daysOverdue` + `ageingBucket`, and what is
  * "on the books" is what `receivablesSummary` counts — all in ./calc.ts. A
  * client's row is literally `receivablesSummary` run over that client's
@@ -18,8 +19,8 @@
  * currencies has two rows and two ledgers; nothing ever adds them together.
  */
 import { add, fromMajor, subtract, sum, toMajor, zero } from "@/lib/proposals/engine/money";
-import { receivablesSummary, settlement, type AgeingBucket } from "./calc";
-import type { InvoiceStatus } from "./types";
+import { creditsOf, invoiceBalance, receivablesSummary, type AgeingBucket } from "./calc";
+import type { CreditNoteStatus, InvoiceStatus } from "./types";
 
 export const AGEING_BUCKETS: readonly AgeingBucket[] = ["current", "1-30", "31-60", "61-90", "90+"];
 
@@ -38,7 +39,30 @@ export type LedgerInvoice = {
   createdAt?: string | null;
   total: number;
   payments: { id?: string; paidAt: string; amount: number; reference?: string | null }[];
+  /**
+   * Credit notes against it. Only ISSUED ones count (`invoiceBalance`); each
+   * is a credit line in the statement on its own date.
+   */
+  creditNotes?: {
+    id: string;
+    number: string;
+    date: string;
+    status: CreditNoteStatus;
+    currency: string;
+    total: number;
+  }[];
 };
+
+/** What an invoice still owes — payments AND issued credit notes, via calc.ts. */
+function balanceOf(inv: LedgerInvoice, asAt?: string) {
+  const within = (d: string) => !asAt || d.slice(0, 10) <= asAt;
+  return invoiceBalance({
+    total: inv.total,
+    currency: inv.currency,
+    payments: inv.payments.filter((p) => within(p.paidAt)),
+    credits: creditsOf((inv.creditNotes ?? []).filter((c) => within(c.date))),
+  });
+}
 
 /** On the books: issued, part-paid or paid. Drafts and voids are not debts. */
 export function onBooks(status: InvoiceStatus): boolean {
@@ -92,13 +116,14 @@ export function receivablesByClient(invoices: LedgerInvoice[], today: string): C
     const { currency, clientId } = list[0];
     const settled = list.map((inv) => ({
       inv,
-      ...settlement(inv.total, inv.payments, currency),
+      ...balanceOf(inv),
     }));
     const summary = receivablesSummary(
       settled.map((s) => ({
         status: s.inv.status,
         total: s.inv.total,
         paid: s.paid,
+        credited: s.credited,
         outstanding: s.outstanding,
         dueDate: s.inv.dueDate,
       })),
@@ -214,9 +239,13 @@ export function statementPeriod(
 
 export type StatementEntry = {
   date: string;
-  kind: "invoice" | "payment";
+  /** An invoice is a debit; a payment and an issued credit note are credits. */
+  kind: "invoice" | "payment" | "credit-note";
   invoiceId: string;
   invoiceNumber: string;
+  /** Set on a credit-note line: the credit note itself. */
+  creditNoteId?: string;
+  creditNoteNumber?: string;
   /** Payment reference, or the invoice's due date for an invoice line. */
   reference: string | null;
   dueDate: string | null;
@@ -260,11 +289,14 @@ export function statementCurrencies(invoices: LedgerInvoice[]): string[] {
  *
  * Opening balance = every debit before `from` less every credit before `from`.
  * Each invoice is a debit on its date (issue date, else the date it was raised);
- * each payment is a credit on its date. Same-day order: invoices before
- * payments, then by invoice number. Entries after `to` are not on the statement.
+ * each payment is a credit on its date, and so is each ISSUED credit note (a
+ * draft has not been sent, a void was withdrawn — neither is on the statement).
+ * Same-day order: invoices, then payments, then credit notes, then by number.
+ * Entries after `to` are not on the statement.
  *
  * The closing balance's ageing is the register's rule applied AS AT `to`: each
- * invoice's outstanding is `settlement` over the payments received by `to`, and
+ * invoice's outstanding is `invoiceBalance` over the payments received and the
+ * credit notes dated by `to`, and
  * the bucket is `daysOverdue` against `to`.
  */
 export function clientStatement(
@@ -303,12 +335,30 @@ export function clientStatement(
         credit: toMajor(fromMajor(p.amount, currency)),
       });
     }
+    for (const c of inv.creditNotes ?? []) {
+      if (c.status !== "ISSUED") continue;
+      raw.push({
+        date: c.date.slice(0, 10),
+        kind: "credit-note",
+        invoiceId: inv.id,
+        invoiceNumber: inv.number,
+        creditNoteId: c.id,
+        creditNoteNumber: c.number,
+        reference: inv.number,
+        dueDate: null,
+        debit: 0,
+        // fromMajor in the credit note's own currency: a mismatch throws in
+        // `add` below rather than being summed as if it were the same money.
+        credit: toMajor(fromMajor(c.total, c.currency)),
+      });
+    }
   }
+  const ORDER: Record<StatementEntry["kind"], number> = { invoice: 0, payment: 1, "credit-note": 2 };
   raw.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
-      (a.kind === b.kind ? 0 : a.kind === "invoice" ? -1 : 1) ||
-      a.invoiceNumber.localeCompare(b.invoiceNumber),
+      ORDER[a.kind] - ORDER[b.kind] ||
+      (a.creditNoteNumber ?? a.invoiceNumber).localeCompare(b.creditNoteNumber ?? b.invoiceNumber),
   );
 
   let opening = zero(currency);
@@ -339,12 +389,15 @@ export function clientStatement(
       return d !== null && d <= to;
     })
     .map((inv) => {
-      const s = settlement(
-        inv.total,
-        inv.payments.filter((p) => p.paidAt.slice(0, 10) <= to),
-        currency,
-      );
-      return { status: inv.status, total: inv.total, paid: s.paid, outstanding: s.outstanding, dueDate: inv.dueDate };
+      const s = balanceOf(inv, to);
+      return {
+        status: inv.status,
+        total: inv.total,
+        paid: s.paid,
+        credited: s.credited,
+        outstanding: s.outstanding,
+        dueDate: inv.dueDate,
+      };
     });
   const summary = receivablesSummary(asAt, to, currency);
   const owed = fromMajor(summary.outstanding, currency);

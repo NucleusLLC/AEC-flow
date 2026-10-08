@@ -47,6 +47,15 @@ function toLedger(i: InvoiceDTO): LedgerInvoice {
       amount: p.amount,
       reference: p.reference,
     })),
+    // Every live credit note; the pure code counts only the ISSUED ones.
+    creditNotes: i.creditNotes.map((c) => ({
+      id: c.id,
+      number: c.number,
+      date: c.date,
+      status: c.status,
+      currency: c.currency,
+      total: c.total,
+    })),
   };
 }
 

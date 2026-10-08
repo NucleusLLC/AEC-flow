@@ -1,6 +1,7 @@
 /**
  * One currency's Statement of Account ledger: opening balance, each invoice as
- * a debit and each payment as a credit with the running balance, the closing
+ * a debit and each payment and issued credit note as a credit with the running
+ * balance, the closing
  * balance, and the ageing of what is owed at the end date.
  *
  * Shared by the statement screen and its printed sheet so the two cannot show
@@ -91,8 +92,16 @@ export function StatementLedger({
               <tr key={`${e.kind}-${e.invoiceId}-${i}`} className={c.row}>
                 <td className={`${c.cell} whitespace-nowrap font-mono ${c.muted}`}>{militaryDate(e.date)}</td>
                 <td className={`${c.cell} ${c.strong}`}>
-                  {e.kind === "invoice" ? t("Invoice") : t("Payment")}{" "}
-                  {print ? (
+                  {e.kind === "invoice" ? t("Invoice") : e.kind === "payment" ? t("Payment") : t("Credit note")}{" "}
+                  {e.kind === "credit-note" ? (
+                    print ? (
+                      <span className="font-mono">{e.creditNoteNumber}</span>
+                    ) : (
+                      <Link href={`/finance/credit-notes/${e.creditNoteId}`} className={`font-mono text-xs ${c.link}`}>
+                        {e.creditNoteNumber}
+                      </Link>
+                    )
+                  ) : print ? (
                     <span className="font-mono">{e.invoiceNumber}</span>
                   ) : (
                     <Link href={`/finance/invoices/${e.invoiceId}`} className={`font-mono text-xs ${c.link}`}>

@@ -11,6 +11,7 @@ import {
   type CalcCredit,
 } from "./calc";
 import { creditNotesTable, invoicesTable } from "./export";
+import { clientStatement, receivablesByClient, type LedgerInvoice } from "./receivables";
 import type { CreditNoteDTO, InvoiceDTO } from "./types";
 
 /**
@@ -274,5 +275,64 @@ describe("accounting export", () => {
     expect(t.rows[0][t.columns.indexOf("Paid")]).toBe("400.00");
     expect(t.rows[0][t.columns.indexOf("Credited")]).toBe("265.00");
     expect(t.rows[0][t.columns.indexOf("Outstanding")]).toBe("395.00");
+  });
+});
+
+describe("receivables and the statement count issued credit notes", () => {
+  const cn = (id: string, date: string, total: number, status: "DRAFT" | "ISSUED" | "VOID" = "ISSUED") => ({
+    id,
+    number: `CN-2026-${id}`,
+    date,
+    status,
+    currency: AWG,
+    total,
+  });
+  const book: LedgerInvoice[] = [
+    {
+      id: "i1",
+      number: "INV-2026-001",
+      status: "PART_PAID",
+      currency: AWG,
+      clientId: "c1",
+      clientName: "Alpha NV",
+      issueDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      total: 1000,
+      payments: [{ paidAt: "2026-09-10", amount: 400, reference: "TRF-1" }],
+      creditNotes: [cn("001", "2026-09-15", 100), cn("002", "2026-09-16", 50, "VOID"), cn("003", "2026-09-17", 70, "DRAFT")],
+    },
+  ];
+
+  it("receivables by client owe total − paid − issued credits", () => {
+    const [row] = receivablesByClient(book, "2026-10-02");
+    expect(row.outstanding).toBe(500);
+    expect(row.ageing["1-30"]).toBe(500);
+  });
+
+  it("a fully credited invoice drops off receivables", () => {
+    const credited = [{ ...book[0], creditNotes: [cn("001", "2026-09-15", 600)] }];
+    expect(receivablesByClient(credited, "2026-10-02")).toEqual([]);
+  });
+
+  it("the statement shows an issued credit note as a credit line, voids and drafts not at all", () => {
+    const s = clientStatement(book, { from: "2026-09-01", to: "2026-10-02" }, AWG);
+    expect(s.entries.map((e) => [e.kind, e.debit, e.credit, e.balance])).toEqual([
+      ["invoice", 1000, 0, 1000],
+      ["payment", 0, 400, 600],
+      ["credit-note", 0, 100, 500],
+    ]);
+    expect(s.entries[2]).toMatchObject({ creditNoteNumber: "CN-2026-001", reference: "INV-2026-001" });
+    expect(s).toMatchObject({ credits: 500, closing: 500, owed: 500, credit: 0 });
+  });
+
+  it("ages as at the period end: a credit dated after it is not yet counted", () => {
+    const s = clientStatement(book, { from: "2026-09-01", to: "2026-09-12" }, AWG);
+    expect(s.entries.map((e) => e.kind)).toEqual(["invoice", "payment"]);
+    expect(s).toMatchObject({ closing: 600, owed: 600 });
+  });
+
+  it("never mixes currencies: a credit note in another currency throws", () => {
+    const bad = [{ ...book[0], creditNotes: [{ ...cn("001", "2026-09-15", 100), currency: "USD" }] }];
+    expect(() => clientStatement(bad, { from: "2026-09-01", to: "2026-10-02" }, AWG)).toThrow(/Currency mismatch/);
   });
 });
