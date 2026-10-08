@@ -8,6 +8,8 @@ import type { AreaDict } from "../types";
 
 export const projects: AreaDict = {
   es: {
+    "Move action item up": "Subir acción",
+    "Move action item down": "Bajar acción",
     "ARCHIVE": "ARCHIVAR",
     "ARCHIVED": "ARCHIVADO",
     "RESTORE": "RESTAURAR",
@@ -657,6 +659,8 @@ export const projects: AreaDict = {
     "No phase": "Sin fase",
   },
   nl: {
+    "Move action item up": "Actiepunt omhoog",
+    "Move action item down": "Actiepunt omlaag",
     "ARCHIVE": "ARCHIVEREN",
     "ARCHIVED": "GEARCHIVEERD",
     "RESTORE": "HERSTELLEN",
