@@ -7,6 +7,7 @@ import { TimeApprovals } from "@/components/finance/time-approvals";
 import { RateTable } from "@/components/finance/rate-table";
 import { listTimeEntries, listTimekeepers, listWeek } from "@/lib/data/time-entries";
 import { getProjects } from "@/lib/data/projects";
+import { listPhasesForProjects } from "@/lib/data/project-phases";
 import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import { getSystemCurrency } from "@/lib/format";
@@ -41,9 +42,11 @@ export default async function TimePage({
   const week = await listWeek(params.week ?? today, params.user);
   // `listTimekeepers` hands a non-approver only their own row — a colleague's
   // charge-out rate is not public — so this is safe to call for everybody.
-  const [people, awaiting] = await Promise.all([
+  const [people, awaiting, phases] = await Promise.all([
     listTimekeepers(),
     canApprove ? listTimeEntries({ status: "SUBMITTED" }) : Promise.resolve([]),
+    // Phases only for projects the tenant-scoped project read returned.
+    listPhasesForProjects(projects.map((p) => p.id)),
   ]);
 
   const person = people.find((p) => p.id === week.userId);
@@ -66,6 +69,7 @@ export default async function TimePage({
         days={week.days}
         entries={week.entries}
         projects={projects.map((p) => ({ id: p.id, name: `${p.projectNumber} — ${p.name}` }))}
+        phases={phases}
         people={people.map((p) => ({ id: p.id, name: p.name }))}
         personName={person?.name ?? actor.name}
         userId={week.userId}

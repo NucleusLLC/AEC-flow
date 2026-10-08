@@ -23,7 +23,7 @@ export function ProjectTabBar({ projectId }: { projectId: string }) {
   const tabs = [
     { label: "Dashboard", href: base, icon: LayoutDashboard, exact: true },
     { label: "Overview", href: `${base}/overview`, icon: ClipboardCheck },
-    { label: "Timeframe", href: `${base}/timeframe`, icon: CalendarClock },
+    { label: "Timeframe & Phases", href: `${base}/timeframe`, icon: CalendarClock },
     { label: "Punch List", href: `${base}/punch-list`, icon: ListChecks },
     { label: "Documents", href: `${base}/documents`, icon: FolderOpen },
     { label: "Drawings", href: `${base}/drawings`, icon: FileStack },
