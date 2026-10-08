@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { getSystemCurrency } from "@/lib/format";
 import { cleanDevelopment, type ProjectDevelopmentType } from "@/lib/projects/development";
+import { cleanArchitecture, type ProjectArchitectureType } from "@/lib/projects/architecture-type";
 import type {
   Discipline,
   PhaseStatus,
@@ -68,6 +69,8 @@ export async function getProjects(): Promise<ProjectListItem[]> {
         disciplines: p.disciplines as Discipline[],
         developmentType: (p.developmentType as ProjectDevelopmentType | null) ?? null,
         developmentTypeOther: p.developmentTypeOther ?? null,
+        architectureType: (p.architectureType as ProjectArchitectureType | null) ?? null,
+        architectureTypeOther: p.architectureTypeOther ?? null,
         progressPct: p.progressPct,
         phasesCount: p.phases.length,
         openPhases: p.phases.filter((ph) => OPEN_PHASE.includes(ph.status as PhaseStatus)).length,
@@ -139,6 +142,8 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
     disciplines: p.disciplines as Discipline[],
     developmentType: (p.developmentType as ProjectDevelopmentType | null) ?? null,
     developmentTypeOther: p.developmentTypeOther ?? null,
+    architectureType: (p.architectureType as ProjectArchitectureType | null) ?? null,
+    architectureTypeOther: p.architectureTypeOther ?? null,
     startDate: ymd(p.startDate),
     targetEndDate: ymd(p.targetEndDate),
     completedAt: ymd(p.completedAt),
@@ -243,6 +248,7 @@ export async function createProject(input: ProjectInput): Promise<{ id: string; 
 
   const manual = cleanProjectNumber(input.projectNumber);
   const development = cleanDevelopment(input.developmentType, input.developmentTypeOther);
+  const architecture = cleanArchitecture(input.disciplines, input.architectureType, input.architectureTypeOther, "create");
   const [clientId, managerId, projectNumber] = await Promise.all([
     resolveClientId(input.clientName),
     resolveManagerId(input.manager),
@@ -261,6 +267,7 @@ export async function createProject(input: ProjectInput): Promise<{ id: string; 
       siteAddress: input.siteAddress ?? null,
       disciplines: input.disciplines ?? [],
       ...development,
+      ...architecture,
       startDate: toDate(input.startDate),
       targetEndDate: toDate(input.targetEndDate),
       progressPct: 0,
@@ -288,6 +295,8 @@ export async function updateProject(id: string, input: ProjectInput): Promise<{ 
     input.developmentType === undefined
       ? null
       : cleanDevelopment(input.developmentType, input.developmentTypeOther);
+  // ARCHITECTURE unticked = both cleared; ticked with no type sent = leave it.
+  const architecture = cleanArchitecture(input.disciplines, input.architectureType, input.architectureTypeOther, "update");
   const [clientId, managerId] = await Promise.all([
     resolveClientId(input.clientName),
     resolveManagerId(input.manager),
@@ -308,6 +317,7 @@ export async function updateProject(id: string, input: ProjectInput): Promise<{ 
       siteAddress: input.siteAddress ?? null,
       disciplines: input.disciplines ?? [],
       ...(development ?? {}),
+      ...(architecture ?? {}),
       startDate: toDate(input.startDate),
       targetEndDate: toDate(input.targetEndDate),
       contractValue: input.value ?? null,
