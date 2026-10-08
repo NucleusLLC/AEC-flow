@@ -775,6 +775,8 @@ export const commercial: Dict = {
   "Delete this draft credit note?": "删除此贷项通知单草稿？",
   "Draft. The invoice balance does not change until this is issued.": "草稿。开具之前发票余额不会改变。",
   "Raised in error": "误开",
+  "An administrator or director issues it.": "由管理员或总监开具。",
+  "Only an administrator or director can issue or void a credit note.": "只有管理员或总监可以开具或作废贷项通知单。",
   "The credit note keeps its number. The invoice balance it reduced comes back.": "贷项通知单保留其编号。它所减少的发票余额将恢复。",
   "Credited per currency": "按币种贷记",
   "Drafts": "草稿",

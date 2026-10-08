@@ -775,6 +775,8 @@ export const commercial: Dict = {
   "Delete this draft credit note?": "この下書きのクレジットノートを削除しますか？",
   "Draft. The invoice balance does not change until this is issued.": "下書きです。発行されるまで請求書の残高は変わりません。",
   "Raised in error": "誤って作成",
+  "An administrator or director issues it.": "発行は管理者または取締役が行います。",
+  "Only an administrator or director can issue or void a credit note.": "クレジットノートの発行・無効化は管理者または取締役のみが行えます。",
   "The credit note keeps its number. The invoice balance it reduced comes back.": "クレジットノートの番号は保持されます。減額された請求書の残高は元に戻ります。",
   "Credited per currency": "通貨別の貸方計上額",
   "Drafts": "下書き",

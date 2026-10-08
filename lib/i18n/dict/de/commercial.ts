@@ -775,6 +775,8 @@ export const commercial: Dict = {
   "Delete this draft credit note?": "Diesen Gutschriftsentwurf löschen?",
   "Draft. The invoice balance does not change until this is issued.": "Entwurf. Der Rechnungssaldo ändert sich erst, wenn sie ausgestellt ist.",
   "Raised in error": "Irrtümlich erstellt",
+  "An administrator or director issues it.": "Ein Administrator oder Geschäftsführer stellt sie aus.",
+  "Only an administrator or director can issue or void a credit note.": "Nur ein Administrator oder Geschäftsführer kann eine Gutschrift ausstellen oder stornieren.",
   "The credit note keeps its number. The invoice balance it reduced comes back.": "Die Gutschrift behält ihre Nummer. Der Rechnungssaldo, den sie verringert hat, wird wiederhergestellt.",
   "Credited per currency": "Gutgeschrieben je Währung",
   "Drafts": "Entwürfe",

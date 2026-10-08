@@ -5,9 +5,12 @@
  *
  * Same shape as the invoice actions: re-parse through the zod gate, return a
  * discriminated result rather than throwing. Every one calls `requireActor()`
- * first — exactly the people who may raise and void invoices (any active
- * member of the practice) may raise, issue and void credit notes, and an
- * action is a public endpoint whatever the screen in front of it shows.
+ * first, and an action is a public endpoint whatever the screen in front of it
+ * shows. Any active member may raise, edit or delete a DRAFT (it moves no
+ * money). ISSUING and VOIDING one — money going out, or coming back onto the
+ * client's balance — is for an administrator, a director or the founder:
+ * `canManagePasswords`, the same set that approves expenses and exports the
+ * accounts.
  *
  * The over-credit ceiling is NOT checked here: it is checked by the data layer
  * (lib/data/credit-notes.ts) against the invoice as it is at that moment, on
@@ -18,6 +21,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerT } from "@/lib/i18n/server";
 import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 import {
   createCreditNote,
   deleteCreditNote,
@@ -38,6 +42,8 @@ function revalidateAll(id: string, invoiceId?: string): void {
   revalidatePath(`${REGISTER}/${id}`);
   // The invoice's balance, status and the receivables tiles all move with it.
   revalidatePath("/finance/invoices");
+  // ...and so do the receivables and every Statement of Account.
+  revalidatePath("/finance/receivables", "layout");
   if (invoiceId) revalidatePath(`/finance/invoices/${invoiceId}`);
 }
 
@@ -55,6 +61,19 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
 async function gate(): Promise<{ ok: false; error: string } | null> {
   try {
     await requireActor();
+    return null;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
+  }
+}
+
+const CREDIT_NOTE_NOT_ALLOWED = "Only an administrator or director can issue or void a credit note.";
+
+/** Issue and void: signed in AND Admin / Director / founder. */
+async function managerGate(): Promise<{ ok: false; error: string } | null> {
+  try {
+    const actor = await requireActor();
+    if (!canManagePasswords(actor.role, actor.isFounder)) return { ok: false, error: CREDIT_NOTE_NOT_ALLOWED };
     return null;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
@@ -93,7 +112,7 @@ export async function updateCreditNoteAction(
 }
 
 export async function issueCreditNoteAction(id: string): Promise<CreditNoteActionResult> {
-  const denied = await gate();
+  const denied = await managerGate();
   if (denied) return denied;
   try {
     const note = await issueCreditNote(id);
@@ -105,7 +124,7 @@ export async function issueCreditNoteAction(id: string): Promise<CreditNoteActio
 }
 
 export async function voidCreditNoteAction(id: string, reason: string): Promise<CreditNoteActionResult> {
-  const denied = await gate();
+  const denied = await managerGate();
   if (denied) return denied;
   try {
     const note = await voidCreditNote(id, String(reason ?? ""));

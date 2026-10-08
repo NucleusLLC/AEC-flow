@@ -20,9 +20,11 @@
  *   · DRAFT is editable and deletable; ISSUED changes only by being voided;
  *     a VOID credit note is ignored by every balance, so voiding restores it.
  *
- * WHO. Exactly who may raise and void invoices: any active member of the
- * practice (`requireActor`). Every function here calls it, as well as the
- * actions in front of them — an action is a public endpoint.
+ * WHO. Any active member of the practice (`requireActor`) may read, raise,
+ * edit and delete a DRAFT. ISSUING and VOIDING — the two writes that move the
+ * client's balance — are for an administrator, a director or the founder
+ * (`canManagePasswords`), checked here as well as in the actions in front of
+ * them, because an action is a public endpoint.
  *
  * Same conventions as lib/data/invoices.ts: findFirst (never findUnique) for
  * single rows, and child rows written TOP-LEVEL with the company stamped on —
@@ -32,6 +34,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 import {
   checkCreditNote,
   creditableByLine,
@@ -416,6 +419,15 @@ function headerFrom(inv: LoadedInvoice, input: CreditNoteInput, totals: ReturnTy
   };
 }
 
+/** Issue and void move money: Admin / Director / founder only. */
+async function requireCreditManager() {
+  const actor = await requireActor();
+  if (!canManagePasswords(actor.role, actor.isFounder)) {
+    throw new CreditNoteError("Only an administrator or director can issue or void a credit note.");
+  }
+  return actor;
+}
+
 async function requireCreditNote(id: string) {
   const row = await prisma.creditNote.findFirst({
     where: { id, deletedAt: null },
@@ -500,7 +512,7 @@ export async function updateCreditNote(id: string, input: CreditNoteInput): Prom
  * already in what it reads.
  */
 export async function issueCreditNote(id: string): Promise<CreditNoteDTO> {
-  const actor = await requireActor();
+  const actor = await requireCreditManager();
   const current = await requireCreditNote(id);
   if (current.status !== "DRAFT") {
     throw new CreditNoteError("This credit note has already been issued.");
@@ -543,7 +555,7 @@ export async function issueCreditNote(id: string): Promise<CreditNoteDTO> {
 
 /** Void it, with a reason. The balance it took off the invoice comes back. */
 export async function voidCreditNote(id: string, reason: string): Promise<CreditNoteDTO> {
-  const actor = await requireActor();
+  const actor = await requireCreditManager();
   const current = await requireCreditNote(id);
   if (current.status === "VOID") throw new CreditNoteError("This credit note is already void.");
   if (current.status === "DRAFT") {

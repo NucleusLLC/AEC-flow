@@ -1,7 +1,14 @@
--- 0025_credit_notes.sql
+-- 0030_credit_notes.sql
 --
 -- Finance: credit notes. Two new tables, one new enum, and one new value on an
 -- existing enum.
+--
+-- APPLY BEFORE MERGING the PR that adds it — the invoice register, invoice
+-- pages, receivables and the Statement of Account all read "credit_notes", so
+-- deploying the code first makes the finance pages fail.
+--
+-- Numbered 0030: it was written as 0025, but 0026–0029 were taken on main
+-- while it waited. Independent of all of them; may be applied in any order.
 --
 -- Purely additive: nothing that already exists is changed or dropped, so it is
 -- safe to run against a live database and safe to run before the code that
@@ -30,7 +37,7 @@
 --   npx prisma migrate diff --from-schema <main>.prisma --to-schema prisma/schema.prisma --script
 -- and reviewed by hand. Rehearsed against a local copy of production's schema
 -- (origin/main) before being committed. Apply with:
---   node scripts/apply-sql.mjs prisma/sql/0025_credit_notes.sql
+--   node scripts/apply-sql.mjs prisma/sql/0030_credit_notes.sql
 --   node scripts/verify-data-api-lockdown.mjs
 
 -- CreateEnum

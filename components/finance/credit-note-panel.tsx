@@ -28,7 +28,11 @@ const BTN =
 const input =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
 
-export function CreditNotePanel({ note }: { note: CreditNoteDTO }) {
+/**
+ * `canManage`: Admin / Director / founder. Only they see ISSUE and VOID — the
+ * actions refuse anyone else whatever the screen shows.
+ */
+export function CreditNotePanel({ note, canManage }: { note: CreditNoteDTO; canManage: boolean }) {
   const router = useRouter();
   const t = useT();
   const [pending, setPending] = useState(false);
@@ -85,6 +89,7 @@ export function CreditNotePanel({ note }: { note: CreditNoteDTO }) {
       {note.status === "DRAFT" ? (
         <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-muted">
           {t("Draft. The invoice balance does not change until this is issued.")}
+          {canManage ? null : <> {t("An administrator or director issues it.")}</>}
         </p>
       ) : null}
 
@@ -100,20 +105,22 @@ export function CreditNotePanel({ note }: { note: CreditNoteDTO }) {
             <Link href={`/finance/credit-notes/${note.id}/edit`} className={BTN}>
               {t("Edit")}
             </Link>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => run(() => issueCreditNoteAction(note.id))}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-semibold uppercase tracking-wider text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
-            >
-              <Send className="h-4 w-4" /> {t("Issue")}
-            </button>
+            {canManage ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => run(() => issueCreditNoteAction(note.id))}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-xs font-semibold uppercase tracking-wider text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" /> {t("Issue")}
+              </button>
+            ) : null}
             <button type="button" disabled={pending} onClick={() => setAsking("delete")} className={`${BTN} text-red-600`}>
               <Trash2 className="h-4 w-4" /> {t("Delete draft")}
             </button>
           </>
         ) : null}
-        {note.status === "ISSUED" ? (
+        {note.status === "ISSUED" && canManage ? (
           <button type="button" disabled={pending} onClick={() => setAsking("void")} className={`${BTN} text-red-600`}>
             <Ban className="h-4 w-4" /> {t("Void")}
           </button>

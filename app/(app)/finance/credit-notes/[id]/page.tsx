@@ -7,6 +7,8 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { CreditNotePanel } from "@/components/finance/credit-note-panel";
 import { getCreditNote } from "@/lib/data/credit-notes";
 import { militaryDate } from "@/lib/building-permits/register";
+import { requireActor } from "@/lib/server/actor";
+import { canManagePasswords } from "@/lib/password-policy";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -18,6 +20,8 @@ export default async function CreditNotePage({ params }: { params: Promise<{ id:
   const note = await getCreditNote(id);
   if (!note) notFound();
   const t = await getServerT();
+  const actor = await requireActor();
+  const canManage = canManagePasswords(actor.role, actor.isFounder);
 
   return (
     <div className="w-full max-w-5xl space-y-6">
@@ -37,7 +41,7 @@ export default async function CreditNotePage({ params }: { params: Promise<{ id:
         </p>
       </div>
 
-      <CreditNotePanel note={note} />
+      <CreditNotePanel note={note} canManage={canManage} />
 
       <Card>
         <CardHeader title={t("Details").toUpperCase()} />

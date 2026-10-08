@@ -144,7 +144,7 @@ those are receivables' numbers, and mixing the two double-counts the same job.
 
 ## 6. Credit notes
 
-`prisma/sql/0025_credit_notes.sql` · `lib/finance/calc.ts` (`invoiceBalance`,
+`prisma/sql/0030_credit_notes.sql` · `lib/finance/calc.ts` (`invoiceBalance`,
 `checkCreditNote`, `creditableByLine`) · `lib/data/credit-notes.ts` ·
 `/finance/credit-notes` · `/print/finance/credit-notes/[id]`
 
@@ -172,9 +172,17 @@ that locks the invoice row, so two credits issued at once cannot both pass.
 taken from the form. A credit note in another currency from its invoice cannot
 be built, and `invoiceBalance` throws rather than add one.
 
-**Who.** Exactly who may raise and void invoices: any active member of the
-practice (`requireActor`). DRAFT is editable and deletable; ISSUED changes only
-by being voided with a reason.
+**Who.** Any active member of the practice (`requireActor`) may raise, edit and
+delete a DRAFT — it moves no money. ISSUING and VOIDING are for an
+administrator, a director or the founder (`canManagePasswords`), checked in the
+actions and again in `lib/data/credit-notes.ts`. Invoices themselves are still
+ungated (any member) pending the owner's decision; money going out is gated
+now. ISSUED changes only by being voided with a reason.
+
+**Where it shows.** An issued credit note reduces the invoice's balance
+everywhere `invoiceBalance` is used: the invoice, the register tiles,
+`/finance/receivables` (and its ageing buckets) and the client's Statement of
+Account, where it is a CREDIT line on its own date.
 
 **Not done.** Crediting an invoice does not free the proposal milestone it
 billed (a credit is a concession, not an un-billing) and does not release
