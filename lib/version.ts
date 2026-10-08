@@ -64,8 +64,13 @@
  *   OTHER typed in) and shows "Development · …" on the Projects list, the overview and the
  *   printed sheet. Needs prisma/sql/0028_project_development.sql.
  * 0.16.1 (8 OCT 2026): Office Dash projects sheet 30 s; every font on the board 15% larger.
+ * 0.18.0 (8 OCT 2026): feat — project PHASES on the Timeframe & Phases tab: EDIT PHASES / + ADD PHASE
+ *   (rename, reorder, remove, dates, status, % complete, discipline), quick-add presets and LOAD
+ *   STANDARD PHASES; project progress = equal-weighted average of the phases. The timesheet asks
+ *   for the PHASE once a project is chosen, and the phase screen shows hours by phase and person.
+ *   No SQL.
  */
-export const APP_VERSION = "0.16.1";
+export const APP_VERSION = "0.18.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

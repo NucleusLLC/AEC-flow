@@ -45,6 +45,13 @@ export class TimeEntryLockedError extends Error {
   }
 }
 
+export class TimeEntryPhaseError extends Error {
+  constructor() {
+    super("That phase is not part of the chosen project.");
+    this.name = "TimeEntryPhaseError";
+  }
+}
+
 export class TimeEntryForbiddenError extends Error {
   constructor(what: string) {
     super(`Only a director or an administrator can ${what}.`);
@@ -285,12 +292,21 @@ async function snapshot(actor: Actor, input: TimeEntryInput) {
       })
     : null;
 
-  const phase = input.phaseId
-    ? await prisma.projectPhase.findFirst({
-        where: { id: input.phaseId },
-        select: { id: true, name: true },
-      })
-    : null;
+  // ProjectPhase is NOT tenant-scoped by the extension (no companyId), so a
+  // phase is only ever looked up UNDER the project just resolved through the
+  // tenant-scoped client. A phase id with no project, or from another project
+  // (or another practice), is refused rather than quietly dropped — the hours
+  // would otherwise land somewhere other than where the person said.
+  let phase: { id: string; name: string } | null = null;
+  if (input.phaseId) {
+    phase = project
+      ? await prisma.projectPhase.findFirst({
+          where: { id: input.phaseId, projectId: project.id },
+          select: { id: true, name: true },
+        })
+      : null;
+    if (!phase) throw new TimeEntryPhaseError();
+  }
 
   return {
     userId: person.id,

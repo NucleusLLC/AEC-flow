@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { getProject, DISCIPLINE_LABEL, type PhaseStatus } from "@/lib/data/projects";
 import { formatDate } from "@/lib/format";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
+import { getPhaseScreen } from "@/lib/data/project-phases";
+import { PhaseEditor } from "@/components/projects/phase-editor";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -44,6 +46,9 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
   if (!project) notFound();
   const t = await getServerT();
   const locale = await getServerLocale();
+  // The PHASES card (editor + hours by phase) reads through the tenant-scoped
+  // project first — see lib/data/project-phases.ts.
+  const phaseScreen = await getPhaseScreen(project.id);
 
   // Timeline bounds across all dated phases (+ project start / target end).
   const stamps: number[] = [];
@@ -113,6 +118,8 @@ export default async function ProjectTimeframePage({ params }: PageProps) {
           ) : null}
         </div>
       </Card>
+
+      <PhaseEditor initial={phaseScreen} />
     </div>
   );
 }

@@ -41,6 +41,8 @@ import {
 } from "@/app/(app)/finance/time/actions";
 
 export type PickerOption = { id: string; name: string };
+/** A project's phase, for the PHASE dropdown beside the project. */
+export type PhaseOption = { id: string; name: string; projectId: string };
 
 const CONTROL =
   "h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
@@ -57,6 +59,7 @@ export function TimesheetWeek({
   days,
   entries,
   projects,
+  phases = [],
   people,
   personName,
   userId,
@@ -68,6 +71,7 @@ export function TimesheetWeek({
   days: string[];
   entries: TimeEntryDTO[];
   projects: PickerOption[];
+  phases?: PhaseOption[];
   people: PickerOption[];
   personName: string;
   userId: string;
@@ -273,6 +277,7 @@ export function TimesheetWeek({
       <LogRow
         days={days}
         projects={projects}
+        phases={phases}
         today={today}
         pending={pending}
         userId={canLogForOthers ? userId : undefined}
@@ -303,6 +308,9 @@ export function TimesheetWeek({
                     </td>
                     <td className="px-3 py-2 align-top">
                       <div className="text-fg">{e.projectName ?? t("No project")}</div>
+                      {e.phaseName ? (
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-[#5c6633]">{e.phaseName}</div>
+                      ) : null}
                       {!e.billable ? (
                         <div className="text-[11px] text-faint">{t("Non-billable")}</div>
                       ) : null}
@@ -351,6 +359,7 @@ export function TimesheetWeek({
 function LogRow({
   days,
   projects,
+  phases,
   today,
   pending,
   userId,
@@ -358,12 +367,14 @@ function LogRow({
 }: {
   days: string[];
   projects: PickerOption[];
+  phases: PhaseOption[];
   today: string;
   pending: boolean;
   userId?: string;
   onSave: (input: {
     userId?: string | null;
     projectId: string | null;
+    phaseId: string | null;
     date: string;
     hours: number;
     billable: boolean;
@@ -373,6 +384,8 @@ function LogRow({
   const t = useT();
   const [date, setDate] = useState(days.includes(today) ? today : days[0]);
   const [projectId, setProjectId] = useState("");
+  const [phaseId, setPhaseId] = useState("");
+  const projectPhases = projectId ? phases.filter((p) => p.projectId === projectId) : [];
   const [hours, setHours] = useState("");
   const [billable, setBillable] = useState(true);
   const [description, setDescription] = useState("");
@@ -401,7 +414,11 @@ function LogRow({
           <span className="text-[11px] uppercase tracking-wide text-faint">{t("Project")}</span>
           <select
             value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
+            onChange={(e) => {
+              setProjectId(e.target.value);
+              // A phase belongs to one project: changing the project clears it.
+              setPhaseId("");
+            }}
             className={`${CONTROL} w-full`}
           >
             <option value="">{t("No project")}</option>
@@ -412,6 +429,25 @@ function LogRow({
             ))}
           </select>
         </label>
+
+        {projectId ? (
+          <label className="flex min-w-[180px] flex-col gap-1">
+            <span className="text-[11px] uppercase tracking-wide text-faint">{t("PHASE")}</span>
+            <select
+              value={phaseId}
+              onChange={(e) => setPhaseId(e.target.value)}
+              aria-label={t("Phase")}
+              className={`${CONTROL} w-full`}
+            >
+              <option value="">{t("— No phase —")}</option>
+              {projectPhases.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
         <label className="flex flex-col gap-1">
           <span className="text-[11px] uppercase tracking-wide text-faint">{t("Hours")}</span>
@@ -452,6 +488,7 @@ function LogRow({
             onSave({
               userId: userId ?? null,
               projectId: projectId || null,
+              phaseId: (projectId && phaseId) || null,
               date,
               hours: parsed,
               billable,
