@@ -14,9 +14,9 @@ const body = Barlow_Condensed({ weight: ["400", "500", "600", "700"], subsets: [
 const mono = JetBrains_Mono({ weight: ["400", "600", "700"], subsets: ["latin"], variable: "--od-mono", fallback: ["Consolas", "Menlo", "monospace"], adjustFontFallback: false });
 
 /** Rows per page — the board rotates when a list is longer. */
-const PROJECT_ROWS = 9;
-const PERMIT_ROWS = 7;
-const CHASE_ROWS = 7;
+const PROJECT_ROWS = 8;
+const PERMIT_ROWS = 6;
+const CHASE_ROWS = 6;
 /** DEADLINES shown on the strip of sheet OD-02; the rest are counted. */
 const DEADLINE_CHIPS = 5;
 /**
@@ -248,12 +248,12 @@ export function OfficeBoard({
                 </div>
                 <table className={`${s.table} ${s.big}`}>
                   <colgroup>
-                    <col style={{ width: "13%" }} />
-                    <col style={{ width: "31%" }} />
-                    <col style={{ width: "19%" }} />
-                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "32%" }} />
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "12%" }} />
                     <col style={{ width: "15%" }} />
-                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "9%" }} />
                   </colgroup>
                   <thead>
                     <tr>

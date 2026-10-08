@@ -21,10 +21,10 @@ export const metadata: Metadata = { title: "SITREP · AEC-flow" };
  * Open to anyone (owner's decision): a signed-in member sees their own practice,
  * everyone else sees the founder practice's board. No login page, ever.
  *
- * The TV's run: projects for 20 s, building permits for 10 s, then the Nucleus
+ * The TV's run: projects for 30 s, building permits for 10 s, then the Nucleus
  * development board (30 s), then the Sigma board, which flips back here.
  */
-const DEFAULT_DWELL = 20;
+const DEFAULT_DWELL = 30;
 const DEFAULT_PERMIT_DWELL = 10;
 const seconds = (raw: string | undefined, fallback: number) => (raw !== undefined && /^\d{1,4}$/.test(raw) ? Number(raw) : fallback);
 
