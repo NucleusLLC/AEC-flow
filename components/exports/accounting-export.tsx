@@ -12,10 +12,11 @@ const FILES: { kind: ExportKind; label: string; desc: string }[] = [
   { kind: "payments", label: "Payments", desc: "Payments received in the period, whatever date the invoice was issued." },
   { kind: "time", label: "Approved time", desc: "Approved hours with the charge and cost rates as they were, and what was invoiced." },
   { kind: "expenses", label: "Approved expenses", desc: "Approved expenses with markup, reimbursement and what was invoiced." },
+  { kind: "tax", label: "Tax report", desc: "BBO, BAVP and other tax as the invoices carry it: each invoice issued and each payment received in the period, with its tax." },
 ];
 
 /**
- * The accounting export: five CSV files for one period, for an accountant or a
+ * The accounting export: six CSV files for one period, for an accountant or a
  * bookkeeping package. Shown only to people who approve time and expenses;
  * the route checks again (app/api/export/finance/[kind]/route.ts).
  */

@@ -69,8 +69,13 @@
  *   STANDARD PHASES; project progress = equal-weighted average of the phases. The timesheet asks
  *   for the PHASE once a project is chosen, and the phase screen shows hours by phase and person.
  *   No SQL.
+ * 0.20.0 (8 OCT 2026): feat — Finance TAX REPORT (/finance/tax, Admin / Director only): BBO, BAVP and
+ *   any other tax the invoices carry, per currency, for a month or a quarter (default the last full
+ *   month), on two bases — INVOICED (by issue date; drafts and voids left out) and RECEIVED (payments
+ *   in the period, tax pro rata). Invoices without tax are listed under NOTES, never imputed at 7%.
+ *   Printable on A4 (/print/finance/tax) and a "Tax report" CSV in the accounting export. No SQL.
  */
-export const APP_VERSION = "0.18.0";
+export const APP_VERSION = "0.20.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

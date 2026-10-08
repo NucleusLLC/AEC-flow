@@ -34,6 +34,7 @@ import {
   TIME_ITEM,
   EXPENSES_ITEM,
   PROFIT_ITEM,
+  TAX_ITEM,
   navSections,
   type NavSection,
 } from "@/lib/nav";
@@ -142,7 +143,7 @@ const MODULE_1: AppModule = {
       ],
     },
     { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }] },
-    { title: "Finance", items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM] },
+    { title: "Finance", items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM, TAX_ITEM] },
     {
       title: DRAWINGS_AND_DOCUMENTS,
       items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, GENERAL_DOCUMENTS_ITEM, WRITE_WITH_AI_ITEM, CONTRACTS_ITEM, DOC_GENERATOR, DOC_REGISTER],
