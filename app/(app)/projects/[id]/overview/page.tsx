@@ -4,7 +4,7 @@ import { MapPin } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
-import { getProject, DISCIPLINE_LABEL, type PhaseStatus } from "@/lib/data/projects";
+import { getProject, DISCIPLINE_LABEL, developmentTag, type PhaseStatus } from "@/lib/data/projects";
 import { getProjectModulesRollup } from "@/lib/data/project-rollup";
 import { ProjectModulesRollupCard } from "@/components/projects/project-modules-rollup";
 import { getProjectScheduleSummary } from "@/lib/integrations/schedule/adapter";
@@ -161,6 +161,9 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
                   {project.disciplines.map((d) => (
                     <Badge key={d} tone="slate">{t(DISCIPLINE_LABEL[d])}</Badge>
                   ))}
+                  {project.developmentType ? (
+                    <Badge tone="slate">{developmentTag(project.developmentType, project.developmentTypeOther, t)}</Badge>
+                  ) : null}
                 </span>
               </DetailRow>
               {project.siteAddress ? (

@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentCompanyId } from "@/lib/server/tenant";
 import { getSystemCurrency } from "@/lib/format";
+import { cleanDevelopment, type ProjectDevelopmentType } from "@/lib/projects/development";
 import type {
   Discipline,
   PhaseStatus,
@@ -65,6 +66,8 @@ export async function getProjects(): Promise<ProjectListItem[]> {
         status: p.status as ProjectStatus,
         priority: p.priority as Priority,
         disciplines: p.disciplines as Discipline[],
+        developmentType: (p.developmentType as ProjectDevelopmentType | null) ?? null,
+        developmentTypeOther: p.developmentTypeOther ?? null,
         progressPct: p.progressPct,
         phasesCount: p.phases.length,
         openPhases: p.phases.filter((ph) => OPEN_PHASE.includes(ph.status as PhaseStatus)).length,
@@ -134,6 +137,8 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
     description: p.description,
     siteAddress: p.siteAddress,
     disciplines: p.disciplines as Discipline[],
+    developmentType: (p.developmentType as ProjectDevelopmentType | null) ?? null,
+    developmentTypeOther: p.developmentTypeOther ?? null,
     startDate: ymd(p.startDate),
     targetEndDate: ymd(p.targetEndDate),
     completedAt: ymd(p.completedAt),
@@ -237,6 +242,7 @@ export async function createProject(input: ProjectInput): Promise<{ id: string; 
   if (!input.name?.trim()) throw new Error("name is required");
 
   const manual = cleanProjectNumber(input.projectNumber);
+  const development = cleanDevelopment(input.developmentType, input.developmentTypeOther);
   const [clientId, managerId, projectNumber] = await Promise.all([
     resolveClientId(input.clientName),
     resolveManagerId(input.manager),
@@ -254,6 +260,7 @@ export async function createProject(input: ProjectInput): Promise<{ id: string; 
       description: input.description ?? null,
       siteAddress: input.siteAddress ?? null,
       disciplines: input.disciplines ?? [],
+      ...development,
       startDate: toDate(input.startDate),
       targetEndDate: toDate(input.targetEndDate),
       progressPct: 0,
@@ -276,6 +283,11 @@ export async function createProject(input: ProjectInput): Promise<{ id: string; 
 /** Update scalar fields only — phases are not rewritten here. */
 export async function updateProject(id: string, input: ProjectInput): Promise<{ id: string }> {
   const manual = cleanProjectNumber(input.projectNumber);
+  // Absent = leave it; null = no longer a development (both columns cleared).
+  const development =
+    input.developmentType === undefined
+      ? null
+      : cleanDevelopment(input.developmentType, input.developmentTypeOther);
   const [clientId, managerId] = await Promise.all([
     resolveClientId(input.clientName),
     resolveManagerId(input.manager),
@@ -295,6 +307,7 @@ export async function updateProject(id: string, input: ProjectInput): Promise<{ 
       description: input.description ?? null,
       siteAddress: input.siteAddress ?? null,
       disciplines: input.disciplines ?? [],
+      ...(development ?? {}),
       startDate: toDate(input.startDate),
       targetEndDate: toDate(input.targetEndDate),
       contractValue: input.value ?? null,

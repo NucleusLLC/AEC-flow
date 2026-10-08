@@ -12,6 +12,7 @@ import {
   PROJECT_STATUS_LABEL,
   PRIORITY_LABEL,
   DISCIPLINE_LABEL,
+  developmentTag,
   type PhaseStatus,
 } from "@/lib/data/projects.types";
 
@@ -86,7 +87,14 @@ export default async function ProjectFactSheet({ params }: PageProps) {
         <Meta label={t("Site Address")} value={p.siteAddress || "—"} />
         <Meta
           label={t("Disciplines")}
-          value={p.disciplines.length ? p.disciplines.map((d) => t(DISCIPLINE_LABEL[d])).join(", ") : "—"}
+          value={
+            [
+              ...p.disciplines.map((d) => t(DISCIPLINE_LABEL[d])),
+              developmentTag(p.developmentType, p.developmentTypeOther, t),
+            ]
+              .filter(Boolean)
+              .join(", ") || "—"
+          }
         />
       </div>
 

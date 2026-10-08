@@ -13,6 +13,14 @@ import {
   type Priority,
   type ProjectWriteInput,
 } from "@/lib/data/projects.types";
+import {
+  DEVELOPMENT_ERRORS,
+  DEVELOPMENT_OTHER_MAX,
+  DEVELOPMENT_TYPES,
+  DEVELOPMENT_TYPE_OPTION,
+  checkDevelopment,
+  type ProjectDevelopmentType,
+} from "@/lib/projects/development";
 import { saveProject } from "@/app/(app)/projects/actions";
 import { getSystemCurrency } from "@/lib/format";
 import { ClientSelect } from "@/components/clients/client-select";
@@ -23,6 +31,11 @@ import { fmt } from "@/lib/i18n/format";
 const inputClass =
   "h-9 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
 const labelClass = "mb-1 block text-xs font-medium text-muted";
+
+// DEVELOPMENT panel — the olive "military" look of the Estimates ADD NEW dialog.
+const devLabelClass = "mb-1 block font-mono text-[11px] font-semibold uppercase tracking-wider text-[#4b5320] dark:text-[#c5d18a]";
+const devInputClass =
+  "h-9 w-full rounded-md border border-[#5c6633] bg-surface px-3 text-sm font-semibold text-fg outline-none focus:border-[#5c6633] focus:ring-2 focus:ring-[#8a9a5b]/30";
 
 const DISCIPLINES = Object.keys(DISCIPLINE_LABEL) as Discipline[];
 const STATUSES = Object.keys(PROJECT_STATUS_LABEL) as ProjectStatus[];
@@ -41,6 +54,10 @@ export type ProjectFormValues = {
   status: ProjectStatus;
   priority: Priority;
   disciplines: Discipline[];
+  /** DEVELOPMENT type, or null when the project is not a development. */
+  developmentType: ProjectDevelopmentType | null;
+  /** The typed type when developmentType is OTHER ("" otherwise). */
+  developmentTypeOther: string;
   startDate: string;
   targetEndDate: string;
   value: number;
@@ -81,8 +98,22 @@ export function ProjectForm({
   const [clientName, setClientName] = useState(initial?.clientName ?? clientNames[0] ?? "");
   const [manager, setManager] = useState(initial?.manager ?? managerNames[0] ?? "");
 
+  // DEVELOPMENT is controlled: the type dropdown appears only while the box is
+  // ticked, and the text box only for OTHER. Unticking keeps what was chosen on
+  // screen (tick it again and it is still there) but saves "not a development".
+  const [devTicked, setDevTicked] = useState(!!initial?.developmentType);
+  const [devType, setDevType] = useState<string>(initial?.developmentType ?? "");
+  const [devOther, setDevOther] = useState(initial?.developmentTypeOther ?? "");
+  const [devError, setDevError] = useState<string | null>(null);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const dev = checkDevelopment({ ticked: devTicked, type: devType, other: devOther });
+    if (!dev.ok) {
+      setDevError(dev.error);
+      return;
+    }
+    setDevError(null);
     const fd = new FormData(e.currentTarget);
     const payload: ProjectWriteInput = {
       name: String(fd.get("name") ?? ""),
@@ -92,6 +123,8 @@ export function ProjectForm({
       status: (fd.get("status") as ProjectStatus) || undefined,
       priority: (fd.get("priority") as Priority) || undefined,
       disciplines: fd.getAll("disciplines").map((d) => String(d) as Discipline),
+      developmentType: dev.developmentType,
+      developmentTypeOther: dev.developmentTypeOther,
       startDate: (fd.get("startDate") as string) || null,
       targetEndDate: (fd.get("targetEndDate") as string) || null,
       value: Number(fd.get("value")) || 0,
@@ -259,7 +292,77 @@ export function ProjectForm({
                   {t(DISCIPLINE_LABEL[d])}
                 </label>
               ))}
+              <label className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[#4b5320] dark:text-[#c5d18a]">
+                <input
+                  type="checkbox"
+                  name="development"
+                  checked={devTicked}
+                  onChange={(e) => {
+                    setDevTicked(e.target.checked);
+                    setDevError(null);
+                  }}
+                  className="h-4 w-4 rounded border-[#5c6633] accent-[#4b5320] focus:ring-[#8a9a5b]/30"
+                />
+                {t("DEVELOPMENT")}
+              </label>
             </div>
+
+            {devTicked ? (
+              <div className="mt-3 rounded-lg border border-[#5c6633] bg-[#e4e8dc]/60 p-3 dark:bg-[#4b5320]/25">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={devLabelClass} htmlFor="developmentType">
+                      {t("DEVELOPMENT TYPE")} *
+                    </label>
+                    <select
+                      id="developmentType"
+                      name="developmentType"
+                      className={`${devInputClass} uppercase tracking-wide`}
+                      value={devType}
+                      aria-invalid={devError === DEVELOPMENT_ERRORS.type || undefined}
+                      onChange={(e) => {
+                        setDevType(e.target.value);
+                        setDevError(null);
+                      }}
+                    >
+                      <option value="">{t("— SELECT —")}</option>
+                      {DEVELOPMENT_TYPES.map((d) => (
+                        <option key={d} value={d}>
+                          {t(DEVELOPMENT_TYPE_OPTION[d])}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {devType === "OTHER" ? (
+                    <div>
+                      <label className={devLabelClass} htmlFor="developmentTypeOther">
+                        {t("TYPE OF DEVELOPMENT")} *
+                      </label>
+                      <input
+                        id="developmentTypeOther"
+                        name="developmentTypeOther"
+                        className={devInputClass}
+                        maxLength={DEVELOPMENT_OTHER_MAX}
+                        placeholder={t("e.g. Marina Lofts")}
+                        value={devOther}
+                        aria-invalid={(devError !== null && devError !== DEVELOPMENT_ERRORS.type) || undefined}
+                        onChange={(e) => {
+                          setDevOther(e.target.value);
+                          setDevError(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                {devError ? (
+                  <p role="alert" className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {t(devError)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="sm:col-span-2">
