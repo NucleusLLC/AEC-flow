@@ -76,8 +76,13 @@
  *   (public, like /officedash): build phases with a Gantt of the days worked since 14 SEP, the
  *   releases, WORKING ON NOW and MISSING, the stats strip and news. The TV run now goes
  *   /officedash -> /progressdash (30 s) -> Nucleus. Content is lib/progressdash/data.ts. No SQL.
+ * 0.22.0 (8 OCT 2026): feat — Finance TAX REPORT (/finance/tax, Admin / Director only): BBO, BAVP and
+ *   any other tax the invoices carry, per currency, for a month or a quarter (default the last full
+ *   month), on two bases — INVOICED (by issue date; drafts and voids left out) and RECEIVED (payments
+ *   in the period, tax pro rata). Invoices without tax are listed under NOTES, never imputed at 7%.
+ *   Printable on A4 (/print/finance/tax) and a "Tax report" CSV in the accounting export. No SQL.
  */
-export const APP_VERSION = "0.21.0";
+export const APP_VERSION = "0.22.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

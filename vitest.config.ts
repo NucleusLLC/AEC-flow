@@ -177,6 +177,9 @@ export default defineConfig({
       // Accounting export: date ranges, drafts left out, money format, and the
       // spreadsheet-formula guard on user-typed cells. Pure.
       "lib/finance/export.test.ts",
+      // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
+      // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
+      "lib/finance/tax-report.test.ts",
       "lib/estimates/cover-fit.test.ts",
       // Office Dash board: project order + lamps, pipeline folding, permit deadlines, orders. Pure.
       "lib/officedash/board.test.ts",
