@@ -63,8 +63,9 @@
  *   asks the DEVELOPMENT TYPE (Housing, Condo / Apartment, Town Homes, Resort, Parceling, or
  *   OTHER typed in) and shows "Development · …" on the Projects list, the overview and the
  *   printed sheet. Needs prisma/sql/0028_project_development.sql.
+ * 0.16.1 (8 OCT 2026): Office Dash projects sheet 30 s; every font on the board 15% larger.
  */
-export const APP_VERSION = "0.16.0";
+export const APP_VERSION = "0.16.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
