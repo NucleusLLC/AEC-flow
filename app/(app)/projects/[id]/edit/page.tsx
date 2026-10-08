@@ -45,6 +45,8 @@ export default async function EditProjectPage({ params }: PageProps) {
     status: project.status,
     priority: project.priority,
     disciplines: project.disciplines,
+    developmentType: project.developmentType,
+    developmentTypeOther: project.developmentTypeOther ?? "",
     startDate: project.startDate ?? "",
     targetEndDate: project.targetEndDate ?? "",
     value: project.value,

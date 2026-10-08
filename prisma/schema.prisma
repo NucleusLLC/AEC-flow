@@ -470,6 +470,10 @@ model Project {
   archivedAt    DateTime?
   /// Who archived it — a user id, kept loose so removing the user never blocks.
   archivedById  String?
+  /// DEVELOPMENT tick box on the project form: null = not a development.
+  developmentType      ProjectDevelopmentType?
+  /// The typed development type when developmentType is OTHER (80 characters at most).
+  developmentTypeOther String?
   contractValue Decimal?
   currency      String        @default("AWG")
   notes         String?
@@ -484,6 +488,16 @@ model Project {
   attachments  Attachment[]
   activityLogs ActivityLog[]
   drawings     Drawing[]
+}
+
+/// What kind of development a project is (the DEVELOPMENT tick box). See prisma/sql/0028_project_development.sql.
+enum ProjectDevelopmentType {
+  HOUSING
+  CONDO_APARTMENT
+  TOWN_HOMES
+  RESORT
+  PARCELING
+  OTHER
 }
 
 model ProjectPhase {

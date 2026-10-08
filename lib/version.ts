@@ -59,8 +59,12 @@
  * 0.15.1 (7 OCT 2026): /officedash hands over to the Nucleus development board
  *   (nucleus-apps.vercel.app/officedash) instead of Sigma; the loop is now
  *   AEC-flow -> Nucleus -> Sigma -> AEC-flow.
+ * 0.16.0 (7 OCT 2026): feat — Projects DEVELOPMENT: a tick box beside the disciplines; ticked, it
+ *   asks the DEVELOPMENT TYPE (Housing, Condo / Apartment, Town Homes, Resort, Parceling, or
+ *   OTHER typed in) and shows "Development · …" on the Projects list, the overview and the
+ *   printed sheet. Needs prisma/sql/0028_project_development.sql.
  */
-export const APP_VERSION = "0.15.1";
+export const APP_VERSION = "0.16.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

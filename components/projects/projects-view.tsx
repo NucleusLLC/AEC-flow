@@ -8,6 +8,7 @@ import { StatusBadge, PriorityBadge, Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress";
 import {
   DISCIPLINE_LABEL,
+  developmentTag,
   type ProjectListItem,
   type ProjectStatus,
   type Priority,
@@ -156,6 +157,9 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                         ))}
                         {p.disciplines.length > 2 ? (
                           <span className="text-[11px] text-faint">+{p.disciplines.length - 2}</span>
+                        ) : null}
+                        {p.developmentType ? (
+                          <Badge tone="slate">{developmentTag(p.developmentType, p.developmentTypeOther, t)}</Badge>
                         ) : null}
                       </span>
                       <span className="mt-0.5 block truncate font-medium text-fg group-hover:text-brand">

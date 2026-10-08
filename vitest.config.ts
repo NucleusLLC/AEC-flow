@@ -182,6 +182,8 @@ export default defineConfig({
       "lib/officedash/board.test.ts",
       // Project archive/delete: confirmation match, link list, refusal order. Pure.
       "lib/projects/lifecycle.test.ts",
+      // Project DEVELOPMENT: type list, tag text, tick-box/type/OTHER validation. Pure.
+      "lib/projects/development.test.ts",
     ],
     environment: "node",
   },

@@ -7,6 +7,19 @@
  * bundle never drags the Postgres driver along with it.
  */
 
+import type { ProjectDevelopmentType } from "@/lib/projects/development";
+
+// DEVELOPMENT (a tick box beside the disciplines) — rules and labels live in
+// lib/projects/development.ts; re-exported here so call sites get them with the
+// rest of the project types.
+export {
+  DEVELOPMENT_TYPES,
+  DEVELOPMENT_TYPE_LABEL,
+  DEVELOPMENT_TYPE_OPTION,
+  developmentTag,
+  type ProjectDevelopmentType,
+} from "@/lib/projects/development";
+
 export type ProjectStatus = "ACTIVE" | "ON_HOLD" | "COMPLETED" | "CANCELLED";
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type Discipline =
@@ -59,6 +72,10 @@ export type ProjectRecord = {
   description: string | null;
   siteAddress: string | null;
   disciplines: Discipline[];
+  /** DEVELOPMENT type, or null when the project is not a development. */
+  developmentType: ProjectDevelopmentType | null;
+  /** The typed type when developmentType is OTHER, else null. */
+  developmentTypeOther: string | null;
   startDate: string | null;
   targetEndDate: string | null;
   completedAt: string | null;
@@ -82,6 +99,10 @@ export type ProjectListItem = {
   status: ProjectStatus;
   priority: Priority;
   disciplines: Discipline[];
+  /** DEVELOPMENT type, or null when the project is not a development. */
+  developmentType: ProjectDevelopmentType | null;
+  /** The typed type when developmentType is OTHER, else null. */
+  developmentTypeOther: string | null;
   progressPct: number;
   phasesCount: number;
   openPhases: number;
@@ -147,6 +168,13 @@ export type ProjectWriteInput = {
   status?: ProjectStatus;
   priority?: Priority;
   disciplines?: Discipline[];
+  /**
+   * DEVELOPMENT type; null = not a development (the tick box unticked). Absent
+   * (undefined) on an update leaves what is saved as it is.
+   */
+  developmentType?: ProjectDevelopmentType | null;
+  /** The typed type for OTHER (80 characters at most); ignored for any other type. */
+  developmentTypeOther?: string | null;
   description?: string | null;
   siteAddress?: string | null;
   startDate?: string | null;
