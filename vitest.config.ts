@@ -186,6 +186,8 @@ export default defineConfig({
       "lib/projects/development.test.ts",
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
+      // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
+      "lib/projects/architecture-type.test.ts",
     ],
     environment: "node",
   },

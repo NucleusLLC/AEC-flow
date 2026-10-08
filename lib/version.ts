@@ -69,8 +69,11 @@
  *   STANDARD PHASES; project progress = equal-weighted average of the phases. The timesheet asks
  *   for the PHASE once a project is chosen, and the phase screen shows hours by phase and person.
  *   No SQL.
+ * 0.18.1 (8 OCT 2026): feat — ARCHITECTURE TYPE on a project (Single Family Home, Mansion,
+ *   Commercial, Retail, Apartment/Condo Building, Apartment, School, Resort, Other + typed);
+ *   needs prisma/sql/0029_project_architecture_type.sql (applied 8 OCT).
  */
-export const APP_VERSION = "0.18.0";
+export const APP_VERSION = "0.18.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

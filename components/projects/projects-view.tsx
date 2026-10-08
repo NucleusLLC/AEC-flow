@@ -9,6 +9,7 @@ import { ProgressBar } from "@/components/ui/progress";
 import {
   DISCIPLINE_LABEL,
   developmentTag,
+  architectureTag,
   type ProjectListItem,
   type ProjectStatus,
   type Priority,
@@ -152,7 +153,8 @@ export function ProjectsView({ projects }: { projects: ProjectListItem[] }) {
                         <span className="font-mono text-[11px] text-faint">{p.projectNumber}</span>
                         {p.disciplines.slice(0, 2).map((d) => (
                           <Badge key={d} tone="slate">
-                            {t(DISCIPLINE_LABEL[d])}
+                            {(d === "ARCHITECTURE" && architectureTag(p.architectureType, p.architectureTypeOther, t)) ||
+                              t(DISCIPLINE_LABEL[d])}
                           </Badge>
                         ))}
                         {p.disciplines.length > 2 ? (

@@ -13,6 +13,7 @@ import {
   PRIORITY_LABEL,
   DISCIPLINE_LABEL,
   developmentTag,
+  architectureTag,
   type PhaseStatus,
 } from "@/lib/data/projects.types";
 
@@ -89,7 +90,11 @@ export default async function ProjectFactSheet({ params }: PageProps) {
           label={t("Disciplines")}
           value={
             [
-              ...p.disciplines.map((d) => t(DISCIPLINE_LABEL[d])),
+              ...p.disciplines.map(
+                (d) =>
+                  (d === "ARCHITECTURE" && architectureTag(p.architectureType, p.architectureTypeOther, t)) ||
+                  t(DISCIPLINE_LABEL[d]),
+              ),
               developmentTag(p.developmentType, p.developmentTypeOther, t),
             ]
               .filter(Boolean)
