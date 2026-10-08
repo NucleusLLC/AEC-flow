@@ -188,6 +188,9 @@ export default defineConfig({
       "lib/projects/phases.test.ts",
       // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
       "lib/projects/architecture-type.test.ts",
+      // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with
+      // today, the overall %, chip and phase colours, and a sanity check on the seeded data. Pure.
+      "lib/progressdash/timeline.test.ts",
     ],
     environment: "node",
   },
