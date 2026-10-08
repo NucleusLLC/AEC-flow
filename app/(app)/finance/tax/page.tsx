@@ -6,7 +6,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { TaxReportView } from "@/components/finance/tax-report-view";
 import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
-import { listInvoicesForExport } from "@/lib/data/invoices";
+import { countDraftInvoicesIssued, listInvoicesForExport } from "@/lib/data/invoices";
 import { buildTaxReport, parsePeriod, periodOptions, shiftPeriod } from "@/lib/finance/tax-report";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -64,7 +64,12 @@ export default async function TaxReportPage({
   const today = new Date().toISOString().slice(0, 10);
   const { period: periodKey } = await searchParams;
   const period = parsePeriod(periodKey, today);
-  const report = buildTaxReport(await listInvoicesForExport(), { from: period.from, to: period.to });
+  const [invoices, drafts] = await Promise.all([
+    listInvoicesForExport(),
+    countDraftInvoicesIssued(period.from, period.to),
+  ]);
+  const report = buildTaxReport(invoices, { from: period.from, to: period.to });
+  report.excluded.drafts += drafts;
   const options = periodOptions(today);
   const prev = shiftPeriod(period, -1);
   const next = shiftPeriod(period, 1);

@@ -7,7 +7,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
-import { listInvoicesForExport } from "@/lib/data/invoices";
+import { countDraftInvoicesIssued, listInvoicesForExport } from "@/lib/data/invoices";
 import { buildTaxReport, lastFullMonth, periodFromRange } from "@/lib/finance/tax-report";
 import { militaryDate } from "@/lib/building-permits/register";
 
@@ -44,12 +44,15 @@ export default async function TaxReportPrintPage({
   const today = new Date().toISOString().slice(0, 10);
   const { from, to } = await searchParams;
   const period = periodFromRange(from, to) ?? lastFullMonth(today);
-  const [invoices, practice, firm] = await Promise.all([
+  const [invoices, drafts, practice, firm] = await Promise.all([
     listInvoicesForExport(),
+    countDraftInvoicesIssued(period.from, period.to),
     getPracticeSettings(),
     getFirmIdentity(),
   ]);
   const report = buildTaxReport(invoices, { from: period.from, to: period.to });
+  // The export list never loads drafts; count them so "left out" is true.
+  report.excluded.drafts += drafts;
   const backKey = period.kind === "range" ? "" : `?period=${period.key}`;
 
   return (
