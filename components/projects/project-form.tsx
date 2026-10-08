@@ -21,6 +21,14 @@ import {
   checkDevelopment,
   type ProjectDevelopmentType,
 } from "@/lib/projects/development";
+import {
+  ARCHITECTURE_ERRORS,
+  ARCHITECTURE_OTHER_MAX,
+  ARCHITECTURE_TYPES,
+  ARCHITECTURE_TYPE_OPTION,
+  checkArchitecture,
+  type ProjectArchitectureType,
+} from "@/lib/projects/architecture-type";
 import { saveProject } from "@/app/(app)/projects/actions";
 import { getSystemCurrency } from "@/lib/format";
 import { ClientSelect } from "@/components/clients/client-select";
@@ -58,6 +66,10 @@ export type ProjectFormValues = {
   developmentType: ProjectDevelopmentType | null;
   /** The typed type when developmentType is OTHER ("" otherwise). */
   developmentTypeOther: string;
+  /** ARCHITECTURE type, or null (not ticked, or ticked before types existed). */
+  architectureType: ProjectArchitectureType | null;
+  /** The typed type when architectureType is OTHER ("" otherwise). */
+  architectureTypeOther: string;
   startDate: string;
   targetEndDate: string;
   value: number;
@@ -106,14 +118,21 @@ export function ProjectForm({
   const [devOther, setDevOther] = useState(initial?.developmentTypeOther ?? "");
   const [devError, setDevError] = useState<string | null>(null);
 
+  // ARCHITECTURE (the discipline tick box) is controlled for the same reason:
+  // ticked, it opens the ARCHITECTURE TYPE panel. A project ticked before types
+  // existed opens with the box ticked and no type; saving asks for one.
+  const [archTicked, setArchTicked] = useState(!!initial?.disciplines.includes("ARCHITECTURE"));
+  const [archType, setArchType] = useState<string>(initial?.architectureType ?? "");
+  const [archOther, setArchOther] = useState(initial?.architectureTypeOther ?? "");
+  const [archError, setArchError] = useState<string | null>(null);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const arch = checkArchitecture({ ticked: archTicked, type: archType, other: archOther });
     const dev = checkDevelopment({ ticked: devTicked, type: devType, other: devOther });
-    if (!dev.ok) {
-      setDevError(dev.error);
-      return;
-    }
-    setDevError(null);
+    setArchError(arch.ok ? null : arch.error);
+    setDevError(dev.ok ? null : dev.error);
+    if (!arch.ok || !dev.ok) return;
     const fd = new FormData(e.currentTarget);
     const payload: ProjectWriteInput = {
       name: String(fd.get("name") ?? ""),
@@ -125,6 +144,8 @@ export function ProjectForm({
       disciplines: fd.getAll("disciplines").map((d) => String(d) as Discipline),
       developmentType: dev.developmentType,
       developmentTypeOther: dev.developmentTypeOther,
+      architectureType: arch.architectureType,
+      architectureTypeOther: arch.architectureTypeOther,
       startDate: (fd.get("startDate") as string) || null,
       targetEndDate: (fd.get("targetEndDate") as string) || null,
       value: Number(fd.get("value")) || 0,
@@ -286,12 +307,29 @@ export function ProjectForm({
           <div className="sm:col-span-2">
             <span className={labelClass}>{t("Disciplines")}</span>
             <div className="flex flex-wrap gap-3">
-              {DISCIPLINES.map((d) => (
-                <label key={d} className="inline-flex items-center gap-2 text-sm text-fg">
-                  <input type="checkbox" name="disciplines" value={d} defaultChecked={initial?.disciplines.includes(d)} className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
-                  {t(DISCIPLINE_LABEL[d])}
-                </label>
-              ))}
+              {DISCIPLINES.map((d) =>
+                d === "ARCHITECTURE" ? (
+                  <label key={d} className="inline-flex items-center gap-2 text-sm text-fg">
+                    <input
+                      type="checkbox"
+                      name="disciplines"
+                      value={d}
+                      checked={archTicked}
+                      onChange={(e) => {
+                        setArchTicked(e.target.checked);
+                        setArchError(null);
+                      }}
+                      className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30"
+                    />
+                    {t(DISCIPLINE_LABEL[d])}
+                  </label>
+                ) : (
+                  <label key={d} className="inline-flex items-center gap-2 text-sm text-fg">
+                    <input type="checkbox" name="disciplines" value={d} defaultChecked={initial?.disciplines.includes(d)} className="h-4 w-4 rounded border-border text-brand focus:ring-brand/30" />
+                    {t(DISCIPLINE_LABEL[d])}
+                  </label>
+                ),
+              )}
               <label className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[#4b5320] dark:text-[#c5d18a]">
                 <input
                   type="checkbox"
@@ -306,6 +344,63 @@ export function ProjectForm({
                 {t("DEVELOPMENT")}
               </label>
             </div>
+
+            {archTicked ? (
+              <div className="mt-3 rounded-lg border border-[#5c6633] bg-[#e4e8dc]/60 p-3 dark:bg-[#4b5320]/25">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={devLabelClass} htmlFor="architectureType">
+                      {t("ARCHITECTURE TYPE")} *
+                    </label>
+                    <select
+                      id="architectureType"
+                      name="architectureType"
+                      className={`${devInputClass} uppercase tracking-wide`}
+                      value={archType}
+                      aria-invalid={archError === ARCHITECTURE_ERRORS.type || undefined}
+                      onChange={(e) => {
+                        setArchType(e.target.value);
+                        setArchError(null);
+                      }}
+                    >
+                      <option value="">{t("— SELECT —")}</option>
+                      {ARCHITECTURE_TYPES.map((a) => (
+                        <option key={a} value={a}>
+                          {t(ARCHITECTURE_TYPE_OPTION[a])}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {archType === "OTHER" ? (
+                    <div>
+                      <label className={devLabelClass} htmlFor="architectureTypeOther">
+                        {t("TYPE OF ARCHITECTURE PROJECT")} *
+                      </label>
+                      <input
+                        id="architectureTypeOther"
+                        name="architectureTypeOther"
+                        className={devInputClass}
+                        maxLength={ARCHITECTURE_OTHER_MAX}
+                        placeholder={t("e.g. Beach Pavilion")}
+                        value={archOther}
+                        aria-invalid={(archError !== null && archError !== ARCHITECTURE_ERRORS.type) || undefined}
+                        onChange={(e) => {
+                          setArchOther(e.target.value);
+                          setArchError(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                {archError ? (
+                  <p role="alert" className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {t(archError)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             {devTicked ? (
               <div className="mt-3 rounded-lg border border-[#5c6633] bg-[#e4e8dc]/60 p-3 dark:bg-[#4b5320]/25">

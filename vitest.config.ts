@@ -184,6 +184,8 @@ export default defineConfig({
       "lib/projects/lifecycle.test.ts",
       // Project DEVELOPMENT: type list, tag text, tick-box/type/OTHER validation. Pure.
       "lib/projects/development.test.ts",
+      // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
+      "lib/projects/architecture-type.test.ts",
     ],
     environment: "node",
   },

@@ -64,8 +64,13 @@
  *   OTHER typed in) and shows "Development · …" on the Projects list, the overview and the
  *   printed sheet. Needs prisma/sql/0028_project_development.sql.
  * 0.16.1 (8 OCT 2026): Office Dash projects sheet 30 s; every font on the board 15% larger.
+ * 0.17.0 (8 OCT 2026): feat — Projects ARCHITECTURE TYPE: ticking the Architecture discipline asks
+ *   the ARCHITECTURE TYPE (Single Family Home, Mansion, Commercial Building, Retail Building,
+ *   Apartment / Condo Building, Apartment, School, Resort, or OTHER typed in) and the tag reads
+ *   "Architecture · …" on the Projects list, the overview and the printed sheet.
+ *   Needs prisma/sql/0029_project_architecture_type.sql.
  */
-export const APP_VERSION = "0.16.1";
+export const APP_VERSION = "0.17.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
