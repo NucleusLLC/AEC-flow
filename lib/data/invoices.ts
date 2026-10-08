@@ -310,6 +310,20 @@ export async function listInvoicesForExport(): Promise<InvoiceDTO[]> {
   return (rows as unknown as InvoiceRow[]).map(invoiceDto);
 }
 
+/**
+ * Drafts dated in a period, for the tax report's "left out" line. The export
+ * list above never loads drafts, so the report cannot count them itself.
+ */
+export async function countDraftInvoicesIssued(from: string, to: string): Promise<number> {
+  return prisma.invoice.count({
+    where: {
+      deletedAt: null,
+      status: "DRAFT",
+      issueDate: { gte: new Date(`${from}T00:00:00.000Z`), lte: new Date(`${to}T23:59:59.999Z`) },
+    },
+  });
+}
+
 /** Every number ever used, soft-deleted included, so one is never reused. */
 async function allNumbers(): Promise<string[]> {
   const rows = await prisma.invoice.findMany({ select: { number: true } });

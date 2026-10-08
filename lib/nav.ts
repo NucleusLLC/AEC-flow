@@ -32,6 +32,7 @@ import {
   Clock3,
   Wallet,
   TrendingUp,
+  Landmark,
   Stamp,
   type LucideIcon,
 } from "lucide-react";
@@ -157,6 +158,13 @@ export const PROFIT_ITEM: NavItem = {
   icon: TrendingUp,
 };
 
+/** Turnover tax (BBO, BAVP) from the invoices, for a month or a quarter. */
+export const TAX_ITEM: NavItem = {
+  label: "Tax report",
+  href: "/finance/tax",
+  icon: Landmark,
+};
+
 /** Section title used wherever the drawings bin appears. */
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
@@ -220,7 +228,7 @@ export const navSections: NavSection[] = [
   },
   {
     title: "Finance",
-    items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM],
+    items: [INVOICES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM, TAX_ITEM],
   },
   {
     title: "People",
