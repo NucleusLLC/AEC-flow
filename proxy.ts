@@ -86,6 +86,13 @@ export async function proxy(req: NextRequest) {
     return res;
   }
 
+  // The BUILD TIMELINE board, next in the office TV run after /officedash. Public by
+  // the owner's decision (8 OCT 2026), like the other TV boards: it shows AEC-flow's
+  // own build progress (no practice data) and must never land on a login page.
+  if (pathname === "/progressdash") {
+    return NextResponse.next();
+  }
+
   // Beta subdomain: it's the portal, not the app.
   if (isBetaHost(req)) {
     if (pathname === "/") {
