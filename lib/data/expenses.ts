@@ -21,6 +21,22 @@ import { prisma } from "@/lib/db";
 import { requireActor, type Actor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import { expenseChargeable } from "@/lib/finance/timesheet";
+import {
+  buildReceiptKey,
+  canChangeReceipt,
+  canViewReceipt,
+  isReceiptKeyForExpense,
+  receiptDisplayName,
+  validateReceipt,
+} from "@/lib/finance/receipt";
+import {
+  createSignedDownload,
+  createSignedUpload,
+  deleteObject,
+  isStorageConfigured,
+  statObject,
+} from "@/lib/server/storage";
+import { randomUUID } from "node:crypto";
 import type {
   ExpenseCategory,
   ExpenseDTO,
@@ -101,6 +117,10 @@ type Row = {
   invoicedAt: Date | null;
   invoiceId: string | null;
   invoiceNumber: string | null;
+  receiptFilename: string | null;
+  receiptMimeType: string | null;
+  receiptSizeBytes: number | null;
+  receiptUploadedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -129,6 +149,12 @@ const SELECT = {
   invoicedAt: true,
   invoiceId: true,
   invoiceNumber: true,
+  // The receipt's description only — never its storage key, which stays in
+  // this file (receiptKeyFor) and is never handed to a screen.
+  receiptFilename: true,
+  receiptMimeType: true,
+  receiptSizeBytes: true,
+  receiptUploadedAt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -161,6 +187,15 @@ function toDTO(r: Row): ExpenseDTO {
     invoiceId: r.invoiceId,
     invoiceNumber: r.invoiceNumber,
     chargeable: r.billable ? expenseChargeable(amount, markupPercent, r.currency) : 0,
+    receipt:
+      r.receiptFilename && r.receiptMimeType
+        ? {
+            filename: r.receiptFilename,
+            mimeType: r.receiptMimeType,
+            sizeBytes: r.receiptSizeBytes ?? 0,
+            uploadedAt: r.receiptUploadedAt?.toISOString() ?? null,
+          }
+        : null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   };
@@ -395,4 +430,180 @@ export async function markReimbursed(ids: string[], paid: boolean): Promise<numb
     data: { reimbursedAt: paid ? new Date() : null },
   });
   return result.count;
+}
+
+// ── Receipts ───────────────────────────────────────────────────────────────
+//
+// The drawing-intake storage path exactly (lib/server/storage.ts): the server
+// names the object and signs an upload URL, the browser PUTs the bytes straight
+// to the private bucket, and only then does the server record them on the row —
+// after checking the object really exists under a key it would have issued, and
+// taking its size and type from storage rather than from the browser.
+//
+// Who may: the rules in lib/finance/receipt.ts, the same as editing the expense
+// (an invoiced expense is frozen, receipt included). Viewing is the person who
+// recorded it or an administrator. Every check is here, not on the screen,
+// because a server action and a route are public endpoints.
+
+export class ReceiptFileError extends Error {
+  constructor(why: string) {
+    super(why);
+    this.name = "ReceiptFileError";
+  }
+}
+
+export type ReceiptUploadTicket = {
+  uploadUrl: string;
+  storageKey: string;
+  headers: Record<string, string>;
+};
+
+/** A receipt the browser uploaded and hands back, to be recorded on the expense. */
+export type UploadedReceipt = { storageKey: string; filename: string };
+
+function requireReceiptStorage(): void {
+  if (!isStorageConfigured()) {
+    throw new ReceiptFileError(
+      "File storage is not connected on this deployment, so receipts cannot be attached yet.",
+    );
+  }
+}
+
+/** The row, if the actor may change its receipt; otherwise the reason, thrown. */
+async function assertReceiptWritable(id: string, actor: Actor): Promise<Row> {
+  const row = await assertWritable(id, actor);
+  // assertWritable already refuses each case; this restates the rule from the
+  // shared module so the two can never disagree silently.
+  if (!canChangeReceipt(row, { id: actor.id, isAdmin: isApprover(actor) })) {
+    throw new ExpenseLockedError("This expense's receipt cannot be changed.");
+  }
+  return row;
+}
+
+/** The current storage key of an expense's receipt. Tenant-scoped by findFirst. */
+async function receiptKeyFor(id: string): Promise<string | null> {
+  const row = await prisma.expense.findFirst({
+    where: { id, deletedAt: null },
+    select: { receiptStorageKey: true },
+  });
+  return row?.receiptStorageKey ?? null;
+}
+
+/** Step one of attaching a receipt: a signed URL the browser uploads to. */
+export async function createReceiptUploadTicket(
+  expenseId: string,
+  file: { filename: string; mimeType: string; sizeBytes: number },
+): Promise<ReceiptUploadTicket> {
+  const actor = await requireActor();
+  requireReceiptStorage();
+  const row = await assertReceiptWritable(expenseId, actor);
+  const verdict = validateReceipt({ name: file.filename, size: file.sizeBytes, type: file.mimeType });
+  if (!verdict.ok) throw new ReceiptFileError(verdict.message);
+  const signed = await createSignedUpload(buildReceiptKey(row.id, file.filename, randomUUID()));
+  return {
+    uploadUrl: signed.uploadUrl,
+    storageKey: signed.storageKey,
+    headers: { "content-type": verdict.mimeType },
+  };
+}
+
+/**
+ * Step three: record an uploaded receipt on the expense. Replaces any receipt
+ * already there — the old object is deleted once the row points at the new one.
+ */
+export async function attachReceipt(expenseId: string, upload: UploadedReceipt): Promise<ExpenseDTO> {
+  const actor = await requireActor();
+  requireReceiptStorage();
+  const row = await assertReceiptWritable(expenseId, actor);
+
+  const storageKey = String(upload?.storageKey ?? "").trim();
+  if (!isReceiptKeyForExpense(storageKey, row.id)) {
+    throw new ReceiptFileError("That upload does not belong to this expense.");
+  }
+  const object = await statObject(storageKey);
+  if (!object) throw new ReceiptFileError("The receipt did not finish uploading. Try again.");
+
+  // Trust storage, not the caller, for what actually landed.
+  const filename = String(upload.filename ?? "").trim();
+  const verdict = validateReceipt({ name: filename || "receipt", size: object.sizeBytes, type: object.mimeType });
+  if (!verdict.ok) {
+    await deleteObject(storageKey).catch(() => {});
+    throw new ReceiptFileError(verdict.message);
+  }
+
+  const previous = await receiptKeyFor(row.id);
+  let updated: Row;
+  try {
+    updated = (await prisma.expense.update({
+      where: { id: row.id },
+      data: {
+        receiptStorageKey: storageKey,
+        receiptFilename: receiptDisplayName(filename, verdict.mimeType),
+        receiptMimeType: verdict.mimeType,
+        receiptSizeBytes: object.sizeBytes,
+        receiptUploadedAt: new Date(),
+      },
+      select: SELECT,
+    })) as Row;
+  } catch (e) {
+    await deleteObject(storageKey).catch(() => {});
+    throw e;
+  }
+  if (previous && previous !== storageKey) await deleteObject(previous).catch(() => {});
+  return toDTO(updated);
+}
+
+/** Take the receipt off the expense and delete the file. */
+export async function removeReceipt(expenseId: string): Promise<void> {
+  const actor = await requireActor();
+  const row = await assertReceiptWritable(expenseId, actor);
+  const previous = await receiptKeyFor(row.id);
+  await prisma.expense.update({
+    where: { id: row.id },
+    data: {
+      receiptStorageKey: null,
+      receiptFilename: null,
+      receiptMimeType: null,
+      receiptSizeBytes: null,
+      receiptUploadedAt: null,
+    },
+  });
+  if (previous && isStorageConfigured()) await deleteObject(previous).catch(() => {});
+}
+
+/**
+ * Remove an upload that never made it onto the row — the browser uploaded, then
+ * recording it failed. Ignores a key that is not this expense's, and the key the
+ * row already records.
+ */
+export async function discardReceiptUpload(expenseId: string, storageKey: string): Promise<void> {
+  if (!isStorageConfigured()) return;
+  const actor = await requireActor();
+  const row = await assertReceiptWritable(expenseId, actor);
+  const key = String(storageKey ?? "").trim();
+  if (!isReceiptKeyForExpense(key, row.id)) return;
+  if ((await receiptKeyFor(row.id)) === key) return;
+  await deleteObject(key).catch(() => {});
+}
+
+/**
+ * A five-minute signed URL for an expense's receipt, or null when there is none
+ * (or this person may not see it — the same answer, so a guessed id learns
+ * nothing). `download` asks storage to send it as an attachment.
+ */
+export async function getReceiptUrl(
+  expenseId: string,
+  options: { download?: boolean } = {},
+): Promise<string | null> {
+  const actor = await requireActor();
+  const row = await prisma.expense.findFirst({
+    where: { id: expenseId, deletedAt: null },
+    select: { userId: true, receiptStorageKey: true, receiptFilename: true },
+  });
+  if (!row?.receiptStorageKey || !isStorageConfigured()) return null;
+  if (!canViewReceipt(row, { id: actor.id, isAdmin: isApprover(actor) })) return null;
+  const url = await createSignedDownload(row.receiptStorageKey);
+  if (!options.download) return url;
+  const name = row.receiptFilename || "receipt";
+  return `${url}${url.includes("?") ? "&" : "?"}download=${encodeURIComponent(name)}`;
 }

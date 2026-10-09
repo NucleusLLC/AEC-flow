@@ -180,6 +180,12 @@ export default defineConfig({
       // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
       // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
       "lib/finance/tax-report.test.ts",
+      // Expense receipts: allowed types and size, server-chosen storage keys, who may
+      // see and change one (frozen once invoiced). Pure.
+      "lib/finance/receipt.test.ts",
+      // Overdue chase: overdue = outstanding and past due (no drafts, no voids), one
+      // group per client per currency, exact sums, the reminder text. Pure.
+      "lib/finance/overdue.test.ts",
       "lib/finance/project-finance.test.ts",
       "lib/estimates/cover-fit.test.ts",
       // Office Dash board: project order + lamps, pipeline folding, permit deadlines, orders. Pure.

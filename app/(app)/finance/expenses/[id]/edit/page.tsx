@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { ExpenseForm } from "@/components/finance/expense-form";
+import { ExpenseReceipt } from "@/components/finance/expense-receipt";
+import { canChangeReceipt, canViewReceipt } from "@/lib/finance/receipt";
 import { getExpense } from "@/lib/data/expenses";
 import { getProjects } from "@/lib/data/projects";
 import { listTimekeepers } from "@/lib/data/time-entries";
@@ -40,6 +42,12 @@ export default async function EditExpensePage({
     Boolean(expense.invoicedAt) ||
     (expense.userId !== actor.id && !canApprove) ||
     (expense.status === "APPROVED" && !canApprove);
+  // The receipt is open to whoever recorded the expense and to administrators;
+  // it can be changed exactly when the expense can. lib/data/expenses.ts checks
+  // both again on every request.
+  const viewer = { id: actor.id, isAdmin: canApprove };
+  const receiptViewable = canViewReceipt(expense, viewer);
+  const receiptChangeable = canChangeReceipt(expense, viewer);
 
   return (
     <div className="w-full space-y-4">
@@ -72,6 +80,15 @@ export default async function EditExpensePage({
           today={ymd(new Date())}
         />
       )}
+
+      {receiptViewable || receiptChangeable ? (
+        <ExpenseReceipt
+          expenseId={expense.id}
+          receipt={expense.receipt}
+          canView={receiptViewable}
+          canChange={receiptChangeable}
+        />
+      ) : null}
     </div>
   );
 }

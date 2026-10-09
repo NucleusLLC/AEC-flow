@@ -16,7 +16,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Inbox, Search, Send, Trash2, Undo2 } from "lucide-react";
+import { Check, Inbox, Paperclip, Search, Send, Trash2, Undo2 } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -209,6 +209,8 @@ export function ExpenseRegister({
               {rows.map((x) => {
                 const mine = x.userId === currentUserId;
                 const editable = !x.invoicedAt && (x.status !== "APPROVED" || canApprove) && (mine || canApprove);
+                // Whoever recorded it, or an administrator — the route checks again.
+                const receiptViewable = mine || canApprove;
                 return (
                   <tr
                     key={x.id}
@@ -228,6 +230,12 @@ export function ExpenseRegister({
                       ) : (
                         <span className="font-medium text-fg">{x.description}</span>
                       )}
+                      <ReceiptClip
+                        expenseId={x.id}
+                        filename={x.receipt?.filename ?? null}
+                        viewable={receiptViewable}
+                        attachable={editable}
+                      />
                       <div className="text-[11px] text-faint">
                         {t(EXPENSE_CATEGORY_LABEL[x.category])}
                         {x.vendor ? ` · ${x.vendor}` : ""}
@@ -310,6 +318,55 @@ export function ExpenseRegister({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The paperclip beside an expense. Attached and yours to see: opens it. Attached
+ * but not yours: says so, without a link. None yet and still editable: a faint
+ * clip to the expense, where it can be attached.
+ */
+function ReceiptClip({
+  expenseId,
+  filename,
+  viewable,
+  attachable,
+}: {
+  expenseId: string;
+  filename: string | null;
+  viewable: boolean;
+  attachable: boolean;
+}) {
+  const t = useT();
+  if (filename) {
+    const label = fmt(t("Receipt: {name}"), { name: filename });
+    return viewable ? (
+      <a
+        href={`/finance/expenses/${expenseId}/receipt`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={label}
+        title={label}
+        className="ml-1.5 inline-flex align-middle text-brand hover:text-brand/80"
+      >
+        <Paperclip className="h-3.5 w-3.5" />
+      </a>
+    ) : (
+      <span aria-label={label} title={label} className="ml-1.5 inline-flex align-middle text-faint">
+        <Paperclip className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
+  if (!attachable) return null;
+  return (
+    <Link
+      href={`/finance/expenses/${expenseId}/edit`}
+      aria-label={t("Attach a receipt")}
+      title={t("Attach a receipt")}
+      className="ml-1.5 inline-flex align-middle text-faint/50 hover:text-brand"
+    >
+      <Paperclip className="h-3.5 w-3.5" />
+    </Link>
   );
 }
 

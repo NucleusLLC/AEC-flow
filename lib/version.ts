@@ -86,8 +86,14 @@
  *   per currency; approved work not yet billed, with RAISE AN INVOICE; the job's margin (Admin /
  *   Director only); hours by phase and by person; the project's invoices and expenses. Read-only,
  *   no SQL.
+ * 0.24.0 (9 OCT 2026): feat — Finance RECEIPTS and OVERDUE CHASE. A photo or PDF receipt on an
+ *   expense (JPEG/PNG/WebP/HEIC/PDF, 10 MB), in the private bucket under receipts/, opened through a
+ *   five-minute signed URL for the person who recorded it or an administrator; frozen once invoiced;
+ *   a paperclip in the expense register. /finance/invoices/overdue lists invoices with money
+ *   outstanding past due, by client and currency, with a "Copy reminder" to paste into an email or
+ *   WhatsApp (nothing is sent). Needs prisma/sql/0031_expense_receipts.sql applied FIRST.
  */
-export const APP_VERSION = "0.23.0";
+export const APP_VERSION = "0.24.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
