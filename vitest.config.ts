@@ -186,6 +186,7 @@ export default defineConfig({
       // Overdue chase: overdue = outstanding and past due (no drafts, no voids), one
       // group per client per currency, exact sums, the reminder text. Pure.
       "lib/finance/overdue.test.ts",
+      "lib/finance/project-finance.test.ts",
       "lib/estimates/cover-fit.test.ts",
       // Office Dash board: project order + lamps, pipeline folding, permit deadlines, orders. Pure.
       "lib/officedash/board.test.ts",

@@ -177,7 +177,8 @@ those are receivables' numbers, and mixing the two double-counts the same job.
 - Billing time and expenses ONTO an invoice — the columns exist
   (`invoicedAt`, `invoiceId`, `invoiceNumber`, `invoiceLineId`) and the guard
   is written, but nothing sets them yet.
-- The profit / WIP screens, and a per-project finance tab.
+- The profit / WIP screens. (The per-project finance tab shipped in 0.23.0:
+  app/(app)/projects/[id]/finance, lib/finance/project-finance.ts.)
 - Credit notes. A negative line amount is refused rather than quietly
   accepted as one.
 - Any billing provider. (The accounting export — invoices, lines, payments,
