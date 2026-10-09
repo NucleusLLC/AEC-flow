@@ -3456,6 +3456,16 @@ model Expense {
   invoiceNumber String?
   invoiceLineId String?
 
+  /// The receipt — a photo or a PDF in the private storage bucket, under
+  /// receipts/<expenseId>/<uploadId>/<filename>. All five are null when none is
+  /// attached. Size and type are what storage reported, not what the browser
+  /// claimed. prisma/sql/0031_expense_receipts.sql.
+  receiptStorageKey String?
+  receiptFilename   String?
+  receiptMimeType   String?
+  receiptSizeBytes  Int?
+  receiptUploadedAt DateTime?
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

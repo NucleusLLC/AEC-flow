@@ -130,6 +130,36 @@ billable hours whatever their approval state, because a director looking at a
 week wants to see work that has not been signed off yet, not a hole where it
 should be.
 
+### Receipts (0.24.0)
+
+`prisma/sql/0031_expense_receipts.sql` · `lib/finance/receipt.ts` ·
+`lib/data/expenses.ts` · `app/(app)/finance/expenses/[id]/receipt/route.ts`
+
+One receipt per expense — a photo (JPEG, PNG, WebP, HEIC) or a PDF, up to
+10 MB — stored in the private bucket under `receipts/<expenseId>/<uploadId>/`
+by the drawing-intake path: the server names the object and signs an upload
+URL, the browser PUTs the bytes straight to storage, and the server records the
+row only after reading the object's real size and type back from storage. The
+row carries the filename, type, size and time; the storage key never leaves the
+data layer.
+
+Changing a receipt follows the frozen table above exactly — an invoiced expense
+keeps the receipt it was billed with. Seeing one is the person who recorded the
+expense or an administrator, checked in the data layer on every request; the
+file is opened through a five-minute signed URL that is never stored.
+
+## 4a. Overdue chase — F2, read for action (0.24.0)
+
+`lib/finance/overdue.ts` · `app/(app)/finance/invoices/overdue/page.tsx`
+
+Receivables' own rule, read for action: an issued or part-paid invoice with
+money outstanding and a due date before today. Grouped by client **and
+currency** — a client billed in AWG and in USD owes two amounts — with a
+"Copy reminder" that produces a polite text naming the invoice, the amount
+still outstanding (the balance, not the original total) and the due date.
+Nothing is sent; the text is pasted into an email or a WhatsApp message by a
+person.
+
 ## 5. F4 — Profit and WIP (arithmetic only, so far)
 
 `projectProfitability` compares what a job earned at charge-out against what it
@@ -148,7 +178,6 @@ those are receivables' numbers, and mixing the two double-counts the same job.
   (`invoicedAt`, `invoiceId`, `invoiceNumber`, `invoiceLineId`) and the guard
   is written, but nothing sets them yet.
 - The profit / WIP screens, and a per-project finance tab.
-- Receipt images on an expense.
 - Credit notes. A negative line amount is refused rather than quietly
   accepted as one.
 - Any billing provider. (The accounting export — invoices, lines, payments,

@@ -81,8 +81,14 @@
  *   month), on two bases — INVOICED (by issue date; drafts and voids left out) and RECEIVED (payments
  *   in the period, tax pro rata). Invoices without tax are listed under NOTES, never imputed at 7%.
  *   Printable on A4 (/print/finance/tax) and a "Tax report" CSV in the accounting export. No SQL.
+ * 0.24.0 (9 OCT 2026): feat — Finance RECEIPTS and OVERDUE CHASE. A photo or PDF receipt on an
+ *   expense (JPEG/PNG/WebP/HEIC/PDF, 10 MB), in the private bucket under receipts/, opened through a
+ *   five-minute signed URL for the person who recorded it or an administrator; frozen once invoiced;
+ *   a paperclip in the expense register. /finance/invoices/overdue lists invoices with money
+ *   outstanding past due, by client and currency, with a "Copy reminder" to paste into an email or
+ *   WhatsApp (nothing is sent). Needs prisma/sql/0031_expense_receipts.sql applied FIRST.
  */
-export const APP_VERSION = "0.22.0";
+export const APP_VERSION = "0.24.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
