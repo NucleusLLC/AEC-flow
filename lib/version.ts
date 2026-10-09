@@ -81,8 +81,13 @@
  *   month), on two bases — INVOICED (by issue date; drafts and voids left out) and RECEIVED (payments
  *   in the period, tax pro rata). Invoices without tax are listed under NOTES, never imputed at 7%.
  *   Printable on A4 (/print/finance/tax) and a "Tax report" CSV in the accounting export. No SQL.
+ * 0.23.0 (9 OCT 2026): feat — a FINANCE tab on every project (/projects/[id]/finance): contract value
+ *   against invoiced (issued, not void), received, outstanding and overdue, with % of contract billed,
+ *   per currency; approved work not yet billed, with RAISE AN INVOICE; the job's margin (Admin /
+ *   Director only); hours by phase and by person; the project's invoices and expenses. Read-only,
+ *   no SQL.
  */
-export const APP_VERSION = "0.22.0";
+export const APP_VERSION = "0.23.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
