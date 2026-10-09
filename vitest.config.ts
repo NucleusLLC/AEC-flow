@@ -180,6 +180,7 @@ export default defineConfig({
       // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
       // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
       "lib/finance/tax-report.test.ts",
+      "lib/finance/project-finance.test.ts",
       "lib/estimates/cover-fit.test.ts",
       // Office Dash board: project order + lamps, pipeline folding, permit deadlines, orders. Pure.
       "lib/officedash/board.test.ts",
