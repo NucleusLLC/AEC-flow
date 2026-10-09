@@ -193,7 +193,8 @@ billed time or expenses. Refunds of overpayments are not credit notes.
 - Billing time and expenses ONTO an invoice — the columns exist
   (`invoicedAt`, `invoiceId`, `invoiceNumber`, `invoiceLineId`) and the guard
   is written, but nothing sets them yet.
-- The profit / WIP screens, and a per-project finance tab.
+- The profit / WIP screens. (The per-project finance tab shipped in 0.23.0:
+  app/(app)/projects/[id]/finance, lib/finance/project-finance.ts.)
 - Receipt images on an expense.
 - Any billing provider. (The accounting export — invoices, lines, payments,
   approved time and expenses as CSV for a period — shipped in 0.11.0:

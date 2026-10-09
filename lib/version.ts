@@ -69,14 +69,31 @@
  *   STANDARD PHASES; project progress = equal-weighted average of the phases. The timesheet asks
  *   for the PHASE once a project is chosen, and the phase screen shows hours by phase and person.
  *   No SQL.
- * 0.19.0 (8 OCT 2026): feat — Finance RECEIVABLES and CREDIT NOTES: who owes what by client, aged
+ * 0.18.1 (8 OCT 2026): feat — ARCHITECTURE TYPE on a project (Single Family Home, Mansion,
+ *   Commercial, Retail, Apartment/Condo Building, Apartment, School, Resort, Other + typed);
+ *   needs prisma/sql/0029_project_architecture_type.sql (applied 8 OCT).
+ * 0.21.0 (8 OCT 2026): feat — /progressdash, the AEC-FLOW · BUILD TIMELINE office-TV board
+ *   (public, like /officedash): build phases with a Gantt of the days worked since 14 SEP, the
+ *   releases, WORKING ON NOW and MISSING, the stats strip and news. The TV run now goes
+ *   /officedash -> /progressdash (30 s) -> Nucleus. Content is lib/progressdash/data.ts. No SQL.
+ * 0.22.0 (8 OCT 2026): feat — Finance TAX REPORT (/finance/tax, Admin / Director only): BBO, BAVP and
+ *   any other tax the invoices carry, per currency, for a month or a quarter (default the last full
+ *   month), on two bases — INVOICED (by issue date; drafts and voids left out) and RECEIVED (payments
+ *   in the period, tax pro rata). Invoices without tax are listed under NOTES, never imputed at 7%.
+ *   Printable on A4 (/print/finance/tax) and a "Tax report" CSV in the accounting export. No SQL.
+ * 0.23.0 (9 OCT 2026): feat — a FINANCE tab on every project (/projects/[id]/finance): contract value
+ *   against invoiced (issued, not void), received, outstanding and overdue, with % of contract billed,
+ *   per currency; approved work not yet billed, with RAISE AN INVOICE; the job's margin (Admin /
+ *   Director only); hours by phase and by person; the project's invoices and expenses. Read-only,
+ *   no SQL.
+ * 0.25.0 (9 OCT 2026): feat — Finance RECEIVABLES and CREDIT NOTES: who owes what by client, aged
  *   Current / 1–30 / 31–60 / 61–90 / 90+ per currency; each client's Statement of Account (running
  *   balance for a period) on screen and printed on A4. CREDIT NOTES (CN-YYYY-NNN) against an issued
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
- *   Needs prisma/sql/0030_credit_notes.sql.
+ *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
  */
-export const APP_VERSION = "0.19.0";
+export const APP_VERSION = "0.25.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

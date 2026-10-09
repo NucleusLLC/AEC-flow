@@ -21,8 +21,9 @@ export const metadata: Metadata = { title: "SITREP · AEC-flow" };
  * Open to anyone (owner's decision): a signed-in member sees their own practice,
  * everyone else sees the founder practice's board. No login page, ever.
  *
- * The TV's run: projects for 30 s, building permits for 10 s, then the Nucleus
- * development board (30 s), then the Sigma board, which flips back here.
+ * The TV's run: projects for 30 s, building permits for 10 s, then AEC-flow's own
+ * BUILD TIMELINE board (/progressdash, 30 s), then Nucleus, LOC8 and the Sigma board,
+ * which flips back here.
  */
 const DEFAULT_DWELL = 30;
 const DEFAULT_PERMIT_DWELL = 10;

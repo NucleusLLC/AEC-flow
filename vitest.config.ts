@@ -180,6 +180,10 @@ export default defineConfig({
       // Accounting export: date ranges, drafts left out, money format, and the
       // spreadsheet-formula guard on user-typed cells. Pure.
       "lib/finance/export.test.ts",
+      // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
+      // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
+      "lib/finance/tax-report.test.ts",
+      "lib/finance/project-finance.test.ts",
       "lib/estimates/cover-fit.test.ts",
       // Office Dash board: project order + lamps, pipeline folding, permit deadlines, orders. Pure.
       "lib/officedash/board.test.ts",
@@ -190,6 +194,11 @@ export default defineConfig({
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
       "lib/finance/receivables.test.ts",
+      // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
+      "lib/projects/architecture-type.test.ts",
+      // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with
+      // today, the overall %, chip and phase colours, and a sanity check on the seeded data. Pure.
+      "lib/progressdash/timeline.test.ts",
     ],
     environment: "node",
   },

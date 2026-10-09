@@ -13,6 +13,7 @@ const FILES: { kind: ExportKind; label: string; desc: string }[] = [
   { kind: "credit-notes", label: "Credit notes", desc: "Credit notes dated in the period, with the invoice each one credits and why." },
   { kind: "time", label: "Approved time", desc: "Approved hours with the charge and cost rates as they were, and what was invoiced." },
   { kind: "expenses", label: "Approved expenses", desc: "Approved expenses with markup, reimbursement and what was invoiced." },
+  { kind: "tax", label: "Tax report", desc: "BBO, BAVP and other tax as the invoices carry it: each invoice issued and each payment received in the period, with its tax." },
 ];
 
 /**

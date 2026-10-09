@@ -8,6 +8,7 @@
  */
 
 import type { ProjectDevelopmentType } from "@/lib/projects/development";
+import type { ProjectArchitectureType } from "@/lib/projects/architecture-type";
 
 // DEVELOPMENT (a tick box beside the disciplines) — rules and labels live in
 // lib/projects/development.ts; re-exported here so call sites get them with the
@@ -19,6 +20,16 @@ export {
   developmentTag,
   type ProjectDevelopmentType,
 } from "@/lib/projects/development";
+
+// ARCHITECTURE TYPE (asked when the ARCHITECTURE discipline is ticked) — rules
+// and labels live in lib/projects/architecture-type.ts.
+export {
+  ARCHITECTURE_TYPES,
+  ARCHITECTURE_TYPE_LABEL,
+  ARCHITECTURE_TYPE_OPTION,
+  architectureTag,
+  type ProjectArchitectureType,
+} from "@/lib/projects/architecture-type";
 
 export type ProjectStatus = "ACTIVE" | "ON_HOLD" | "COMPLETED" | "CANCELLED";
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
@@ -76,6 +87,10 @@ export type ProjectRecord = {
   developmentType: ProjectDevelopmentType | null;
   /** The typed type when developmentType is OTHER, else null. */
   developmentTypeOther: string | null;
+  /** ARCHITECTURE type, or null (not ticked, or ticked before types existed). */
+  architectureType: ProjectArchitectureType | null;
+  /** The typed type when architectureType is OTHER, else null. */
+  architectureTypeOther: string | null;
   startDate: string | null;
   targetEndDate: string | null;
   completedAt: string | null;
@@ -103,6 +118,10 @@ export type ProjectListItem = {
   developmentType: ProjectDevelopmentType | null;
   /** The typed type when developmentType is OTHER, else null. */
   developmentTypeOther: string | null;
+  /** ARCHITECTURE type, or null (not ticked, or ticked before types existed). */
+  architectureType: ProjectArchitectureType | null;
+  /** The typed type when architectureType is OTHER, else null. */
+  architectureTypeOther: string | null;
   progressPct: number;
   phasesCount: number;
   openPhases: number;
@@ -175,6 +194,14 @@ export type ProjectWriteInput = {
   developmentType?: ProjectDevelopmentType | null;
   /** The typed type for OTHER (80 characters at most); ignored for any other type. */
   developmentTypeOther?: string | null;
+  /**
+   * ARCHITECTURE type — required while `disciplines` holds ARCHITECTURE, cleared
+   * when it does not. Absent (undefined) on an update with ARCHITECTURE still
+   * ticked leaves what is saved as it is.
+   */
+  architectureType?: ProjectArchitectureType | null;
+  /** The typed type for OTHER (80 characters at most), saved as typed; ignored otherwise. */
+  architectureTypeOther?: string | null;
   description?: string | null;
   siteAddress?: string | null;
   startDate?: string | null;

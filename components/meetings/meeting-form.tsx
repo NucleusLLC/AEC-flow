@@ -325,8 +325,31 @@ export function MeetingForm({
               ) : null}
               {actionItems.fields.map((field, i) => (
                 <div key={field.id} className="grid grid-cols-12 items-center gap-2">
+                  {/* Military: solid red triangles move the row, same as the Estimate section arrows. */}
+                  <span className="col-span-12 flex items-center gap-1 sm:col-span-1 sm:flex-col sm:gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => actionItems.move(i, i - 1)}
+                      disabled={i === 0}
+                      aria-label={t("Move action item up")}
+                      title={t("Move action item up")}
+                      className="flex h-4 w-6 items-center justify-center text-red-600 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-25"
+                    >
+                      <svg viewBox="0 0 10 8" className="h-2.5 w-3.5" aria-hidden="true"><polygon points="5,0 10,8 0,8" fill="currentColor" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actionItems.move(i, i + 1)}
+                      disabled={i === actionItems.fields.length - 1}
+                      aria-label={t("Move action item down")}
+                      title={t("Move action item down")}
+                      className="flex h-4 w-6 items-center justify-center text-red-600 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-25"
+                    >
+                      <svg viewBox="0 0 10 8" className="h-2.5 w-3.5" aria-hidden="true"><polygon points="0,0 10,0 5,8" fill="currentColor" /></svg>
+                    </button>
+                  </span>
                   <input
-                    className={`${inputCls} col-span-12 sm:col-span-5`}
+                    className={`${inputCls} col-span-12 sm:col-span-4`}
                     placeholder={t("Description")}
                     {...register(`actionItems.${i}.description` as const, { required: true })}
                   />

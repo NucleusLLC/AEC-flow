@@ -474,6 +474,10 @@ model Project {
   developmentType      ProjectDevelopmentType?
   /// The typed development type when developmentType is OTHER (80 characters at most).
   developmentTypeOther String?
+  /// ARCHITECTURE TYPE (asked when the ARCHITECTURE discipline is ticked): null = no type chosen.
+  architectureType      ProjectArchitectureType?
+  /// The typed architecture project type when architectureType is OTHER (80 characters at most).
+  architectureTypeOther String?
   contractValue Decimal?
   currency      String        @default("AWG")
   notes         String?
@@ -497,6 +501,19 @@ enum ProjectDevelopmentType {
   TOWN_HOMES
   RESORT
   PARCELING
+  OTHER
+}
+
+/// What kind of architecture project a project is (asked when the ARCHITECTURE discipline is ticked). See prisma/sql/0029_project_architecture_type.sql.
+enum ProjectArchitectureType {
+  SINGLE_FAMILY_HOME
+  MANSION
+  COMMERCIAL_BUILDING
+  RETAIL_BUILDING
+  APARTMENT_CONDO_BUILDING
+  APARTMENT
+  SCHOOL
+  RESORT
   OTHER
 }
 

@@ -2,7 +2,7 @@
  * Accounting export.
  *
  * GET /api/export/finance/<kind>?from=YYYY-MM-DD&to=YYYY-MM-DD  →  CSV attachment
- *   kind: invoices | invoice-lines | payments | credit-notes | time | expenses
+ *   kind: invoices | invoice-lines | payments | credit-notes | time | expenses | tax
  *
  * Money, rates and other people's hours are not for every member: only the
  * people who approve time and expenses (Admin, Director, the founder — the
@@ -44,7 +44,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
   if (!parsed.ok) return json(400, parsed.error);
   const { range } = parsed;
 
-  const needsInvoices = kind === "invoices" || kind === "invoice-lines" || kind === "payments";
+  const needsInvoices =
+    kind === "invoices" || kind === "invoice-lines" || kind === "payments" || kind === "tax";
   const [invoices, creditNotes, time, expenses] = await Promise.all([
     needsInvoices ? listInvoicesForExport() : Promise.resolve([]),
     kind === "credit-notes" ? listCreditNotesForExport() : Promise.resolve([]),

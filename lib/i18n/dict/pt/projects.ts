@@ -1,6 +1,8 @@
 import type { Dict } from "../../types";
 
 export const projects: Dict = {
+  "Move action item up": "Mover ação para cima",
+  "Move action item down": "Mover ação para baixo",
   "ARCHIVE": "ARQUIVAR",
   "ARCHIVED": "ARQUIVADO",
   "RESTORE": "RESTAURAR",
@@ -648,4 +650,24 @@ export const projects: Dict = {
   "COST": "CUSTO",
   "CHARGE VALUE": "VALOR FATURÁVEL",
   "No phase": "Sem fase",
+  "ARCHITECTURE TYPE": "TIPO DE ARQUITETURA",
+  "TYPE OF ARCHITECTURE PROJECT": "DESCREVA O PROJETO DE ARQUITETURA",
+  "SINGLE FAMILY HOME": "CASA UNIFAMILIAR",
+  "MANSION": "MANSÃO",
+  "COMMERCIAL BUILDING": "EDIFÍCIO COMERCIAL",
+  "RETAIL BUILDING": "EDIFÍCIO DE VAREJO",
+  "APARTMENT / CONDO BUILDING": "EDIFÍCIO DE APARTAMENTOS / CONDOMÍNIO",
+  "APARTMENT": "APARTAMENTO",
+  "SCHOOL": "ESCOLA",
+  "Single Family Home": "Casa unifamiliar",
+  "Mansion": "Mansão",
+  "Commercial Building": "Edifício comercial",
+  "Retail Building": "Edifício de varejo",
+  "Apartment / Condo Building": "Edifício de apartamentos / condomínio",
+  "Apartment": "Apartamento",
+  "School": "Escola",
+  "e.g. Beach Pavilion": "ex.: Beach Pavilion",
+  "Choose the type of architecture project.": "Escolha o tipo de projeto de arquitetura.",
+  "Type the kind of architecture project.": "Digite o tipo de projeto de arquitetura.",
+  "The type of architecture project is 80 characters at most.": "O tipo de projeto de arquitetura tem no máximo 80 caracteres.",
 };

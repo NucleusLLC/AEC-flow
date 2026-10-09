@@ -27,6 +27,7 @@
  *    their status, for the same reason as voided invoices.
  */
 import type { CreditNoteDTO, ExpenseDTO, InvoiceDTO, TimeEntryDTO } from "./types";
+import { buildTaxReport } from "./tax-report";
 
 export const EXPORT_KINDS = [
   "invoices",
@@ -35,6 +36,7 @@ export const EXPORT_KINDS = [
   "credit-notes",
   "time",
   "expenses",
+  "tax",
 ] as const;
 export type ExportKind = (typeof EXPORT_KINDS)[number];
 
@@ -286,6 +288,34 @@ export function expensesTable(expenses: ExpenseDTO[], range: DateRange): Table {
   };
 }
 
+/**
+ * The turnover-tax ledger behind /finance/tax: one row per invoice issued in
+ * range (basis "Invoiced") and one per payment received in range (basis
+ * "Received", its tax pro rata). Built by lib/finance/tax-report.ts, so the CSV
+ * and the screen cannot disagree. The two bases are alternatives — an
+ * accountant sums one or the other, never both.
+ */
+export function taxTable(invoices: InvoiceDTO[], range: DateRange): Table {
+  const report = buildTaxReport(invoices, range);
+  const rows: Cell[][] = [
+    ...report.invoices.map((r) => [
+      "Invoiced", r.issueDate, r.number, r.clientName, r.currency, r.taxName ?? "",
+      r.taxPercent, r.taxPercent > 0 ? r.taxMode : "", money(r.net), money(r.tax), money(r.gross),
+    ]),
+    ...report.payments.map((r) => [
+      "Received", r.paidAt, r.invoiceNumber, r.clientName, r.currency, r.taxName ?? "",
+      r.taxPercent, r.taxPercent > 0 ? r.taxMode : "", money(r.net), money(r.tax), money(r.gross),
+    ]),
+  ];
+  return {
+    columns: [
+      "Basis", "Date", "Invoice number", "Client", "Currency", "Tax name", "Tax %", "Tax mode",
+      "Net", "Tax", "Gross",
+    ],
+    rows,
+  };
+}
+
 function byIssueThenNumber(a: InvoiceDTO, b: InvoiceDTO): number {
   return (a.issueDate ?? "").localeCompare(b.issueDate ?? "") || a.number.localeCompare(b.number);
 }
@@ -338,5 +368,7 @@ export function buildTable(
       return timeTable(data.time ?? [], range);
     case "expenses":
       return expensesTable(data.expenses ?? [], range);
+    case "tax":
+      return taxTable(data.invoices ?? [], range);
   }
 }

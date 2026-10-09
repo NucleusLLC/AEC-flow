@@ -136,7 +136,7 @@ export async function getMeeting(id: string): Promise<MeetingRecord | null> {
     include: {
       project: true,
       author: true,
-      actionItems: { include: { assignee: true } },
+      actionItems: { include: { assignee: true }, orderBy: { id: "asc" } },
     },
   });
   if (!row) return null;
@@ -162,7 +162,7 @@ export async function getMeetingRecipients(id: string): Promise<MeetingRecipient
     where: { id },
     include: {
       project: { include: { client: true } },
-      actionItems: { include: { assignee: true } },
+      actionItems: { include: { assignee: true }, orderBy: { id: "asc" } },
     },
   });
   if (!row) return null;

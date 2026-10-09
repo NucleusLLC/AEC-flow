@@ -11,6 +11,7 @@ import {
   FileStack,
   Calculator,
   HardHat,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n/language-provider";
@@ -29,6 +30,7 @@ export function ProjectTabBar({ projectId }: { projectId: string }) {
     { label: "Drawings", href: `${base}/drawings`, icon: FileStack },
     { label: "Estimates", href: `${base}/estimates`, icon: Calculator },
     { label: "Construction Admin", href: `${base}/construction-admin`, icon: HardHat },
+    { label: "Finance", href: `${base}/finance`, icon: Wallet },
   ];
 
   return (
