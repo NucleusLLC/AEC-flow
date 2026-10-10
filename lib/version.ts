@@ -98,8 +98,15 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
+ * 0.27.0 (10 OCT 2026): feat — SUBSCRIPTION BILLING for AEC-flow itself (decision D-5: Stripe Billing
+ *   on the Nucleus LLC account). Settings › Billing (Admin / Director): plan, status, renewal date,
+ *   seats; SUBSCRIBE (monthly / yearly) through Stripe Checkout and MANAGE BILLING through the
+ *   Stripe Customer Portal. /api/billing/webhook (signed, idempotent) keeps the status current. A
+ *   dismissable banner for past-due / canceled; NOTHING is locked (BILLING_ENFORCED = false); the
+ *   founder practice never pays. Hidden until the Stripe env vars are set.
+ *   Needs prisma/sql/0033_billing_subscriptions.sql applied FIRST.
  */
-export const APP_VERSION = "0.25.0";
+export const APP_VERSION = "0.27.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

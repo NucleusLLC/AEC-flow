@@ -138,7 +138,7 @@ export const PROGRESS: ProgressData = {
       pct: 15,
       worked: [],
       next: [
-        { text: "BILLING PROVIDER", kind: "you" },
+        { text: "STRIPE ACCOUNT SETUP", kind: "you" },
         { text: "DEV DATABASE", kind: "plain" },
       ],
     },
@@ -171,7 +171,7 @@ export const PROGRESS: ProgressData = {
   missing: [
     { text: "Close old PRs #172 #150 #146 #121 #118 #116", tag: "YOU" },
     { text: "D-6: who may issue / void invoices", tag: "YOU" },
-    { text: "Billing provider for AEC-flow itself", tag: "YOU" },
+    { text: "Stripe products, prices + webhook for AEC-flow billing (D-5 decided: Stripe)", tag: "YOU" },
     { text: "Legal entity + governing law in the Terms", tag: "YOU" },
     { text: "Invoices with two taxes (BBO + BAVP)", tag: "DECISION" },
     { text: "Separate development database", tag: "SETUP" },
@@ -191,6 +191,6 @@ export const PROGRESS: ProgressData = {
     { label: "To merge", value: "0", tone: "green", note: "all finance merged" },
     { label: "Languages", value: "7", note: "EN ES NL DE ZH JA PT" },
     { label: "Lockdown checks", value: "5/5", note: "on production" },
-    { label: "Billing provider", value: "NONE", tone: "red", note: "decision D-5" },
+    { label: "Billing provider", value: "STRIPE", tone: "green", note: "D-5 decided 10 OCT" },
   ],
 };

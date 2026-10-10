@@ -110,6 +110,13 @@ export default defineConfig({
       // Who may change role, status and email on a member record. Named file, same
       // reason as every entry above — pure module, no Prisma, no session.
       "lib/team/member-write-policy.test.ts",
+      // AEC-flow subscription billing (Stripe, D-5): webhook signature, status mapping,
+      // accessFor, the Stripe REST wrapper (fetch mocked) and webhook idempotency /
+      // ordering against an in-memory store. Pure, no Prisma, no network.
+      "lib/billing/signature.test.ts",
+      "lib/billing/status.test.ts",
+      "lib/billing/stripe.test.ts",
+      "lib/billing/webhook.test.ts",
       // Building Permit module. Three named files, same reason as every entry
       // above: the register arithmetic and the zod gate are pure, and the enum
       // tripwire reads prisma/schema.prisma off disk as text rather than

@@ -10,6 +10,9 @@ import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
+import Link from "next/link";
+import { CreditCard } from "lucide-react";
+import { isBillingConfigured } from "@/lib/billing/config";
 
 export async function generateMetadata() {
   const tr = await getServerT();
@@ -52,11 +55,22 @@ export default async function SettingsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-fg">{tr("Settings")}</h2>
-        <p className="text-sm text-muted">
-          {tr("Manage your practice profile, proposal templates, members, and preferences.")}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-fg">{tr("Settings")}</h2>
+          <p className="text-sm text-muted">
+            {tr("Manage your practice profile, proposal templates, members, and preferences.")}
+          </p>
+        </div>
+        {/* AEC-flow subscription (D-5). Only once Stripe is configured, only for those who may pay. */}
+        {canManagePasswords && isBillingConfigured() ? (
+          <Link
+            href="/settings/billing"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-semibold text-fg hover:border-brand"
+          >
+            <CreditCard className="h-4 w-4 text-brand" aria-hidden="true" /> {tr("Billing")}
+          </Link>
+        ) : null}
       </div>
 
       <SettingsView
