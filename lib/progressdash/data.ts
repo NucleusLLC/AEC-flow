@@ -109,7 +109,7 @@ export const PROGRESS: ProgressData = {
     {
       code: "P5",
       name: "Finance & accounting",
-      pct: 96,
+      pct: 98,
       worked: [
         { from: "2026-09-22", days: 4 },
         { from: "2026-09-28", days: 1 },
@@ -117,8 +117,8 @@ export const PROGRESS: ProgressData = {
         { from: "2026-10-08", days: 2 },
       ],
       next: [
-        { text: "MERGE #171", kind: "you" },
         { text: "D-6 INVOICE ROLES", kind: "you" },
+        { text: "TWO TAXES", kind: "plain" },
       ],
     },
     {
@@ -161,15 +161,14 @@ export const PROGRESS: ProgressData = {
     "2026-10-08",
     "2026-10-09",
   ],
-  deploysNext: [{ text: "MERGE #171", kind: "go" }],
+  deploysNext: [],
   workingOn: [
-    "Credit notes, Receivables, Statement of Account (#171) — ready",
+    "Credit notes, Receivables, Statement of Account — live (0.25.0)",
     "Project FINANCE tab — live (0.23.0)",
     "Expense receipts + overdue chase — live (0.24.0)",
     "This progress board",
   ],
   missing: [
-    { text: "Merge #171 (credit notes · SQL 0030 applied)", tag: "YOU" },
     { text: "Close old PRs #172 #150 #146 #121 #118 #116", tag: "YOU" },
     { text: "D-6: who may issue / void invoices", tag: "YOU" },
     { text: "Billing provider for AEC-flow itself", tag: "YOU" },
@@ -179,17 +178,17 @@ export const PROGRESS: ProgressData = {
     { text: "Error alerting (Sentry or similar)", tag: "VENDOR" },
   ],
   kpis: [
-    { label: "PRs SINCE 14 SEP", value: "86", tone: "green" },
-    { label: "TESTS PASS", value: "1,561", tone: "cyan" },
-    { label: "TO MERGE", value: "1", tone: "amber" },
+    { label: "PRs SINCE 14 SEP", value: "87", tone: "green" },
+    { label: "TESTS PASS", value: "1,617", tone: "cyan" },
+    { label: "TO MERGE", value: "0", tone: "green" },
     { label: "SQL WAITING", value: "0", tone: "green" },
   ],
   stats: [
-    { label: "PRs merged today", value: "2", note: "#177 #178" },
-    { label: "PRs merged since 14 SEP", value: "86" },
-    { label: "Unit tests", value: "1,561", note: "all pass" },
+    { label: "PRs merged today", value: "3", note: "#177 #178 #171" },
+    { label: "PRs merged since 14 SEP", value: "87" },
+    { label: "Unit tests", value: "1,617", note: "all pass" },
     { label: "Database change waiting", value: "NONE", tone: "green", note: "0030 + 0031 applied 9 OCT" },
-    { label: "To merge", value: "1", tone: "amber", note: "#171 credit notes" },
+    { label: "To merge", value: "0", tone: "green", note: "all finance merged" },
     { label: "Languages", value: "7", note: "EN ES NL DE ZH JA PT" },
     { label: "Lockdown checks", value: "5/5", note: "on production" },
     { label: "Billing provider", value: "NONE", tone: "red", note: "decision D-5" },
