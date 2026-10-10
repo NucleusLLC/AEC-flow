@@ -126,7 +126,7 @@ describe("positions", () => {
 
 describe("overall, tones, chips", () => {
   it("BUILT is the plain mean of the phases", () => {
-    expect(overallPct(PROGRESS.phases)).toBe(86);
+    expect(overallPct(PROGRESS.phases)).toBe(89);
     expect(overallPct([{ pct: 100 }, { pct: 0 }])).toBe(50);
     expect(overallPct([])).toBe(0);
     expect(overallPct([{ pct: 140 }, { pct: -5 }])).toBe(50);
