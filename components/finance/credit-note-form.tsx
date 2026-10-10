@@ -68,10 +68,10 @@ export function CreditNoteForm({
     () =>
       invoiceTotals(
         chosen.map((c) => ({ amount: c.amount, taxable: c.line.taxable })),
-        { percent: invoice.taxPercent, mode: invoice.taxMode },
+        { percent: invoice.taxPercent, mode: invoice.taxMode, percent2: invoice.tax2Percent },
         invoice.currency,
       ),
-    [chosen, invoice.taxPercent, invoice.taxMode, invoice.currency],
+    [chosen, invoice.taxPercent, invoice.taxMode, invoice.tax2Percent, invoice.currency],
   );
 
   const minor = (n: number) => fromMajor(n, invoice.currency).minor;
@@ -211,6 +211,16 @@ export function CreditNoteForm({
                     {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
                   </td>
                   <td className="text-right font-mono tabular-nums text-fg">{money(totals.taxTotal)}</td>
+                </tr>
+              ) : null}
+              {/* A second tax (BBO + BAVP) prints as its own line; one-tax documents are unchanged. */}
+              {invoice.tax2Percent > 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-right text-[11px] uppercase tracking-wider text-muted">
+                    {invoice.tax2Name ?? t("Tax")} {invoice.tax2Percent}%
+                    {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
+                  </td>
+                  <td className="text-right font-mono tabular-nums text-fg">{money(totals.tax2Total)}</td>
                 </tr>
               ) : null}
               <tr>

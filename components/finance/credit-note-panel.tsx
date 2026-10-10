@@ -214,6 +214,17 @@ export function CreditNotePanel({ note, canManage }: { note: CreditNoteDTO; canM
                   <td />
                 </tr>
               ) : null}
+              {/* A second tax (BBO + BAVP) prints as its own line; one-tax documents are unchanged. */}
+              {note.tax2Percent > 0 ? (
+                <tr>
+                  <td className="text-right text-[11px] uppercase tracking-wider text-muted">
+                    {note.tax2Name ?? t("Tax")} {note.tax2Percent}%
+                    {note.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
+                  </td>
+                  <td className="text-right font-mono tabular-nums text-fg">{money(note.tax2Total)}</td>
+                  <td />
+                </tr>
+              ) : null}
               <tr>
                 <td className="pt-2 text-right text-[11px] font-semibold uppercase tracking-wider text-fg">
                   {t("Credit total")}

@@ -38,6 +38,16 @@ function taxLabel(t: T, name: string | null, percent: number): string {
   return `${name ?? t("Unnamed tax")} ${percent}%`;
 }
 
+/** An invoice or payment row's tax: one, or both ("BBO 3% + BAVP 4%"). */
+function rowTaxLabel(
+  t: T,
+  r: { taxName: string | null; taxPercent: number; tax2Name: string | null; tax2Percent: number },
+): string {
+  if (!(r.taxPercent > 0)) return t("No tax charged");
+  const first = taxLabel(t, r.taxName, r.taxPercent);
+  return r.tax2Percent > 0 ? `${first} + ${taxLabel(t, r.tax2Name, r.tax2Percent)}` : first;
+}
+
 function CurrencyBlock({ t, c, basis }: { t: T; c: CurrencyTotals; basis: "invoiced" | "received" }) {
   const th = "px-2 py-1 text-left text-[10px] font-bold uppercase tracking-wider";
   const num = "px-2 py-1 text-right font-mono tabular-nums";
@@ -195,7 +205,7 @@ export function TaxReportView({ t, report }: { t: T; report: TaxReport }) {
                   <td className="px-2 py-1 font-mono">{militaryDate(r.issueDate)}</td>
                   <td className="px-2 py-1 font-mono">{r.number}</td>
                   <td className="px-2 py-1">{r.clientName}</td>
-                  <td className="px-2 py-1">{r.taxPercent > 0 ? taxLabel(t, r.taxName, r.taxPercent) : t("No tax charged")}</td>
+                  <td className="px-2 py-1">{rowTaxLabel(t, r)}</td>
                   <td className={num}>{amount(r.net, r.currency)}</td>
                   <td className={num}>{amount(r.tax, r.currency)}</td>
                   <td className={num}>{amount(r.gross, r.currency)}</td>
@@ -232,7 +242,7 @@ export function TaxReportView({ t, report }: { t: T; report: TaxReport }) {
                   <td className="px-2 py-1 font-mono">{militaryDate(r.paidAt)}</td>
                   <td className="px-2 py-1 font-mono">{r.invoiceNumber}</td>
                   <td className="px-2 py-1">{r.clientName}</td>
-                  <td className="px-2 py-1">{r.taxPercent > 0 ? taxLabel(t, r.taxName, r.taxPercent) : t("No tax charged")}</td>
+                  <td className="px-2 py-1">{rowTaxLabel(t, r)}</td>
                   <td className={num}>{amount(r.net, r.currency)}</td>
                   <td className={num}>{amount(r.tax, r.currency)}</td>
                   <td className={num}>{amount(r.gross, r.currency)}</td>

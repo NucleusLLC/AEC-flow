@@ -183,6 +183,9 @@ export default defineConfig({
       // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
       // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
       "lib/finance/tax-report.test.ts",
+      // Two taxes on one invoice (BBO + BAVP): per-tax rounding, the INCLUSIVE
+      // proportional split, credit notes, the tax report rows and the CSV columns. Pure.
+      "lib/finance/two-taxes.test.ts",
       // Expense receipts: allowed types and size, server-chosen storage keys, who may
       // see and change one (frozen once invoiced). Pure.
       "lib/finance/receipt.test.ts",
