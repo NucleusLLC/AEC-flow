@@ -7,9 +7,10 @@ import { useT } from "@/components/i18n/language-provider";
 import { parseRange, type ExportKind } from "@/lib/finance/export";
 
 const FILES: { kind: ExportKind; label: string; desc: string }[] = [
-  { kind: "invoices", label: "Invoices", desc: "One row per invoice issued in the period: net, tax, total, paid and outstanding." },
+  { kind: "invoices", label: "Invoices", desc: "One row per invoice issued in the period: net, tax, total, paid, credited and outstanding." },
   { kind: "invoice-lines", label: "Invoice lines", desc: "Every line of those invoices, with milestone, quantity, rate and tax flag." },
   { kind: "payments", label: "Payments", desc: "Payments received in the period, whatever date the invoice was issued." },
+  { kind: "credit-notes", label: "Credit notes", desc: "Credit notes dated in the period, with the invoice each one credits and why." },
   { kind: "time", label: "Approved time", desc: "Approved hours with the charge and cost rates as they were, and what was invoiced." },
   { kind: "expenses", label: "Approved expenses", desc: "Approved expenses with markup, reimbursement and what was invoiced." },
   { kind: "tax", label: "Tax report", desc: "BBO, BAVP and other tax as the invoices carry it: each invoice issued and each payment received in the period, with its tax." },

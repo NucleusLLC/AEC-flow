@@ -25,7 +25,7 @@ import {
   zero,
   type Money,
 } from "@/lib/proposals/engine/money";
-import type { InvoiceStatus } from "./types";
+import type { CreditNoteStatus, InvoiceStatus } from "./types";
 
 /** A line as the arithmetic sees it: the amount rules, the rest is provenance. */
 export type CalcLine = {
@@ -35,6 +35,18 @@ export type CalcLine = {
 
 /** A payment as the arithmetic sees it. */
 export type CalcPayment = { amount: number | string | null | undefined };
+
+/**
+ * A credit note as the arithmetic sees it. The status rides along because only
+ * an ISSUED credit note has told the client anything: a draft is a proposal and
+ * a void was withdrawn. The currency rides along so a credit raised in the
+ * wrong currency is refused loudly rather than added as if it were the same.
+ */
+export type CalcCredit = {
+  amount: number | string | null | undefined;
+  status: CreditNoteStatus;
+  currency: string;
+};
 
 export type InvoiceTotals = {
   subtotal: number;
@@ -121,26 +133,157 @@ export type Settlement = {
   overpaidBy: number;
 };
 
-/** What has been received against a total, and what is still owed. */
+/** Credit-note DTOs (or rows) as the arithmetic sees them: their total is the amount. */
+export function creditsOf(
+  notes: { total: number | string | null | undefined; status: CreditNoteStatus; currency: string }[],
+): CalcCredit[] {
+  return notes.map((n) => ({ amount: n.total, status: n.status, currency: n.currency }));
+}
+
+export type InvoiceBalance = Settlement & {
+  /** What ISSUED credit notes have taken off the invoice. Drafts and voids are not in it. */
+  credited: number;
+  /** How many issued credit notes `credited` is made of. */
+  creditCount: number;
+};
+
+/**
+ * THE balance of an invoice: what it asked for, less what has been received,
+ * less what the practice has credited back. Every screen, print, tile, ledger
+ * and export that shows what an invoice still owes reads it from here — the
+ * register, the detail panel, the printed sheet, receivables and the
+ * accounting CSV — so a credit note can never reduce the balance in one place
+ * and not another.
+ *
+ * Only ISSUED credit notes count. A DRAFT has not been sent; a VOID has been
+ * withdrawn, and the balance it took off comes back.
+ *
+ * NEVER ACROSS CURRENCIES. A credit note snapshots its invoice's currency, so a
+ * mismatch here is corrupt data, not a conversion to attempt: the money
+ * primitive throws (`MoneyError`), and so does this.
+ */
+export function invoiceBalance(input: {
+  total: number | string | null | undefined;
+  currency: string;
+  payments: CalcPayment[];
+  credits?: CalcCredit[];
+}): InvoiceBalance {
+  const { currency } = input;
+  const due = fromMajor(input.total, currency);
+  const paid = sum(
+    input.payments.map((p) => fromMajor(p.amount, currency)),
+    currency,
+  );
+  const issued = (input.credits ?? []).filter((c) => c.status === "ISSUED");
+  // fromMajor in the CREDIT's currency, then add to the invoice's: a mismatch
+  // throws inside `add` instead of being summed as if it were the same money.
+  const credited = issued.reduce<Money>(
+    (acc, c) => add(acc, fromMajor(c.amount, c.currency)),
+    zero(currency),
+  );
+  const remaining: Money = subtract(subtract(due, paid), credited);
+  const outstanding = remaining.minor > 0 ? remaining : zero(currency);
+  const over = remaining.minor < 0 ? subtract(add(paid, credited), due) : zero(currency);
+  return {
+    paid: toMajor(paid),
+    credited: toMajor(credited),
+    creditCount: issued.length,
+    outstanding: toMajor(outstanding),
+    settled:
+      due.minor > 0
+        ? remaining.minor <= 0
+        : isZero(due) && (paid.minor > 0 || credited.minor > 0),
+    overpaidBy: toMajor(over),
+  };
+}
+
+/**
+ * What has been received against a total, and what is still owed — with no
+ * credit notes. Kept for its callers; it is `invoiceBalance` with an empty
+ * credit list, not a second implementation.
+ */
 export function settlement(
   total: number | string | null | undefined,
   payments: CalcPayment[],
   currency: string,
 ): Settlement {
-  const due = fromMajor(total, currency);
-  const paid = sum(
-    payments.map((p) => fromMajor(p.amount, currency)),
-    currency,
-  );
-  const remaining: Money = subtract(due, paid);
-  const outstanding = remaining.minor > 0 ? remaining : zero(currency);
-  const over = remaining.minor < 0 ? subtract(paid, due) : zero(currency);
-  return {
-    paid: toMajor(paid),
-    outstanding: toMajor(outstanding),
-    settled: due.minor > 0 ? remaining.minor <= 0 : isZero(due) && paid.minor > 0,
-    overpaidBy: toMajor(over),
-  };
+  const { paid, outstanding, settled, overpaidBy } = invoiceBalance({ total, currency, payments });
+  return { paid, outstanding, settled, overpaidBy };
+}
+
+export type CreditCheck =
+  | { ok: true; available: number }
+  | { ok: false; available: number; error: string };
+
+/**
+ * May this credit note be issued against this invoice? The over-credit guard,
+ * in one place, called by the server before it writes — the form's own limit
+ * is a convenience, not a control.
+ *
+ * `available` is the invoice's outstanding balance with every OTHER issued
+ * credit note already taken off: pass the credit being checked as `credit`,
+ * never inside `invoice.credits`. A credit note can never take an invoice
+ * below zero — that would be the practice owing the client money it never
+ * received, which is a refund, not a credit.
+ */
+export function checkCreditNote(
+  invoice: {
+    status: InvoiceStatus;
+    total: number | string | null | undefined;
+    currency: string;
+    payments: CalcPayment[];
+    credits?: CalcCredit[];
+  },
+  credit: { amount: number | string | null | undefined; currency: string },
+): CreditCheck {
+  if (invoice.status === "DRAFT" || invoice.status === "VOID") {
+    return { ok: false, available: 0, error: "Only an issued invoice can be credited." };
+  }
+  if (credit.currency !== invoice.currency) {
+    return {
+      ok: false,
+      available: 0,
+      error: "A credit note must be in the same currency as its invoice.",
+    };
+  }
+  const { outstanding } = invoiceBalance(invoice);
+  const asked = fromMajor(credit.amount, invoice.currency);
+  if (asked.minor <= 0) {
+    return { ok: false, available: outstanding, error: "A credit note has to be for more than zero." };
+  }
+  if (asked.minor > fromMajor(outstanding, invoice.currency).minor) {
+    return {
+      ok: false,
+      available: outstanding,
+      error: "A credit note cannot exceed the invoice's outstanding balance.",
+    };
+  }
+  return { ok: true, available: outstanding };
+}
+
+/**
+ * What is left to credit on each invoice line: its amount, less what ISSUED
+ * credit notes have already taken back from it. Pass only the other credit
+ * notes' lines (the one being checked is what is being measured against this).
+ * Never below zero.
+ */
+export function creditableByLine(
+  invoiceLines: { id: string; amount: number | string | null | undefined }[],
+  creditedLines: { invoiceLineId: string | null; amount: number | string | null | undefined }[],
+  currency: string,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const line of invoiceLines) {
+    const taken = sum(
+      creditedLines
+        .filter((c) => c.invoiceLineId === line.id)
+        .map((c) => fromMajor(c.amount, currency)),
+      currency,
+    );
+    const left = subtract(fromMajor(line.amount, currency), taken);
+    out.set(line.id, toMajor(left.minor > 0 ? left : zero(currency)));
+  }
+  return out;
 }
 
 /**
@@ -156,23 +299,40 @@ export function invoiceStatus(invoice: {
   total: number | string | null | undefined;
   issueDate?: string | null;
   payments: CalcPayment[];
+  credits?: CalcCredit[];
   currency: string;
 }): InvoiceStatus {
   if (invoice.status === "DRAFT" || invoice.status === "VOID") return invoice.status;
-  const { paid, settled } = settlement(invoice.total, invoice.payments, invoice.currency);
-  if (settled) return "PAID";
+  const { paid, settled, credited } = invoiceBalance(invoice);
+  // Settled with nothing received: the practice took the whole bill back.
+  // Settled with money received (and perhaps a credit for the rest): paid.
+  if (settled) return paid === 0 && credited > 0 ? "CREDITED" : "PAID";
   if (paid > 0) return "PART_PAID";
   return "ISSUED";
 }
 
-/** `INV-{year}-{NNN}`, one past the highest number ever used in the practice. */
-export function nextInvoiceNumber(existing: string[], year: number): string {
+/** `{prefix}-{year}-{NNN}`, one past the highest number ever used in that series. */
+function nextSeriesNumber(prefix: string, existing: string[], year: number): string {
   let max = 0;
   for (const number of existing) {
     const m = /(\d+)\s*$/.exec(number);
     if (m && Number(m[1]) > max) max = Number(m[1]);
   }
-  return `INV-${year}-${String(max + 1).padStart(3, "0")}`;
+  return `${prefix}-${year}-${String(max + 1).padStart(3, "0")}`;
+}
+
+/** `INV-{year}-{NNN}`, one past the highest number ever used in the practice. */
+export function nextInvoiceNumber(existing: string[], year: number): string {
+  return nextSeriesNumber("INV", existing, year);
+}
+
+/**
+ * `CN-{year}-{NNN}`, exactly the way invoice numbers are made: one past the
+ * highest credit-note number ever used in the practice, voided and deleted
+ * drafts included, so a number is never reused.
+ */
+export function nextCreditNoteNumber(existing: string[], year: number): string {
+  return nextSeriesNumber("CN", existing, year);
 }
 
 /** `YYYY-MM-DD`, `days` after the issue date. Null when there is no issue date. */
@@ -218,6 +378,8 @@ export type ReceivablesSummary = {
   count: number;
   billed: number;
   paid: number;
+  /** Issued credit notes against those invoices. billed − paid − credited = outstanding. */
+  credited: number;
   outstanding: number;
   overdue: number;
   drafts: number;
@@ -238,6 +400,9 @@ export function receivablesSummary(
     status: InvoiceStatus;
     total: number;
     paid: number;
+    /** From `invoiceBalance`; absent means no credit notes. */
+    credited?: number;
+    /** Net of payments AND issued credit notes — `invoiceBalance`. */
     outstanding: number;
     dueDate?: string | null;
   }[],
@@ -246,6 +411,7 @@ export function receivablesSummary(
 ): ReceivablesSummary {
   let billed = zero(currency);
   let paid = zero(currency);
+  let credited = zero(currency);
   let outstanding = zero(currency);
   let overdue = zero(currency);
   let drafts = 0;
@@ -267,6 +433,7 @@ export function receivablesSummary(
     count += 1;
     billed = add(billed, fromMajor(inv.total, currency));
     paid = add(paid, fromMajor(inv.paid, currency));
+    credited = add(credited, fromMajor(inv.credited ?? 0, currency));
     const owed = fromMajor(inv.outstanding, currency);
     outstanding = add(outstanding, owed);
     const late = daysOverdue({ dueDate: inv.dueDate, outstanding: inv.outstanding }, today);
@@ -281,6 +448,7 @@ export function receivablesSummary(
     count,
     billed: toMajor(billed),
     paid: toMajor(paid),
+    credited: toMajor(credited),
     outstanding: toMajor(outstanding),
     overdue: toMajor(overdue),
     drafts,

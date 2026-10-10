@@ -172,15 +172,59 @@ leaving them out is how a job looks profitable right up until payroll.
 `earned` is what the work is worth, NOT what has been invoiced or collected —
 those are receivables' numbers, and mixing the two double-counts the same job.
 
-## 6. Not built yet
+## 6. Credit notes
+
+`prisma/sql/0030_credit_notes.sql` · `lib/finance/calc.ts` (`invoiceBalance`,
+`checkCreditNote`, `creditableByLine`) · `lib/data/credit-notes.ts` ·
+`/finance/credit-notes` · `/print/finance/credit-notes/[id]`
+
+A credit note (`CN-{year}-{NNN}`, numbered exactly like invoices) takes back
+some or all of what ONE issued invoice asked for. It never edits the invoice:
+the invoice stays what the client was sent, and the credit note is a second
+document that reduces what it still owes.
+
+**One balance.** `invoiceBalance` is total − payments − ISSUED credit notes,
+never below zero. The register, the invoice panel and print, the receivables
+tiles and ageing, and the accounting export all read it from there. A DRAFT
+credit note has not been sent and a VOID one was withdrawn, so neither counts —
+voiding a credit note restores the balance it took off.
+
+**Status.** An invoice settled by credit notes with nothing received is
+CREDITED; settled by payments and credits together it is PAID. Both are
+derived, never stored.
+
+**The ceiling.** A credit note can never exceed the invoice's outstanding
+balance, and no line can be credited for more than is left on it. The server
+checks this when a draft is saved and again at issue, inside a transaction
+that locks the invoice row, so two credits issued at once cannot both pass.
+
+**Snapshot.** Client, currency and tax are copied from the invoice, never
+taken from the form. A credit note in another currency from its invoice cannot
+be built, and `invoiceBalance` throws rather than add one.
+
+**Who.** Any active member of the practice (`requireActor`) may raise, edit and
+delete a DRAFT — it moves no money. ISSUING and VOIDING are for an
+administrator, a director or the founder (`canManagePasswords`), checked in the
+actions and again in `lib/data/credit-notes.ts`. Invoices themselves are still
+ungated (any member) pending the owner's decision; money going out is gated
+now. ISSUED changes only by being voided with a reason.
+
+**Where it shows.** An issued credit note reduces the invoice's balance
+everywhere `invoiceBalance` is used: the invoice, the register tiles,
+`/finance/receivables` (and its ageing buckets) and the client's Statement of
+Account, where it is a CREDIT line on its own date.
+
+**Not done.** Crediting an invoice does not free the proposal milestone it
+billed (a credit is a concession, not an un-billing) and does not release
+billed time or expenses. Refunds of overpayments are not credit notes.
+
+## 7. Not built yet
 
 - Billing time and expenses ONTO an invoice — the columns exist
   (`invoicedAt`, `invoiceId`, `invoiceNumber`, `invoiceLineId`) and the guard
   is written, but nothing sets them yet.
 - The profit / WIP screens. (The per-project finance tab shipped in 0.23.0:
   app/(app)/projects/[id]/finance, lib/finance/project-finance.ts.)
-- Credit notes. A negative line amount is refused rather than quietly
-  accepted as one.
 - Any billing provider. (The accounting export — invoices, lines, payments,
   approved time and expenses as CSV for a period — shipped in 0.11.0:
   lib/finance/export.ts, app/api/export/finance/[kind]/route.ts.)

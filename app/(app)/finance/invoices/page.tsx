@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getServerT } from "@/lib/i18n/server";
 import Link from "next/link";
-import { BellRing, Plus } from "lucide-react";
+import { BellRing, HandCoins, Plus } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { InvoiceRegister } from "@/components/finance/invoice-register";
 import { listInvoices } from "@/lib/data/invoices";
@@ -30,6 +30,12 @@ export default async function InvoicesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/finance/receivables"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <HandCoins className="h-4 w-4" /> {t("Receivables by client")}
+          </Link>
           <Link
             href="/finance/invoices/overdue"
             className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors hover:bg-surface-2 ${

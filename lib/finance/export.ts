@@ -1,6 +1,6 @@
 /**
- * Accounting export: the practice's invoices, invoice lines, payments, approved
- * time and approved expenses as CSV files an accountant or a bookkeeping
+ * Accounting export: the practice's invoices, invoice lines, payments, credit
+ * notes, approved time and approved expenses as CSV files an accountant or a bookkeeping
  * package can import.
  *
  * Pure: DTOs in, a table out, a CSV string out. The route that serves it is
@@ -19,11 +19,25 @@
  *    "CafÃ© Oranjestad"; CRLF line ends.
  *  - Drafts are left out: a draft invoice is not in the books. Voided invoices
  *    are kept, with their status, because their number was issued.
+ *  - Credit notes are their own file, one row per credit note, because they
+ *    are their own documents with their own numbers (CN-YYYY-NNN). Their
+ *    amounts are positive, as printed; the "Credited" column on the invoices
+ *    file is what they took off each invoice, so Paid + Credited + Outstanding
+ *    = Total on every row that is not void. Voided credit notes are kept, with
+ *    their status, for the same reason as voided invoices.
  */
-import type { ExpenseDTO, InvoiceDTO, TimeEntryDTO } from "./types";
+import type { CreditNoteDTO, ExpenseDTO, InvoiceDTO, TimeEntryDTO } from "./types";
 import { buildTaxReport } from "./tax-report";
 
-export const EXPORT_KINDS = ["invoices", "invoice-lines", "payments", "time", "expenses", "tax"] as const;
+export const EXPORT_KINDS = [
+  "invoices",
+  "invoice-lines",
+  "payments",
+  "credit-notes",
+  "time",
+  "expenses",
+  "tax",
+] as const;
 export type ExportKind = (typeof EXPORT_KINDS)[number];
 
 export function isExportKind(v: string): v is ExportKind {
@@ -104,6 +118,7 @@ export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
       money(i.taxTotal),
       money(i.total),
       money(i.paid),
+      money(i.credited ?? 0),
       money(i.status === "VOID" ? 0 : i.outstanding),
       day(i.voidedAt),
     ]);
@@ -111,7 +126,7 @@ export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
     columns: [
       "Invoice number", "Status", "Issue date", "Due date", "Client", "Project", "Proposal",
       "Title", "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Total", "Paid",
-      "Outstanding", "Voided on",
+      "Credited", "Outstanding", "Voided on",
     ],
     rows,
   };
@@ -172,6 +187,40 @@ export function paymentsTable(invoices: InvoiceDTO[], range: DateRange): Table {
     columns: [
       "Paid on", "Invoice number", "Client", "Project", "Amount", "Currency", "Method",
       "Reference", "Recorded by",
+    ],
+    rows,
+  };
+}
+
+/**
+ * Issued and voided credit notes dated in range, one row per credit note, with
+ * the invoice each one credits. Drafts are left out — not in the books.
+ */
+export function creditNotesTable(notes: CreditNoteDTO[], range: DateRange): Table {
+  const rows = notes
+    .filter((c) => c.status !== "DRAFT" && inRange(c.date, range))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.number.localeCompare(b.number))
+    .map((c) => [
+      c.number,
+      c.status,
+      day(c.date),
+      c.invoiceNumber,
+      c.clientName,
+      c.projectName ?? "",
+      c.reason,
+      c.currency,
+      money(c.subtotal),
+      c.taxName ?? "",
+      c.taxPercent,
+      c.taxMode,
+      money(c.taxTotal),
+      money(c.total),
+      day(c.voidedAt),
+    ]);
+  return {
+    columns: [
+      "Credit note number", "Status", "Date", "Invoice number", "Client", "Project", "Reason",
+      "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Total", "Voided on",
     ],
     rows,
   };
@@ -298,7 +347,12 @@ export function exportFilename(kind: ExportKind, range: DateRange, today: string
 
 export function buildTable(
   kind: ExportKind,
-  data: { invoices?: InvoiceDTO[]; time?: TimeEntryDTO[]; expenses?: ExpenseDTO[] },
+  data: {
+    invoices?: InvoiceDTO[];
+    creditNotes?: CreditNoteDTO[];
+    time?: TimeEntryDTO[];
+    expenses?: ExpenseDTO[];
+  },
   range: DateRange,
 ): Table {
   switch (kind) {
@@ -308,6 +362,8 @@ export function buildTable(
       return invoiceLinesTable(data.invoices ?? [], range);
     case "payments":
       return paymentsTable(data.invoices ?? [], range);
+    case "credit-notes":
+      return creditNotesTable(data.creditNotes ?? [], range);
     case "time":
       return timeTable(data.time ?? [], range);
     case "expenses":

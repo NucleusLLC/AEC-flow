@@ -92,8 +92,14 @@
  *   a paperclip in the expense register. /finance/invoices/overdue lists invoices with money
  *   outstanding past due, by client and currency, with a "Copy reminder" to paste into an email or
  *   WhatsApp (nothing is sent). Needs prisma/sql/0031_expense_receipts.sql applied FIRST.
+ * 0.25.0 (9 OCT 2026): feat — Finance RECEIVABLES and CREDIT NOTES: who owes what by client, aged
+ *   Current / 1–30 / 31–60 / 61–90 / 90+ per currency; each client's Statement of Account (running
+ *   balance for a period) on screen and printed on A4. CREDIT NOTES (CN-YYYY-NNN) against an issued
+ *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
+ *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
+ *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
  */
-export const APP_VERSION = "0.24.0";
+export const APP_VERSION = "0.25.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

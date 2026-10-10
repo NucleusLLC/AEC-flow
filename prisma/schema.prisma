@@ -3170,12 +3170,23 @@ model GeneralDocument {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Where an invoice is in its life. Derived from the payments recorded against
-/// it — never set by hand except for the two ends, DRAFT and VOID.
+/// it — never set by hand except for the two ends, DRAFT and VOID. CREDITED
+/// (settled by credit notes with nothing received) is derived the same way and
+/// is never written to the column; it is in the enum so the client-safe union
+/// in lib/finance/types.ts and the schema stay one list.
 enum InvoiceStatus {
   DRAFT
   ISSUED
   PART_PAID
   PAID
+  CREDITED
+  VOID
+}
+
+/// Where a credit note is. Every state is chosen by a person; nothing derives it.
+enum CreditNoteStatus {
+  DRAFT
+  ISSUED
   VOID
 }
 
@@ -3258,8 +3269,9 @@ model Invoice {
   /// Soft delete, and only ever for a DRAFT (the data layer enforces that).
   deletedAt DateTime?
 
-  lines    InvoiceLine[]
-  payments InvoicePayment[]
+  lines       InvoiceLine[]
+  payments    InvoicePayment[]
+  creditNotes CreditNote[]
 
   @@unique([companyId, number])
   @@index([companyId, status])
@@ -3325,6 +3337,106 @@ model InvoicePayment {
   @@index([companyId, invoiceId])
   @@index([companyId, paidAt])
   @@map("invoice_payments")
+}
+
+/// A credit note: the practice taking back some or all of what ONE issued
+/// invoice asked for. It never edits the invoice — the invoice stays what the
+/// client was sent — it reduces what the invoice still owes, through
+/// `invoiceBalance` in lib/finance/calc.ts, and only once it is ISSUED.
+///
+/// Client, currency and tax are snapshotted from the invoice when the credit
+/// note is raised, exactly as the invoice snapshotted them from the proposal.
+/// Its total can never exceed the invoice's outstanding balance at the moment
+/// it is issued; the data layer enforces that inside a transaction.
+model CreditNote {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// `CN-{year}-{NNN}`, sequential within the practice and never reused.
+  number String
+  status CreditNoteStatus @default(DRAFT)
+
+  invoiceId     String
+  /// Snapshot: the number the client knows the invoice by.
+  invoiceNumber String
+
+  currency String @default("AWG")
+
+  clientId       String?
+  clientName     String
+  contactName    String?
+  contactEmail   String?
+  billingAddress String?
+
+  projectId   String?
+  projectName String?
+
+  /// The credit note's own date.
+  date   DateTime
+  /// Why the money is being taken back. Required: an unexplained credit is the
+  /// first thing an auditor asks about.
+  reason String
+
+  taxName    String?
+  taxPercent Decimal @default(0)
+  taxMode    TaxMode @default(EXCLUSIVE)
+
+  subtotal        Decimal @default(0)
+  taxableSubtotal Decimal @default(0)
+  taxTotal        Decimal @default(0)
+  total           Decimal @default(0)
+
+  notes String?
+
+  createdById   String?
+  createdByName String?
+  updatedById   String?
+  issuedByName  String?
+  issuedAt      DateTime?
+  voidReason    String?
+  voidedAt      DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete, drafts only.
+  deletedAt DateTime?
+
+  /// RESTRICT: an invoice that has been credited is a record, and so is the
+  /// credit. Invoices are only ever soft-deleted, so this never fires in-app.
+  invoice Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  lines   CreditNoteLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, invoiceId])
+  @@index([companyId, clientId])
+  @@index([companyId, date])
+  @@map("credit_notes")
+}
+
+/// One credited line. Mirrors InvoiceLine; `invoiceLineId` says which invoice
+/// line it takes back, and the description and taxable flag are copied from it.
+model CreditNoteLine {
+  companyId    String?
+  id           String  @id @default(cuid())
+  creditNoteId String
+
+  /// Provenance only — no foreign key, like InvoiceLine.milestoneId.
+  invoiceLineId String?
+  description   String
+  amount        Decimal @default(0)
+  taxable       Boolean @default(true)
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, creditNoteId])
+  @@index([companyId, invoiceLineId])
+  @@map("credit_note_lines")
 }
 
 // ───────────────────────────────────────────────────────────────────────────
