@@ -375,6 +375,17 @@ export function InvoicePanel({
                   <td />
                 </tr>
               ) : null}
+              {/* A second tax (BBO + BAVP) prints as its own line; one-tax documents are unchanged. */}
+              {invoice.tax2Percent > 0 ? (
+                <tr>
+                  <td className="text-right text-muted">
+                    {invoice.tax2Name ?? t("Tax")} {invoice.tax2Percent}%
+                    {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
+                  </td>
+                  <td className="text-right font-mono tabular-nums text-fg">{money(invoice.tax2Total)}</td>
+                  <td />
+                </tr>
+              ) : null}
               <tr>
                 <td className="pt-2 text-right font-medium text-fg">{t("Total")}</td>
                 <td className="pt-2 text-right font-mono text-base font-semibold tabular-nums text-fg">

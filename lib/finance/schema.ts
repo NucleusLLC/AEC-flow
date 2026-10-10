@@ -116,6 +116,18 @@ export const invoiceInputSchema = z
       })
       .refine((n) => n >= 0 && n <= 100, "A tax percentage runs from 0 to 100"),
     taxMode: enumOf(["EXCLUSIVE", "INCLUSIVE"] as const, "tax mode").optional(),
+    // An optional second tax (Aruba: BBO + BAVP). Same mode as the first, on the
+    // same base, never compounded — lib/finance/calc.ts.
+    tax2Name: optionalText(120),
+    tax2Percent: z
+      .union([z.number(), z.string(), z.null()])
+      .optional()
+      .transform((v) => {
+        if (v === null || v === undefined || v === "") return 0;
+        const n = typeof v === "number" ? v : Number(v);
+        return Number.isFinite(n) ? n : 0;
+      })
+      .refine((n) => n >= 0 && n <= 100, "A tax percentage runs from 0 to 100"),
     notes: optionalText(4000, "The notes"),
     footer: optionalText(2000, "The footer"),
     lines: z.array(invoiceLineSchema).min(1, "An invoice needs at least one line"),
@@ -129,6 +141,20 @@ export const invoiceInputSchema = z
   .refine((v) => !(v.taxPercent > 0) || Boolean(v.taxName), {
     message: "Name the tax that is being charged",
     path: ["taxName"],
+  })
+  // The same for the second tax, and a second tax needs a first: "Tax 2" on
+  // an invoice with no tax 1 is a layout nobody can read.
+  .refine((v) => !(v.tax2Percent > 0) || Boolean(v.tax2Name), {
+    message: "Name the second tax that is being charged",
+    path: ["tax2Name"],
+  })
+  .refine((v) => !(v.tax2Percent > 0) || v.taxPercent > 0, {
+    message: "Set the first tax before adding a second",
+    path: ["tax2Percent"],
+  })
+  .refine((v) => v.taxPercent + v.tax2Percent <= 100, {
+    message: "The two taxes together cannot exceed 100%",
+    path: ["tax2Percent"],
   });
 
 export const invoicePaymentSchema = z.object({

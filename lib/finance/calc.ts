@@ -15,6 +15,7 @@
  */
 import {
   add,
+  allocate,
   applyPercent,
   fromMajor,
   isZero,
@@ -52,7 +53,10 @@ export type InvoiceTotals = {
   subtotal: number;
   /** The part of the subtotal the tax applies to. */
   taxableSubtotal: number;
+  /** The FIRST tax only (the `taxTotal` column). */
   taxTotal: number;
+  /** The second tax (the `tax2Total` column). 0 when the invoice carries one tax. */
+  tax2Total: number;
   total: number;
 };
 
@@ -60,15 +64,33 @@ export type TaxSnapshot = {
   percent: number;
   /** EXCLUSIVE adds tax on top; INCLUSIVE means the line amounts already contain it. */
   mode: "EXCLUSIVE" | "INCLUSIVE";
+  /**
+   * An optional second tax (Aruba: BBO + BAVP) on the SAME taxable base, in the
+   * same mode. Never compounded — it is not charged on the first tax. Absent,
+   * null or 0 means one tax, and the arithmetic is exactly the one-tax one.
+   */
+  percent2?: number | null;
 };
 
+function cleanPercent(p: number | null | undefined): number {
+  return typeof p === "number" && Number.isFinite(p) ? Math.max(0, p) : 0;
+}
+
 /**
- * Totals for a set of lines under one tax snapshot.
+ * Totals for a set of lines under one tax snapshot (one tax, or two).
  *
  * INCLUSIVE tax is backed OUT of the lines rather than added to them: the total
  * a client sees is the sum of the lines, and the tax figure is what is contained
  * within it. Adding it instead would silently bill the tax twice — which is the
  * mistake the proposal engine documents at its own inclusive-tax branch.
+ *
+ * TWO TAXES. EXCLUSIVE: each is its own percentage of the taxable subtotal,
+ * rounded on its own; total = subtotal + tax 1 + tax 2. INCLUSIVE: the COMBINED
+ * rate (p1 + p2) is backed out of the taxable lines once, and that contained tax
+ * is split between the two in proportion to their rates by `allocate` (largest
+ * remainder), so the two parts add back to the contained tax to the cent and the
+ * total is still the sum of the lines. With no second tax the split hands all of
+ * it to the first, which is the one-tax figure unchanged.
  */
 export function invoiceTotals(
   lines: CalcLine[],
@@ -82,34 +104,40 @@ export function invoiceTotals(
     currency,
   );
 
-  const percent = Number.isFinite(tax.percent) ? Math.max(0, tax.percent) : 0;
-  if (percent === 0) {
+  const percent = cleanPercent(tax.percent);
+  const percent2 = cleanPercent(tax.percent2);
+  if (percent === 0 && percent2 === 0) {
     return {
       subtotal: toMajor(subtotal),
       taxableSubtotal: toMajor(taxable),
       taxTotal: 0,
+      tax2Total: 0,
       total: toMajor(subtotal),
     };
   }
 
   if (tax.mode === "INCLUSIVE") {
-    // net = gross / (1 + p/100); tax = gross − net.
-    const net = multiply(taxable, 1 / (1 + percent / 100));
-    const taxTotal = subtract(taxable, net);
+    // net = gross / (1 + (p1 + p2)/100); contained tax = gross − net, split p1 : p2.
+    const net = multiply(taxable, 1 / (1 + (percent + percent2) / 100));
+    const contained = subtract(taxable, net);
+    const [first, second] = allocate(contained, [percent, percent2]);
     return {
       subtotal: toMajor(subtotal),
       taxableSubtotal: toMajor(taxable),
-      taxTotal: toMajor(taxTotal),
+      taxTotal: toMajor(first),
+      tax2Total: toMajor(second),
       total: toMajor(subtotal),
     };
   }
 
   const taxTotal = applyPercent(taxable, percent);
+  const tax2Total = applyPercent(taxable, percent2);
   return {
     subtotal: toMajor(subtotal),
     taxableSubtotal: toMajor(taxable),
     taxTotal: toMajor(taxTotal),
-    total: toMajor(add(subtotal, taxTotal)),
+    tax2Total: toMajor(tax2Total),
+    total: toMajor(add(add(subtotal, taxTotal), tax2Total)),
   };
 }
 

@@ -173,7 +173,7 @@ export const PROGRESS: ProgressData = {
     { text: "D-6: who may issue / void invoices", tag: "YOU" },
     { text: "Billing provider for AEC-flow itself", tag: "YOU" },
     { text: "Legal entity + governing law in the Terms", tag: "YOU" },
-    { text: "Invoices with two taxes (BBO + BAVP)", tag: "DECISION" },
+    { text: "Apply SQL 0032 (invoices with two taxes)", tag: "YOU" },
     { text: "Separate development database", tag: "SETUP" },
     { text: "Error alerting (Sentry or similar)", tag: "VENDOR" },
   ],

@@ -98,8 +98,15 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
+ * 0.26.0 (10 OCT 2026): feat — an invoice can carry TWO taxes (Aruba: BBO + BAVP). The second tax
+ *   (name + percent, optional) is charged on the same amounts as the first, never on top of it, and
+ *   rounded on its own; "already in the amounts" backs the combined rate out and splits it by rate.
+ *   Snapshotted like the first; credit notes take back both in proportion; the tax report counts each
+ *   under its own name; the accounting CSV gains Tax 2 columns; invoice and credit-note screens and
+ *   prints show a second tax line. One-tax invoices are unchanged. A proposal's second tax row comes
+ *   across when raising from it. Needs prisma/sql/0032_invoice_second_tax.sql applied FIRST.
  */
-export const APP_VERSION = "0.25.0";
+export const APP_VERSION = "0.26.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

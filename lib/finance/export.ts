@@ -28,6 +28,12 @@
  */
 import type { CreditNoteDTO, ExpenseDTO, InvoiceDTO, TimeEntryDTO } from "./types";
 import { buildTaxReport } from "./tax-report";
+import { fromMajor, subtract, toMajor } from "@/lib/proposals/engine/money";
+
+/** The first tax of a tax-report row: all its tax less the second, in minor units. */
+function firstTax(r: { tax: number; tax2: number; currency: string }): number {
+  return toMajor(subtract(fromMajor(r.tax, r.currency), fromMajor(r.tax2, r.currency)));
+}
 
 export const EXPORT_KINDS = [
   "invoices",
@@ -116,6 +122,9 @@ export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
       i.taxPercent,
       i.taxMode,
       money(i.taxTotal),
+      i.tax2Percent > 0 ? i.tax2Name ?? "" : "",
+      i.tax2Percent > 0 ? i.tax2Percent : "",
+      money(i.tax2Total ?? 0),
       money(i.total),
       money(i.paid),
       money(i.credited ?? 0),
@@ -125,7 +134,8 @@ export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
   return {
     columns: [
       "Invoice number", "Status", "Issue date", "Due date", "Client", "Project", "Proposal",
-      "Title", "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Total", "Paid",
+      "Title", "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Tax 2 name", "Tax 2 %",
+      "Tax 2", "Total", "Paid",
       "Credited", "Outstanding", "Voided on",
     ],
     rows,
@@ -214,13 +224,17 @@ export function creditNotesTable(notes: CreditNoteDTO[], range: DateRange): Tabl
       c.taxPercent,
       c.taxMode,
       money(c.taxTotal),
+      c.tax2Percent > 0 ? c.tax2Name ?? "" : "",
+      c.tax2Percent > 0 ? c.tax2Percent : "",
+      money(c.tax2Total ?? 0),
       money(c.total),
       day(c.voidedAt),
     ]);
   return {
     columns: [
       "Credit note number", "Status", "Date", "Invoice number", "Client", "Project", "Reason",
-      "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Total", "Voided on",
+      "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Tax 2 name", "Tax 2 %", "Tax 2",
+      "Total", "Voided on",
     ],
     rows,
   };
@@ -294,23 +308,30 @@ export function expensesTable(expenses: ExpenseDTO[], range: DateRange): Table {
  * "Received", its tax pro rata). Built by lib/finance/tax-report.ts, so the CSV
  * and the screen cannot disagree. The two bases are alternatives — an
  * accountant sums one or the other, never both.
+ *
+ * "Tax" is the FIRST tax and "Tax 2" the second (BBO + BAVP), so on every row
+ * Net + Tax + Tax 2 = Gross. One-tax invoices have an empty "Tax 2 name".
  */
 export function taxTable(invoices: InvoiceDTO[], range: DateRange): Table {
   const report = buildTaxReport(invoices, range);
   const rows: Cell[][] = [
     ...report.invoices.map((r) => [
       "Invoiced", r.issueDate, r.number, r.clientName, r.currency, r.taxName ?? "",
-      r.taxPercent, r.taxPercent > 0 ? r.taxMode : "", money(r.net), money(r.tax), money(r.gross),
+      r.taxPercent, r.taxPercent > 0 ? r.taxMode : "", money(r.net), money(firstTax(r)),
+      r.tax2Percent > 0 ? r.tax2Name ?? "" : "", r.tax2Percent > 0 ? r.tax2Percent : "", money(r.tax2),
+      money(r.gross),
     ]),
     ...report.payments.map((r) => [
       "Received", r.paidAt, r.invoiceNumber, r.clientName, r.currency, r.taxName ?? "",
-      r.taxPercent, r.taxPercent > 0 ? r.taxMode : "", money(r.net), money(r.tax), money(r.gross),
+      r.taxPercent, r.taxPercent > 0 ? r.taxMode : "", money(r.net), money(firstTax(r)),
+      r.tax2Percent > 0 ? r.tax2Name ?? "" : "", r.tax2Percent > 0 ? r.tax2Percent : "", money(r.tax2),
+      money(r.gross),
     ]),
   ];
   return {
     columns: [
       "Basis", "Date", "Invoice number", "Client", "Currency", "Tax name", "Tax %", "Tax mode",
-      "Net", "Tax", "Gross",
+      "Net", "Tax", "Tax 2 name", "Tax 2 %", "Tax 2", "Gross",
     ],
     rows,
   };

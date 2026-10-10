@@ -94,6 +94,8 @@ export default async function NewInvoicePage({
             taxName: billing.taxName,
             taxPercent: billing.taxPercent,
             taxMode: billing.taxMode,
+            tax2Name: billing.tax2Name,
+            tax2Percent: billing.tax2Percent,
             issueDate: today,
             termsDays: 30,
             dueDate: dueDateFrom(today, 30),

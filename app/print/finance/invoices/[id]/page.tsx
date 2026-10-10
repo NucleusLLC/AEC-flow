@@ -155,6 +155,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
                 <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.taxTotal)}</td>
               </tr>
             ) : null}
+            {/* A second tax (BBO + BAVP) prints as its own line; one-tax documents are unchanged. */}
+            {invoice.tax2Percent > 0 ? (
+              <tr>
+                <td className="py-0.5 text-gray-500">
+                  {invoice.tax2Name ?? t("Tax")} {invoice.tax2Percent}%
+                  {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
+                </td>
+                <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.tax2Total)}</td>
+              </tr>
+            ) : null}
             <tr className="border-t border-gray-900">
               <td className="py-1 font-semibold text-gray-900">{t("Total")}</td>
               <td className="py-1 text-right font-mono text-sm font-bold text-gray-900">

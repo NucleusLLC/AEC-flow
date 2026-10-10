@@ -73,6 +73,9 @@ export function InvoiceForm({
   const [taxName, setTaxName] = useState(source?.taxName ?? "");
   const [taxPercent, setTaxPercent] = useState(String(source?.taxPercent ?? 0));
   const [taxMode, setTaxMode] = useState<TaxMode>(source?.taxMode ?? "EXCLUSIVE");
+  // Optional second tax (Aruba: BAVP beside BBO). Same mode, same base.
+  const [tax2Name, setTax2Name] = useState(source?.tax2Name ?? "");
+  const [tax2Percent, setTax2Percent] = useState(String(source?.tax2Percent ?? 0));
   const [notes, setNotes] = useState(source?.notes ?? "");
   const [footer, setFooter] = useState(source?.footer ?? "");
   const [lines, setLines] = useState<EditableLine[]>(() => {
@@ -96,8 +99,13 @@ export function InvoiceForm({
   const project = projects.find((p) => p.id === projectId);
 
   const totals = useMemo(
-    () => invoiceTotals(lines, { percent: Number(taxPercent) || 0, mode: taxMode }, currency),
-    [lines, taxPercent, taxMode, currency],
+    () =>
+      invoiceTotals(
+        lines,
+        { percent: Number(taxPercent) || 0, mode: taxMode, percent2: Number(tax2Percent) || 0 },
+        currency,
+      ),
+    [lines, taxPercent, taxMode, tax2Percent, currency],
   );
   const money = (n: number) =>
     formatCurrency(n, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -138,6 +146,8 @@ export function InvoiceForm({
       taxName: taxName || null,
       taxPercent: Number(taxPercent) || 0,
       taxMode,
+      tax2Name: Number(tax2Percent) > 0 ? tax2Name || null : null,
+      tax2Percent: Number(tax2Percent) || 0,
       notes: notes || null,
       footer: footer || null,
       // The editor key is local bookkeeping, not part of the line.
@@ -429,6 +439,33 @@ export function InvoiceForm({
                 <option value="INCLUSIVE">{t("Already in the amounts")}</option>
               </select>
             </div>
+            <div className="sm:col-span-3">
+              <p className="text-xs font-medium text-fg">{t("Second tax (optional)")}</p>
+              <p className="text-xs text-muted">
+                {t("Charged on the same amounts as the first tax, never on top of it.")}
+              </p>
+            </div>
+            <div>
+              <label className={label}>{t("Name")}</label>
+              <input
+                value={tax2Name}
+                onChange={(e) => setTax2Name(e.target.value)}
+                placeholder="BAVP"
+                className={input}
+                data-testid="invoice-tax2-name"
+              />
+            </div>
+            <div>
+              <label className={label}>{t("Percent")}</label>
+              <input
+                type="number"
+                step="0.01"
+                value={tax2Percent}
+                onChange={(e) => setTax2Percent(e.target.value)}
+                className={input}
+                data-testid="invoice-tax2-percent"
+              />
+            </div>
           </CardBody>
         </Card>
 
@@ -443,6 +480,12 @@ export function InvoiceForm({
                   label={`${taxName || t("Tax")} ${Number(taxPercent)}%${taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}`}
                   value={money(totals.taxTotal)}
                 />
+                {Number(tax2Percent) > 0 ? (
+                  <Row
+                    label={`${tax2Name || t("Tax")} ${Number(tax2Percent)}%${taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}`}
+                    value={money(totals.tax2Total)}
+                  />
+                ) : null}
               </>
             ) : null}
             <div className="mt-2 flex items-baseline justify-between border-t border-border pt-2">

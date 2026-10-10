@@ -167,9 +167,12 @@ type InvoiceRow = {
   taxName: string | null;
   taxPercent: DecimalLike;
   taxMode: TaxMode;
+  tax2Name: string | null;
+  tax2Percent: DecimalLike;
   subtotal: DecimalLike;
   taxableSubtotal: DecimalLike;
   taxTotal: DecimalLike;
+  tax2Total: DecimalLike;
   total: DecimalLike;
   notes: string | null;
   footer: string | null;
@@ -253,6 +256,7 @@ function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
     dueDate: ymd(r.dueDate),
     subtotal: num(r.subtotal),
     taxTotal: num(r.taxTotal),
+    tax2Total: num(r.tax2Total),
     total,
     paid,
     credited,
@@ -275,6 +279,8 @@ function invoiceDto(r: InvoiceRow): InvoiceDTO {
     taxName: r.taxName,
     taxPercent: num(r.taxPercent),
     taxMode: r.taxMode,
+    tax2Name: r.tax2Name,
+    tax2Percent: num(r.tax2Percent),
     taxableSubtotal: num(r.taxableSubtotal),
     notes: r.notes,
     footer: r.footer,
@@ -461,6 +467,10 @@ export async function getProposalBilling(
   }
 
   const tax = proposal.taxes[0];
+  // A second tax row (BBO + BAVP) comes across as the invoice's second tax —
+  // but only in the first one's mode: an invoice has one tax mode, and mixing
+  // an inclusive and an exclusive tax on one sheet is not something it can show.
+  const tax2 = tax && proposal.taxes[1]?.mode === tax.mode ? proposal.taxes[1] : undefined;
   return {
     serviceProposalId: proposal.id,
     proposalNumber: proposal.number,
@@ -477,6 +487,8 @@ export async function getProposalBilling(
     taxName: tax?.name ?? null,
     taxPercent: tax ? num(tax.percent) : 0,
     taxMode: (tax?.mode as TaxMode) ?? "EXCLUSIVE",
+    tax2Name: tax2?.name ?? null,
+    tax2Percent: tax2 ? num(tax2.percent) : 0,
     milestones,
     warnings,
   };
@@ -537,9 +549,13 @@ function headerData(input: InvoiceInput, totals: ReturnType<typeof invoiceTotals
     taxName: input.taxName ?? null,
     taxPercent: input.taxPercent ?? 0,
     taxMode: input.taxMode ?? "EXCLUSIVE",
+    // No rate, no second tax: a name alone would be a label on nothing.
+    tax2Name: (input.tax2Percent ?? 0) > 0 ? input.tax2Name?.trim() || null : null,
+    tax2Percent: input.tax2Percent ?? 0,
     subtotal: totals.subtotal,
     taxableSubtotal: totals.taxableSubtotal,
     taxTotal: totals.taxTotal,
+    tax2Total: totals.tax2Total,
     total: totals.total,
     notes: input.notes ?? null,
     footer: input.footer ?? null,
@@ -567,6 +583,7 @@ export async function createInvoice(input: InvoiceInput): Promise<InvoiceDTO> {
   const totals = invoiceTotals(input.lines, {
     percent: input.taxPercent ?? 0,
     mode: input.taxMode ?? "EXCLUSIVE",
+    percent2: input.tax2Percent ?? 0,
   }, currency);
 
   const asked = input.number?.trim() || undefined;
@@ -598,6 +615,7 @@ export async function updateInvoice(id: string, input: InvoiceInput): Promise<In
   const totals = invoiceTotals(input.lines, {
     percent: input.taxPercent ?? 0,
     mode: input.taxMode ?? "EXCLUSIVE",
+    percent2: input.tax2Percent ?? 0,
   }, currency);
 
   const asked = input.number?.trim() || undefined;

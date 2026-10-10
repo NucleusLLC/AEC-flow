@@ -123,6 +123,16 @@ export default async function CreditNotePrintPage({ params }: { params: Promise<
                 <td className="py-0.5 text-right font-mono text-gray-900">{money(note.taxTotal)}</td>
               </tr>
             ) : null}
+            {/* A second tax (BBO + BAVP) prints as its own line; one-tax documents are unchanged. */}
+            {note.tax2Percent > 0 ? (
+              <tr>
+                <td className="py-0.5 text-gray-500">
+                  {note.tax2Name ?? t("Tax")} {note.tax2Percent}%
+                  {note.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
+                </td>
+                <td className="py-0.5 text-right font-mono text-gray-900">{money(note.tax2Total)}</td>
+              </tr>
+            ) : null}
             <tr className="border-t border-gray-900">
               <td className="py-1 font-semibold uppercase text-gray-900">{t("Credit total")}</td>
               <td className="py-1 text-right font-mono text-sm font-bold text-gray-900">{money(note.total)}</td>
