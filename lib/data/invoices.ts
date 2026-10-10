@@ -684,6 +684,11 @@ export async function deleteInvoice(id: string): Promise<void> {
 export async function recordPayment(
   invoiceId: string,
   input: InvoicePaymentInput,
+  /**
+   * For a payment no person recorded (the Stripe webhook has no session): who to
+   * name as the recorder, and the PaymentIntent that makes the row unique.
+   */
+  opts: { recordedBy?: { id: string | null; name: string }; stripePaymentIntentId?: string } = {},
 ): Promise<InvoicePaymentDTO> {
   const current = await requireInvoice(invoiceId);
   if (current.status === "DRAFT") {
@@ -692,7 +697,7 @@ export async function recordPayment(
   if (current.status === "VOID") {
     throw new InvoiceLockedError("paid — it has been voided");
   }
-  const who = await actor();
+  const who = opts.recordedBy ?? (await actor());
   const row = await prisma.invoicePayment.create({
     data: {
       invoiceId,
@@ -703,9 +708,46 @@ export async function recordPayment(
       notes: input.notes ?? null,
       recordedById: who.id,
       recordedByName: who.name,
+      ...(opts.stripePaymentIntentId ? { stripePaymentIntentId: opts.stripePaymentIntentId } : {}),
     },
   });
   return paymentDto(row as unknown as PaymentRow);
+}
+
+/**
+ * Record a card payment that arrived through Stripe — the same path as a
+ * payment typed in by hand (`recordPayment`), so the invoice's paid state is
+ * still DERIVED from its payments and nothing else.
+ *
+ * Idempotent on the PaymentIntent: Stripe delivers webhooks at least once, and
+ * the UNIQUE column turns a replay into "duplicate" instead of a second row
+ * (checked first, and caught again for two deliveries racing each other).
+ * "refused" is a draft or voided invoice; the money then sits in the practice's
+ * Stripe account for them to refund — the webhook logs it loudly.
+ *
+ * Must run inside the invoice's company (`runAsCompany`, lib/server/request-company.ts).
+ */
+export async function recordStripePayment(
+  invoiceId: string,
+  input: InvoicePaymentInput & { stripePaymentIntentId: string },
+): Promise<"recorded" | "duplicate" | "refused"> {
+  const { stripePaymentIntentId, ...payment } = input;
+  const seen = await prisma.invoicePayment.findFirst({
+    where: { stripePaymentIntentId },
+    select: { id: true },
+  });
+  if (seen) return "duplicate";
+  try {
+    await recordPayment(invoiceId, payment, {
+      recordedBy: { id: null, name: "Stripe (online payment)" },
+      stripePaymentIntentId,
+    });
+    return "recorded";
+  } catch (e) {
+    if (isUniqueViolation(e)) return "duplicate";
+    if (e instanceof InvoiceLockedError) return "refused";
+    throw e;
+  }
 }
 
 export async function deletePayment(id: string): Promise<void> {

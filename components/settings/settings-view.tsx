@@ -20,6 +20,8 @@ import { PracticeForm } from "@/components/settings/practice-form";
 import { TemplatesManager } from "@/components/settings/templates-manager";
 import { MembersManager } from "@/components/settings/members-manager";
 import { DocumentControlForm } from "@/components/settings/document-control-form";
+import { OnlinePaymentsCard } from "@/components/settings/online-payments-card";
+import type { OnlinePaymentsStatus } from "@/lib/data/pay-now";
 import {
   saveAnthropicApiKeyAction,
   clearAnthropicApiKeyAction,
@@ -63,6 +65,9 @@ export function SettingsView({
   canSave,
   isFounder = false,
   canManagePasswords = false,
+  onlinePayments,
+  initialTab,
+  stripeNotice = null,
 }: {
   profile: PracticeProfile;
   logoDataUrl: string | null;
@@ -79,9 +84,16 @@ export function SettingsView({
   isFounder?: boolean;
   /** Draws the per-member "Set password" control. Presentation only — the server enforces the real gate. */
   canManagePasswords?: boolean;
+  /** Settings → Integrations → Online payments (Stripe Connect). */
+  onlinePayments: OnlinePaymentsStatus;
+  /** `?tab=` — Stripe onboarding returns to Integrations. */
+  initialTab?: string;
+  stripeNotice?: "returned" | "error" | null;
 }) {
   const t = useT();
-  const [tab, setTab] = useState<Tab>("practice");
+  const [tab, setTab] = useState<Tab>(
+    TABS.some((tb) => tb.key === initialTab) ? (initialTab as Tab) : "practice",
+  );
 
   return (
     <div className="space-y-5">
@@ -130,7 +142,12 @@ export function SettingsView({
       {/* Practice-wide settings (letterhead, logo, currency, font, AI key) are for
        * the people who manage the practice — the same gate as members, enforced
        * again in app/(app)/settings/actions.ts. */}
-      {tab === "integrations" ? <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} /> : null}
+      {tab === "integrations" ? (
+        <div className="space-y-6">
+          <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} />
+          <OnlinePaymentsCard initial={onlinePayments} canManage={canManagePasswords} notice={stripeNotice} />
+        </div>
+      ) : null}
     </div>
   );
 }

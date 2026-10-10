@@ -93,6 +93,21 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // PAY ONLINE. A client paying a practice's invoice has no account and must
+  // never see a login page: /pay/<token> is public like the TV boards. The token
+  // (32 random bytes) is the only key, and the page shows nothing beyond the
+  // invoice number, the practice and the amount owed (app/pay/[token]/page.tsx).
+  // Before the beta-host branch so the link works whichever host it was printed with.
+  if (pathname.startsWith("/pay/")) {
+    return NextResponse.next();
+  }
+
+  // Stripe's webhook has no session; its signature is its authentication,
+  // verified by the route itself (app/api/stripe/webhook/route.ts).
+  if (pathname === "/api/stripe/webhook") {
+    return NextResponse.next();
+  }
+
   // Beta subdomain: it's the portal, not the app.
   if (isBetaHost(req)) {
     if (pathname === "/") {

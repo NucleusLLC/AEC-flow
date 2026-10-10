@@ -10,13 +10,20 @@ import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
+import { getOnlinePaymentsStatus, type OnlinePaymentsStatus } from "@/lib/data/pay-now";
+import { stripeConfig } from "@/lib/payments/stripe";
 
 export async function generateMetadata() {
   const tr = await getServerT();
   return { title: `${tr("Settings")} · AEC-flow` };
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; stripe?: string }>;
+}) {
+  const q = await searchParams;
   const tr = await getServerT();
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id ?? null;
@@ -50,6 +57,19 @@ export default async function SettingsPage() {
     isFounder,
   );
 
+  // Online payments: the practice's Stripe Connect state, from its Company row.
+  const companyId = session?.user?.companyId ?? null;
+  const onlinePayments: OnlinePaymentsStatus = companyId
+    ? await getOnlinePaymentsStatus(companyId)
+    : {
+        configured: stripeConfig() !== null,
+        accountId: null,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        statusAt: null,
+      };
+
   return (
     <div className="w-full space-y-6">
       <div>
@@ -74,6 +94,9 @@ export default async function SettingsPage() {
         canSave={!!userId}
         isFounder={isFounder}
         canManagePasswords={canManagePasswords}
+        onlinePayments={onlinePayments}
+        initialTab={q.tab}
+        stripeNotice={q.stripe === "returned" || q.stripe === "error" ? q.stripe : null}
       />
     </div>
   );

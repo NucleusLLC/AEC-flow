@@ -218,6 +218,52 @@ Account, where it is a CREDIT line on its own date.
 billed (a credit is a concession, not an un-billing) and does not release
 billed time or expenses. Refunds of overpayments are not credit notes.
 
+## 6a. Pay online — Stripe Connect (0.28.0)
+
+`prisma/sql/0034_stripe_pay_now.sql` · `lib/payments/` · `lib/data/pay-now.ts` ·
+`app/pay/[token]` · `app/api/stripe/webhook` · owner setup: `docs/finance/STRIPE.md`
+
+A client pays an issued invoice by card. **The money goes to the practice, never
+to Nucleus.** Nucleus LLC's Stripe account is the Connect platform; each practice
+connects its own Standard account (Settings → Integrations → Online payments,
+Admin / Director only, Stripe-hosted onboarding via Account Links), and the
+checkout is a **direct charge on that account** (`Stripe-Account` header). No
+platform fee (`PLATFORM_FEE_BASIS_POINTS = 0`). Stripe's own fees are the
+practice's.
+
+**The link.** While the practice can take cards and an invoice is ISSUED or
+PART_PAID with money owing, the invoice page shows a "Pay online link" to copy
+and the printed invoice carries the URL. It is `/pay/<token>`, 32 random bytes
+base64url, stored on the invoice (`payToken`, unique) and created the first
+time it is shown. Stored, not hashed: the same link must reprint on every copy
+of the invoice. The page is public (proxy.ts), like the TV boards, and shows
+only the number, the practice, the due date and the amount owed now.
+
+**The amount** is always the current outstanding balance (`invoiceBalance`:
+total less payments and issued credit notes), computed on the server at the
+moment the client presses Pay, converted to minor units by money.ts. Zero- and
+three-decimal currencies are refused rather than mis-scaled; AWG, USD, EUR are
+two-decimal. The Checkout page expires after 60 minutes.
+
+**Recording.** Only the signed webhook records a payment — never the success
+page. `checkout.session.completed` (and `async_payment_succeeded`) with
+`payment_status = paid` becomes an InvoicePayment through the SAME path as a
+hand-recorded payment (`recordPayment`), method STRIPE ("Card (Stripe)"),
+reference = the PaymentIntent, so the paid state stays DERIVED. The
+PaymentIntent is UNIQUE on the payment row: a replayed event is a no-op. A
+payment is recorded only when the event's connected account is the invoice
+practice's own. The webhook has no session, so it runs inside the invoice's
+company with `runAsCompany` (AsyncLocalStorage, lib/server/request-company.ts):
+React `cache` — what `companyOverride()` relies on — does not hold in a route
+handler. STRIPE cannot be chosen when recording a payment by hand.
+
+**Not done.** Refunds and disputes are handled in the practice's Stripe
+dashboard and are not mirrored back (a refunded card payment must be deleted
+from the invoice by hand). Money taken against an invoice voided while the
+client was on the Checkout page is logged as PAID BUT NOT RECORDED and must be
+refunded in Stripe. Two tabs paying at once can overpay; the invoice then shows
+the overpayment like any other.
+
 ## 7. Not built yet
 
 - Billing time and expenses ONTO an invoice — the columns exist
@@ -225,6 +271,7 @@ billed time or expenses. Refunds of overpayments are not credit notes.
   is written, but nothing sets them yet.
 - The profit / WIP screens. (The per-project finance tab shipped in 0.23.0:
   app/(app)/projects/[id]/finance, lib/finance/project-finance.ts.)
-- Any billing provider. (The accounting export — invoices, lines, payments,
+- Any billing provider beyond card payments through Stripe (0.28.0, §6a).
+  (The accounting export — invoices, lines, payments,
   approved time and expenses as CSV for a period — shipped in 0.11.0:
   lib/finance/export.ts, app/api/export/finance/[kind]/route.ts.)

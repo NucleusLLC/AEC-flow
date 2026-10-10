@@ -98,8 +98,14 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
+ * 0.28.0 (10 OCT 2026): feat — PAY ONLINE. A practice connects its own Stripe account (Settings →
+ *   Integrations → Online payments, Stripe Connect, Admin / Director only); its issued invoices then
+ *   carry a "Pay online" link (on screen and printed) to a public /pay page where the client pays
+ *   the amount owed by card, straight into the practice's Stripe account (no platform fee). The
+ *   signed Stripe webhook records the payment ("Card (Stripe)"), once. Off until STRIPE_SECRET_KEY
+ *   and STRIPE_WEBHOOK_SECRET are set. Needs prisma/sql/0034_stripe_pay_now.sql applied FIRST.
  */
-export const APP_VERSION = "0.25.0";
+export const APP_VERSION = "0.28.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

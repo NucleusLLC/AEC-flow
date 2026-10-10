@@ -27,7 +27,7 @@ import { creditsOf, daysOverdue, invoiceBalance } from "@/lib/finance/calc";
 import { militaryDate } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 import {
-  PAYMENT_METHODS,
+  MANUAL_PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
   type InvoiceDTO,
   type InvoicePaymentMethod,
@@ -227,7 +227,7 @@ export function InvoicePanel({
                 onChange={(e) => setMethod(e.target.value as InvoicePaymentMethod)}
                 className={input}
               >
-                {PAYMENT_METHODS.map((m) => (
+                {MANUAL_PAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>
                     {t(PAYMENT_METHOD_LABEL[m])}
                   </option>
