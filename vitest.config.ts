@@ -144,6 +144,9 @@ export default defineConfig({
       // Finance. Invoice arithmetic (exact money, ageing, status from payments)
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
+      // Credit notes: the one balance function (invoiceBalance) and the
+      // over-credit guard. Named file, same reason as every entry above.
+      "lib/finance/credit-notes.test.ts",
       "lib/finance/enums.test.ts",
       // Time and expense arithmetic: the week grid, what may still be billed,
       // and cost against worth per project. Same reason as every entry above —
@@ -196,6 +199,7 @@ export default defineConfig({
       "lib/projects/development.test.ts",
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
+      "lib/finance/receivables.test.ts",
       // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
       "lib/projects/architecture-type.test.ts",
       // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with

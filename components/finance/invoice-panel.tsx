@@ -10,17 +10,20 @@
  *
  * The status shown here is derived (lib/finance/calc.ts): recording a payment
  * that covers the total turns the invoice PAID without anyone choosing that.
+ * Issued credit notes reduce the balance through the same function
+ * (`invoiceBalance`) — they are listed under the payments, and a credit note
+ * is raised from here, against this invoice, while money is still owed.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ban, Plus, Send, Trash2 } from "lucide-react";
+import { Ban, FileMinus, Plus, Send, Trash2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
-import { InvoiceStatusBadge, OverdueBadge } from "@/components/finance/badges";
-import { daysOverdue, settlement } from "@/lib/finance/calc";
+import { CreditNoteStatusBadge, InvoiceStatusBadge, OverdueBadge } from "@/components/finance/badges";
+import { creditsOf, daysOverdue, invoiceBalance } from "@/lib/finance/calc";
 import { militaryDate } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 import {
@@ -64,14 +67,18 @@ export function InvoicePanel({
 
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const { paid, outstanding, overpaidBy } = settlement(
-    invoice.total,
-    invoice.payments,
-    invoice.currency,
-  );
+  const { paid, credited, outstanding, overpaidBy } = invoiceBalance({
+    total: invoice.total,
+    currency: invoice.currency,
+    payments: invoice.payments,
+    credits: creditsOf(invoice.creditNotes),
+  });
   const late = daysOverdue({ dueDate: invoice.dueDate, outstanding }, today);
   const isDraft = invoice.status === "DRAFT";
   const canTakePayment = !isDraft && invoice.status !== "VOID";
+  // Same people as everything else on this panel (any member — see
+  // app/(app)/finance/credit-notes/actions.ts); only while money is owed.
+  const canCredit = canTakePayment && outstanding > 0;
 
   /**
    * The actions return only an id, and the server page is the source of truth
@@ -106,7 +113,11 @@ export function InvoicePanel({
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-4">
         <Stat label={t("Total")} value={money(invoice.total)} />
-        <Stat label={t("Received")} value={paid > 0 ? money(paid) : "—"} />
+        <Stat
+          label={t("Received")}
+          value={paid > 0 ? money(paid) : "—"}
+          note={credited > 0 ? `${t("Credited")} ${money(credited)}` : undefined}
+        />
         <Stat
           label={t("Outstanding")}
           value={outstanding > 0 ? money(outstanding) : "—"}
@@ -174,6 +185,14 @@ export function InvoicePanel({
           <button type="button" disabled={pending} onClick={() => setAsking("pay")} className={BTN}>
             <Plus className="h-4 w-4" /> {t("Record a payment")}
           </button>
+        ) : null}
+        {canCredit ? (
+          <Link
+            href={`/finance/credit-notes/new?invoice=${invoice.id}`}
+            className={`${BTN} uppercase tracking-wider`}
+          >
+            <FileMinus className="h-4 w-4" /> {t("Raise credit note")}
+          </Link>
         ) : null}
         {!isDraft && invoice.status !== "VOID" ? (
           <button type="button" disabled={pending} onClick={() => setAsking("void")} className={`${BTN} text-red-600`}>
@@ -412,6 +431,49 @@ export function InvoicePanel({
           )}
         </CardBody>
       </Card>
+
+      {invoice.creditNotes.length > 0 ? (
+        <Card>
+          <CardHeader
+            title={t("Credits").toUpperCase()}
+            subtitle={t("Only issued credit notes reduce the balance. Drafts and voids are shown, not counted.")}
+          />
+          <CardBody>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
+                  <th className="pb-1.5 font-medium">{t("Credit note")}</th>
+                  <th className="pb-1.5 font-medium">{t("Date")}</th>
+                  <th className="pb-1.5 font-medium">{t("Reason")}</th>
+                  <th className="pb-1.5 text-right font-medium">{t("Amount")}</th>
+                  <th className="pb-1.5 pl-3 font-medium">{t("Status")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoice.creditNotes.map((c) => (
+                  <tr key={c.id} className="border-t border-border/60">
+                    <td className="py-2">
+                      <Link href={`/finance/credit-notes/${c.id}`} className="font-mono text-xs font-semibold text-brand hover:underline">
+                        {c.number}
+                      </Link>
+                    </td>
+                    <td className="py-2 font-mono text-xs tabular-nums">{militaryDate(c.date)}</td>
+                    <td className="max-w-[280px] truncate py-2 text-muted">{c.reason}</td>
+                    <td
+                      className={`py-2 text-right font-mono tabular-nums ${c.status === "ISSUED" ? "text-fg" : "text-faint line-through"}`}
+                    >
+                      −{money(c.total)}
+                    </td>
+                    <td className="py-2 pl-3">
+                      <CreditNoteStatusBadge status={c.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardBody>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -7,7 +7,16 @@
  * exactly, and `lib/finance/enums.test.ts` fails the build if they drift.
  */
 
-export type InvoiceStatus = "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "VOID";
+/**
+ * DRAFT, ISSUED and VOID are chosen by a person; PART_PAID, PAID and CREDITED
+ * are derived from the money (lib/finance/calc.ts) and never set by hand.
+ * CREDITED is an invoice settled by credit notes with nothing received — the
+ * practice took the whole bill back.
+ */
+export type InvoiceStatus = "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "CREDITED" | "VOID";
+
+/** A credit note is chosen into each of its states; none is derived. */
+export type CreditNoteStatus = "DRAFT" | "ISSUED" | "VOID";
 
 export type InvoicePaymentMethod = "BANK_TRANSFER" | "CASH" | "CHEQUE" | "CARD" | "OTHER";
 
@@ -19,8 +28,11 @@ export const INVOICE_STATUSES: InvoiceStatus[] = [
   "ISSUED",
   "PART_PAID",
   "PAID",
+  "CREDITED",
   "VOID",
 ];
+
+export const CREDIT_NOTE_STATUSES: CreditNoteStatus[] = ["DRAFT", "ISSUED", "VOID"];
 
 export const PAYMENT_METHODS: InvoicePaymentMethod[] = [
   "BANK_TRANSFER",
@@ -35,6 +47,13 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   ISSUED: "Issued",
   PART_PAID: "Part paid",
   PAID: "Paid",
+  CREDITED: "Credited",
+  VOID: "Voided",
+};
+
+export const CREDIT_NOTE_STATUS_LABEL: Record<CreditNoteStatus, string> = {
+  DRAFT: "Draft",
+  ISSUED: "Issued",
   VOID: "Voided",
 };
 
@@ -59,6 +78,13 @@ export const INVOICE_STATUS_TONE: Record<InvoiceStatus, BadgeTone> = {
   ISSUED: "blue",
   PART_PAID: "amber",
   PAID: "green",
+  CREDITED: "violet",
+  VOID: "slate",
+};
+
+export const CREDIT_NOTE_STATUS_TONE: Record<CreditNoteStatus, BadgeTone> = {
+  DRAFT: "slate",
+  ISSUED: "violet",
   VOID: "slate",
 };
 
@@ -119,6 +145,9 @@ export type InvoiceSummaryDTO = {
   total: number;
   /** Derived from the payments, never stored: see lib/finance/calc.ts. */
   paid: number;
+  /** Issued credit notes against it — `invoiceBalance` in lib/finance/calc.ts. */
+  credited: number;
+  /** total − paid − credited, never below zero. */
   outstanding: number;
   paymentCount: number;
   lineCount: number;
@@ -145,6 +174,104 @@ export type InvoiceDTO = InvoiceSummaryDTO & {
   createdAt: string;
   lines: InvoiceLineDTO[];
   payments: InvoicePaymentDTO[];
+  /** Every credit note raised against it, drafts and voids included. */
+  creditNotes: CreditNoteSummaryDTO[];
+};
+
+// ── Credit notes ───────────────────────────────────────────────────────────
+
+export type CreditNoteLineDTO = {
+  id: string;
+  creditNoteId: string;
+  /** The invoice line this credits. Provenance; the description is a snapshot. */
+  invoiceLineId: string | null;
+  description: string;
+  amount: number;
+  taxable: boolean;
+  sortOrder: number;
+};
+
+export type CreditNoteSummaryDTO = {
+  id: string;
+  number: string;
+  status: CreditNoteStatus;
+  invoiceId: string;
+  invoiceNumber: string;
+  currency: string;
+  clientId: string | null;
+  clientName: string;
+  projectId: string | null;
+  projectName: string | null;
+  date: string;
+  reason: string;
+  subtotal: number;
+  taxTotal: number;
+  total: number;
+  updatedAt: string;
+};
+
+export type CreditNoteDTO = CreditNoteSummaryDTO & {
+  contactName: string | null;
+  contactEmail: string | null;
+  billingAddress: string | null;
+  taxName: string | null;
+  taxPercent: number;
+  taxMode: TaxMode;
+  taxableSubtotal: number;
+  notes: string | null;
+  createdByName: string | null;
+  issuedByName: string | null;
+  issuedAt: string | null;
+  voidReason: string | null;
+  voidedAt: string | null;
+  createdAt: string;
+  lines: CreditNoteLineDTO[];
+};
+
+/**
+ * One line of a credit note: which invoice line, and how much of it. The
+ * description, the taxable flag and the tax rate are copied from the invoice
+ * on the server — a credit note cannot credit something its invoice never
+ * charged, nor at a different tax rate.
+ */
+export type CreditNoteLineInput = {
+  invoiceLineId: string;
+  amount: number;
+};
+
+/** An invoice as the credit-note form sees it: limits included. */
+export type CreditableInvoice = {
+  id: string;
+  number: string;
+  /** The STORED status — only DRAFT and VOID matter: neither can be credited. */
+  status: InvoiceStatus;
+  currency: string;
+  clientName: string;
+  projectName: string | null;
+  taxName: string | null;
+  taxPercent: number;
+  taxMode: TaxMode;
+  total: number;
+  paid: number;
+  credited: number;
+  /** The most a new credit note may total: the outstanding balance. */
+  available: number;
+  lines: {
+    id: string;
+    description: string;
+    amount: number;
+    taxable: boolean;
+    /** The line amount less what issued credit notes already took back. */
+    creditable: number;
+  }[];
+};
+
+export type CreditNoteInput = {
+  invoiceId: string;
+  date: string;
+  reason: string;
+  notes?: string | null;
+  lines: CreditNoteLineInput[];
 };
 
 // ── Write inputs ───────────────────────────────────────────────────────────

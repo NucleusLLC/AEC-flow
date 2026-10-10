@@ -26,11 +26,12 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { releaseWork } from "@/lib/data/work-billing";
+import { creditNoteSummaryDto } from "@/lib/data/credit-notes";
 import {
+  invoiceBalance,
   invoiceStatus,
   invoiceTotals,
   nextInvoiceNumber,
-  settlement,
 } from "@/lib/finance/calc";
 import type {
   BillableMilestone,
@@ -114,6 +115,9 @@ function toDate(s: string | null | undefined): Date | null {
 const CHILDREN = {
   lines: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
   payments: { orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }] },
+  // Every live credit note, drafts and voids included: the balance counts only
+  // the ISSUED ones (invoiceBalance), the screens list them all.
+  creditNotes: { where: { deletedAt: null }, orderBy: [{ date: "asc" }, { number: "asc" }] },
 } satisfies Prisma.InvoiceInclude;
 
 type LineRow = {
@@ -177,6 +181,7 @@ type InvoiceRow = {
   updatedAt: Date;
   lines: LineRow[];
   payments: PaymentRow[];
+  creditNotes: Parameters<typeof creditNoteSummaryDto>[0][];
 };
 
 function lineDto(r: LineRow): InvoiceLineDTO {
@@ -210,8 +215,19 @@ function paymentDto(r: PaymentRow): InvoicePaymentDTO {
 
 function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
   const payments = r.payments.map((p) => ({ amount: num(p.amount) }));
+  const credits = r.creditNotes.map((c) => ({
+    amount: num(c.total as DecimalLike),
+    status: c.status,
+    currency: c.currency,
+  }));
   const total = num(r.total);
-  const { paid, outstanding } = settlement(total, payments, r.currency);
+  // ONE balance: payments AND issued credit notes, lib/finance/calc.ts.
+  const { paid, credited, outstanding } = invoiceBalance({
+    total,
+    currency: r.currency,
+    payments,
+    credits,
+  });
   return {
     id: r.id,
     number: r.number,
@@ -223,6 +239,7 @@ function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
       total,
       issueDate: ymd(r.issueDate),
       payments,
+      credits,
       currency: r.currency,
     }),
     currency: r.currency,
@@ -238,6 +255,7 @@ function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
     taxTotal: num(r.taxTotal),
     total,
     paid,
+    credited,
     outstanding,
     paymentCount: r.payments.length,
     lineCount: r.lines.length,
@@ -267,6 +285,7 @@ function invoiceDto(r: InvoiceRow): InvoiceDTO {
     createdAt: r.createdAt.toISOString(),
     lines: r.lines.map(lineDto),
     payments: r.payments.map(paymentDto),
+    creditNotes: r.creditNotes.map(creditNoteSummaryDto),
   };
 }
 
@@ -304,6 +323,28 @@ export async function getInvoice(idOrNumber: string): Promise<InvoiceDTO | null>
 export async function listInvoicesForExport(): Promise<InvoiceDTO[]> {
   const rows = await prisma.invoice.findMany({
     where: { deletedAt: null, status: { not: "DRAFT" } },
+    include: CHILDREN,
+    orderBy: [{ issueDate: "asc" }, { number: "asc" }],
+  });
+  return (rows as unknown as InvoiceRow[]).map(invoiceDto);
+}
+
+/**
+ * Every invoice in the books (drafts left out) with its payments, optionally for
+ * one client — what receivables by client and the Statement of Account read.
+ * VOID invoices come back too, marked VOID, and the pure code in
+ * lib/finance/receivables.ts leaves them out; that decision lives in one place.
+ * Who may call this is decided by lib/data/receivables.ts.
+ */
+export async function listInvoicesOnBooks(
+  filter: { clientId?: string } = {},
+): Promise<InvoiceDTO[]> {
+  const rows = await prisma.invoice.findMany({
+    where: {
+      deletedAt: null,
+      status: { not: "DRAFT" },
+      ...(filter.clientId ? { clientId: filter.clientId } : {}),
+    },
     include: CHILDREN,
     orderBy: [{ issueDate: "asc" }, { number: "asc" }],
   });
