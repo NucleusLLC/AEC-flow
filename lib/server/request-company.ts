@@ -1,4 +1,24 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { cache } from "react";
+
+/**
+ * A company named for the duration of one async call — for ROUTE HANDLERS with no
+ * session (the Stripe webhook, the public /pay checkout). React `cache` memoises
+ * only inside a React render; a route handler is not one, so there
+ * `companyOverride()` hands back a fresh object on every call and a value set on
+ * it is never seen again. AsyncLocalStorage follows the awaited call instead.
+ */
+const companyScope = new AsyncLocalStorage<string>();
+
+/**
+ * Run `fn` with every tenant-scoped query limited to `companyId`. Use it only
+ * after the caller has proved which company the work belongs to (a verified
+ * Stripe signature naming the connected account, an unguessable pay token).
+ */
+export function runAsCompany<T>(companyId: string, fn: () => Promise<T>): Promise<T> {
+  if (!companyId) throw new Error("runAsCompany needs a company.");
+  return companyScope.run(companyId, fn);
+}
 
 /**
  * The current request's companyId, read from the signed-in session and memoised
@@ -14,6 +34,9 @@ import { cache } from "react";
  * otherwise cycle: db → this → auth → db).
  */
 export const currentCompanyId = cache(async (): Promise<string | null | undefined> => {
+  // A route handler acting for one practice with no session (runAsCompany above).
+  const scoped = companyScope.getStore();
+  if (scoped) return scoped;
   // The office TV board opened with its secret key has no session; it names its
   // company for that one request (app/officedash/page.tsx). Nothing else sets it.
   const override = companyOverride().companyId;

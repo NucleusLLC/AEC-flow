@@ -159,6 +159,18 @@ model Company {
   licenseValidUntil   DateTime? // grace horizon; only consulted once enforcement is switched on
   licenseEntitlements Json? // plan/modules/features/limits from the last good validation
 
+  // ── Online payments (Stripe Connect) ─────────────────────────────────────
+  // The practice's OWN Stripe account (a Standard account connected to the Nucleus
+  // platform). Card payments for this practice's invoices are direct charges on it,
+  // so the money goes to the practice, never to Nucleus. Status flags are the last
+  // values Stripe reported (account.updated webhook, or the onboarding return).
+  // See docs/finance/STRIPE.md and prisma/sql/0034_stripe_pay_now.sql.
+  stripeAccountId        String?   @unique
+  stripeChargesEnabled   Boolean   @default(false)
+  stripePayoutsEnabled   Boolean   @default(false)
+  stripeDetailsSubmitted Boolean   @default(false)
+  stripeStatusAt         DateTime?
+
   users User[]
 
   @@map("companies")
@@ -3196,6 +3208,9 @@ enum InvoicePaymentMethod {
   CHEQUE
   CARD
   OTHER
+  /// Card, paid online through the practice's Stripe account. Recorded only by the
+  /// Stripe webhook (app/api/stripe/webhook), never chosen by hand.
+  STRIPE
 }
 
 /// One invoice. The aggregate root: lines and payments hang off it.
@@ -3269,6 +3284,12 @@ model Invoice {
   /// Soft delete, and only ever for a DRAFT (the data layer enforces that).
   deletedAt DateTime?
 
+  /// The "Pay online" link: /pay/<payToken>. 32 random bytes, base64url. Stored as
+  /// is (not hashed) because the practice must be able to show and print the same
+  /// link again on every reprint; it opens a page showing only the number, the
+  /// practice and the amount owed. Created lazily, the first time it is shown.
+  payToken String? @unique
+
   lines       InvoiceLine[]
   payments    InvoicePayment[]
   creditNotes CreditNote[]
@@ -3328,6 +3349,10 @@ model InvoicePayment {
 
   recordedById   String?
   recordedByName String?
+
+  /// The Stripe PaymentIntent behind an online card payment. UNIQUE: a replayed
+  /// webhook can never record the same money twice. Null for every manual payment.
+  stripePaymentIntentId String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

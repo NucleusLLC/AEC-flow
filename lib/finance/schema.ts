@@ -17,7 +17,7 @@
  */
 import { z } from "zod";
 import { MAX_HOURS_PER_DAY } from "./timesheet";
-import { EXPENSE_CATEGORIES, PAYMENT_METHODS } from "./types";
+import { EXPENSE_CATEGORIES, MANUAL_PAYMENT_METHODS } from "./types";
 
 const dateOnly = z
   .string()
@@ -134,7 +134,7 @@ export const invoiceInputSchema = z
 export const invoicePaymentSchema = z.object({
   paidAt: dateOnly,
   amount: amount("The payment").refine((n) => n > 0, "A payment has to be more than zero"),
-  method: enumOf(PAYMENT_METHODS, "payment method"),
+  method: enumOf(MANUAL_PAYMENT_METHODS, "payment method"),
   reference: optionalText(120),
   notes: optionalText(2000, "The notes"),
 });

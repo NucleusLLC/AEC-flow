@@ -8,6 +8,8 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmailButton } from "@/components/email/email-button";
 import { InvoicePanel } from "@/components/finance/invoice-panel";
 import { getInvoice } from "@/lib/data/invoices";
+import { payLinkFor } from "@/lib/data/pay-now";
+import { PayOnlineLink } from "@/components/finance/pay-online-link";
 import { militaryDate, ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 
@@ -21,6 +23,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const invoice = await getInvoice(id);
   if (!invoice) notFound();
   const today = ymd(new Date());
+  // Null unless Stripe is configured, the practice is connected and money is owed.
+  const payLink = await payLinkFor(invoice);
   const t = await getServerT();
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -61,6 +65,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       </div>
 
       <InvoicePanel invoice={invoice} today={today} />
+
+      {payLink ? <PayOnlineLink url={payLink} /> : null}
 
       <Card>
         <CardHeader title={t("Details")} />

@@ -18,7 +18,7 @@ export type InvoiceStatus = "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "CREDITE
 /** A credit note is chosen into each of its states; none is derived. */
 export type CreditNoteStatus = "DRAFT" | "ISSUED" | "VOID";
 
-export type InvoicePaymentMethod = "BANK_TRANSFER" | "CASH" | "CHEQUE" | "CARD" | "OTHER";
+export type InvoicePaymentMethod = "BANK_TRANSFER" | "CASH" | "CHEQUE" | "CARD" | "OTHER" | "STRIPE";
 
 export type TaxMode = "EXCLUSIVE" | "INCLUSIVE";
 
@@ -40,7 +40,18 @@ export const PAYMENT_METHODS: InvoicePaymentMethod[] = [
   "CHEQUE",
   "CARD",
   "OTHER",
+  "STRIPE",
 ];
+
+/**
+ * The methods a person may choose when recording a payment by hand. STRIPE is
+ * left out: an online card payment is recorded only by the Stripe webhook, with
+ * the PaymentIntent as its unique reference, so a hand-made "Stripe" row could
+ * never be told apart from a real one.
+ */
+export const MANUAL_PAYMENT_METHODS: InvoicePaymentMethod[] = PAYMENT_METHODS.filter(
+  (m) => m !== "STRIPE",
+);
 
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   DRAFT: "Draft",
@@ -63,6 +74,7 @@ export const PAYMENT_METHOD_LABEL: Record<InvoicePaymentMethod, string> = {
   CHEQUE: "Cheque",
   CARD: "Card",
   OTHER: "Other",
+  STRIPE: "Card (Stripe)",
 };
 
 export const TAX_MODE_LABEL: Record<TaxMode, string> = {

@@ -205,6 +205,15 @@ export default defineConfig({
       // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with
       // today, the overall %, chip and phase colours, and a sanity check on the seeded data. Pure.
       "lib/progressdash/timeline.test.ts",
+      // Pay online (Stripe Connect): webhook signature verification, the pay
+      // token and the checkout amount (money.ts), the REST calls against a fake
+      // fetch, and the webhook -> payment mapping with its idempotency. Pure:
+      // no Prisma, no network. Plus runAsCompany, which scopes the webhook.
+      "lib/payments/stripe-signature.test.ts",
+      "lib/payments/pay-link.test.ts",
+      "lib/payments/stripe.test.ts",
+      "lib/payments/webhook.test.ts",
+      "lib/server/request-company.test.ts",
     ],
     environment: "node",
   },

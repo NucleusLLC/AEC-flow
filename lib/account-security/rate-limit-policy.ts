@@ -39,6 +39,9 @@ export const RATE_LIMITS = {
   // bounding is one person holding the button down, and anyone who can reach the
   // button can already read the inbox it sends to.
   verifyRequestEmail: { prefix: "verify-request:email", limit: 5, windowSeconds: 60 * 60 },
+  // Starting a card checkout from a public /pay link. Each attempt is one call to
+  // Stripe on the practice's account; a person paying needs a handful at most.
+  payCheckoutIp: { prefix: "pay-checkout:ip", limit: 20, windowSeconds: 15 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Longest subject kept in a key — a hostile "email" can be arbitrarily long. */
