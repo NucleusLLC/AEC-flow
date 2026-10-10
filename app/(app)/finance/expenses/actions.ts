@@ -18,6 +18,13 @@ import {
   ExpenseForbiddenError,
   ExpenseLockedError,
   ExpenseNotFoundError,
+  attachReceipt,
+  createReceiptUploadTicket,
+  discardReceiptUpload,
+  removeReceipt,
+  ReceiptFileError,
+  type ReceiptUploadTicket,
+  type UploadedReceipt,
 } from "@/lib/data/expenses";
 import { issuesToMessage, parseApprovalDecision, parseExpenseInput } from "@/lib/finance/schema";
 import type { ExpenseInput } from "@/lib/finance/types";
@@ -44,7 +51,8 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
   if (
     e instanceof ExpenseForbiddenError ||
     e instanceof ExpenseLockedError ||
-    e instanceof ExpenseNotFoundError
+    e instanceof ExpenseNotFoundError ||
+    e instanceof ReceiptFileError
   ) {
     return { ok: false, error: e.message };
   }
@@ -123,5 +131,53 @@ export async function markReimbursedAction(
     return { ok: true, count };
   } catch (e) {
     return failure(e, "Failed to record the reimbursement.");
+  }
+}
+
+// ── Receipts ───────────────────────────────────────────────────────────────
+
+export type ReceiptUploadTicketResult =
+  | { ok: true; ticket: ReceiptUploadTicket }
+  | { ok: false; error: string };
+
+/** Step one of attaching a receipt: a signed URL the browser uploads to. */
+export async function createReceiptUploadTicketAction(
+  expenseId: string,
+  file: { filename: string; mimeType: string; sizeBytes: number },
+): Promise<ReceiptUploadTicketResult> {
+  try {
+    return { ok: true, ticket: await createReceiptUploadTicket(expenseId, file) };
+  } catch (e) {
+    return failure(e, "Could not prepare the upload.");
+  }
+}
+
+/** Step three: record the uploaded receipt on the expense (replacing any). */
+export async function attachReceiptAction(
+  expenseId: string,
+  upload: UploadedReceipt,
+): Promise<ExpenseActionResult> {
+  try {
+    await attachReceipt(expenseId, upload);
+    revalidateExpenses(expenseId);
+    return { ok: true, id: expenseId };
+  } catch (e) {
+    await discardReceiptUpload(expenseId, upload?.storageKey ?? "").catch(() => {});
+    return failure(e, "Failed to attach that receipt.");
+  }
+}
+
+/** Best-effort clean-up when the browser's upload itself failed. */
+export async function discardReceiptUploadAction(expenseId: string, storageKey: string): Promise<void> {
+  await discardReceiptUpload(expenseId, storageKey).catch(() => {});
+}
+
+export async function removeReceiptAction(expenseId: string): Promise<ExpenseActionResult> {
+  try {
+    await removeReceipt(expenseId);
+    revalidateExpenses(expenseId);
+    return { ok: true, id: expenseId };
+  } catch (e) {
+    return failure(e, "Failed to remove that receipt.");
   }
 }

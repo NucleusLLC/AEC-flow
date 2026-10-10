@@ -86,6 +86,12 @@
  *   per currency; approved work not yet billed, with RAISE AN INVOICE; the job's margin (Admin /
  *   Director only); hours by phase and by person; the project's invoices and expenses. Read-only,
  *   no SQL.
+ * 0.24.0 (9 OCT 2026): feat — Finance RECEIPTS and OVERDUE CHASE. A photo or PDF receipt on an
+ *   expense (JPEG/PNG/WebP/HEIC/PDF, 10 MB), in the private bucket under receipts/, opened through a
+ *   five-minute signed URL for the person who recorded it or an administrator; frozen once invoiced;
+ *   a paperclip in the expense register. /finance/invoices/overdue lists invoices with money
+ *   outstanding past due, by client and currency, with a "Copy reminder" to paste into an email or
+ *   WhatsApp (nothing is sent). Needs prisma/sql/0031_expense_receipts.sql applied FIRST.
  * 0.25.0 (9 OCT 2026): feat — Finance RECEIVABLES and CREDIT NOTES: who owes what by client, aged
  *   Current / 1–30 / 31–60 / 61–90 / 90+ per currency; each client's Statement of Account (running
  *   balance for a period) on screen and printed on A4. CREDIT NOTES (CN-YYYY-NNN) against an issued

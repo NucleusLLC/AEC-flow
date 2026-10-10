@@ -499,8 +499,18 @@ export type ExpenseDTO = {
   invoiceNumber: string | null;
   /** amount plus markup — what a client would be charged. */
   chargeable: number;
+  /** The attached receipt, or null. Never carries the storage key: the file is
+   *  only reachable through /finance/expenses/<id>/receipt, which checks who asks. */
+  receipt: ExpenseReceiptDTO | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ExpenseReceiptDTO = {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string | null;
 };
 
 export type TimeEntryInput = {
