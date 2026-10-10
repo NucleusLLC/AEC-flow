@@ -159,9 +159,37 @@ model Company {
   licenseValidUntil   DateTime? // grace horizon; only consulted once enforcement is switched on
   licenseEntitlements Json? // plan/modules/features/limits from the last good validation
 
+  // ── AEC-flow subscription (Stripe Billing, decision D-5) ─────────────────
+  // What the practice pays Nucleus LLC for AEC-flow. Written ONLY by the Stripe
+  // webhook (app/api/billing/webhook) and the Subscribe action (the customer id).
+  // Nothing is enforced yet: lib/billing/status.ts BILLING_ENFORCED = false.
+  // Needs prisma/sql/0033_billing_subscriptions.sql.
+  stripeCustomerId              String?   @unique // cus_… on the Nucleus Stripe account
+  stripeSubscriptionId          String? // sub_…
+  subscriptionStatus            String? // none | trialing | active | past_due | canceled (lib/billing/status.ts)
+  subscriptionPriceId           String? // price_… (monthly or yearly)
+  subscriptionCurrentPeriodEnd  DateTime? // renews / ends on
+  subscriptionCancelAtPeriodEnd Boolean   @default(false)
+  subscriptionEventAt           DateTime? // created time of the last applied Stripe event (out-of-order guard)
+
   users User[]
 
   @@map("companies")
+}
+
+/// One Stripe billing webhook event that has been applied: the idempotency
+/// record for /api/billing/webhook (id = Stripe's evt_… id). PLATFORM table, not
+/// tenant data: it holds no practice content, only which event touched which
+/// company, so it is deliberately NOT in TENANT_MODELS and its company column is
+/// named billingCompanyId (not companyId) for that reason. Needs 0033.
+model BillingWebhookEvent {
+  id               String   @id // evt_…
+  type             String
+  billingCompanyId String?
+  receivedAt       DateTime @default(now())
+
+  @@index([billingCompanyId])
+  @@map("billing_webhook_events")
 }
 
 /// A beta access code for the AEC-Flow beta. A code IS a Nucleus licence key: the plaintext lives

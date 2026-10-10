@@ -47,3 +47,5 @@ next-env.d.ts
 
 .vercel
 .env*
+# Names only, no values: the documented list of env vars.
+!.env.example

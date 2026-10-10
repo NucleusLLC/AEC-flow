@@ -93,6 +93,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Stripe's billing webhook (AEC-flow subscriptions, decision D-5). Stripe has no
+  // session, so the route checks the Stripe-Signature itself (lib/billing/signature.ts)
+  // and refuses anything unsigned. Exactly this path, nothing under it.
+  if (pathname === "/api/billing/webhook") {
+    return NextResponse.next();
+  }
+
   // Beta subdomain: it's the portal, not the app.
   if (isBetaHost(req)) {
     if (pathname === "/") {
