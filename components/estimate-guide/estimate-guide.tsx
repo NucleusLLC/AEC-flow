@@ -7,6 +7,14 @@
  * is outlined at a time and a callout card beside it says what it is for. The
  * card holds for five seconds, then flies to the next part.
  *
+ * NARRATION. When the platform has a Fish Audio voice configured, each card is
+ * also read aloud: the clip starts when the card arrives, and the card then
+ * holds for max(5 s, clip + a short gap) so speech is never cut off. Pause
+ * pauses both; Next, Back, stop, Esc and the end of the tour silence it at
+ * once. A speaker button on the card turns sound off for this browser. With no
+ * voice configured, a clip that fails, or a browser that blocks sound, the tour
+ * is exactly the silent five-second tour (narration-player.ts fails quiet).
+ *
  * This lives OUTSIDE components/estimates/ on purpose. Estimates is a protected
  * system; the editor only mounts <EstimateGuide /> and carries `data-guide`
  * attributes. The guide reads rectangles off the page and draws on top of it.
@@ -22,7 +30,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Compass, Pause, Play, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Compass, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
 import { useLanguage } from "@/components/i18n/language-provider";
 import {
   GUIDE_BUTTON_LABEL,
@@ -46,6 +54,15 @@ import {
   type Rect,
 } from "@/lib/estimates/interactive-guide";
 import { guideContentFor } from "@/lib/estimates/interactive-guide-content";
+import {
+  NARRATION_GAP_MS,
+  NARRATION_OFF,
+  narratedHoldMs,
+  readNarrationPref,
+  writeNarrationPref,
+  type NarrationManifest,
+} from "@/lib/guide-narration/timing";
+import { GuideNarrationPlayer, fetchNarrationManifest, primeGuideAudio } from "./narration-player";
 
 // ---------------------------------------------------------------------------
 // Reading the page
@@ -99,6 +116,15 @@ function reveal(el: Element, smooth: boolean) {
   }
   const dy = scrollDeltaToReveal(r.top, r.bottom, 0, window.innerHeight, 24);
   if (dy !== 0) window.scrollBy({ top: dy, behavior });
+}
+
+/** localStorage, or null where the browser refuses even to hand it over. */
+function browserStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 const prefersReducedMotion = () =>
@@ -155,7 +181,18 @@ type Cursor = {
   run: number;
 };
 
-function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang: string; onClose: () => void }) {
+function GuideOverlay({
+  content,
+  lang,
+  narration,
+  onClose,
+}: {
+  content: GuideContent;
+  lang: string;
+  /** What the server said about narration when the page loaded; "off" is silence. */
+  narration: NarrationManifest;
+  onClose: () => void;
+}) {
   const [cursor, setCursor] = useState<Cursor>(() => ({
     index: nextStepIndex(GUIDE_STEPS.length, -1, 1, stepIsAvailable),
     flies: false,
@@ -171,6 +208,22 @@ function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang:
   const ringRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const tailRef = useRef<HTMLSpanElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+
+  // Narration. `player` exists only when the server says the guide is narrated
+  // in this language; until then, and whenever it is null, the tour is silent.
+  const [player, setPlayer] = useState<GuideNarrationPlayer | null>(null);
+  const [soundOn, setSoundOn] = useState(() => readNarrationPref(browserStorage()));
+  // A card moves on when BOTH are true: its five seconds are up, and its clip
+  // (if any) has finished. With no clip the second is true from the start.
+  const holdDoneRef = useRef(false);
+  const audioDoneRef = useRef(true);
+  const audioStartedRef = useRef(false);
+  const pausedRef = useRef(false);
+  /** Did the card fly to the step on screen (so the clip waits for it to land)? */
+  const arrivedFlyingRef = useRef(false);
+  /** A clip that became ready while paused: started by Resume. */
+  const deferredStartRef = useRef<(() => void) | null>(null);
 
   const { index, flies, run } = cursor;
   const step: GuideStep | undefined = GUIDE_STEPS[index];
@@ -190,6 +243,8 @@ function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang:
         return;
       }
       indexRef.current = next;
+      holdDoneRef.current = false;
+      arrivedFlyingRef.current = true;
       setPosition(stepPosition(availableIndices(GUIDE_STEPS.length, stepIsAvailable), next));
       setCursor((c) => ({ index: next, flies: true, run: c.run + 1 }));
     },
@@ -208,13 +263,116 @@ function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang:
     if (index < 0) onClose();
   }, [index, onClose]);
 
+  const maybeAdvance = useCallback(() => {
+    if (holdDoneRef.current && audioDoneRef.current && !pausedRef.current) go(1);
+  }, [go]);
+
+  // One player per run of the tour, and only when the tour is narrated.
+  useEffect(() => {
+    if (!narration.enabled) return;
+    const made = new GuideNarrationPlayer(lang, narration);
+    // The player owns blob URLs, so it is made and disposed with this effect.
+    setPlayer(made);
+    return () => {
+      made.dispose();
+      setPlayer(null);
+    };
+  }, [lang, narration]);
+
+  // Pause holds the clip where it is; Resume continues it.
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (!player) return;
+    if (paused) {
+      player.pause();
+      return;
+    }
+    const start = deferredStartRef.current;
+    deferredStartRef.current = null;
+    if (start) start();
+    else player.resume();
+  }, [paused, player]);
+
   // The 5 seconds. Any step change or Resume starts them again from zero.
   useEffect(() => {
+    holdDoneRef.current = false;
     if (index < 0 || paused) return;
     const ms = stepDurationMs({ flies, reducedMotion: prefersReducedMotion() });
-    const id = window.setTimeout(() => go(1), ms);
+    const id = window.setTimeout(() => {
+      holdDoneRef.current = true;
+      // A clip that has not begun by now is not waited for: the card moves on
+      // exactly as it would in silence.
+      if (!audioStartedRef.current) audioDoneRef.current = true;
+      maybeAdvance();
+    }, ms);
     return () => window.clearTimeout(id);
-  }, [index, flies, run, paused, go]);
+  }, [index, flies, run, paused, maybeAdvance]);
+
+  // The clip of the step on screen: starts when the card has landed, and the
+  // next step's clip is fetched meanwhile so it can start on time too.
+  const narrating = soundOn && player !== null && step !== undefined && player.has(step.id);
+  useEffect(() => {
+    const s = GUIDE_STEPS[index];
+    audioStartedRef.current = false;
+    if (!s || !player || !soundOn || !player.has(s.id)) {
+      audioDoneRef.current = true;
+      // Sound switched off after the five seconds were already up.
+      maybeAdvance();
+      return;
+    }
+    audioDoneRef.current = false;
+    let cancelled = false;
+    let gap = 0;
+    const finish = () => {
+      if (cancelled) return;
+      audioDoneRef.current = true;
+      maybeAdvance();
+    };
+    const flyMs = arrivedFlyingRef.current && !prefersReducedMotion() ? GUIDE_FLY_MS : 0;
+    const arrivesAt = performance.now() + flyMs;
+    const start = window.setTimeout(() => {
+      void player.load(s.id).then((url) => {
+        // Moved on, or given up on, while the clip was still loading.
+        if (cancelled || audioDoneRef.current) return;
+        if (!url) return finish();
+        const begin = () => {
+          if (cancelled || audioDoneRef.current) return;
+          audioStartedRef.current = true;
+          const late = Math.max(0, performance.now() - arrivesAt);
+          void player
+            .play(url, () => {
+              gap = window.setTimeout(finish, NARRATION_GAP_MS);
+            })
+            .then((playing) => {
+              if (cancelled) return;
+              if (!playing) return finish();
+              // The progress bar runs for as long as the card will really hold.
+              const fill = fillRef.current;
+              if (fill && playing.durationMs) fill.style.animationDuration = `${narratedHoldMs(playing.durationMs, late)}ms`;
+            });
+        };
+        if (pausedRef.current) deferredStartRef.current = begin;
+        else begin();
+      });
+    }, flyMs);
+
+    const next = nextStepIndex(GUIDE_STEPS.length, index, 1, stepIsAvailable);
+    if (next >= 0) void player.load(GUIDE_STEPS[next].id);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(start);
+      window.clearTimeout(gap);
+      deferredStartRef.current = null;
+      player.stop();
+    };
+  }, [index, player, soundOn, maybeAdvance]);
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    writeNarrationPref(browserStorage(), next);
+    setSoundOn(next);
+  };
 
   // Esc stops the tour.
   useEffect(() => {
@@ -308,6 +466,7 @@ function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang:
       data-step={step.id}
       data-step-number={step.number}
       data-paused={paused ? "1" : "0"}
+      data-narration={narrating ? "1" : "0"}
       style={{ ["--aeg" as string]: GUIDE_TONE_HEX[step.tone] }}
     >
       <style>{CSS}</style>
@@ -322,6 +481,22 @@ function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang:
             <span className="aeg-title" data-guide-title="" style={{ flex: 1, minWidth: 0 }}>
               {text.title}
             </span>
+            {player ? (
+              <button
+                type="button"
+                className="aeg-btn"
+                style={{ padding: "0 6px" }}
+                data-guide-sound=""
+                aria-pressed={soundOn}
+                onClick={toggleSound}
+                aria-label={soundOn ? content.ui.mute : content.ui.unmute}
+                title={soundOn ? content.ui.mute : content.ui.unmute}
+              >
+                <span style={{ display: "inline-flex" }} aria-hidden="true">
+                  {soundOn ? <Volume2 width={14} height={14} /> : <VolumeX width={14} height={14} />}
+                </span>
+              </button>
+            ) : null}
             <button type="button" className="aeg-btn" style={{ padding: "0 6px" }} onClick={onClose} aria-label={content.ui.close} title={content.ui.close}>
               <X width={14} height={14} aria-hidden="true" />
             </button>
@@ -348,6 +523,7 @@ function GuideOverlay({ content, lang, onClose }: { content: GuideContent; lang:
 
           <div className="aeg-track" style={{ marginTop: 10 }} aria-hidden="true">
             <div
+              ref={fillRef}
               key={`${index}:${run}:${paused ? "p" : "r"}`}
               className="aeg-fill"
               data-run={paused ? "0" : "1"}
@@ -403,6 +579,21 @@ export function EstimateGuide() {
   const running = content !== null && startedIn === lang;
   const stop = useCallback(() => setStartedIn(null), []);
 
+  // Is the guide narrated? Asked once when the editor opens (one small request,
+  // no audio), so that the first card's clip can start with the card. "No", or
+  // no answer, is silence.
+  const [narration, setNarration] = useState<{ lang: string; manifest: NarrationManifest } | null>(null);
+  const narrated = content !== null;
+  useEffect(() => {
+    if (!narrated) return;
+    const ctl = new AbortController();
+    void fetchNarrationManifest(lang, ctl.signal).then((manifest) => {
+      if (!ctl.signal.aborted) setNarration({ lang, manifest });
+    });
+    return () => ctl.abort();
+  }, [lang, narrated]);
+  const manifest = narration && narration.lang === lang ? narration.manifest : NARRATION_OFF;
+
   // The slot in the shell's top bar, beside the full-screen button. The top bar
   // sits behind a Suspense boundary, so it can arrive a few frames after us.
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -427,7 +618,11 @@ export function EstimateGuide() {
       data-guide-button=""
       data-float={floating ? "" : undefined}
       aria-pressed={running}
-      onClick={() => setStartedIn(running ? null : lang)}
+      onClick={() => {
+        // Inside the click, so browsers that only allow sound from a gesture let the clips play.
+        if (!running) primeGuideAudio();
+        setStartedIn(running ? null : lang);
+      }}
       title={running ? content.ui.stop : content.ui.start}
       className={`no-print notranslate h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-bold uppercase tracking-wider transition-colors print:hidden ${running ? LIT : IDLE} ${visibility}`}
     >
@@ -446,7 +641,7 @@ export function EstimateGuide() {
         button(`fixed bottom-4 right-4 z-[85] shadow-lg ${slot ? "inline-flex xl:hidden" : "inline-flex"}`, true),
         document.body,
       )}
-      {running ? createPortal(<GuideOverlay content={content} lang={lang} onClose={stop} />, document.body) : null}
+      {running ? createPortal(<GuideOverlay content={content} lang={lang} narration={manifest} onClose={stop} />, document.body) : null}
     </>
   );
 }

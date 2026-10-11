@@ -102,8 +102,14 @@
  *   button turns magenta and a callout card flies from one part of the screen to the next, lighting
  *   each up for 5 seconds with what it is for (29 steps; Back / Pause / Next, Esc stops). Parts that
  *   are not on screen are skipped. It only reads the page: nothing is saved or changed. No SQL.
+ * 0.25.7 (10 OCT 2026): feat — the INTERACTIVE-GUIDE is read aloud in Spanish by a Fish Audio
+ *   voice: each card's text is spoken while it is lit (symbols and abbreviations read as words),
+ *   the card holds for max(5 s, clip + 0.6 s), Pause / Next / Back / stop silence it, and a
+ *   speaker button mutes it per browser. Clips are made once and kept in the private bucket.
+ *   Founder only: Settings > Integrations > Guide narration (key, voice, model, on/off, test,
+ *   clear cache). Silent exactly as before until a key is saved there. No SQL.
  */
-export const APP_VERSION = "0.25.3";
+export const APP_VERSION = "0.25.7";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

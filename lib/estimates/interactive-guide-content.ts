@@ -22,6 +22,8 @@ const es: GuideContent = {
     pause: "Pausa",
     resume: "Continuar",
     close: "Cerrar la guía",
+    mute: "Silenciar la narración",
+    unmute: "Activar la narración",
     label: "Guía interactiva",
   },
   steps: {

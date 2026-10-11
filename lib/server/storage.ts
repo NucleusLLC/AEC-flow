@@ -236,3 +236,52 @@ export async function deleteObject(key: string): Promise<void> {
   });
   if (!response.ok) await failure(response, "Deleting the object");
 }
+
+/**
+ * Write one object from the server (upsert).
+ *
+ * The browser path above signs an upload URL because a 60 MB drawing must not
+ * travel through a function body. This is the other case: bytes the SERVER
+ * produced (a narration clip of a few hundred kilobytes) that no browser ever
+ * holds. The key is decided by the caller, server-side.
+ */
+export async function uploadObject(key: string, bytes: Uint8Array, contentType: string): Promise<void> {
+  const config = requireConfig();
+  const response = await fetch(`${config.url}/storage/v1/object/${config.bucket}/${encodeKey(key)}`, {
+    method: "POST",
+    headers: { ...authHeaders(config), "content-type": contentType, "x-upsert": "true" },
+    body: Buffer.from(bytes),
+    cache: "no-store",
+  });
+  if (!response.ok) await failure(response, "Writing the object");
+}
+
+/** The object keys directly inside one folder (`prefix` without a trailing slash). */
+export async function listObjects(prefix: string, limit = 1000): Promise<string[]> {
+  const config = requireConfig();
+  const folder = prefix.replace(/\/+$/, "");
+  const response = await fetch(`${config.url}/storage/v1/object/list/${config.bucket}`, {
+    method: "POST",
+    headers: { ...authHeaders(config), "content-type": "application/json" },
+    body: JSON.stringify({ prefix: `${folder}/`, limit, offset: 0 }),
+    cache: "no-store",
+  });
+  if (!response.ok) await failure(response, "Listing the folder");
+
+  const body = (await response.json()) as { name?: string; id?: string | null }[];
+  // A sub-folder comes back with a null id; only real objects are returned.
+  return Array.isArray(body) ? body.filter((o) => o.name && o.id).map((o) => `${folder}/${o.name}`) : [];
+}
+
+/** Delete several objects in one call. */
+export async function deleteObjects(keys: readonly string[]): Promise<void> {
+  if (keys.length === 0) return;
+  const config = requireConfig();
+  const response = await fetch(`${config.url}/storage/v1/object/${config.bucket}`, {
+    method: "DELETE",
+    headers: { ...authHeaders(config), "content-type": "application/json" },
+    body: JSON.stringify({ prefixes: keys }),
+    cache: "no-store",
+  });
+  if (!response.ok) await failure(response, "Deleting the objects");
+}

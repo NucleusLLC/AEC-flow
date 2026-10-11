@@ -39,6 +39,10 @@ export default defineConfig({
       // INTERACTIVE-GUIDE on the Estimates editor: the language gate, the step
       // order with its skip rule, and the card placement that keeps it on screen.
       "lib/estimates/interactive-guide.test.ts",
+      // Guide narration (Fish Audio): the spoken form of all 29 cards, the cache
+      // key, the step lookup that refuses free text, the dwell, and the proof
+      // that the API key is in nothing sent to a browser. Pure modules.
+      "lib/guide-narration/narration.test.ts",
       // New client: CLIENT NAME, EMAIL and CELL NUMBER. Pure rule shared by
       // saveClient and every create form. Named file, same reason as above.
       "lib/clients/new-client.test.ts",

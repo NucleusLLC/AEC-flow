@@ -137,6 +137,9 @@ export type GuideContent = {
     pause: string;
     resume: string;
     close: string;
+    /** Tooltip of the speaker button while narration is on / off. */
+    mute: string;
+    unmute: string;
     /** Accessible name of the card. */
     label: string;
   };
