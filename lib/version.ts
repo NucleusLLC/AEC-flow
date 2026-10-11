@@ -98,12 +98,16 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
- * 0.25.2 (10 OCT 2026): feat — ESTIMATES in the Architecture & Engineering Design module: the
+ * 0.25.3 (10 OCT 2026): feat — INTERACTIVE-GUIDE on the Estimates editor, Spanish only for now: the
+ *   button turns magenta and a callout card flies from one part of the screen to the next, lighting
+ *   each up for 5 seconds with what it is for (29 steps; Back / Pause / Next, Esc stops). Parts that
+ *   are not on screen are skipped. It only reads the page: nothing is saved or changed. No SQL.
+ * 0.25.5 (10 OCT 2026): feat — ESTIMATES in the Architecture & Engineering Design module: the
  *   Module 1 sidebar gets an Estimating section opening the same /estimates as Module 3 and
  *   Complete AEC, so architecture and interior projects are priced without switching module.
  *   Navigation only; no SQL.
  */
-export const APP_VERSION = "0.25.2";
+export const APP_VERSION = "0.25.5";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
