@@ -20,12 +20,14 @@ import { PracticeForm } from "@/components/settings/practice-form";
 import { TemplatesManager } from "@/components/settings/templates-manager";
 import { MembersManager } from "@/components/settings/members-manager";
 import { DocumentControlForm } from "@/components/settings/document-control-form";
+import { GuideNarrationCard } from "@/components/settings/guide-narration-card";
 import {
   saveAnthropicApiKeyAction,
   clearAnthropicApiKeyAction,
   testAnthropicKeyAction,
 } from "@/app/(app)/settings/actions";
 import type { AnthropicKeyStatus } from "@/lib/server/ai-config";
+import type { NarrationStatus } from "@/lib/guide-narration/config";
 import type { FooterSettings, LogoSettings } from "@/lib/server/practice-config";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n/language-provider";
@@ -60,6 +62,7 @@ export function SettingsView({
   roles,
   preferences,
   keyStatus,
+  narrationStatus = null,
   canSave,
   isFounder = false,
   canManagePasswords = false,
@@ -75,6 +78,8 @@ export function SettingsView({
   roles: RoleInfo[];
   preferences: Preferences;
   keyStatus: AnthropicKeyStatus;
+  /** Guide narration is a platform setting: the page passes this for the founder only. */
+  narrationStatus?: NarrationStatus | null;
   canSave: boolean;
   isFounder?: boolean;
   /** Draws the per-member "Set password" control. Presentation only — the server enforces the real gate. */
@@ -130,7 +135,13 @@ export function SettingsView({
       {/* Practice-wide settings (letterhead, logo, currency, font, AI key) are for
        * the people who manage the practice — the same gate as members, enforced
        * again in app/(app)/settings/actions.ts. */}
-      {tab === "integrations" ? <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} /> : null}
+      {tab === "integrations" ? (
+        <div className="space-y-5">
+          <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} />
+          {/* Platform-wide, founder only; the actions behind it check the founder again. */}
+          {isFounder && narrationStatus ? <GuideNarrationCard initial={narrationStatus} /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

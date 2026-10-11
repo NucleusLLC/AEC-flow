@@ -7,6 +7,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { listTemplates } from "@/lib/data/proposal-templates";
 import { getTeam } from "@/lib/data/team";
 import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
+import { getNarrationStatus } from "@/lib/server/guide-narration";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
@@ -22,12 +23,14 @@ export default async function SettingsPage() {
   const userId = session?.user?.id ?? null;
   const isFounder = isFounderEmail(session?.user?.email);
 
-  const [practice, templates, team, preferences, keyStatus] = await Promise.all([
+  const [practice, templates, team, preferences, keyStatus, narrationStatus] = await Promise.all([
     getPracticeSettings(),
     listTemplates(),
     getTeam(),
     getUserPreferences(userId),
     getAnthropicKeyStatus(),
+    // Guide narration is a platform setting: only the founder is shown it.
+    isFounder ? getNarrationStatus() : Promise.resolve(null),
   ]);
 
   // Real User rows projected to the settings Member shape; roles derived from them.
@@ -71,6 +74,7 @@ export default async function SettingsPage() {
         roles={roles}
         preferences={preferences}
         keyStatus={keyStatus}
+        narrationStatus={narrationStatus}
         canSave={!!userId}
         isFounder={isFounder}
         canManagePasswords={canManagePasswords}

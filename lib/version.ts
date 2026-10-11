@@ -114,8 +114,14 @@
  *   Module 1 sidebar gets an Estimating section opening the same /estimates as Module 3 and
  *   Complete AEC, so architecture and interior projects are priced without switching module.
  *   Navigation only; no SQL.
+ * 0.25.7 (10 OCT 2026): feat — the INTERACTIVE-GUIDE is read aloud in Spanish by a Fish Audio
+ *   voice: each card's text is spoken while it is lit (symbols and abbreviations read as words),
+ *   the card holds for max(5 s, clip + 0.6 s), Pause / Next / Back / stop silence it, and a
+ *   speaker button mutes it per browser. Clips are made once and kept in the private bucket.
+ *   Founder only: Settings > Integrations > Guide narration (key, voice, model, on/off, test,
+ *   clear cache). Silent exactly as before until a key is saved there. No SQL.
  */
-export const APP_VERSION = "0.25.5";
+export const APP_VERSION = "0.25.7";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
