@@ -98,8 +98,12 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
+ * 0.25.3 (10 OCT 2026): feat — INTERACTIVE-GUIDE on the Estimates editor, Spanish only for now: the
+ *   button turns magenta and a callout card flies from one part of the screen to the next, lighting
+ *   each up for 5 seconds with what it is for (29 steps; Back / Pause / Next, Esc stops). Parts that
+ *   are not on screen are skipped. It only reads the page: nothing is saved or changed. No SQL.
  */
-export const APP_VERSION = "0.25.0";
+export const APP_VERSION = "0.25.3";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

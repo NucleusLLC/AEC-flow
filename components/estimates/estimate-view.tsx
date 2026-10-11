@@ -41,6 +41,7 @@ import { sumGeneralConditions, type GeneralConditionItem } from "@/lib/data/gene
 import { calcItem, sum, ZERO, pocPct, type Totals } from "@/lib/estimates/calc";
 import { saveEstimateAction, saveTemplatesAction } from "@/app/(app)/estimates/actions";
 import { useT } from "@/components/i18n/language-provider";
+import { EstimateGuide } from "@/components/estimate-guide/estimate-guide";
 import { fmt } from "@/lib/i18n/format";
 import { CoverFitControls } from "./cover-fit-controls";
 import type { CoverFit } from "@/lib/estimates/cover-fit";
@@ -860,7 +861,7 @@ ${!preview ? `@media print {
               className="w-full max-w-3xl rounded-md bg-transparent text-xl font-semibold text-fg outline-none focus:bg-brand/5"
               aria-label={t("Project name")}
             />
-            <div className="mt-0.5 text-xs text-faint">
+            <div data-guide="est-status" className="mt-0.5 text-xs text-faint">
               {saving ? t("Saving…") : saved ? t("All changes saved") : t("Autosaves as you type")}
             </div>
           </div>
@@ -868,6 +869,7 @@ ${!preview ? `@media print {
           {/* One primary action (Save). The occasional ones sit behind ⋯ so they stop
               competing with it for attention. */}
           <div className="flex shrink-0 items-center gap-2">
+            <EstimateGuide />
             {saveError ? <span className="self-center text-xs text-red-600" title={t(saveError)}>{t("Save failed")}</span> : null}
             {/* COPY2ANOTHER/NEW PROJECT. Always present, so the checkmarks beside
                 each task have a visible purpose, and disabled with the reason
@@ -947,22 +949,22 @@ ${!preview ? `@media print {
         {/* Row 2 — project identity. Built-up Area joins the other fields instead of
             floating in the title row: it's a field, so it belongs with the fields. */}
         <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 sm:grid-cols-3 lg:grid-cols-6">
-          <Field label={t("Project No.")}>
+          <Field guide="est-project-no" label={t("Project No.")}>
             <input value={est.projectId ?? ""} onChange={(e) => patchMeta({ projectId: e.target.value })} placeholder="—" className={metaInput} />
           </Field>
-          <Field label={t("Client")}>
+          <Field guide="est-client" label={t("Client")}>
             <input value={est.client ?? ""} onChange={(e) => patchMeta({ client: e.target.value })} placeholder="—" className={metaInput} />
           </Field>
-          <Field label={t("Version")}>
+          <Field guide="est-version" label={t("Version")}>
             <input value={est.version} onChange={(e) => patchMeta({ version: e.target.value })} className={metaInput} />
           </Field>
-          <Field label={t("Date")}>
+          <Field guide="est-date" label={t("Date")}>
             <input type="date" value={est.date} onChange={(e) => patchMeta({ date: e.target.value })} className={metaInput} />
           </Field>
-          <Field label={t("Location")}>
+          <Field guide="est-location" label={t("Location")}>
             <input value={est.location} onChange={(e) => patchMeta({ location: e.target.value })} className={metaInput} />
           </Field>
-          <Field label={t("Built-up Area (m²)")}>
+          <Field guide="est-area" label={t("Built-up Area (m²)")}>
             <input
               type="number"
               min={0}
@@ -977,7 +979,7 @@ ${!preview ? `@media print {
         {/* Row 3 — settings toolbar: Pricing · Cost Database · View as three equal
             columns on one row (stacks on small screens). */}
         <div className="mt-4 flex flex-nowrap items-stretch gap-3 border-t border-border pt-4">
-          <ToolGroup label={t("Pricing")} className="shrink-0">
+          <ToolGroup guide="est-pricing" label={t("Pricing")} className="shrink-0">
             <span className="inline-flex flex-col">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-xs text-muted">{est.currency}</span>
@@ -997,7 +999,7 @@ ${!preview ? `@media print {
           {/* Cost Database — four controls you set once per estimate, folded behind one
               button that states the current source. Set-and-forget settings don't earn
               permanent space next to the ones you flip while working. */}
-          <ToolGroup label={t("Cost Database")} className="min-w-0">
+          <ToolGroup guide="est-cost-db" label={t("Cost Database")} className="min-w-0">
             <div className="relative min-w-0">
               <button
                 type="button"
@@ -1040,7 +1042,7 @@ ${!preview ? `@media print {
             </div>
           </ToolGroup>
 
-          <ToolGroup label={t("View")} className="shrink-0">
+          <ToolGroup guide="est-view" label={t("View")} className="shrink-0">
             <Switch on={showProgress} onClick={() => setShowProgress((v) => !v)} label={t("Progress")} tone="green" />
             <Switch on={clientVersion} onClick={() => {
               const nv = !clientVersion;
@@ -1282,7 +1284,7 @@ ${!preview ? `@media print {
             * to turn on a print setting to get one. The USD line is dropped when there
             * is no rate to convert with, rather than printing the local figure twice
             * under a dollar sign. */}
-          <div className="ml-auto flex shrink-0 flex-col justify-center rounded-lg border border-brand/40 bg-brand/10 px-4 py-2 text-right">
+          <div data-guide="est-total" className="ml-auto flex shrink-0 flex-col justify-center rounded-lg border border-brand/40 bg-brand/10 px-4 py-2 text-right">
             <div className="text-[10px] font-medium uppercase tracking-wide text-brand/80">
               {t("Total construction cost")}
             </div>
@@ -1298,7 +1300,7 @@ ${!preview ? `@media print {
           </div>
         </div>
         {saved ? (
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+          <div data-guide="est-status-banner" className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
             <Check className="h-4 w-4" /> {t("Estimate captured locally — persistence goes live with the database (Supabase).")}
           </div>
         ) : null}
@@ -1334,7 +1336,7 @@ ${!preview ? `@media print {
             <option value="E10">{t("Equipment & Furnishings")}</option>
             <option value="G10">{t("Site Work")}</option>
           </datalist>
-          <table className="w-full table-fixed border-collapse text-sm">
+          <table data-guide="est-table" className="w-full table-fixed border-collapse text-sm">
             <colgroup>
               {COLW.map((w, i) => (
                 <col key={i} style={{ width: w }} className={colClass[i] || undefined} />
@@ -1351,22 +1353,22 @@ ${!preview ? `@media print {
               </tr>
               <tr className="text-[10px] uppercase tracking-wide text-slate-200">
                 <th rowSpan={2} className="sticky left-0 z-10 border-b border-r border-slate-700 bg-slate-800 pl-0.5 pr-2 py-1.5 text-left text-slate-100">{t("Code · Task")}</th>
-                <th rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">{t("Qty")}</th>
-                <th rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">{t("Unit")}</th>
+                <th data-guide="est-col-qty" rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">{t("Qty")}</th>
+                <th data-guide="est-col-unit" rowSpan={2} className="pc-qtyunit border-b border-slate-700 bg-slate-800 px-1 py-1.5 text-center text-slate-100">{t("Unit")}</th>
                 <th colSpan={3} className="pc-labor border-b-2 border-b-blue-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Labor")}</th>
-                <th colSpan={2} className="pc-material border-b-2 border-b-emerald-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Material")}</th>
-                <th colSpan={2} className="pc-equipment border-b-2 border-b-amber-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Equipment")}</th>
-                <th colSpan={2} className="pc-subcontractor border-b-2 border-b-violet-400 border-l border-slate-600 bg-slate-800 px-1 py-0.5 text-center font-semibold text-white">{t("Subcontractor")}</th>
+                <th data-guide="est-col-material" colSpan={2} className="pc-material border-b-2 border-b-emerald-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Material")}</th>
+                <th data-guide="est-col-equipment" colSpan={2} className="pc-equipment border-b-2 border-b-amber-400 border-l border-slate-600 bg-slate-800 px-2 py-1 text-center font-semibold text-white">{t("Equipment")}</th>
+                <th data-guide="est-col-sub" colSpan={2} className="pc-subcontractor border-b-2 border-b-violet-400 border-l border-slate-600 bg-slate-800 px-1 py-0.5 text-center font-semibold text-white">{t("Subcontractor")}</th>
                 <th rowSpan={2} className="border-b border-l border-slate-600 bg-slate-800 px-2 py-1 text-center text-slate-100">{t("Item Total")}</th>
                 {showProgress && (
-                  <th colSpan={2} className="border-b-2 border-b-green-300 border-l-2 border-slate-500 bg-green-700 px-1 py-0.5 text-center font-semibold text-white">{t("Progress")}</th>
+                  <th data-guide="est-col-progress" colSpan={2} className="border-b-2 border-b-green-300 border-l-2 border-slate-500 bg-green-700 px-1 py-0.5 text-center font-semibold text-white">{t("Progress")}</th>
                 )}
                 <th rowSpan={2} className="no-print border-b border-slate-700 bg-slate-800 px-1 py-1" />
               </tr>
               <tr className="text-[9px] uppercase tracking-wide text-muted">
-                <th className="pc-labor border-b border-l border-border bg-blue-500/10 px-1 py-0.5 text-center">{t("Norm hrs/u")}</th>
-                <th className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">{t("Total Hrs")}</th>
-                <th className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">{t("Labor Cost")}</th>
+                <th data-guide="est-col-norm" className="pc-labor border-b border-l border-border bg-blue-500/10 px-1 py-0.5 text-center">{t("Norm hrs/u")}</th>
+                <th data-guide="est-col-hrs" className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">{t("Total Hrs")}</th>
+                <th data-guide="est-col-labor" className="pc-labor border-b border-l border-dotted border-black/40 bg-blue-500/10 px-1 py-0.5 text-center">{t("Labor Cost")}</th>
                 <th className="pc-material border-b border-l border-border bg-emerald-500/10 px-1 py-0.5 text-center">{t("Unit Cost")}</th>
                 <th className="pc-material border-b border-l border-dotted border-black/40 bg-emerald-500/10 px-1 py-0.5 text-center">{t("Total")}</th>
                 <th className="pc-equipment border-b border-l border-border bg-amber-500/10 px-1 py-0.5 text-center">{t("Unit Cost")}</th>
@@ -1475,7 +1477,7 @@ ${!preview ? `@media print {
                             </optgroup>
                           ))}
                         </select>
-                        <button type="button" onClick={() => addItem(cat.id)} className="no-print inline-flex h-5 items-center gap-1 rounded border border-border bg-surface px-1.5 text-[11px] font-medium text-fg hover:bg-surface-2">
+                        <button data-guide="est-item-btn" type="button" onClick={() => addItem(cat.id)} className="no-print inline-flex h-5 items-center gap-1 rounded border border-border bg-surface px-1.5 text-[11px] font-medium text-fg hover:bg-surface-2">
                           <Plus className="h-3 w-3" /> {t("Item")}
                         </button>
                         <button type="button" onClick={() => removeCategory(cat.id)} aria-label={t("Remove section")} className="no-print inline-flex h-5 w-5 items-center justify-center rounded text-faint hover:text-red-600">
@@ -1659,7 +1661,7 @@ ${!preview ? `@media print {
                   })}
 
                   {/* Category subtotal */}
-                  <tr className="border-t border-border bg-surface-2/70 font-semibold">
+                  <tr data-guide="est-subtotal" className="border-t border-border bg-surface-2/70 font-semibold">
                     <td colSpan={3} className="sticky left-0 z-10 border-r border-border bg-surface-2/70 px-3 py-0.5 text-center text-xs uppercase tracking-wide text-muted">
                       {t("Subtotal")} — {cat.name}
                     </td>
@@ -1687,7 +1689,7 @@ ${!preview ? `@media print {
 
             {/* Grand totals per column */}
             <tfoot>
-              <tr className="border-t-2 border-border bg-surface text-sm font-bold">
+              <tr data-guide="est-direct" className="border-t-2 border-border bg-surface text-sm font-bold">
                 <td colSpan={3} className="sticky left-0 z-10 border-r border-border bg-surface px-3 py-2 text-right uppercase tracking-wide text-fg">
                   {t("Direct Cost")}
                 </td>
@@ -1717,14 +1719,14 @@ ${!preview ? `@media print {
          * breaks the same figure out per column; this is the single headline number,
          * always shown. Screen-only: the print document renders its own totals block,
          * so printing this too would state the figure twice. */}
-        <div className="no-print flex items-baseline gap-3 border-t-2 border-border bg-surface-2/60 px-4 py-2.5 print:hidden">
+        <div data-guide="est-total-direct" className="no-print flex items-baseline gap-3 border-t-2 border-border bg-surface-2/60 px-4 py-2.5 print:hidden">
           <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-fg">{t("Total Direct Costs")}</span>
           <span aria-hidden className="min-w-6 flex-1 translate-y-[-3px] border-b border-dotted border-faint/60" />
           <span className="shrink-0 tabular-nums text-sm font-bold text-fg">{dualMoney(direct)}</span>
         </div>
 
         <div className="no-print border-t border-border p-3">
-          <button type="button" onClick={addCategory} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
+          <button data-guide="est-add-section" type="button" onClick={addCategory} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-surface-2">
             <Plus className="h-3.5 w-3.5" /> {t("Add section")}
           </button>
         </div>
@@ -1843,7 +1845,7 @@ ${!preview ? `@media print {
               ];
               const share = (n: number) => (direct > 0 ? (n / direct) * 100 : 0);
               return (
-                <div className="px-4 py-3">
+                <div data-guide="est-summary" className="px-4 py-3">
                   <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">{t("Cost by Section")}</div>
                   {/* Composition bar */}
                   <div className="mb-3 flex h-2 w-full overflow-hidden rounded-full bg-surface-2">
@@ -1871,7 +1873,7 @@ ${!preview ? `@media print {
             })()}
 
             {/* Mark-ups & Total */}
-            <div className="border-t border-border px-4 py-3 lg:border-t-0">
+            <div data-guide="est-markups" className="border-t border-border px-4 py-3 lg:border-t-0">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-faint">{t("Mark-ups & Total")}</div>
               <dl className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-2">
@@ -2381,9 +2383,9 @@ function AssemblyEditor({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, guide }: { label: string; children: React.ReactNode; guide?: string }) {
   return (
-    <label className="flex min-w-0 items-center gap-1.5">
+    <label data-guide={guide} className="flex min-w-0 items-center gap-1.5">
       <span className="shrink-0 whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-faint">{label}</span>
       {children}
     </label>
@@ -2391,9 +2393,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // Labeled toolbar group — keeps related controls visually contained.
-function ToolGroup({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function ToolGroup({ label, children, className, guide }: { label: string; children: React.ReactNode; className?: string; guide?: string }) {
   return (
-    <div className={`rounded-lg border border-border bg-surface-2/60 px-3 py-2 ${className ?? ""}`}>
+    <div data-guide={guide} className={`rounded-lg border border-border bg-surface-2/60 px-3 py-2 ${className ?? ""}`}>
       <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-faint">{label}</div>
       <div className="flex flex-nowrap items-center gap-2">{children}</div>
     </div>
