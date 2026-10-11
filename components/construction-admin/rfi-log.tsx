@@ -79,7 +79,7 @@ export function RfiLog({ rfis }: { rfis: Rfi[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((r) => (
-                <tr key={r.id} className="group transition-colors even:bg-surface-2/60 hover:bg-surface-2">
+                <tr key={r.id} className="zebra-row group transition-colors zebra-hover">
                   <td className="px-5 py-3">
                     <Link href={`/construction-admin/rfis/${r.id}`} className="block">
                       <span className="font-mono text-[11px] text-faint">{r.rfiNumber}</span>

@@ -120,6 +120,16 @@
  *   speaker button mutes it per browser. Clips are made once and kept in the private bucket.
  *   Founder only: Settings > Integrations > Guide narration (key, voice, model, on/off, test,
  *   clear cache). Silent exactly as before until a key is saved there. No SQL.
+ * 0.25.8 (11 OCT 2026): feat — the INTERACTIVE-GUIDE in English as well as Spanish: the button and
+ *   the full 29-step tour appear when the interface is in English, with cards written for the
+ *   English screen (every control named as that screen names it) and read aloud by an English
+ *   voice ("square metres", "version one point zero", "per cent"). Voices are per language in
+ *   Settings > Integrations > Guide narration, each with its own shortlist and Test voice;
+ *   Generate all clips makes both languages and Clear cached audio clears both. The Spanish
+ *   texts, voice and cached clips are untouched (their cache keys are pinned by a test). Also:
+ *   the button now shows on the Estimates landing screen too, where it opens one card saying to
+ *   open a project, or create one with New estimate, to start the tour; a new user could not
+ *   find the guide before an estimate was open. Every other language still has no button. No SQL.
  * 0.25.9 (11 OCT 2026): fix — a new beta signup got three sample clients and four tasks and
  *   nothing else: no sample project, schedule, estimate or proposal, and no error anywhere.
  *   The seed re-read the clients it had just created, and at signup (a request with no session
@@ -128,6 +138,11 @@
  *   failure cannot drop the rest, and any failure is one [aecflow-error] line naming the step.
  *   The seeded estimate is keyed by its project, so it opens from the project too. New signups
  *   only; companies already created are not touched. No SQL.
+ * 0.25.10 (11 OCT 2026): feat — ZEBRA shading on every list: one stripe, defined once (tokens and
+ *   the zebra-row / zebra-list classes in globals.css), on every register and row list, the
+ *   Estimates project list included. Hover and selected rows are tinted so they never read as a
+ *   stripe; grouped, filtered and expanded tables stay in step. The Estimate editor, the Gantt,
+ *   the Take-Off and everything printed are unchanged. Presentation only. No SQL.
  * 0.25.11 (11 OCT 2026): feat — sample files. One complete sample project that runs through
  *   every live module (client, project, service proposal, estimate, schedule, tasks, minutes,
  *   building permit, construction records, purchase order, materials, deliverables, a letter,

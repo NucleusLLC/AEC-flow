@@ -102,7 +102,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
               {rows.map((m) => (
                 <tr
                   key={m.id}
-                  className="group border-b border-border transition-colors even:bg-surface-2/60 hover:bg-surface-2/80"
+                  className="zebra-row group border-b border-border transition-colors zebra-hover"
                 >
                   <td className="whitespace-nowrap px-5 py-2.5 text-muted">
                     {formatDate(m.meetingDate, locale)}

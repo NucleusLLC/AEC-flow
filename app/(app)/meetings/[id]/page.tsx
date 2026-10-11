@@ -206,7 +206,7 @@ export default async function MeetingDetailPage({ params }: PageProps) {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {meeting.actionItems.map((a) => (
-                      <tr key={a.id} className="transition-colors hover:bg-surface-2/60">
+                      <tr key={a.id} className="zebra-row transition-colors zebra-hover">
                         <td className="px-5 py-2 font-medium text-fg">{a.description}</td>
                         <td className="px-3 py-2 text-muted">{a.assignee}</td>
                         <td className="px-3 py-2 text-muted">

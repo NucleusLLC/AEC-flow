@@ -116,7 +116,7 @@ export function OrdersView({ orders }: { orders: OrderListItem[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((o) => (
-                <tr key={o.id} className="group transition-colors even:bg-surface-2/60 hover:bg-surface-2">
+                <tr key={o.id} className="zebra-row group transition-colors zebra-hover">
                   <td className="px-5 py-3">
                     <Link href={`/orders/${o.id}`} className="block">
                       <span className="flex items-center gap-2">

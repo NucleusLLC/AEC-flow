@@ -104,7 +104,7 @@ function Group({ group }: { group: SupplierGroup }) {
             </thead>
             <tbody>
               {group.items.map((i) => (
-                <tr key={i.id} className="border-b border-border/60 last:border-0">
+                <tr key={i.id} className="zebra-row border-b border-border/60 last:border-0">
                   <td className="px-3 py-2">
                     <input
                       type="checkbox"

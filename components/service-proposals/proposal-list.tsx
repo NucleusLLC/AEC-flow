@@ -86,7 +86,7 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
           </thead>
           <tbody>
             {filtered.map((p) => (
-              <tr key={p.id} className="border-b border-border/60 last:border-0 hover:bg-surface-2/30">
+              <tr key={p.id} className="zebra-row border-b border-border/60 last:border-0 zebra-hover">
                 <td className="px-4 py-2.5">
                   <Link href={`/design/service-proposals/${p.id}`} className="font-medium text-brand hover:underline">
                     {p.number}

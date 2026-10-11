@@ -338,7 +338,7 @@ export function InvoicePanel({
           <table className="w-full text-sm">
             <tbody>
               {invoice.lines.map((l) => (
-                <tr key={l.id} className="border-b border-border/60 last:border-0">
+                <tr key={l.id} className="zebra-row border-b border-border/60 last:border-0">
                   <td className="py-2 pr-3">
                     <div className="text-fg">{l.description}</div>
                     {l.milestoneName ? (
@@ -408,7 +408,7 @@ export function InvoicePanel({
               </thead>
               <tbody>
                 {invoice.payments.map((p) => (
-                  <tr key={p.id} className="border-t border-border/60">
+                  <tr key={p.id} className="zebra-row border-t border-border/60">
                     <td className="py-2 font-mono text-xs tabular-nums">{militaryDate(p.paidAt)}</td>
                     <td className="py-2 text-muted">{t(PAYMENT_METHOD_LABEL[p.method])}</td>
                     <td className="py-2 font-mono text-xs text-muted">{p.reference ?? "—"}</td>
@@ -451,7 +451,7 @@ export function InvoicePanel({
               </thead>
               <tbody>
                 {invoice.creditNotes.map((c) => (
-                  <tr key={c.id} className="border-t border-border/60">
+                  <tr key={c.id} className="zebra-row border-t border-border/60">
                     <td className="py-2">
                       <Link href={`/finance/credit-notes/${c.id}`} className="font-mono text-xs font-semibold text-brand hover:underline">
                         {c.number}

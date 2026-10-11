@@ -111,7 +111,7 @@ export function PunchBoard({ projectId }: { projectId: string }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((it) => (
-                <tr key={it.id} className="even:bg-surface-2/60">
+                <tr key={it.id} className="zebra-row">
                   <td className="px-5 py-2.5 text-fg">{it.description}</td>
                   <td className="px-3 py-2.5 text-muted">{it.location || "—"}</td>
                   <td className="px-3 py-2.5 text-muted">{it.trade || "—"}</td>

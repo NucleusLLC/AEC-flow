@@ -180,7 +180,7 @@ export function OverdueChaseView({
                 </thead>
                 <tbody>
                   {g.invoices.map((i) => (
-                    <tr key={i.id} className="border-t border-border/60">
+                    <tr key={i.id} className="zebra-row border-t border-border/60">
                       <td className="py-2 pr-3 align-middle">
                         <Link
                           href={`/finance/invoices/${i.id}`}

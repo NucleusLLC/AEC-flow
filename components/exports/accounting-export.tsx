@@ -59,7 +59,7 @@ export function AccountingExport({ defaultFrom, defaultTo }: { defaultFrom: stri
             </div>
             {!check.ok ? <p className="mt-2 text-xs text-red-600">{t(check.error)}</p> : null}
 
-            <ul className="mt-4 divide-y divide-border rounded-lg border border-border">
+            <ul className="zebra-list mt-4 divide-y divide-border rounded-lg border border-border">
               {FILES.map((f) => (
                 <li key={f.kind} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
                   <div className="min-w-0 flex-1">
