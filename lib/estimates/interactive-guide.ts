@@ -17,9 +17,10 @@ import type { Lang } from "@/lib/i18n/types";
 /**
  * The languages the guide is offered in. The button is not rendered in any
  * other language. Widening the guide is this one line plus that language's
- * card text in interactive-guide-content.ts (a test holds the two together).
+ * card text in interactive-guide-content.ts (a test holds the two together);
+ * narrating it is one more entry in lib/guide-narration/spoken.ts and voices.ts.
  */
-export const GUIDE_LANGS: readonly Lang[] = ["es"];
+export const GUIDE_LANGS: readonly Lang[] = ["es", "en"];
 
 /** The single gate: is the INTERACTIVE-GUIDE button shown in this language? */
 export function guideEnabledFor(lang: string | null | undefined): boolean {
@@ -29,8 +30,27 @@ export function guideEnabledFor(lang: string | null | undefined): boolean {
 /** The button label. Deliberately the same in every language. */
 export const GUIDE_BUTTON_LABEL = "INTERACTIVE-GUIDE";
 
+/**
+ * The one card shown on the Estimates landing screen (the project picker),
+ * where there is no estimate to tour yet. Not a step of the tour: it has no
+ * number and is not in GUIDE_STEPS. Its narration clip is filed under this id.
+ */
+export const GUIDE_PICKER_HINT_ID = "pickerHint";
+
+/** The route whose landing screen shows the picker card. */
+export const GUIDE_PICKER_PATH = "/estimates";
+
 /** Id of the empty slot in the shell's top bar the button moves into on wide screens. */
 export const GUIDE_TOPBAR_SLOT_ID = "estimate-guide-slot";
+
+/**
+ * Set on the slot by the top bar once it is live in the browser. The button is
+ * only moved into a slot that carries it: the top bar is server-rendered behind
+ * a Suspense boundary, and a button put into it before React has adopted that
+ * markup is a hydration mismatch (React then throws the whole shell away and
+ * renders it again).
+ */
+export const GUIDE_TOPBAR_SLOT_READY = "data-guide-slot-ready";
 
 /** How long a step stays lit once the card has arrived. */
 export const GUIDE_HOLD_MS = 5000;
@@ -127,6 +147,12 @@ export type GuideStepText = {
 
 export type GuideContent = {
   steps: Record<string, GuideStepText>;
+  /**
+   * The picker card: what to do before the tour can run. Its body names the
+   * "New estimate" button exactly as that screen shows it in this language (a
+   * test holds it to the dictionary).
+   */
+  picker: { title: string; body: string };
   ui: {
     /** Tooltip on the idle button. */
     start: string;

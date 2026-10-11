@@ -63,12 +63,16 @@ export async function clearGuideNarrationKeyAction(): Promise<NarrationActionRes
   }
 }
 
-/** Save the on/off switch, the model and the voice of a language. */
+/**
+ * Save the on/off switch, the model and the voice of each language. A language
+ * left out of `voices`, or given something that is not a voice id, keeps the
+ * voice it has.
+ */
 export async function saveGuideNarrationSettingsAction(input: {
   enabled: boolean;
   model: string;
-  lang: string;
-  voice: string;
+  /** language -> Fish Audio reference id */
+  voices: Record<string, string>;
 }): Promise<NarrationActionResult> {
   const denied = await founderDenied();
   if (denied) return { ok: false, error: denied };
@@ -76,7 +80,7 @@ export async function saveGuideNarrationSettingsAction(input: {
     const status = await saveNarrationSettings({
       enabled: input?.enabled,
       model: input?.model,
-      voices: typeof input?.lang === "string" ? { [input.lang]: input.voice } : undefined,
+      voices: input?.voices && typeof input.voices === "object" ? input.voices : undefined,
     });
     revalidatePath("/settings");
     return { ok: true, status };
