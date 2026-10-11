@@ -102,6 +102,14 @@
  *   button turns magenta and a callout card flies from one part of the screen to the next, lighting
  *   each up for 5 seconds with what it is for (29 steps; Back / Pause / Next, Esc stops). Parts that
  *   are not on screen are skipped. It only reads the page: nothing is saved or changed. No SQL.
+ * 0.25.4 (10 OCT 2026): fix — sending a Bug/Wish report no longer takes the app down when the
+ *   browser is translating the page (Edge / Chrome Translate). The translator replaces text with
+ *   its own elements; pressing Send then made React insert the spinner before a label that was no
+ *   longer on the page ("Failed to execute 'insertBefore' on 'Node'") and, the panel being part of
+ *   the app layout, everything became "Something went wrong" although the report was saved. The
+ *   label now sits in its own element; a failure inside the panel stays inside the panel; a submit
+ *   that fails says so in a plain sentence (never the database's own words) and keeps what was
+ *   typed; and the outer error page now logs what it catches. No SQL.
  * 0.25.5 (10 OCT 2026): feat — ESTIMATES in the Architecture & Engineering Design module: the
  *   Module 1 sidebar gets an Estimating section opening the same /estimates as Module 3 and
  *   Complete AEC, so architecture and interior projects are priced without switching module.
