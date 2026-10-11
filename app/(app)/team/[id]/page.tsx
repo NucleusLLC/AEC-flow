@@ -97,13 +97,13 @@ export default async function TeamMemberPage({ params }: PageProps) {
               title={t("Current Projects")}
               subtitle={fmt(t("{count} active"), { count: member.currentProjects.length })}
             />
-            <div className="divide-y divide-border">
+            <div className="zebra-list divide-y divide-border">
               {member.currentProjects.length > 0 ? (
                 member.currentProjects.map((p) => (
                   <Link
                     key={p.id}
                     href={`/projects/${p.id}`}
-                    className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-surface-2"
+                    className="flex items-center justify-between gap-3 px-5 py-3 transition-colors zebra-hover"
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium text-fg">{p.name}</div>
@@ -120,13 +120,13 @@ export default async function TeamMemberPage({ params }: PageProps) {
 
           <Card>
             <CardHeader title={t("Action Items")} subtitle={fmt(t("{count} open"), { count: actionItems.length })} />
-            <div className="divide-y divide-border">
+            <div className="zebra-list divide-y divide-border">
               {actionItems.length > 0 ? (
                 actionItems.map((a) => (
                   <Link
                     key={a.id}
                     href={`/meetings/${a.meetingId}`}
-                    className="flex items-start justify-between gap-3 px-5 py-3 transition-colors hover:bg-surface-2"
+                    className="flex items-start justify-between gap-3 px-5 py-3 transition-colors zebra-hover"
                   >
                     <div className="min-w-0">
                       <div className="text-sm text-fg">{a.description}</div>

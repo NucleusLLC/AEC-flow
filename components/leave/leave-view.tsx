@@ -86,7 +86,7 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((r) => (
-                <tr key={r.id} className="transition-colors even:bg-surface-2/60 hover:bg-surface-2">
+                <tr key={r.id} className="zebra-row transition-colors zebra-hover">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2.5">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">

@@ -59,7 +59,7 @@ export type NarrationManifest = {
 
 export const NARRATION_OFF: NarrationManifest = { enabled: false, clips: {} };
 
-/** Where a step's clip is served from. */
+/** Where a card's clip is served from. `stepId` is its clip id (lib/guide/definition.ts: clipIdFor). */
 export function narrationClipUrl(lang: string, stepId: string, version: string): string {
   return `/api/guide-narration/${encodeURIComponent(stepId)}?lang=${encodeURIComponent(lang)}&v=${encodeURIComponent(version)}`;
 }

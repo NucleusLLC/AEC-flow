@@ -56,7 +56,7 @@ function UnitCard({ unit, onChange, onRemove, currency }: { unit: UnitType; onCh
             </thead>
             <tbody>
               {unit.components.map((c) => (
-                <tr key={c.id} className="even:bg-surface-2/40">
+                <tr key={c.id} className="zebra-row">
                   <td className={cell}><input className="h-8 w-32 rounded border border-transparent bg-transparent px-1.5 text-sm hover:border-border focus:border-brand focus:bg-surface focus:outline-none" value={c.name} onChange={(e) => setComp(c.id, "name", e.target.value)} /></td>
                   <td className={cell}><input type="number" className={numInput} value={c.area} onChange={(e) => setComp(c.id, "area", Number(e.target.value))} /></td>
                   <td className={cell}><input type="number" className={numInput} value={c.constructionCostPerM2} onChange={(e) => setComp(c.id, "constructionCostPerM2", Number(e.target.value))} /></td>

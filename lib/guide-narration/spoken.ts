@@ -103,6 +103,8 @@ export function spanishCode(code: string): string {
 
 /** Applied in order. Each takes display text a step nearer to plain words. */
 const ES_RULES: readonly SpokenRule[] = [
+  // Aruba's turnover tax is said letter by letter.
+  [/\bBBO\b/g, "be be o"],
   // Abbreviations with a meaning of their own.
   [/\bN\.\s?º/g, "Número"],
   [/\bn\.\s?º/g, "número"],
@@ -246,6 +248,8 @@ export function englishCode(code: string): string {
 
 /** Applied in order. Each takes display text a step nearer to plain words. */
 const EN_RULES: readonly SpokenRule[] = [
+  // Aruba's turnover tax is said letter by letter.
+  [/\bBBO\b/g, "B B O"],
   // Abbreviations with a meaning of their own.
   [/\be\.g\.,?\s?/g, "for example, "],
   [/\bE\.g\.,?\s?/g, "For example, "],
@@ -311,6 +315,7 @@ type SpokenLang = {
   /** "Paso tres" */
   stepLabel: (n: number) => string;
   rules: readonly SpokenRule[];
+  /** The overrides of the ESTIMATES guide. Another guide brings its own (lib/guide/definition.ts). */
   overrides: Record<string, SpokenOverride>;
 };
 
@@ -421,10 +426,17 @@ export function speakable(lang: string, text: string): string {
  * Ejemplo: Acme Development." The step number and title are read first, then
  * the body, then each bullet as a sentence of its own.
  */
-export function spokenStepText(lang: string, step: Pick<GuideStep, "id" | "number">, text: GuideStepText): string {
+export function spokenStepText(
+  lang: string,
+  step: Pick<GuideStep, "id" | "number">,
+  text: GuideStepText,
+  /** The guide's own overrides for this language. Left out: the Estimates guide's. */
+  overrides?: Record<string, SpokenOverride>,
+): string {
   const spec = SPOKEN_LANGS[lang];
   if (!spec) return "";
-  const override = spec.overrides[step.id] ?? {};
+  const from = overrides ?? spec.overrides;
+  const override = (Object.prototype.hasOwnProperty.call(from, step.id) ? from[step.id] : undefined) ?? {};
   const title = override.title ?? applyRules(text.title, spec.rules);
 
   let body: string;
@@ -457,10 +469,11 @@ export function spokenGuide(
   lang: string,
   steps: readonly GuideStep[],
   content: GuideContent,
+  overrides?: Record<string, SpokenOverride>,
 ): { id: string; number: number; text: string }[] {
   return steps
     .filter((s) => content.steps[s.id])
-    .map((s) => ({ id: s.id, number: s.number, text: spokenStepText(lang, s, content.steps[s.id]) }));
+    .map((s) => ({ id: s.id, number: s.number, text: spokenStepText(lang, s, content.steps[s.id], overrides) }));
 }
 
 /**

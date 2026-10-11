@@ -197,7 +197,7 @@ export function DrawingsView({ drawings }: { drawings: Drawing[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((d) => (
-                <tr key={d.id} className="hover:bg-surface-2">
+                <tr key={d.id} className="zebra-row zebra-hover">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">

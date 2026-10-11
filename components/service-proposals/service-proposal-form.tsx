@@ -31,6 +31,8 @@ import { validateNewClient, type NewClientErrors, type NewClientField } from "@/
 import { saveProject } from "@/app/(app)/projects/actions";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { GuideTour } from "@/components/estimate-guide/guide-tour";
+import { PROPOSALS_GUIDE } from "@/lib/proposals/interactive-guide";
 
 type Option = { id: string; name: string };
 
@@ -732,9 +734,14 @@ export function ServiceProposalForm({
   const orphanIssues = issues.filter((i) => !reachablePaths.has(i.path));
 
   return (
+    <>
+    {/* INTERACTIVE-GUIDE: the button and the tour of this form. It only reads the
+        data-guide markers below; it is not part of the form and changes nothing in it. */}
+    <GuideTour guide={PROPOSALS_GUIDE} />
     <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-6" ref={nav}>
         {mode === "new" ? (
+          <div data-guide="sp-template">
           <Card>
             <CardHeader title={t("Start from a template")} subtitle={t("Optional — prefills fees, phases and scope for a common project type")} />
             <CardBody>
@@ -757,13 +764,14 @@ export function ServiceProposalForm({
               ) : null}
             </CardBody>
           </Card>
+          </div>
         ) : null}
 
         {/* Proposal */}
         <Card>
           <CardHeader title={t("Proposal")} />
           <CardBody className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
+            <div data-guide="sp-title" className="sm:col-span-2">
               <label className={label}>{t("Title *")}</label>
               <input
                 value={title}
@@ -775,7 +783,7 @@ export function ServiceProposalForm({
               />
               <FieldError msg={issueFor("title")} />
             </div>
-            <div>
+            <div data-guide="sp-number">
               <label className={label}>{t("Proposal number")}</label>
               <input
                 value={number}
@@ -795,7 +803,7 @@ export function ServiceProposalForm({
                 </p>
               ) : null}
             </div>
-            <div>
+            <div data-guide="sp-client">
               <label className={label}>{t("Client")}</label>
               <select
                 value={newClientOpen ? NEW_CLIENT : clientId}
@@ -888,7 +896,7 @@ export function ServiceProposalForm({
                 </div>
               ) : null}
             </div>
-            <div>
+            <div data-guide="sp-project">
               <label className={label}>{t("Project")}</label>
               <select
                 value={newProjectOpen ? NEW_PROJECT : projectId}
@@ -965,7 +973,7 @@ export function ServiceProposalForm({
                 </div>
               ) : null}
             </div>
-            <div>
+            <div data-guide="sp-contact-name">
               <label className={label}>{t("Contact name")}</label>
               <input
                 value={contactName}
@@ -976,7 +984,7 @@ export function ServiceProposalForm({
               />
               <FieldError msg={issueFor("contactName")} />
             </div>
-            <div>
+            <div data-guide="sp-contact-email">
               <label className={label}>{t("Contact email")}</label>
               <input
                 type="email"
@@ -992,7 +1000,7 @@ export function ServiceProposalForm({
               />
               <FieldError msg={issueFor("contactEmail")} />
             </div>
-            <div>
+            <div data-guide="sp-currency">
               <label className={label}>{t("Currency")}</label>
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={field}>
                 {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1003,6 +1011,7 @@ export function ServiceProposalForm({
 
         {/* Cost basis */}
         {anyPercent ? (
+          <div data-guide="sp-basis">
           <Card>
             <CardHeader title={t("Cost basis")} subtitle={t("What the percentage fees are calculated from")} />
             <CardBody className="grid gap-4 sm:grid-cols-3">
@@ -1059,9 +1068,11 @@ export function ServiceProposalForm({
               ) : null}
             </CardBody>
           </Card>
+          </div>
         ) : null}
 
         {/* Fees */}
+        <div data-guide="sp-fees">
         <Card>
           <CardHeader title={t("Professional fees")} subtitle={t("One line per discipline or service")} />
           <CardBody className="space-y-2">
@@ -1131,7 +1142,7 @@ export function ServiceProposalForm({
                     <div className="flex items-end justify-end pb-2 text-sm tabular-nums text-fg">{money(compAmount)}</div>
                   </div>
 
-                  <div className="mt-2 flex items-center gap-4 text-xs text-muted">
+                  <div data-guide="sp-fee-type" className="mt-2 flex items-center gap-4 text-xs text-muted">
                     <label className="inline-flex items-center gap-1.5">
                       <span>{t("Type")}</span>
                       <select value={f.category} onChange={(e) => set({ category: e.target.value as ServiceCategory })} className="h-7 rounded border border-border bg-surface px-2 text-xs">
@@ -1150,13 +1161,15 @@ export function ServiceProposalForm({
                 </div>
               );
             })}
-            <button type="button" onClick={() => setFees((p) => [...p, emptyFee()])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
+            <button data-guide="sp-add-fee" type="button" onClick={() => setFees((p) => [...p, emptyFee()])} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Plus className="h-4 w-4" /> {t("Add fee line")}
             </button>
           </CardBody>
         </Card>
+        </div>
 
         {/* Phases */}
+        <div data-guide="sp-phases">
         <Card>
           <CardHeader title={t("Design phases")} subtitle={t("How the base fee is distributed — should total 100%")} />
           <CardBody className="space-y-2">
@@ -1189,8 +1202,10 @@ export function ServiceProposalForm({
             </div>
           </CardBody>
         </Card>
+        </div>
 
         {/* Payment schedule */}
+        <div data-guide="sp-payment">
         <Card>
           <CardHeader title={t("Payment schedule")} subtitle={t("Optional — should total 100% of the grand total")} />
           <CardBody className="space-y-2">
@@ -1220,8 +1235,10 @@ export function ServiceProposalForm({
             </button>
           </CardBody>
         </Card>
+        </div>
 
         {/* Reimbursables */}
+        <div data-guide="sp-reimbursables">
         <Card>
           <CardHeader title={t("Reimbursable expenses")} subtitle={t("Printing, travel, permit fees — added to the subtotal")} />
           <CardBody className="space-y-2">
@@ -1248,12 +1265,13 @@ export function ServiceProposalForm({
             </button>
           </CardBody>
         </Card>
+        </div>
 
         {/* Tax & discount */}
         <Card>
           <CardHeader title={t("Tax & discount")} />
           <CardBody className="grid gap-4 sm:grid-cols-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div data-guide="sp-tax" className="grid grid-cols-2 gap-3">
               <div>
                 <label className={label}>{t("Tax name")}</label>
                 <input value={taxName} onChange={(e) => setTaxName(e.target.value)} className={`${field} ${issueFor(`taxes.${TAX_KEY}.name`) ? fieldInvalid : ""}`} data-invalid={issueFor(`taxes.${TAX_KEY}.name`) ? "true" : undefined} aria-invalid={issueFor(`taxes.${TAX_KEY}.name`) ? true : undefined} placeholder="BBO" />
@@ -1265,7 +1283,7 @@ export function ServiceProposalForm({
                 <FieldError msg={issueFor(`taxes.${TAX_KEY}.percent`)} />
               </div>
             </div>
-            <div className="grid grid-cols-[1fr_90px_90px] gap-3">
+            <div data-guide="sp-discount" className="grid grid-cols-[1fr_90px_90px] gap-3">
               <div>
                 <label className={label}>{t("Discount")}</label>
                 <input value={discountLabel} onChange={(e) => setDiscountLabel(e.target.value)} className={`${field} ${issueFor(`discounts.${DISCOUNT_KEY}.label`) ? fieldInvalid : ""}`} data-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? "true" : undefined} aria-invalid={issueFor(`discounts.${DISCOUNT_KEY}.label`) ? true : undefined} placeholder={t("Repeat client")} />
@@ -1288,6 +1306,7 @@ export function ServiceProposalForm({
         </Card>
 
         {/* Scope of services */}
+        <div data-guide="sp-scope">
         <Card>
           <CardHeader title={t("Scope of services")} subtitle={t("Itemised inclusions and exclusions — appears as a list on the document")} />
           <CardBody className="space-y-2">
@@ -1331,8 +1350,10 @@ export function ServiceProposalForm({
             </button>
           </CardBody>
         </Card>
+        </div>
 
         {/* Scope & terms */}
+        <div data-guide="sp-narrative">
         <Card>
           <CardHeader
             title={t("Scope narrative & terms")}
@@ -1353,11 +1374,11 @@ export function ServiceProposalForm({
                 <textarea value={assumptions} onChange={(e) => setAssumptions(e.target.value)} rows={2} className={`${field} h-auto py-2`} />
               </div>
             </div>
-            <div>
+            <div data-guide="sp-terms">
               <label className={label}>{t("Terms & conditions")}</label>
               <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={2} className={`${field} h-auto py-2`} />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div data-guide="sp-validity" className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className={label}>{t("Valid until")}</label>
                 <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className={`${field} ${issueFor("validUntil") ? fieldInvalid : ""}`} data-invalid={issueFor("validUntil") ? "true" : undefined} aria-invalid={issueFor("validUntil") ? true : undefined} />
@@ -1370,6 +1391,7 @@ export function ServiceProposalForm({
             </div>
           </CardBody>
         </Card>
+        </div>
 
         {error ? (
           <div
@@ -1397,7 +1419,7 @@ export function ServiceProposalForm({
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3">
+        <div data-guide="sp-save" className="flex items-center gap-3">
           <button type="submit" disabled={pending} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-5 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-50">
             {pending ? t("Saving…") : mode === "edit" ? t("Save changes") : t("Create proposal")}
           </button>
@@ -1407,7 +1429,7 @@ export function ServiceProposalForm({
 
       {/* Live summary rail */}
       <div className="lg:sticky lg:top-4 lg:self-start">
-        <div className="card-surface rounded-xl border border-border bg-surface p-4">
+        <div data-guide="sp-summary" className="card-surface rounded-xl border border-border bg-surface p-4">
           <h3 className="text-sm font-semibold text-fg">{t("Live summary")}</h3>
           <dl className="mt-3 space-y-1.5 text-sm">
             <Row k={t("Base fee")} v={money(calc.totals.baseFeeTotal)} />
@@ -1447,6 +1469,7 @@ export function ServiceProposalForm({
         </div>
       </div>
     </form>
+    </>
   );
 }
 

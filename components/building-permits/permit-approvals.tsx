@@ -128,7 +128,7 @@ export function PermitApprovals({
             </thead>
             <tbody>
               {approvals.map((a) => (
-                <tr key={a.id} className="border-t border-border/60 align-top even:bg-surface-2/40">
+                <tr key={a.id} className="zebra-row border-t border-border/60 align-top">
                   <td className="px-3 py-2 font-medium text-fg">{t(APPROVAL_STAGE_LABEL[a.stage])}</td>
                   <td className="px-3 py-2">
                     <ApprovalStatusBadge status={a.status} />

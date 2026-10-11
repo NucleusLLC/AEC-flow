@@ -13,6 +13,8 @@ import { addMonths } from "date-fns";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { seedCompany } from "@/lib/data/company-seed";
+import { installSampleSet } from "@/lib/samples/install";
+import { getServerLang } from "@/lib/i18n/server";
 import { validateNewPassword } from "@/lib/password-policy";
 import { hitRateLimit } from "@/lib/server/rate-limit";
 import { RATE_LIMITS, clientIpFrom, tooManyAttemptsMessage } from "@/lib/account-security/rate-limit-policy";
@@ -203,8 +205,18 @@ export async function registerBetaTester(input: {
       });
     }
 
-    // Give the new company a little sample data so it isn't empty on first login.
-    await seedCompany(co.id);
+    // Give the new company the complete sample set, in the language the visitor
+    // signed up in (the `lang` cookie; English unless it says Spanish), so every
+    // module opens on a finished example. It never throws and never fails the
+    // signup: a failure is one [aecflow-error] line naming the module that
+    // failed, and nothing of the set is left behind.
+    const lang = await getServerLang();
+    const sample = await installSampleSet(co.id, lang === "es" ? "es" : "en");
+    // If the complete set could not be installed, fall back to the small seed so
+    // the workspace is not empty. The company then shows as "no sample set" in
+    // /admin, where the founder can install it, and the practice can do the same
+    // from Settings > Practice > Sample files.
+    if (!sample.ok) await seedCompany(co.id);
 
     return { ok: true };
   } catch (e) {

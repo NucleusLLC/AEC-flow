@@ -99,7 +99,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader title={t("Phases")} subtitle={fmt(t("{count} phases"), { count: project.phases.length })} />
-            <div className="divide-y divide-border">
+            <div className="zebra-list divide-y divide-border">
               {project.phases.map((ph) => (
                 <div key={ph.id} className="flex items-center gap-4 px-5 py-3">
                   <div className="min-w-0 flex-1">
@@ -186,7 +186,7 @@ export default async function ProjectOverviewPage({ params }: PageProps) {
 
           <Card>
             <CardHeader title={t("Project Team")} subtitle={fmt(t(project.team.length === 1 ? "1 member" : "{count} members"), { count: project.team.length })} />
-            <div className="divide-y divide-border">
+            <div className="zebra-list divide-y divide-border">
               {project.team.map((m) => (
                 <div key={m.name} className="flex items-center gap-3 px-5 py-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">

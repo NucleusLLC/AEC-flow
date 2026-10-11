@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GUIDE_HOLD_MS, GUIDE_LANGS, GUIDE_PICKER_HINT_ID, GUIDE_STEPS } from "@/lib/estimates/interactive-guide";
+import { ESTIMATES_GUIDE, PROPOSALS_GUIDE } from "@/lib/guide/registry";
 import { guideContentFor } from "@/lib/estimates/interactive-guide-content";
 import {
   NARRATION_CACHE_PREFIX,
@@ -92,6 +93,46 @@ const PINNED_ES_FILES: Record<string, string> = {
   colSub: "es-colSub-6aa7f32632ff0b15e12d854158638986.mp3",
   colProgress: "es-colProgress-7cbe37a00bb804002f58aa57785628bc.mp3",
 };
+
+/**
+ * The English Estimates clips and the two landing-screen clips, as v0.25.8
+ * named them (computed on that release, before the engine took a guide
+ * definition and a second guide existed). Pinned for the same reason as the
+ * Spanish ones: a changed name is a clip production synthesises again.
+ */
+const PINNED_EN_FILES: Record<string, string> = {
+  module: "en-module-fb6299b5d0fa19c1d7e3d5a3b14d2058.mp3",
+  projectNo: "en-projectNo-3b3961ec34580d6e55a93254a1d48c8c.mp3",
+  client: "en-client-eaa4d9fc6b5a33a4864e6681c2b99903.mp3",
+  version: "en-version-ca4c8ee416a94645d009fd40642e87ac.mp3",
+  date: "en-date-641b1e3749592dca286049ba95e55f14.mp3",
+  location: "en-location-3a4079847e249c29062fe7c0dc04ffe0.mp3",
+  area: "en-area-3c3ec6fb9380b5e185400a12e4a42bad.mp3",
+  sideMenu: "en-sideMenu-81017d900a1ae4439c52e4d45f076f0f.mp3",
+  pricing: "en-pricing-7c877f629ffc937e9d5e77a1002ce156.mp3",
+  costBase: "en-costBase-5e684d02ccaaf11181a453b42853fd9c.mp3",
+  totalCost: "en-totalCost-943df5003969745c8fbe11ffeaaee10e.mp3",
+  status: "en-status-5c5282fa38ad84f28affed945a7eb5d9.mp3",
+  table: "en-table-7ae8842f995bd148e914cf299467e898.mp3",
+  subtotal: "en-subtotal-4f65e357a121b711aab208b98732b5b6.mp3",
+  directCost: "en-directCost-2972cbadb157a46387250bd19a589015.mp3",
+  totalDirect: "en-totalDirect-c02bd0b0e6d429dd961708e9f4ffe628.mp3",
+  addSection: "en-addSection-c1eb060b77925c0ea4433d695125702c.mp3",
+  summary: "en-summary-d8a39b7e09cc736e76eb17b67438ecf7.mp3",
+  markups: "en-markups-b1e5d373030ed2a61b88aef358a06f6c.mp3",
+  item: "en-item-d729d786c1fbc5a1b8242bafd770346d.mp3",
+  colQty: "en-colQty-2cf6627f21fe55ea4d83ab94042474bb.mp3",
+  colUnit: "en-colUnit-2efce438f8ee0614d7e09a3c0f1ec0e3.mp3",
+  colNorm: "en-colNorm-aa83e68eeb13f1e3fcfc783cda05c25e.mp3",
+  colHours: "en-colHours-90f90187c87d769435dab42f6d0a455d.mp3",
+  colLabor: "en-colLabor-f098cd60fec37aba125909ad1e744c1a.mp3",
+  colMaterial: "en-colMaterial-99f39f3490f7ce95c139a7b375888220.mp3",
+  colEquipment: "en-colEquipment-5891827b1f7deba435b17d66d99d4871.mp3",
+  colSub: "en-colSub-9cb9c3cf4ff816e77b0644c889363e46.mp3",
+  colProgress: "en-colProgress-c127612b0778090139befd894c5b1d5c.mp3",
+  pickerHint: "en-pickerHint-bed287c0b8b981405fa1432be824dfed.mp3",
+};
+const PINNED_ES_PICKER_FILE = "es-pickerHint-837f9e42e2f29793e5b28b2bd7575b2b.mp3";
 
 // ---------------------------------------------------------------------------
 // Spoken form
@@ -550,6 +591,29 @@ describe("the cache key", () => {
     expect(Object.keys(PINNED_ES_FILES)).toEqual(GUIDE_STEPS.map((s) => s.id));
   });
 
+  it("gives every English Estimates clip, and both landing-screen clips, exactly the cache key v0.25.8 gave them", () => {
+    const voice = "2947ec32c7e1479c8ec5628a1fc035f1";
+    expect(NARRATION_LANGUAGES.en.defaultVoice).toBe(voice);
+    const now: Record<string, string> = {};
+    for (const entry of narrationEntries("en")) {
+      now[entry.stepId] = clipCacheKey(entry, { text: entry.text, voice, model: DEFAULT_NARRATION_MODEL }).slice(NARRATION_CACHE_PREFIX.length + 1);
+    }
+    expect(now).toEqual(PINNED_EN_FILES);
+    expect(Object.keys(PINNED_EN_FILES)).toEqual(CARD_IDS);
+    const picker = narrationEntry("es", GUIDE_PICKER_HINT_ID)!;
+    expect(
+      clipCacheKey(picker, { text: picker.text, voice: NARRATION_LANGUAGES.es.defaultVoice, model: DEFAULT_NARRATION_MODEL }),
+    ).toBe(`${NARRATION_CACHE_PREFIX}/${PINNED_ES_PICKER_FILE}`);
+  });
+
+  it("names Estimates clips by the bare step id: the engine's namespaces left them alone", () => {
+    for (const lang of ["es", "en"]) {
+      expect(narrationEntries(lang).map((e) => e.stepId)).toEqual(CARD_IDS);
+      expect(narrationEntries(lang, ESTIMATES_GUIDE)).toEqual(narrationEntries(lang));
+      for (const e of narrationEntries(lang)) expect(e.stepId).not.toContain(".");
+    }
+  });
+
   it("gives the other Spanish voices, and the clip URLs, what they had as well", () => {
     const nagi = "70fb19852a484f3eb1d040423e2a8be7";
     const key = (stepId: string, voice: string) => {
@@ -870,6 +934,30 @@ describe("serving a clip", () => {
     expect(h.calls).toHaveLength(2);
   });
 
+  it("serves a Service Proposals step from its own clip, never from the Estimates step of the same name", async () => {
+    const h = harness();
+    const estimates = await h.service.clip("es", "client");
+    const proposals = await h.service.clip("es", "proposals.client");
+    expect(estimates).toMatchObject({ ok: true, from: "fish" });
+    expect(proposals).toMatchObject({ ok: true, from: "fish" });
+    expect(h.calls).toHaveLength(2);
+    expect(h.calls[0].text).toBe(spoken.client);
+    expect(h.calls[1].text).toBe(narrationEntry("es", "proposals.client")!.text);
+    expect(h.calls[1].text).not.toBe(h.calls[0].text);
+    expect([...h.files.keys()].map((k) => k.replace(/-[0-9a-f]{32}.mp3$/, "")).sort()).toEqual(["guide-narration/es-client", "guide-narration/es-proposals.client"]);
+    expect(await h.service.clip("es", "proposals.client")).toMatchObject({ ok: true, from: "cache" });
+    expect(await h.service.clip("es", "client")).toMatchObject({ ok: true, from: "cache" });
+    expect(h.calls).toHaveLength(2);
+    // A step of one guide asked for under the other is not a step.
+    for (const id of ["proposals.area", "template", "proposals.nope", "estimates.client", "proposals.client.x"]) {
+      expect(await h.service.clip("es", id), id).toEqual({ ok: false, reason: "not-a-step" });
+    }
+    expect(h.calls).toHaveLength(2);
+    // Clearing the cache takes both guides' clips.
+    expect(await h.service.clearCache()).toBe(2);
+    expect(h.files.size).toBe(0);
+  });
+
   it("does not synthesise Spanish again when its clips are already cached and English is new", async () => {
     const h = harness();
     // The bucket as production has it: the 29 Spanish clips under their pinned names.
@@ -1025,6 +1113,24 @@ describe("the manifest", () => {
     for (const step of GUIDE_STEPS) {
       expect(new Set([a.clips[step.id], b.clips[step.id], c.clips[step.id]]).size, step.id).toBe(3);
     }
+  });
+
+  it("answers for one guide at a time: Estimates when none is named, and each guide keyed by its own step ids", async () => {
+    const h = harness();
+    for (const lang of ["es", "en"]) {
+      const estimates = await h.service.manifest(lang);
+      expect(await h.service.manifest(lang, "estimates")).toEqual(estimates);
+      const proposals = await h.service.manifest(lang, "proposals");
+      expect(proposals.enabled).toBe(true);
+      expect(Object.keys(proposals.clips)).toEqual([...PROPOSALS_GUIDE.steps.map((s) => s.id), PROPOSALS_GUIDE.list.hintId]);
+      expect(Object.keys(proposals.clips)).toHaveLength(23);
+      // The step both guides call "client" is a different clip in each.
+      expect(proposals.clips.client).not.toBe(estimates.clips.client);
+      expect(parseNarrationManifest(JSON.parse(JSON.stringify(proposals)))).toEqual(proposals);
+    }
+    for (const guide of ["nope", "", "Proposals", "__proto__", 3, {}]) expect(await h.service.manifest("es", guide), String(guide)).toEqual(NARRATION_OFF);
+    expect(await h.service.manifest("nl", "proposals")).toEqual(NARRATION_OFF);
+    expect(h.calls).toHaveLength(0);
   });
 
   it("is off for a language the guide is not narrated in", async () => {

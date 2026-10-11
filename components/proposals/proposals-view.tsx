@@ -119,7 +119,7 @@ export function ProposalsView({ proposals }: { proposals: ProposalRecord[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((p) => (
-                <tr key={p.id} className="group transition-colors hover:bg-surface-2/70">
+                <tr key={p.id} className="zebra-row group transition-colors zebra-hover">
                   <td className="px-5 py-2.5">
                     <Link href={`/proposals/${p.id}`} className="block">
                       <div className="flex items-center gap-2">

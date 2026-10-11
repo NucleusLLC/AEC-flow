@@ -139,12 +139,12 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {projects.map((p) => (
               <Link
                 key={p.id}
                 href={`/projects/${p.id}`}
-                className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2"
+                className="group flex items-center gap-4 px-5 py-3.5 transition-colors zebra-hover"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {onLeave.map((person) => (
               <div key={person.id} className="flex items-center gap-3 px-5 py-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">

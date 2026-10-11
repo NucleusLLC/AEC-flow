@@ -79,7 +79,7 @@ export function DeliverableList({ items }: { items: DesignDeliverableDTO[] }) {
           </thead>
           <tbody>
             {filtered.map((d) => (
-              <tr key={d.id} className="border-b border-border/60 last:border-0 hover:bg-surface-2/30">
+              <tr key={d.id} className="zebra-row border-b border-border/60 last:border-0 zebra-hover">
                 <td className="px-4 py-2.5">
                   <Link href={`/design/deliverable/${d.id}`} className="font-mono text-xs font-medium text-brand hover:underline">
                     {d.number}

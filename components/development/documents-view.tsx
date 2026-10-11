@@ -59,7 +59,7 @@ export function DocumentsView({ projectId, documents }: { projectId: string; doc
           <h3 className="text-sm font-semibold text-fg">{t("Project documents")}</h3>
           <SaveControl url={`/api/development/${projectId}/documents`} build={() => ({ documents: docs })} label={t("Save documents")} />
         </div>
-        <ul className="divide-y divide-border">
+        <ul className="zebra-list divide-y divide-border">
           {docs.map((d) => (
             <li key={d.id} className="group flex items-center gap-3 px-4 py-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-faint"><FileText className="h-4 w-4" /></div>

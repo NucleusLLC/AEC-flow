@@ -14,6 +14,8 @@
  *     credit, timed out, storage down: the answer is "no clip", the guide runs
  *     silent, and the reason is logged once, not once per card.
  */
+import { guideContentIn, type GuideDefinition } from "@/lib/guide/definition";
+import { ESTIMATES_GUIDE, guideById } from "@/lib/guide/registry";
 import { clipCacheKey, clipVersion, isNarrationCacheKey, narrationEntries, narrationEntry, narrationLangSupported } from "./catalog";
 import { narrationActive, type ResolvedNarrationConfig } from "./config";
 import { NARRATION_OFF, type NarrationManifest } from "./timing";
@@ -83,16 +85,23 @@ export function createNarrationService(deps: NarrationDeps) {
     }
   }
 
-  /** What the browser is told: on or off, and each step's clip version. No secret. */
-  async function manifest(lang: unknown): Promise<NarrationManifest> {
+  /**
+   * What the browser is told about ONE guide: on or off, and each step's clip
+   * version, keyed by the step id inside that guide. No secret. With no guide
+   * named it is the Estimates guide, as it was before there was a second one.
+   */
+  async function manifest(lang: unknown, guideId?: unknown): Promise<NarrationManifest> {
     if (typeof lang !== "string" || !narrationLangSupported(lang)) return NARRATION_OFF;
+    const guide: GuideDefinition | null = guideId === undefined || guideId === null ? ESTIMATES_GUIDE : guideById(guideId);
+    if (!guide || !guideContentIn(guide, lang)) return NARRATION_OFF;
     const config = await safeConfig();
     if (!config || !narrationActive(config) || !safeCache()) return NARRATION_OFF;
     const voice = config.voices[lang];
     if (!voice) return NARRATION_OFF;
     const clips: Record<string, string> = {};
-    for (const entry of narrationEntries(lang)) {
-      clips[entry.stepId] = clipVersion({ text: entry.text, voice, model: config.model });
+    const prefix = guide.clipNamespace ? guide.clipNamespace.length + 1 : 0;
+    for (const entry of narrationEntries(lang, guide)) {
+      clips[entry.stepId.slice(prefix)] = clipVersion({ text: entry.text, voice, model: config.model });
     }
     return Object.keys(clips).length > 0 ? { enabled: true, clips } : NARRATION_OFF;
   }

@@ -50,7 +50,7 @@ export function StatementLedger({
     : {
         table: "w-full min-w-[860px] text-sm",
         head: "text-left text-[11px] uppercase tracking-wide text-faint",
-        row: "border-b border-border/60 align-top even:bg-surface-2/40",
+        row: "zebra-row border-b border-border/60 align-top",
         muted: "text-muted",
         strong: "text-fg",
         rule: "border-t-2 border-border",

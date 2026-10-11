@@ -111,9 +111,9 @@ export function ProjectDrawingSet({
             <h4 className="text-sm font-semibold text-fg">{t(DISCIPLINE_LABEL[discipline])}</h4>
             <span className="text-xs text-faint">{sheets.length}</span>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="zebra-list divide-y divide-border">
             {sheets.map((d) => (
-              <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 hover:bg-surface-2">
+              <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 zebra-hover">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
                   <FileStack className="h-4 w-4" />
                 </span>

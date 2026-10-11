@@ -24,6 +24,9 @@ import {
   saveGuideNarrationSettingsAction,
   testGuideNarrationVoiceAction,
 } from "@/app/(app)/settings/narration-actions";
+import { narrationManifestUrl } from "@/components/estimate-guide/narration-player";
+import { clipIdFor } from "@/lib/guide/definition";
+import { GUIDES } from "@/lib/guide/registry";
 import type { NarrationStatus } from "@/lib/guide-narration/config";
 import { narrationClipUrl, parseNarrationManifest } from "@/lib/guide-narration/timing";
 import { NARRATION_LANGS, NARRATION_LANGUAGES, NARRATION_MODELS, isVoiceId } from "@/lib/guide-narration/voices";
@@ -142,10 +145,10 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
     });
   };
 
-  // Ask for every clip of every language once, one at a time, so the first
-  // listener never waits for Fish Audio. Each request is the same one the guide
-  // makes. A clip that is already cached costs nothing: it is served from the
-  // cache, so pressing this again only makes what is missing.
+  // Ask for every clip of every guide in every language once, one at a time,
+  // so the first listener never waits for Fish Audio. Each request is the same
+  // one the guide makes. A clip that is already cached costs nothing: it is
+  // served from the cache, so pressing this again only makes what is missing.
   const generateAll = () => {
     if (working) return;
     setMsg(null);
@@ -154,28 +157,29 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
       let asked = 0;
       const tally: Record<string, { done: number; total: number }> = {};
       try {
-        const manifests: [string, [string, string][]][] = [];
-        for (const lang of LANGS) {
-          const manifest = parseNarrationManifest(
-            await (await fetch(`/api/guide-narration?lang=${lang}`, { cache: "no-store" })).json(),
-          );
-          const clips = manifest.enabled ? Object.entries(manifest.clips) : [];
-          if (clips.length > 0) {
-            manifests.push([lang, clips]);
-            tally[lang] = { done: 0, total: clips.length };
+        const batches: { key: string; lang: string; clips: [string, string][] }[] = [];
+        for (const guide of GUIDES) {
+          for (const lang of LANGS) {
+            const manifest = parseNarrationManifest(await (await fetch(narrationManifestUrl(lang, guide.id), { cache: "no-store" })).json());
+            const clips = manifest.enabled ? Object.entries(manifest.clips) : [];
+            if (clips.length === 0) continue;
+            const key = `${guide.id}:${lang}`;
+            // The manifest names steps inside the guide; the clip route wants the guide's clip id.
+            batches.push({ key, lang, clips: clips.map(([stepId, version]) => [clipIdFor(guide, stepId), version]) });
+            tally[key] = { done: 0, total: clips.length };
           }
         }
-        if (manifests.length === 0) {
+        if (batches.length === 0) {
           setMsg({ kind: "err", text: "Narration is off or has no key, so there is nothing to generate." });
           return;
         }
         setProgress({ ...tally });
-        generate: for (const [lang, clips] of manifests) {
-          for (const [stepId, version] of clips) {
-            const response = await fetch(narrationClipUrl(lang, stepId, version));
+        generate: for (const { key, lang, clips } of batches) {
+          for (const [clipId, version] of clips) {
+            const response = await fetch(narrationClipUrl(lang, clipId, version));
             asked += 1;
             if (response.status !== 200) failed += 1;
-            tally[lang] = { done: tally[lang].done + 1, total: clips.length };
+            tally[key] = { done: tally[key].done + 1, total: clips.length };
             setProgress({ ...tally });
             // The first failure pauses Fish Audio for a while on the server; stop asking.
             if (failed > 0) break generate;
@@ -364,14 +368,23 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
             <Trash2 className="h-4 w-4" />
             <span>{t("Clear cached audio")}</span>
           </button>
-          {progress
-            ? LANGS.filter((lang) => progress[lang]).map((lang) => (
-                <span key={lang} className="text-xs tabular-nums text-muted" data-narration-progress={lang}>
-                  {`${lang.toUpperCase()} ${progress[lang].done} / ${progress[lang].total}`}
-                </span>
-              ))
-            : null}
         </div>
+
+        {/* Progress of "Generate all clips": one line per guide, one figure per language. */}
+        {progress ? (
+          <ul className="space-y-0.5 text-xs tabular-nums text-muted" data-narration-progress-list="">
+            {GUIDES.filter((guide) => LANGS.some((lang) => progress[`${guide.id}:${lang}`])).map((guide) => (
+              <li key={guide.id} className="flex flex-wrap gap-x-3" data-narration-progress-guide={guide.id}>
+                <span className="font-medium text-fg">{t(guide.title)}</span>
+                {LANGS.filter((lang) => progress[`${guide.id}:${lang}`]).map((lang) => (
+                  <span key={lang} data-narration-progress={`${guide.id}:${lang}`}>
+                    {`${lang.toUpperCase()} ${progress[`${guide.id}:${lang}`].done} / ${progress[`${guide.id}:${lang}`].total}`}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <p className="text-[11px] text-faint" data-narration-cache={status.cache}>
           <span>

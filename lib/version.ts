@@ -130,8 +130,41 @@
  *   the button now shows on the Estimates landing screen too, where it opens one card saying to
  *   open a project, or create one with New estimate, to start the tour; a new user could not
  *   find the guide before an estimate was open. Every other language still has no button. No SQL.
+ * 0.25.9 (11 OCT 2026): fix — a new beta signup got three sample clients and four tasks and
+ *   nothing else: no sample project, schedule, estimate or proposal, and no error anywhere.
+ *   The seed re-read the clients it had just created, and at signup (a request with no session
+ *   yet) the tenant scope answers every read with nothing, so there was no client to file a
+ *   project under. It now keeps the rows it creates, each entity is seeded on its own so one
+ *   failure cannot drop the rest, and any failure is one [aecflow-error] line naming the step.
+ *   The seeded estimate is keyed by its project, so it opens from the project too. New signups
+ *   only; companies already created are not touched. No SQL.
+ * 0.25.10 (11 OCT 2026): feat — ZEBRA shading on every list: one stripe, defined once (tokens and
+ *   the zebra-row / zebra-list classes in globals.css), on every register and row list, the
+ *   Estimates project list included. Hover and selected rows are tinted so they never read as a
+ *   stripe; grouped, filtered and expanded tables stay in step. The Estimate editor, the Gantt,
+ *   the Take-Off and everything printed are unchanged. Presentation only. No SQL.
+ * 0.25.11 (11 OCT 2026): feat — sample files. One complete sample project that runs through
+ *   every live module (client, project, service proposal, estimate, schedule, tasks, minutes,
+ *   building permit, construction records, purchase order, materials, deliverables, a letter,
+ *   a contract, a paid invoice with its time and expense), in English or Spanish, every record
+ *   marked SAMPLE / EJEMPLO and numbered on its own SMP- series so no real number is used up.
+ *   A new signup gets it in the language it signed up in. Settings > Practice > Sample files:
+ *   each practice installs or removes its own. /admin > Sample files (founder): dry run, then
+ *   push to one company or to every beta company without one. While installed, the sample
+ *   invoice, payment, time and expense count in that practice's finance figures. No SQL.
+ * 0.25.12 (11 OCT 2026): feat — an INTERACTIVE-GUIDE for Service Proposals, in Spanish and English.
+ *   The proposal form (new and edit) gets the same button and a 22-step narrated tour, top to
+ *   bottom: template, title, number, client, project, contact, currency, cost basis, fees, phases,
+ *   payment schedule, reimbursables, tax and discount, scope, terms, validity, saving and the
+ *   live summary. A step whose section is not on the form (no template on an existing proposal,
+ *   no cost basis without a percentage fee) is skipped. The Service Proposals list shows the
+ *   button with one card saying how to start. The guide is now an engine that runs a definition
+ *   per screen: Estimates and Service Proposals share the overlay, button, player, narration
+ *   route and cache, and clip ids are namespaced per guide. The Estimates tour, its texts and
+ *   every cached Estimates clip in both languages are unchanged (pinned by tests). Generate all
+ *   clips now covers every guide and shows progress per guide. No SQL.
  */
-export const APP_VERSION = "0.25.8";
+export const APP_VERSION = "0.25.12";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
