@@ -3,12 +3,17 @@
  * guide is offered in (GUIDE_LANGS in interactive-guide.ts).
  *
  * This text deliberately does NOT go through the app dictionaries: the guide is
- * being tried in Spanish only, and a dictionary key must exist in all six
- * translations. Adding a language here and to GUIDE_LANGS is all it takes to
- * widen it; interactive-guide.test.ts fails if either is done without the other.
+ * offered in Spanish and English only, and a dictionary key must exist in all
+ * six translations. Adding a language is one more block here plus its code in
+ * GUIDE_LANGS; interactive-guide.test.ts fails if either is done without the
+ * other.
  *
- * The Spanish follows the owner's annotated screenshot. Examples are generic:
- * no currency, no country.
+ * The Spanish follows the owner's annotated screenshot. The English is written
+ * for the English screen, not translated from the Spanish: every control is
+ * called what the English editor calls it ("Qty", "Total Hrs", "Mark-ups &
+ * Total", and "Labor" spelled as the screen spells it), and it only describes
+ * what that screen has. Prose is British ("metres"). Examples are generic: no
+ * currency, no country.
  */
 import type { Lang } from "@/lib/i18n/types";
 import type { GuideContent } from "./interactive-guide";
@@ -151,9 +156,157 @@ const es: GuideContent = {
       body: "% Avance: porcentaje de ejecución de la partida. Importe avance: se calcula automáticamente.",
     },
   },
+  picker: {
+    title: "Empieza aquí",
+    body: "Abre un proyecto de la lista, o crea uno con Nuevo presupuesto, para iniciar la guía interactiva del presupuesto.",
+  },
 };
 
-export const GUIDE_CONTENT: Partial<Record<Lang, GuideContent>> = { es };
+const en: GuideContent = {
+  ui: {
+    start: "Start the interactive guide for this screen",
+    stop: "Stop the interactive guide",
+    back: "Back",
+    next: "Next",
+    pause: "Pause",
+    resume: "Resume",
+    close: "Close the guide",
+    mute: "Mute the narration",
+    unmute: "Turn the narration on",
+    label: "Interactive guide",
+  },
+  steps: {
+    module: {
+      title: "Module",
+      body: "This shows the module you are working in. Open it to switch to another module.",
+    },
+    projectNo: {
+      title: "Project No.",
+      body: "The project's reference code. You can use your own internal numbering. Example: 2026-001.",
+    },
+    client: {
+      title: "Client",
+      body: "The client's name. Example: Acme Development.",
+    },
+    version: {
+      title: "Version",
+      body: "The version of this estimate. Keep the current one (V1.0), or create a new version when you make changes.",
+    },
+    date: {
+      title: "Date",
+      body: "The date of the estimate. Type it in, or pick it from the calendar.",
+    },
+    location: {
+      title: "Location",
+      body: "Where the work will be carried out.",
+    },
+    area: {
+      title: "Built-up Area (m²)",
+      body: "Enter the built-up area in square metres. Example: 83.8.",
+    },
+    sideMenu: {
+      title: "Side menu",
+      body: "From here you move between the different parts of the system, such as projects, finance and settings.",
+    },
+    pricing: {
+      title: "Pricing",
+      body: "Set the Average Labor Rate (per hour) here. Use Load template… to start from a template, or Save as… to keep this estimate as one.",
+    },
+    costBase: {
+      title: "Cost Database and View",
+      body: "Choose where your costs come from and how the estimate is shown:",
+      points: [
+        { term: "Cost Database", text: "the source your costs are taken from." },
+        { term: "Progress", text: "shows the progress of the work." },
+        { term: "Client", text: "a simplified view to present to the client." },
+        { term: "$ USD", text: "also shows the amounts in US dollars." },
+        { term: "Print Control", text: "sets up the printed report." },
+      ],
+    },
+    totalCost: {
+      title: "Total construction cost",
+      body: "The total cost of the estimate, updated automatically as you fill it in.",
+    },
+    status: {
+      title: "Save status",
+      body: "Tells you whether your latest changes have been saved. The estimate saves itself as you type.",
+    },
+    table: {
+      title: "Estimate table",
+      body: "Enter each task of the project here (e.g. demolition, walls, floors). Each row is one item.",
+    },
+    subtotal: {
+      title: "Subtotal",
+      body: "The total of the items in that section, calculated automatically.",
+    },
+    directCost: {
+      title: "Direct Cost",
+      body: "The sum of every item in the estimate, column by column.",
+    },
+    totalDirect: {
+      title: "Total Direct Costs",
+      body: "The overall total of all the sections.",
+    },
+    addSection: {
+      title: "Add section",
+      body: "Creates a new section of the estimate (e.g. Structure, Finishes, Services).",
+    },
+    summary: {
+      title: "Cost by Section",
+      body: "The direct cost split into Labor, Material, Equipment and Subcontractor, each with its percentage of the total.",
+    },
+    markups: {
+      title: "Mark-ups & Total",
+      body: "Add General Conditions / Overhead and your Profit & Risk percentage here. The Grand Total is calculated for you.",
+    },
+    item: {
+      title: "Item",
+      body: "This button adds a new row (an item) to the section. To remove a row, use the bin icon at its right-hand end.",
+    },
+    colQty: {
+      title: "Qty",
+      body: "The quantity of the item, in the unit of measure you select.",
+    },
+    colUnit: {
+      title: "Unit",
+      body: "Select the unit of measure. Examples: m³, m², m, kg, ton.",
+    },
+    colNorm: {
+      title: "Norm hrs/u",
+      body: "Labor hours per unit, according to the norm.",
+    },
+    colHours: {
+      title: "Total Hrs",
+      body: "Calculated automatically: quantity x norm.",
+    },
+    colLabor: {
+      title: "Labor Cost",
+      body: "Calculated automatically from the hours and the labor rate.",
+    },
+    colMaterial: {
+      title: "Material",
+      body: "Unit Cost: the price of the material per unit. Total: quantity x unit cost.",
+    },
+    colEquipment: {
+      title: "Equipment",
+      body: "Unit Cost: the cost of the equipment per unit. Total: quantity x unit cost.",
+    },
+    colSub: {
+      title: "Subcontractor",
+      body: "Unit Cost: the subcontractor's price per unit. Total: quantity x unit cost.",
+    },
+    colProgress: {
+      title: "Progress",
+      body: "POC %: the percentage of the item that is complete. Prog. Amt: the progress amount, calculated automatically.",
+    },
+  },
+  picker: {
+    title: "Start here",
+    body: "Open a project from the list, or create one with New estimate, to start the guided tour of the estimate.",
+  },
+};
+
+export const GUIDE_CONTENT: Partial<Record<Lang, GuideContent>> = { es, en };
 
 /** The card text for a language, or null when the guide has none for it. */
 export function guideContentFor(lang: string | null | undefined): GuideContent | null {

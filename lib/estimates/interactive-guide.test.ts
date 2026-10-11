@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { DICT } from "@/lib/i18n/dictionaries";
 import { LANG_CODES } from "@/lib/i18n/types";
 import {
   GUIDE_BUTTON_LABEL,
   GUIDE_FLY_MS,
   GUIDE_HOLD_MS,
   GUIDE_LANGS,
+  GUIDE_PICKER_HINT_ID,
+  GUIDE_PICKER_PATH,
   GUIDE_STEPS,
   GUIDE_TONE_HEX,
   availableIndices,
@@ -23,14 +28,17 @@ import {
 import { GUIDE_CONTENT, guideContentFor } from "./interactive-guide-content";
 
 describe("the language gate", () => {
-  it("offers the guide in Spanish only", () => {
-    expect(GUIDE_LANGS).toEqual(["es"]);
+  it("offers the guide in Spanish and English, and in no other language", () => {
+    expect([...GUIDE_LANGS].sort()).toEqual(["en", "es"]);
     expect(guideEnabledFor("es")).toBe(true);
-    for (const l of LANG_CODES.filter((x) => x !== "es")) expect(guideEnabledFor(l)).toBe(false);
+    expect(guideEnabledFor("en")).toBe(true);
+    const others = LANG_CODES.filter((x) => x !== "es" && x !== "en");
+    expect(others).toEqual(["nl", "de", "zh", "ja", "pt"]);
+    for (const l of others) expect(guideEnabledFor(l), l).toBe(false);
   });
 
   it("is closed for anything that is not a known language", () => {
-    for (const v of [undefined, null, "", "ES", "es-CO", "xx"]) expect(guideEnabledFor(v)).toBe(false);
+    for (const v of [undefined, null, "", "ES", "EN", "es-CO", "en-GB", "xx"]) expect(guideEnabledFor(v)).toBe(false);
   });
 
   it("has complete card text for every language it is offered in, and for no other", () => {
@@ -41,8 +49,78 @@ describe("the language gate", () => {
       for (const v of Object.values(content!.ui)) expect(v.trim()).not.toBe("");
     }
     expect(Object.keys(GUIDE_CONTENT).sort()).toEqual([...GUIDE_LANGS].sort());
-    expect(guideContentFor("en")).toBeNull();
+    expect(guideContentFor("nl")).toBeNull();
     expect(guideContentFor(undefined)).toBeNull();
+  });
+
+  it("has all 29 English cards, each with its own text", () => {
+    const en = guideContentFor("en")!;
+    const es = guideContentFor("es")!;
+    expect(Object.keys(en.steps)).toEqual(GUIDE_STEPS.map((s) => s.id));
+    expect(Object.keys(en.steps)).toHaveLength(29);
+    for (const s of GUIDE_STEPS) {
+      expect(en.steps[s.id].title.trim(), s.id).not.toBe("");
+      expect(en.steps[s.id].body.trim(), s.id).not.toBe("");
+      // Written in English, not left in Spanish.
+      expect(en.steps[s.id].body, s.id).not.toBe(es.steps[s.id].body);
+      expect(en.steps[s.id].body, s.id).not.toMatch(/[áéíóúñ¿¡]/i);
+    }
+  });
+
+  it("keeps the two corrections in English: the quantity card is about quantity, and total hours are calculated", () => {
+    const en = guideContentFor("en")!.steps;
+    expect(en.colQty.title).toBe("Qty");
+    expect(en.colQty.body).toMatch(/quantity/i);
+    expect(en.colHours.body).toMatch(/calculated automatically/i);
+    expect(en.colHours.body).not.toMatch(/\b(type|enter)\b/i);
+  });
+
+  it("calls every control what the English screen calls it", () => {
+    // Read as text: the editor is a protected file and is only looked at here.
+    const editor = readFileSync(resolve(__dirname, "../../components/estimates/estimate-view.tsx"), "utf8");
+    const shell = readFileSync(resolve(__dirname, "../../components/shell/module-switcher.tsx"), "utf8");
+    const en = guideContentFor("en")!.steps;
+    const onScreen = (label: string) => editor.includes(`t(${JSON.stringify(label)})`) || editor.includes(`key: ${JSON.stringify(label)}`);
+    // A card whose title is the label of the control it lights up.
+    const labelled = [
+      "projectNo", "client", "version", "date", "location", "area", "pricing", "totalCost", "subtotal", "directCost",
+      "totalDirect", "addSection", "summary", "markups", "item", "colQty", "colUnit", "colNorm", "colHours", "colLabor",
+      "colMaterial", "colEquipment", "colSub", "colProgress",
+    ];
+    for (const id of labelled) expect({ id, title: en[id].title, onScreen: onScreen(en[id].title) }).toEqual({ id, title: en[id].title, onScreen: true });
+    expect(shell).toContain(`t(${JSON.stringify(en.module.title)})`);
+    // The switches and buttons the "Cost Database and View" card lists.
+    for (const p of en.costBase.points ?? []) expect({ term: p.term, onScreen: onScreen(p.term) }).toEqual({ term: p.term, onScreen: true });
+    // Labels named inside a sentence.
+    for (const label of ["Average Labor Rate", "Load template…", "Save as…", "General Conditions / Overhead", "Profit & Risk", "Grand Total", "Labor", "Material", "Equipment", "Subcontractor", "Unit Cost", "Total", "POC %", "Prog. Amt"]) {
+      expect({ label, onScreen: onScreen(label) }).toEqual({ label, onScreen: true });
+    }
+    expect(en.pricing.body).toContain("Average Labor Rate");
+    expect(en.markups.body).toContain("General Conditions / Overhead");
+    expect(en.colProgress.body).toContain("POC %");
+    expect(en.colProgress.body).toContain("Prog. Amt");
+  });
+});
+
+describe("the card on the Estimates landing screen", () => {
+  it("is not a step of the tour", () => {
+    expect(GUIDE_PICKER_PATH).toBe("/estimates");
+    expect(GUIDE_STEPS.some((s) => s.id === GUIDE_PICKER_HINT_ID)).toBe(false);
+    for (const content of Object.values(GUIDE_CONTENT)) expect(Object.keys(content.steps)).not.toContain(GUIDE_PICKER_HINT_ID);
+  });
+
+  it("has text in every language the guide is offered in, naming the button as that screen shows it", () => {
+    for (const l of GUIDE_LANGS) {
+      const picker = guideContentFor(l)!.picker;
+      expect(picker.title.trim(), l).not.toBe("");
+      expect(picker.body.trim(), l).not.toBe("");
+      const label = l === "en" ? "New estimate" : DICT[l]["New estimate"];
+      expect(label, l).toBeTruthy();
+      expect(picker.body, l).toContain(label);
+    }
+    // The picker screen is found by this label, so the screen must still carry it.
+    const pickerSource = readFileSync(resolve(__dirname, "../../components/estimates/project-list-view.tsx"), "utf8");
+    expect(pickerSource).toContain('t("New estimate")');
   });
 
   it("keeps the button label fixed", () => {

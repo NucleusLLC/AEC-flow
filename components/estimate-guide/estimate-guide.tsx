@@ -21,24 +21,27 @@
  * It never writes to the estimate, never focuses or scrolls sideways inside it,
  * takes no pointer events except on its own card, and stores nothing.
  *
- * Offered in the languages of GUIDE_LANGS only (Spanish, for now); in any other
- * language this component renders nothing at all.
+ * Offered in the languages of GUIDE_LANGS only (Spanish and English); in any
+ * other language this component renders nothing at all. The cards and the
+ * clips follow the interface language: switch language and the next run of the
+ * tour is in that language.
+ *
+ * Before an estimate is open there is no editor to tour; the Estimates landing
+ * screen has its own single card (estimate-guide-picker.tsx), and this
+ * component tells it when to step aside (registerEditorGuide).
  *
  * Every label below sits in its own <span>. A text node beside a conditionally
  * rendered sibling is what browser page translation breaks React on.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Compass, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
 import { useLanguage } from "@/components/i18n/language-provider";
 import {
-  GUIDE_BUTTON_LABEL,
   GUIDE_FLY_MS,
-  GUIDE_HOLD_MS,
   GUIDE_STEPS,
   GUIDE_TONE_HEX,
-  GUIDE_TOPBAR_SLOT_ID,
   availableIndices,
   clampRect,
   guideEnabledFor,
@@ -51,24 +54,29 @@ import {
   unionRect,
   type GuideContent,
   type GuideStep,
-  type Rect,
 } from "@/lib/estimates/interactive-guide";
 import { guideContentFor } from "@/lib/estimates/interactive-guide-content";
 import {
   NARRATION_GAP_MS,
-  NARRATION_OFF,
   narratedHoldMs,
   readNarrationPref,
   writeNarrationPref,
   type NarrationManifest,
 } from "@/lib/guide-narration/timing";
-import { GuideNarrationPlayer, fetchNarrationManifest, primeGuideAudio } from "./narration-player";
+import {
+  GUIDE_CSS as CSS,
+  GuideButtons,
+  browserStorage,
+  prefersReducedMotion,
+  registerEditorGuide,
+  toRect,
+  useNarrationManifest,
+} from "./guide-chrome";
+import { GuideNarrationPlayer, primeGuideAudio } from "./narration-player";
 
 // ---------------------------------------------------------------------------
 // Reading the page
 // ---------------------------------------------------------------------------
-
-const toRect = (r: DOMRect): Rect => ({ left: r.left, top: r.top, width: r.width, height: r.height });
 
 /**
  * Is this element really on the page? Rendered, with a size, not `visibility:
@@ -117,56 +125,6 @@ function reveal(el: Element, smooth: boolean) {
   const dy = scrollDeltaToReveal(r.top, r.bottom, 0, window.innerHeight, 24);
   if (dy !== 0) window.scrollBy({ top: dy, behavior });
 }
-
-/** localStorage, or null where the browser refuses even to hand it over. */
-function browserStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-const prefersReducedMotion = () =>
-  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-
-// ---------------------------------------------------------------------------
-// Styles. One static block, mounted with the overlay and gone with it.
-// ---------------------------------------------------------------------------
-
-const FLY = `${GUIDE_FLY_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-
-const CSS = `
-.aeg-root{position:fixed;inset:0;z-index:80;pointer-events:none;overflow:hidden;--aeg:#ec4899}
-.aeg-ring{position:absolute;left:0;top:0;width:0;height:0;border-radius:10px;border:2px solid var(--aeg);opacity:0;
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--aeg) 40%,transparent),0 0 26px 6px color-mix(in srgb,var(--aeg) 75%,transparent),inset 0 0 18px 0 color-mix(in srgb,var(--aeg) 30%,transparent),0 0 0 200vmax rgba(2,6,23,.3)}
-.aeg-card{position:absolute;left:0;top:0;width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:visible;pointer-events:auto;opacity:0;
-  border-radius:22px;border:2px solid var(--aeg);background:color-mix(in srgb,var(--aeg) 13%,#fff);color:#0f172a;
-  box-shadow:0 18px 44px -10px rgba(2,6,23,.55),0 0 0 4px color-mix(in srgb,var(--aeg) 22%,transparent),0 0 28px 2px color-mix(in srgb,var(--aeg) 45%,transparent);
-  font-size:13px;line-height:1.4}
-.aeg-root[data-ready="1"] .aeg-ring,.aeg-root[data-ready="1"] .aeg-card{opacity:1;transition:opacity 180ms ease-out}
-.aeg-root[data-fly="1"] .aeg-ring{transition:left ${FLY},top ${FLY},width ${FLY},height ${FLY},border-color 300ms ease,box-shadow 300ms ease}
-.aeg-root[data-fly="1"] .aeg-card{transition:transform ${FLY},border-color 300ms ease,background-color 300ms ease,box-shadow 300ms ease}
-.aeg-tail{position:absolute;width:14px;height:14px;background:inherit;border:2px solid var(--aeg);transform:rotate(45deg);display:none}
-.aeg-card[data-side="bottom"] .aeg-tail{display:block;top:-9px;border-right-color:transparent;border-bottom-color:transparent}
-.aeg-card[data-side="top"] .aeg-tail{display:block;bottom:-9px;border-left-color:transparent;border-top-color:transparent}
-.aeg-card[data-side="right"] .aeg-tail{display:block;left:-9px;border-right-color:transparent;border-top-color:transparent}
-.aeg-card[data-side="left"] .aeg-tail{display:block;right:-9px;border-left-color:transparent;border-bottom-color:transparent}
-.aeg-badge{display:inline-flex;height:26px;min-width:26px;padding:0 6px;align-items:center;justify-content:center;border-radius:9999px;background:var(--aeg);color:#fff;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0;text-shadow:0 1px 1px rgba(0,0,0,.35)}
-.aeg-title{font-size:15px;font-weight:800;letter-spacing:.01em;color:color-mix(in srgb,var(--aeg) 62%,#0f172a)}
-.aeg-btn{display:inline-flex;height:28px;align-items:center;gap:3px;padding:0 8px;border-radius:8px;border:1px solid color-mix(in srgb,var(--aeg) 45%,#cbd5e1);background:rgba(255,255,255,.75);color:#0f172a;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
-.aeg-btn:hover{background:#fff}
-.aeg-btn:disabled{opacity:.4;cursor:default}
-.aeg-btn:focus-visible{outline:2px solid var(--aeg);outline-offset:2px}
-.aeg-track{height:3px;border-radius:9999px;background:color-mix(in srgb,var(--aeg) 22%,transparent);overflow:hidden}
-.aeg-fill{height:100%;width:100%;border-radius:9999px;background:var(--aeg);transform-origin:left center;transform:scaleX(0)}
-.aeg-fill[data-run="1"]{animation:aeg-fill ${GUIDE_HOLD_MS}ms linear forwards}
-@keyframes aeg-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@media (prefers-reduced-motion: reduce){
-  .aeg-root .aeg-ring,.aeg-root .aeg-card{transition:none !important}
-}
-@media print{.aeg-root{display:none !important}}
-`;
 
 // ---------------------------------------------------------------------------
 // The tour
@@ -563,12 +521,6 @@ function GuideOverlay({
 // The button
 // ---------------------------------------------------------------------------
 
-/** Olive when idle, the same military look as the Estimates ADD NEW dialog; magenta while the guide runs. */
-const IDLE =
-  "border-[#5c6633] bg-[#4b5320] text-[#e4e8dc] hover:bg-[#3f4a1c]";
-const LIT =
-  "border-[#ff8cff] bg-[#ff00ff] text-[#1a001a] shadow-[0_0_0_2px_rgba(255,0,255,0.35),0_0_18px_2px_rgba(255,0,255,0.75)]";
-
 export function EstimateGuide() {
   const { lang } = useLanguage();
   const content = guideEnabledFor(lang) ? guideContentFor(lang) : null;
@@ -579,68 +531,31 @@ export function EstimateGuide() {
   const running = content !== null && startedIn === lang;
   const stop = useCallback(() => setStartedIn(null), []);
 
-  // Is the guide narrated? Asked once when the editor opens (one small request,
-  // no audio), so that the first card's clip can start with the card. "No", or
-  // no answer, is silence.
-  const [narration, setNarration] = useState<{ lang: string; manifest: NarrationManifest } | null>(null);
-  const narrated = content !== null;
-  useEffect(() => {
-    if (!narrated) return;
-    const ctl = new AbortController();
-    void fetchNarrationManifest(lang, ctl.signal).then((manifest) => {
-      if (!ctl.signal.aborted) setNarration({ lang, manifest });
-    });
-    return () => ctl.abort();
-  }, [lang, narrated]);
-  const manifest = narration && narration.lang === lang ? narration.manifest : NARRATION_OFF;
+  // Is the guide narrated? Asked once when the editor opens, and again when
+  // the language changes.
+  const offered = content !== null;
+  const manifest = useNarrationManifest(lang, offered);
 
-  // The slot in the shell's top bar, beside the full-screen button. The top bar
-  // sits behind a Suspense boundary, so it can arrive a few frames after us.
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    let raf = 0;
-    let tries = 0;
-    const look = () => {
-      const el = document.getElementById(GUIDE_TOPBAR_SLOT_ID);
-      if (el) setSlot(el);
-      else if (++tries < 120) raf = requestAnimationFrame(look);
-    };
-    raf = requestAnimationFrame(look);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  // While this button is on the page the landing screen's button is not.
+  // Layout effect: it steps aside in the same frame this one appears.
+  useLayoutEffect(() => {
+    if (!offered) return;
+    return registerEditorGuide();
+  }, [offered]);
 
   if (!content) return null;
 
-  const button = (visibility: string, floating: boolean) => (
-    <button
-      type="button"
-      translate="no"
-      data-guide-button=""
-      data-float={floating ? "" : undefined}
-      aria-pressed={running}
-      onClick={() => {
-        // Inside the click, so browsers that only allow sound from a gesture let the clips play.
-        if (!running) primeGuideAudio();
-        setStartedIn(running ? null : lang);
-      }}
-      title={running ? content.ui.stop : content.ui.start}
-      className={`no-print notranslate h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-xs font-bold uppercase tracking-wider transition-colors print:hidden ${running ? LIT : IDLE} ${visibility}`}
-    >
-      <Compass className="h-4 w-4" aria-hidden="true" />
-      <span>{GUIDE_BUTTON_LABEL}</span>
-    </button>
-  );
-
   return (
     <>
-      {/* Wide screens: in the top bar, beside the full-screen button. Narrower
-          (and phones): floating in the bottom corner, above the dimming, so it
-          takes no room from the editor's own rows. Same button, same state. */}
-      {slot ? createPortal(button("hidden xl:inline-flex", false), slot) : null}
-      {createPortal(
-        button(`fixed bottom-4 right-4 z-[85] shadow-lg ${slot ? "inline-flex xl:hidden" : "inline-flex"}`, true),
-        document.body,
-      )}
+      <GuideButtons
+        lit={running}
+        title={running ? content.ui.stop : content.ui.start}
+        onPress={() => {
+          // Inside the click, so browsers that only allow sound from a gesture let the clips play.
+          if (!running) primeGuideAudio();
+          setStartedIn(running ? null : lang);
+        }}
+      />
       {running ? createPortal(<GuideOverlay content={content} lang={lang} narration={manifest} onClose={stop} />, document.body) : null}
     </>
   );
