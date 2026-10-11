@@ -36,6 +36,7 @@ export function ModuleSwitcher() {
     <div ref={ref} className="relative px-3">
       <button
         type="button"
+        data-guide="shell-module"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}

@@ -67,7 +67,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
       </div>
 
       {/* Nav — reflects the active module. */}
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav data-guide="shell-nav" className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
         {module.nav.map((section, i) => (
           <div key={i}>
             {section.title ? (
