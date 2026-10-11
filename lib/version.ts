@@ -110,8 +110,12 @@
  *   label now sits in its own element; a failure inside the panel stays inside the panel; a submit
  *   that fails says so in a plain sentence (never the database's own words) and keeps what was
  *   typed; and the outer error page now logs what it catches. No SQL.
+ * 0.25.5 (10 OCT 2026): feat — ESTIMATES in the Architecture & Engineering Design module: the
+ *   Module 1 sidebar gets an Estimating section opening the same /estimates as Module 3 and
+ *   Complete AEC, so architecture and interior projects are priced without switching module.
+ *   Navigation only; no SQL.
  */
-export const APP_VERSION = "0.25.4";
+export const APP_VERSION = "0.25.5";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
