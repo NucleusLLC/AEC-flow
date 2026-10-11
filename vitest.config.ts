@@ -212,6 +212,11 @@ export default defineConfig({
       // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with
       // today, the overall %, chip and phase colours, and a sanity check on the seeded data. Pure.
       "lib/progressdash/timeline.test.ts",
+      // Bug/Wish Send button: its markup must survive a browser page translator (the
+      // insertBefore crash of 11 OCT 2026). Rendered to a string, no DOM needed.
+      "components/beta-report/send-button.test.tsx",
+      // Bug/Wish submit: a failure reaches the tester as a plain sentence, never a raw error.
+      "lib/beta-reports/submit-errors.test.ts",
     ],
     environment: "node",
   },
