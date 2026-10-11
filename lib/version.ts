@@ -120,8 +120,16 @@
  *   speaker button mutes it per browser. Clips are made once and kept in the private bucket.
  *   Founder only: Settings > Integrations > Guide narration (key, voice, model, on/off, test,
  *   clear cache). Silent exactly as before until a key is saved there. No SQL.
+ * 0.25.9 (11 OCT 2026): fix — a new beta signup got three sample clients and four tasks and
+ *   nothing else: no sample project, schedule, estimate or proposal, and no error anywhere.
+ *   The seed re-read the clients it had just created, and at signup (a request with no session
+ *   yet) the tenant scope answers every read with nothing, so there was no client to file a
+ *   project under. It now keeps the rows it creates, each entity is seeded on its own so one
+ *   failure cannot drop the rest, and any failure is one [aecflow-error] line naming the step.
+ *   The seeded estimate is keyed by its project, so it opens from the project too. New signups
+ *   only; companies already created are not touched. No SQL.
  */
-export const APP_VERSION = "0.25.7";
+export const APP_VERSION = "0.25.9";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
