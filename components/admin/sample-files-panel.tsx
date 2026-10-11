@@ -194,7 +194,7 @@ export function SampleFilesPanel({ companies }: { companies: SampleCompanyRow[] 
                 const r = results[c.id];
                 const res = r && "result" in r ? r.result : null;
                 return (
-                  <tr key={c.id} className="border-b border-border/60 align-top" data-testid={`sample-row-${c.id}`}>
+                  <tr key={c.id} className="zebra-row border-b border-border/60 align-top" data-testid={`sample-row-${c.id}`}>
                     <td className="px-5 py-3">
                       <div className="font-medium text-fg">
                         <span>{c.name}</span>
