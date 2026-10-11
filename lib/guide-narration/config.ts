@@ -23,6 +23,14 @@ import {
 /** The key in the platform AppConfig blob. */
 export const NARRATION_CONFIG_KEY = "guideNarration";
 
+/**
+ * The one voice of the first release, when the guide was Spanish only. A
+ * settings row holding a bare `voice` (and no `voices`) is read as that
+ * language's choice, so a voice chosen before the guide had a second language
+ * keeps working with nothing to migrate.
+ */
+export const LEGACY_SINGLE_VOICE_LANG = "es";
+
 /** What is stored. Every field optional: an empty object is "never configured". */
 export type StoredNarrationConfig = {
   apiKey?: string;
@@ -51,14 +59,16 @@ export function storedNarrationConfig(blob: unknown): StoredNarrationConfig {
   if (typeof r.apiKey === "string" && r.apiKey.trim()) out.apiKey = r.apiKey.trim();
   if (typeof r.enabled === "boolean") out.enabled = r.enabled;
   if (isNarrationModel(r.model)) out.model = r.model;
+  const voices: Record<string, string> = {};
+  // The older single-voice shape first, so a per-language choice overrides it.
+  if (isVoiceId(r.voice)) voices[LEGACY_SINGLE_VOICE_LANG] = r.voice;
   if (r.voices && typeof r.voices === "object") {
-    const voices: Record<string, string> = {};
     for (const lang of Object.keys(NARRATION_LANGUAGES)) {
       const v = (r.voices as Record<string, unknown>)[lang];
       if (isVoiceId(v)) voices[lang] = v;
     }
-    if (Object.keys(voices).length > 0) out.voices = voices;
   }
+  if (Object.keys(voices).length > 0) out.voices = voices;
   return out;
 }
 

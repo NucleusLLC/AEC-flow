@@ -113,6 +113,9 @@ export default defineConfig({
       // supplies and Vitest cannot resolve), so it reaches no network.
       "lib/server/email.test.ts",
       "lib/server/document-email.test.ts",
+      // The signup seed under the tenant scope that broke it (reads answer nothing
+      // before there is a session). Prisma is faked; named file, as above.
+      "lib/data/company-seed.test.ts",
       "lib/data/email-log.test.ts",
       // Account security: rate-limit rules and reset-token handling. Named files,
       // same reason as every entry above — pure modules, no Prisma, no requests.
