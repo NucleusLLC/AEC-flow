@@ -120,8 +120,13 @@
  *   speaker button mutes it per browser. Clips are made once and kept in the private bucket.
  *   Founder only: Settings > Integrations > Guide narration (key, voice, model, on/off, test,
  *   clear cache). Silent exactly as before until a key is saved there. No SQL.
+ * 0.25.10 (11 OCT 2026): feat — ZEBRA shading on every list: one stripe, defined once (tokens and
+ *   the zebra-row / zebra-list classes in globals.css), on every register and row list, the
+ *   Estimates project list included. Hover and selected rows are tinted so they never read as a
+ *   stripe; grouped, filtered and expanded tables stay in step. The Estimate editor, the Gantt,
+ *   the Take-Off and everything printed are unchanged. Presentation only. No SQL.
  */
-export const APP_VERSION = "0.25.7";
+export const APP_VERSION = "0.25.10";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

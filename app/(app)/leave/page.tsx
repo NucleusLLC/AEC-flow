@@ -78,7 +78,7 @@ export default async function LeavePage() {
         <div className="space-y-6">
           <Card>
             <CardHeader title={t("Out This Week")} subtitle={fmt(t("{count} away"), { count: whoIsOut.length })} />
-            <div className="divide-y divide-border">
+            <div className="zebra-list divide-y divide-border">
               {whoIsOut.length > 0 ? (
                 whoIsOut.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 px-5 py-3">
@@ -103,7 +103,7 @@ export default async function LeavePage() {
 
           <Card>
             <CardHeader title={t("Upcoming Holidays")} />
-            <div className="divide-y divide-border">
+            <div className="zebra-list divide-y divide-border">
               {holidays.map((h) => (
                 <div key={h.id} className="flex items-center gap-3 px-5 py-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10 text-brand">

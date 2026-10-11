@@ -206,7 +206,7 @@ export default async function NewInvoicePage({
                 </thead>
                 <tbody>
                   {billing.milestones.map((m) => (
-                    <tr key={m.id} className="border-t border-border/60">
+                    <tr key={m.id} className="zebra-row border-t border-border/60">
                       <td className="py-2 pr-2">
                         <input
                           type="checkbox"
@@ -292,12 +292,12 @@ export default async function NewInvoicePage({
               )}
             </p>
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="zebra-list divide-y divide-border/60">
               {proposals.map((p) => (
                 <li key={p.id}>
                   <Link
                     href={`/finance/invoices/new?proposal=${p.id}`}
-                    className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:bg-surface-2"
+                    className="flex items-center justify-between gap-3 py-2.5 transition-colors zebra-hover"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <FileSignature className="h-4 w-4 shrink-0 text-muted" />
@@ -339,12 +339,12 @@ export default async function NewInvoicePage({
               )}
             </p>
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="zebra-list divide-y divide-border/60">
               {withWork.map((w) => (
                 <li key={`${w.projectId}:${w.currency}`}>
                   <Link
                     href={`/finance/invoices/new?work=${w.projectId}`}
-                    className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:bg-surface-2"
+                    className="flex items-center justify-between gap-3 py-2.5 transition-colors zebra-hover"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <Clock className="h-4 w-4 shrink-0 text-muted" />

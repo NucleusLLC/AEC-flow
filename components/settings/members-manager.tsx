@@ -159,7 +159,7 @@ export function MembersManager({
             </thead>
             <tbody className="divide-y divide-border">
               {members.map((m) => (
-                <tr key={m.id} className="hover:bg-surface-2">
+                <tr key={m.id} className="zebra-row zebra-hover">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold text-muted">

@@ -39,7 +39,7 @@ function ActivityRow({ e, t }: { e: ActivityEntry; t: (text: string) => string }
 
   if (e.href) {
     return (
-      <Link href={e.href} className="block transition-colors hover:bg-slate-50">
+      <Link href={e.href} className="block transition-colors zebra-hover">
         {body}
       </Link>
     );
@@ -78,7 +78,7 @@ export default async function ActivityPage() {
                 {formatDate(g.day, locale)}
               </div>
               <Card>
-                <div className="divide-y divide-border">
+                <div className="zebra-list divide-y divide-border">
                   {g.items.map((e) => (
                     <ActivityRow key={e.id} e={e} t={t} />
                   ))}

@@ -80,7 +80,7 @@ export function SubmittalLog({ submittals }: { submittals: Submittal[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((s) => (
-                <tr key={s.id} className="group transition-colors even:bg-surface-2/60 hover:bg-surface-2">
+                <tr key={s.id} className="zebra-row group transition-colors zebra-hover">
                   <td className="px-5 py-3">
                     <Link href={`/construction-admin/submittals/${s.id}`} className="block">
                       <span className="font-mono text-[11px] text-faint">{s.submittalNumber}</span>

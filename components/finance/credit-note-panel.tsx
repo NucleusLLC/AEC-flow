@@ -191,7 +191,7 @@ export function CreditNotePanel({ note, canManage }: { note: CreditNoteDTO; canM
           <table className="w-full text-sm">
             <tbody>
               {note.lines.map((l) => (
-                <tr key={l.id} className="border-b border-border/60 last:border-0">
+                <tr key={l.id} className="zebra-row border-b border-border/60 last:border-0">
                   <td className="py-2 pr-3 text-fg">{l.description}</td>
                   <td className="py-2 text-right font-mono tabular-nums text-fg">{money(l.amount)}</td>
                   <td className="w-16 py-2 text-right text-[11px] text-faint">{l.taxable ? "" : t("no tax")}</td>

@@ -91,7 +91,7 @@ export function ClientImport() {
                 </thead>
                 <tbody>
                   {rows.slice(0, 5).map((r, i) => (
-                    <tr key={i} className="border-t border-border">
+                    <tr key={i} className="zebra-row border-t border-border">
                       {columns.map((c) => <td key={c} className="max-w-[180px] truncate px-2 py-1.5 text-fg">{r[c]}</td>)}
                     </tr>
                   ))}

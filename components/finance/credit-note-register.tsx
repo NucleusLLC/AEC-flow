@@ -154,7 +154,7 @@ export function CreditNoteRegister({ notes }: { notes: CreditNoteSummaryDTO[] })
             </thead>
             <tbody>
               {rows.map((n) => (
-                <tr key={n.id} className="border-b border-border/60 last:border-0 even:bg-surface-2/40 hover:bg-surface-2">
+                <tr key={n.id} className="zebra-row border-b border-border/60 last:border-0 zebra-hover">
                   <td className="px-4 py-2.5 align-top">
                     <Link href={`/finance/credit-notes/${n.id}`} className="font-mono text-xs font-semibold text-brand hover:underline">
                       {n.number}

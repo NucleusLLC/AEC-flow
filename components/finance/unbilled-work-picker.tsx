@@ -164,7 +164,7 @@ export function UnbilledWorkPicker({ work }: { work: UnbilledWorkView }) {
               </thead>
               <tbody>
                 {lines.map((l) => (
-                  <tr key={l.key} className="border-t border-border/60">
+                  <tr key={l.key} className="zebra-row border-t border-border/60">
                     <td className="py-2 pr-2 align-top">
                       <input
                         type="checkbox"

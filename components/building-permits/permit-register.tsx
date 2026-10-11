@@ -357,7 +357,7 @@ function PermitRow({
   const t = useT();
 
   return (
-    <tr className="border-b border-border/60 transition-colors last:border-0 even:bg-surface-2/40 hover:bg-surface-2">
+    <tr className="zebra-row border-b border-border/60 transition-colors last:border-0 zebra-hover">
       {/* The red accent rides on the first cell, not the row: a box-shadow on a
        * <tr> is unreliable under the collapsed borders Tailwind's preflight
        * sets. It reads `--color-red-600` rather than theme(): Tailwind v4 only

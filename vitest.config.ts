@@ -91,6 +91,12 @@ export default defineConfig({
       // elapsed-time smoother. Named file, same reason as every entry above —
       // pure module, no React, no Prisma, no DOM.
       "lib/ui/progress-loader.test.ts",
+      // LIST ZEBRA tripwire: a static scan of app/ and components/ for a table that
+      // has neither the shared stripe class nor an entry in the commented
+      // allow-list, plus the contrast arithmetic on the real token values in
+      // app/globals.css. Named file, same reason as every entry above -- it reads
+      // source off disk and needs no DOM.
+      "lib/ui/zebra.test.ts",
       // Outbound document email. Four named files, same reason as every entry
       // above. None of them touches the network or the database: the two
       // lib/email modules are pure, and the other two mock their I/O at the

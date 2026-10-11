@@ -94,7 +94,7 @@ export default async function EmailLogPage() {
             </thead>
             <tbody>
               {entries.map((e) => (
-                <tr key={e.id} className="border-b border-border/60 align-top last:border-0">
+                <tr key={e.id} className="zebra-row border-b border-border/60 align-top last:border-0">
                   <td className="whitespace-nowrap px-3 py-2 text-xs text-muted">
                     {e.createdAt.toLocaleString(locale)}
                   </td>

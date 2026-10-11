@@ -129,7 +129,7 @@ export function ClientsView({ clients }: { clients: ClientListItem[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((c) => (
-                <tr key={c.id} className="group transition-colors hover:bg-surface-2">
+                <tr key={c.id} className="zebra-row group transition-colors zebra-hover">
                   <td className="px-5 py-3">
                     <Link href={`/clients/${c.id}`} className="flex items-center gap-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-xs font-semibold text-brand">

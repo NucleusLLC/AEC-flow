@@ -85,10 +85,10 @@ export default async function ProjectConstructionAdminPage({ params }: PageProps
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card className="overflow-hidden">
             <div className="border-b border-border px-5 py-3 text-sm font-semibold text-fg">{tr("Change Orders")}</div>
-            <ul className="divide-y divide-border">
+            <ul className="zebra-list divide-y divide-border">
               {changeOrders.slice(0, 6).map((c) => (
                 <li key={c.id}>
-                  <Link href={`/construction-admin/change-orders/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2">
+                  <Link href={`/construction-admin/change-orders/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 zebra-hover">
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-fg">{c.title}</span>
                       <span className="font-mono text-[11px] text-faint">{c.changeOrderNumber}</span>
@@ -106,10 +106,10 @@ export default async function ProjectConstructionAdminPage({ params }: PageProps
 
           <Card className="overflow-hidden">
             <div className="border-b border-border px-5 py-3 text-sm font-semibold text-fg">{tr("RFIs & Certifications")}</div>
-            <ul className="divide-y divide-border">
+            <ul className="zebra-list divide-y divide-border">
               {rfis.slice(0, 4).map((r) => (
                 <li key={r.id}>
-                  <Link href={`/construction-admin/rfis/${r.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2">
+                  <Link href={`/construction-admin/rfis/${r.id}`} className="flex items-center justify-between gap-3 px-5 py-3 zebra-hover">
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-fg">{r.subject}</span>
                       <span className="font-mono text-[11px] text-faint">{r.rfiNumber}</span>

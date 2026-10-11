@@ -236,7 +236,7 @@ export default async function ServiceProposalDetailPage({
                 </thead>
                 <tbody>
                   {calc.components.map((c) => (
-                    <tr key={c.id} className="border-b border-border/60">
+                    <tr key={c.id} className="zebra-row border-b border-border/60">
                       <td className="py-2 text-fg">
                         {c.label}
                         {c.overrideAmount !== null ? <span className="ml-1.5 text-xs text-amber-600">{t("overridden")}</span> : null}
@@ -297,7 +297,7 @@ export default async function ServiceProposalDetailPage({
                 <table className="w-full text-sm">
                   <tbody>
                     {calc.phases.map((ph) => (
-                      <tr key={ph.id} className="border-b border-border/60 last:border-0">
+                      <tr key={ph.id} className="zebra-row border-b border-border/60 last:border-0">
                         <td className="py-2 text-fg">{ph.name}</td>
                         <td className="py-2 text-right tabular-nums text-muted">{ph.percent}%</td>
                         <td className="py-2 text-right tabular-nums text-fg">{money(ph.amount)}</td>
@@ -326,7 +326,7 @@ export default async function ServiceProposalDetailPage({
                   </thead>
                   <tbody>
                     {calc.paymentSchedule.map((m) => (
-                      <tr key={m.id} className="border-b border-border/60">
+                      <tr key={m.id} className="zebra-row border-b border-border/60">
                         <td className="py-2 text-fg">{m.name}</td>
                         <td className="py-2 text-right tabular-nums text-muted">{m.percent}%</td>
                         <td className="py-2 text-right tabular-nums text-fg">{money(m.amount)}</td>

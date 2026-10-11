@@ -230,7 +230,7 @@ export function ProjectFinanceView({ data, today }: { data: ProjectFinance; toda
                   return (
                     <tr
                       key={i.id}
-                      className="border-b border-border/60 transition-colors last:border-0 even:bg-surface-2/40 hover:bg-surface-2"
+                      className="zebra-row border-b border-border/60 transition-colors last:border-0 zebra-hover"
                     >
                       <td
                         className={cn(
@@ -297,7 +297,7 @@ export function ProjectFinanceView({ data, today }: { data: ProjectFinance; toda
                 {data.expenses.map((x) => (
                   <tr
                     key={x.id}
-                    className="border-b border-border/60 transition-colors last:border-0 even:bg-surface-2/40 hover:bg-surface-2"
+                    className="zebra-row border-b border-border/60 transition-colors last:border-0 zebra-hover"
                   >
                     <td className="whitespace-nowrap px-5 py-2.5 align-top font-mono text-xs tabular-nums text-muted">
                       {militaryDate(x.date)}
@@ -372,7 +372,7 @@ function HoursTable({
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.key} className="border-b border-border/60 even:bg-surface-2/40">
+            <tr key={r.key} className="zebra-row border-b border-border/60">
               <td className="px-5 py-2 align-top text-fg">{r.name}</td>
               <td className="px-3 py-2 text-right align-top font-mono tabular-nums text-muted">{h(r.approved)}</td>
               <td className="px-3 py-2 text-right align-top font-mono tabular-nums text-muted">{h(r.pending)}</td>

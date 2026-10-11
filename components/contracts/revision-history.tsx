@@ -48,12 +48,12 @@ export async function RevisionHistory({
           subtitle={t("The agreement keeps its number; the revision letter says which version.")}
         />
         <CardBody>
-          <ul className="divide-y divide-border/60">
+          <ul className="zebra-list divide-y divide-border/60">
             {family.map((v) => (
               <li key={v.id}>
                 <Link
                   href={`/documents/contracts/${v.id}`}
-                  className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:bg-surface-2"
+                  className="flex items-center justify-between gap-3 py-2.5 transition-colors zebra-hover"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <GitBranch className="h-4 w-4 shrink-0 text-muted" />
