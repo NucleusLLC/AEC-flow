@@ -36,6 +36,9 @@ export default defineConfig({
       "lib/estimates/copy-lines.test.ts",
       "lib/estimates/norm-task-draft.test.ts",
       "lib/estimates/section-sources.test.ts",
+      // INTERACTIVE-GUIDE on the Estimates editor: the language gate, the step
+      // order with its skip rule, and the card placement that keeps it on screen.
+      "lib/estimates/interactive-guide.test.ts",
       // New client: CLIENT NAME, EMAIL and CELL NUMBER. Pure rule shared by
       // saveClient and every create form. Named file, same reason as above.
       "lib/clients/new-client.test.ts",

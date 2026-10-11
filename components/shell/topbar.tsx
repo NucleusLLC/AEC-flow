@@ -11,6 +11,7 @@ import { UserMenu } from "@/components/shell/user-menu";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import type { NotificationItem } from "@/lib/data/notifications.types";
+import { GUIDE_TOPBAR_SLOT_ID } from "@/lib/estimates/interactive-guide";
 
 function usePageTitle(): string {
   const pathname = usePathname();
@@ -67,6 +68,11 @@ export function Topbar({
       </h1>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* Empty slot beside the full-screen toggle. The Estimates editor moves
+            its INTERACTIVE-GUIDE button in here on wide screens; on every other
+            page, and in every language the guide is not offered in, it stays
+            empty and (display: contents) takes no room. */}
+        <div id={GUIDE_TOPBAR_SLOT_ID} className="contents" />
         {/* Full-screen toggle (desktop only) — collapses/expands the sidebar. */}
         {onToggleSidebar ? (
           <button
