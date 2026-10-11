@@ -26,11 +26,18 @@ import {
 } from "@/app/(app)/settings/narration-actions";
 import type { NarrationStatus } from "@/lib/guide-narration/config";
 import { narrationClipUrl, parseNarrationManifest } from "@/lib/guide-narration/timing";
-import { NARRATION_LANGUAGES, NARRATION_MODELS, isVoiceId } from "@/lib/guide-narration/voices";
+import { NARRATION_LANGS, NARRATION_LANGUAGES, NARRATION_MODELS, isVoiceId } from "@/lib/guide-narration/voices";
 
-/** The language this card configures. Another language is another entry in voices.ts and a selector here. */
-const LANG = "es";
+/**
+ * One voice per narrated language (voices.ts). Each language gets its own
+ * voice list, reference id and Test button below; another language is another
+ * entry in voices.ts and appears here by itself.
+ */
+const LANGS = NARRATION_LANGS;
 const CUSTOM = "custom";
+
+const listed = (lang: string, id: string) => NARRATION_LANGUAGES[lang].voices.some((v) => v.id === id);
+const perLang = <T,>(value: (lang: string) => T): Record<string, T> => Object.fromEntries(LANGS.map((l) => [l, value(l)]));
 
 const BTN =
   "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60";
@@ -41,25 +48,27 @@ type Msg = { kind: "ok" | "err"; text: string; detail?: string } | null;
 
 export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
   const t = useT();
-  const language = NARRATION_LANGUAGES[LANG];
   const [status, setStatus] = useState<NarrationStatus>(initial);
   const [key, setKey] = useState("");
   const [enabled, setEnabled] = useState(initial.enabled);
   const [model, setModel] = useState<string>(initial.model);
-  const savedVoice = initial.voices[LANG] ?? language.defaultVoice;
-  const listed = (id: string) => language.voices.some((v) => v.id === id);
-  const [choice, setChoice] = useState<string>(listed(savedVoice) ? savedVoice : CUSTOM);
-  const [custom, setCustom] = useState(listed(savedVoice) ? "" : savedVoice);
+  const savedVoice = (lang: string) => initial.voices[lang] ?? NARRATION_LANGUAGES[lang].defaultVoice;
+  const [choice, setChoice] = useState<Record<string, string>>(() =>
+    perLang((l) => (listed(l, savedVoice(l)) ? savedVoice(l) : CUSTOM)),
+  );
+  const [custom, setCustom] = useState<Record<string, string>>(() => perLang((l) => (listed(l, savedVoice(l)) ? "" : savedVoice(l))));
   const [msg, setMsg] = useState<Msg>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<Record<string, { done: number; total: number }> | null>(null);
   const [saving, startSave] = useTransition();
   const [testing, startTest] = useTransition();
+  const [testingLang, setTestingLang] = useState<string | null>(null);
   const [working, startWork] = useTransition();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const voice = (choice === CUSTOM ? custom : choice).trim().toLowerCase();
-  const voiceValid = isVoiceId(voice);
-  const dirty = enabled !== status.enabled || model !== status.model || (voiceValid && voice !== status.voices[LANG]);
+  const voiceOf = (lang: string) => (choice[lang] === CUSTOM ? custom[lang] : choice[lang]).trim().toLowerCase();
+  const voicesValid = LANGS.every((l) => isVoiceId(voiceOf(l)));
+  const dirty =
+    enabled !== status.enabled || model !== status.model || LANGS.some((l) => isVoiceId(voiceOf(l)) && voiceOf(l) !== status.voices[l]);
   const fromEnv = status.source === "env";
 
   const saveKey = () => {
@@ -88,10 +97,10 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
   };
 
   const saveSettings = () => {
-    if (saving || !voiceValid) return;
+    if (saving || !voicesValid) return;
     setMsg(null);
     startSave(async () => {
-      const res = await saveGuideNarrationSettingsAction({ enabled, model, lang: LANG, voice });
+      const res = await saveGuideNarrationSettingsAction({ enabled, model, voices: perLang(voiceOf) });
       if (res.ok) {
         setStatus(res.status);
         setMsg({ kind: "ok", text: "Narration settings saved." });
@@ -99,12 +108,15 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
     });
   };
 
-  const testVoice = () => {
-    if (testing || !voiceValid) return;
+  // Speaks that language's own fixed sample in the voice chosen for it.
+  const testVoice = (lang: string) => {
+    const voice = voiceOf(lang);
+    if (testing || !isVoiceId(voice)) return;
     setMsg(null);
     audioRef.current?.pause();
+    setTestingLang(lang);
     startTest(async () => {
-      const res = await testGuideNarrationVoiceAction({ lang: LANG, voice, model });
+      const res = await testGuideNarrationVoiceAction({ lang, voice, model });
       if (!res.ok) {
         setMsg({ kind: "err", text: res.error, detail: res.detail });
         return;
@@ -130,37 +142,50 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
     });
   };
 
-  // Ask for every clip once, one at a time, so the first listener never waits
-  // for Fish Audio. Each request is the same one the guide makes.
+  // Ask for every clip of every language once, one at a time, so the first
+  // listener never waits for Fish Audio. Each request is the same one the guide
+  // makes. A clip that is already cached costs nothing: it is served from the
+  // cache, so pressing this again only makes what is missing.
   const generateAll = () => {
     if (working) return;
     setMsg(null);
     startWork(async () => {
-      let done = 0;
       let failed = 0;
+      let asked = 0;
+      const tally: Record<string, { done: number; total: number }> = {};
       try {
-        const manifest = parseNarrationManifest(
-          await (await fetch(`/api/guide-narration?lang=${LANG}`, { cache: "no-store" })).json(),
-        );
-        const clips = Object.entries(manifest.clips);
-        if (!manifest.enabled || clips.length === 0) {
+        const manifests: [string, [string, string][]][] = [];
+        for (const lang of LANGS) {
+          const manifest = parseNarrationManifest(
+            await (await fetch(`/api/guide-narration?lang=${lang}`, { cache: "no-store" })).json(),
+          );
+          const clips = manifest.enabled ? Object.entries(manifest.clips) : [];
+          if (clips.length > 0) {
+            manifests.push([lang, clips]);
+            tally[lang] = { done: 0, total: clips.length };
+          }
+        }
+        if (manifests.length === 0) {
           setMsg({ kind: "err", text: "Narration is off or has no key, so there is nothing to generate." });
           return;
         }
-        setProgress({ done: 0, total: clips.length });
-        for (const [stepId, version] of clips) {
-          const response = await fetch(narrationClipUrl(LANG, stepId, version));
-          if (response.status === 200) done += 1;
-          else failed += 1;
-          setProgress({ done: done + failed, total: clips.length });
-          // The first failure pauses Fish Audio for a while on the server; stop asking.
-          if (failed > 0) break;
+        setProgress({ ...tally });
+        generate: for (const [lang, clips] of manifests) {
+          for (const [stepId, version] of clips) {
+            const response = await fetch(narrationClipUrl(lang, stepId, version));
+            asked += 1;
+            if (response.status !== 200) failed += 1;
+            tally[lang] = { done: tally[lang].done + 1, total: clips.length };
+            setProgress({ ...tally });
+            // The first failure pauses Fish Audio for a while on the server; stop asking.
+            if (failed > 0) break generate;
+          }
         }
       } catch {
         failed += 1;
       }
       setMsg(
-        failed === 0
+        failed === 0 && asked > 0
           ? { kind: "ok", text: "All clips are ready." }
           : { kind: "err", text: "Some clips could not be generated. Check the key and the Fish Audio credit." },
       );
@@ -251,19 +276,61 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
             <span>{t("Narrate the guide")}</span>
           </label>
 
-          <label className="block">
-            <span className="text-xs font-medium text-muted">{t("Voice (Spanish)")}</span>
-            <select value={choice} onChange={(e) => setChoice(e.target.value)} data-narration-voice="" className={FIELD}>
-              {language.voices.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {`${v.name} — ${t(v.note)}`}
-                </option>
-              ))}
-              <option value={CUSTOM}>{t("Other voice (reference id)")}</option>
-            </select>
-          </label>
+          {LANGS.map((lang) => {
+            const language = NARRATION_LANGUAGES[lang];
+            const isCustom = choice[lang] === CUSTOM;
+            const valid = isVoiceId(voiceOf(lang));
+            return (
+              <div key={lang} className="space-y-3" data-narration-lang={lang}>
+                <label className="block">
+                  <span className="text-xs font-medium text-muted">{t(language.label)}</span>
+                  <select
+                    value={choice[lang]}
+                    onChange={(e) => setChoice((c) => ({ ...c, [lang]: e.target.value }))}
+                    data-narration-voice={lang}
+                    className={FIELD}
+                  >
+                    {language.voices.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {`${v.name} — ${t(v.note)}`}
+                      </option>
+                    ))}
+                    <option value={CUSTOM}>{t("Other voice (reference id)")}</option>
+                  </select>
+                </label>
 
-          <label className="block">
+                <label className="block">
+                  <span className="text-xs font-medium text-muted">{t("Voice reference id")}</span>
+                  <input
+                    type="text"
+                    value={isCustom ? custom[lang] : choice[lang]}
+                    onChange={(e) => setCustom((c) => ({ ...c, [lang]: e.target.value }))}
+                    readOnly={!isCustom}
+                    spellCheck={false}
+                    autoComplete="off"
+                    data-narration-voice-id={lang}
+                    className={cn(FIELD, "font-mono", !isCustom && "text-muted")}
+                  />
+                  {!valid ? (
+                    <span className="mt-1 block text-[11px] text-red-600">{t("A voice reference id is 32 characters (0-9, a-f).")}</span>
+                  ) : null}
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => testVoice(lang)}
+                  disabled={testing || !valid || !status.configured}
+                  data-narration-test={lang}
+                  className={BTN}
+                >
+                  <Play className="h-4 w-4" />
+                  <span>{testing && testingLang === lang ? t("Testing…") : t("Test voice")}</span>
+                </button>
+              </div>
+            );
+          })}
+
+          <label className="block sm:col-span-2">
             <span className="text-xs font-medium text-muted">{t("Model")}</span>
             <select value={model} onChange={(e) => setModel(e.target.value)} data-narration-model="" className={FIELD}>
               {NARRATION_MODELS.map((m) => (
@@ -272,23 +339,6 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
                 </option>
               ))}
             </select>
-          </label>
-
-          <label className="block sm:col-span-2">
-            <span className="text-xs font-medium text-muted">{t("Voice reference id")}</span>
-            <input
-              type="text"
-              value={choice === CUSTOM ? custom : choice}
-              onChange={(e) => setCustom(e.target.value)}
-              readOnly={choice !== CUSTOM}
-              spellCheck={false}
-              autoComplete="off"
-              data-narration-voice-id=""
-              className={cn(FIELD, "font-mono", choice !== CUSTOM && "text-muted")}
-            />
-            {!voiceValid ? (
-              <span className="mt-1 block text-[11px] text-red-600">{t("A voice reference id is 32 characters (0-9, a-f).")}</span>
-            ) : null}
           </label>
 
           <p className="text-[11px] text-faint sm:col-span-2">
@@ -300,15 +350,11 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
           <button
             type="button"
             onClick={saveSettings}
-            disabled={saving || !voiceValid || !dirty}
+            disabled={saving || !voicesValid || !dirty}
             data-narration-save=""
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span>{saving ? t("Saving…") : t("Save settings")}</span>
-          </button>
-          <button type="button" onClick={testVoice} disabled={testing || !voiceValid || !status.configured} data-narration-test="" className={BTN}>
-            <Play className="h-4 w-4" />
-            <span>{testing ? t("Testing…") : t("Test voice")}</span>
           </button>
           <button type="button" onClick={generateAll} disabled={working || !status.configured || status.cache === "none"} data-narration-generate="" className={BTN}>
             <Volume2 className="h-4 w-4" />
@@ -318,11 +364,13 @@ export function GuideNarrationCard({ initial }: { initial: NarrationStatus }) {
             <Trash2 className="h-4 w-4" />
             <span>{t("Clear cached audio")}</span>
           </button>
-          {progress ? (
-            <span className="text-xs tabular-nums text-muted" data-narration-progress="">
-              {`${progress.done} / ${progress.total}`}
-            </span>
-          ) : null}
+          {progress
+            ? LANGS.filter((lang) => progress[lang]).map((lang) => (
+                <span key={lang} className="text-xs tabular-nums text-muted" data-narration-progress={lang}>
+                  {`${lang.toUpperCase()} ${progress[lang].done} / ${progress[lang].total}`}
+                </span>
+              ))
+            : null}
         </div>
 
         <p className="text-[11px] text-faint" data-narration-cache={status.cache}>

@@ -15,9 +15,9 @@
  * Pure (node:crypto only). Server-side: never import from a client component.
  */
 import { createHash } from "node:crypto";
-import { GUIDE_STEPS, guideEnabledFor } from "@/lib/estimates/interactive-guide";
+import { GUIDE_PICKER_HINT_ID, GUIDE_STEPS, guideEnabledFor } from "@/lib/estimates/interactive-guide";
 import { guideContentFor } from "@/lib/estimates/interactive-guide-content";
-import { hasSpokenForm, spokenStepText } from "./spoken";
+import { hasSpokenForm, spokenPickerText, spokenStepText } from "./spoken";
 import { narrationLanguage } from "./voices";
 
 /**
@@ -37,25 +37,36 @@ export function narrationLangSupported(lang: string | null | undefined): lang is
 export type NarrationEntry = { lang: string; stepId: string; text: string };
 
 /**
- * The text spoken for one guide step, or null for anything that is not a step
- * of the guide in a narrated language. `stepId` is matched against the step
- * list itself, never used as an object key, so "__proto__" and friends are
- * simply not steps.
+ * The text spoken for one guide card, or null for anything that is not a card
+ * of the guide in a narrated language. A card is one of the tour's steps or
+ * the single picker card. `stepId` is matched against the step list itself,
+ * never used as an object key, so "__proto__" and friends are simply not steps.
+ *
+ * The language is part of the answer: the same step id gives the Spanish text
+ * for "es" and the English text for "en", and the clip is filed under that
+ * language (clipCacheKey), so one language can never be served the other's.
  */
 export function narrationEntry(lang: unknown, stepId: unknown): NarrationEntry | null {
   if (typeof lang !== "string" || typeof stepId !== "string") return null;
   if (!narrationLangSupported(lang)) return null;
-  const step = GUIDE_STEPS.find((s) => s.id === stepId);
   const content = guideContentFor(lang);
-  if (!step || !content) return null;
+  if (!content) return null;
+  if (stepId === GUIDE_PICKER_HINT_ID) {
+    const text = spokenPickerText(lang, content.picker);
+    return text ? { lang, stepId: GUIDE_PICKER_HINT_ID, text } : null;
+  }
+  const step = GUIDE_STEPS.find((s) => s.id === stepId);
+  if (!step) return null;
   if (!Object.prototype.hasOwnProperty.call(content.steps, step.id)) return null;
   const text = spokenStepText(lang, step, content.steps[step.id]);
   return text ? { lang, stepId: step.id, text } : null;
 }
 
-/** Every narrated step of a language, in tour order. */
+/** Every narrated card of a language: the steps in tour order, then the picker card. */
 export function narrationEntries(lang: string): NarrationEntry[] {
-  return GUIDE_STEPS.map((s) => narrationEntry(lang, s.id)).filter((e): e is NarrationEntry => e !== null);
+  return [...GUIDE_STEPS.map((s) => s.id), GUIDE_PICKER_HINT_ID]
+    .map((id) => narrationEntry(lang, id))
+    .filter((e): e is NarrationEntry => e !== null);
 }
 
 export type ClipIdentity = { text: string; voice: string; model: string };
@@ -72,7 +83,11 @@ export function clipVersion(clip: ClipIdentity): string {
   return clipHash(clip).slice(0, 16);
 }
 
-/** Object key of a clip in the cache. The step id is there for a human reading the bucket. */
+/**
+ * Object key of a clip in the cache. The language leads the name, so two
+ * languages never share an object even if a voice and a sentence coincide; the
+ * step id is there for a human reading the bucket.
+ */
 export function clipCacheKey(entry: Pick<NarrationEntry, "lang" | "stepId">, clip: ClipIdentity): string {
   return `${NARRATION_CACHE_PREFIX}/${entry.lang}-${entry.stepId}-${clipHash(clip).slice(0, 32)}.mp3`;
 }
