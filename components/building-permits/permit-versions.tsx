@@ -108,7 +108,7 @@ export function PermitVersions({
             </thead>
             <tbody>
               {submissions.map((s, i) => (
-                <tr key={s.id} className="border-t border-border/60 even:bg-surface-2/40">
+                <tr key={s.id} className="zebra-row border-t border-border/60">
                   <td className="px-3 py-2 font-mono text-xs font-semibold">V{i + 1}</td>
                   <td className="px-3 py-2 font-mono text-xs tabular-nums">{militaryDate(s.submittedAt)}</td>
                   <td className="px-3 py-2 text-muted">{t(SUBMISSION_METHOD_LABEL[s.method])}</td>

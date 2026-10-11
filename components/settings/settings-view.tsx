@@ -21,6 +21,8 @@ import { TemplatesManager } from "@/components/settings/templates-manager";
 import { MembersManager } from "@/components/settings/members-manager";
 import { DocumentControlForm } from "@/components/settings/document-control-form";
 import { GuideNarrationCard } from "@/components/settings/guide-narration-card";
+import { SampleFilesCard } from "@/components/settings/sample-files-card";
+import type { SampleSetStatus } from "@/lib/samples/install";
 import {
   saveAnthropicApiKeyAction,
   clearAnthropicApiKeyAction,
@@ -66,6 +68,8 @@ export function SettingsView({
   canSave,
   isFounder = false,
   canManagePasswords = false,
+  sampleStatus = { installed: false },
+  sampleLang = "en",
 }: {
   profile: PracticeProfile;
   logoDataUrl: string | null;
@@ -84,6 +88,10 @@ export function SettingsView({
   isFounder?: boolean;
   /** Draws the per-member "Set password" control. Presentation only — the server enforces the real gate. */
   canManagePasswords?: boolean;
+  /** This practice's sample set (Practice tab > Sample files). */
+  sampleStatus?: SampleSetStatus;
+  /** The language the Install picker starts on: the viewer's, when it is one the set comes in. */
+  sampleLang?: "en" | "es";
 }) {
   const t = useT();
   const [tab, setTab] = useState<Tab>("practice");
@@ -114,6 +122,11 @@ export function SettingsView({
 
       {tab === "practice" ? (
         <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave && canManagePasswords} canEditFooter={isFounder} />
+      ) : null}
+
+      {/* Each practice installs or removes its own sample set; the actions re-check the role. */}
+      {tab === "practice" ? (
+        <SampleFilesCard initial={sampleStatus} canManage={canSave && canManagePasswords} defaultLang={sampleLang} />
       ) : null}
 
       {tab === "documentControl" ? (

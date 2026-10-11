@@ -112,7 +112,7 @@ export function LotTable({
           </thead>
           <tbody>
             {computed.map(({ row: r, calc: c }) => (
-              <tr key={r.id} className="even:bg-surface-2/40">
+              <tr key={r.id} className="zebra-row">
                 <td className={cell}><input className={`${txtInput} w-20`} value={r.lotNumber} onChange={(e) => set(r.id, "lotNumber", e.target.value)} /></td>
                 <td className={cell}><input className={`${txtInput} w-24`} value={r.phase ?? ""} onChange={(e) => set(r.id, "phase", e.target.value)} /></td>
                 <td className={cell}><input type="number" className={numInput} value={r.areaM2} onChange={(e) => set(r.id, "areaM2", Number(e.target.value))} /></td>

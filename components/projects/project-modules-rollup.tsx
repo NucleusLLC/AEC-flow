@@ -45,14 +45,14 @@ export async function ProjectModulesRollupCard({
   return (
     <Card>
       <CardHeader title={t("Procurement, Materials & Design")} subtitle={t("Across this project")} />
-      <div className="divide-y divide-border">
+      <div className="zebra-list divide-y divide-border">
         {rows.map((r) => {
           const Icon = r.icon;
           return (
             <Link
               key={r.href}
               href={r.href}
-              className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-2/40"
+              className="group flex items-center gap-3 px-5 py-3 transition-colors zebra-hover"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand">
                 <Icon className="h-4 w-4" />

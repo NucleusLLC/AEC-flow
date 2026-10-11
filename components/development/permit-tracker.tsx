@@ -65,7 +65,7 @@ export function PermitTracker({ projectId, permits }: { projectId: string; permi
               {tasks.map((task, i) => {
                 const isOverdue = !DONE.includes(task.status) && task.dueDate && task.dueDate < today;
                 return (
-                  <tr key={task.id} className="even:bg-surface-2/40">
+                  <tr key={task.id} className="zebra-row">
                     <td className="px-4 py-2.5 text-faint">{i + 1}</td>
                     <td className="px-3 py-2.5">
                       <div className="font-medium text-fg">{task.name}</div>

@@ -95,6 +95,12 @@ export default defineConfig({
       // elapsed-time smoother. Named file, same reason as every entry above —
       // pure module, no React, no Prisma, no DOM.
       "lib/ui/progress-loader.test.ts",
+      // LIST ZEBRA tripwire: a static scan of app/ and components/ for a table that
+      // has neither the shared stripe class nor an entry in the commented
+      // allow-list, plus the contrast arithmetic on the real token values in
+      // app/globals.css. Named file, same reason as every entry above -- it reads
+      // source off disk and needs no DOM.
+      "lib/ui/zebra.test.ts",
       // Outbound document email. Four named files, same reason as every entry
       // above. None of them touches the network or the database: the two
       // lib/email modules are pure, and the other two mock their I/O at the
@@ -111,6 +117,16 @@ export default defineConfig({
       // supplies and Vitest cannot resolve), so it reaches no network.
       "lib/server/email.test.ts",
       "lib/server/document-email.test.ts",
+      // The signup seed under the tenant scope that broke it (reads answer nothing
+      // before there is a session). Prisma is faked; named file, as above.
+      "lib/data/company-seed.test.ts",
+      // The complete sample set (beta sample files). Named files: the plan as data
+      // (contents, marking, numbering, arithmetic against the app's own
+      // calculators), the fences around the unscoped Prisma client, and who may
+      // install, remove or push it. No database; Prisma and the session are faked.
+      "lib/samples/build.test.ts",
+      "lib/samples/boundary.test.ts",
+      "lib/samples/actions.test.ts",
       "lib/data/email-log.test.ts",
       // Account security: rate-limit rules and reset-token handling. Named files,
       // same reason as every entry above — pure modules, no Prisma, no requests.

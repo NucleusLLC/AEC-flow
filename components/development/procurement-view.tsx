@@ -60,7 +60,7 @@ export function ProcurementView({
         save={<SaveControl url={`/api/development/${projectId}/contracts`} build={() => ({ contracts })} label={t("Save contracts")} />}
         head={[t("Ref"), t("Title"), t("Vendor"), t("Code"), t("Value"), t("Ret %"), t("Status"), ""]}>
         {contracts.map((c) => (
-          <tr key={c.id} className="even:bg-surface-2/40">
+          <tr key={c.id} className="zebra-row">
             <td className={cell}><input className={`${txt} w-24`} value={c.contractRef} onChange={(e) => setContracts((p) => p.map((x) => x.id === c.id ? { ...x, contractRef: e.target.value } : x))} /></td>
             <td className={cell}><input className={`${txt} w-40`} value={c.title} onChange={(e) => setContracts((p) => p.map((x) => x.id === c.id ? { ...x, title: e.target.value } : x))} /></td>
             <td className={cell}><input className={`${txt} w-32`} value={c.vendorName ?? ""} onChange={(e) => setContracts((p) => p.map((x) => x.id === c.id ? { ...x, vendorName: e.target.value } : x))} /></td>
@@ -78,7 +78,7 @@ export function ProcurementView({
         save={<SaveControl url={`/api/development/${projectId}/invoices`} build={() => ({ invoices })} label={t("Save invoices")} />}
         head={[t("Invoice"), t("Vendor"), t("Contract"), t("Code"), t("Amount"), t("Status"), ""]}>
         {invoices.map((i) => (
-          <tr key={i.id} className="even:bg-surface-2/40">
+          <tr key={i.id} className="zebra-row">
             <td className={cell}><input className={`${txt} w-28`} value={i.invoiceNumber} onChange={(e) => setInvoices((p) => p.map((x) => x.id === i.id ? { ...x, invoiceNumber: e.target.value } : x))} /></td>
             <td className={cell}><input className={`${txt} w-32`} value={i.vendorName ?? ""} onChange={(e) => setInvoices((p) => p.map((x) => x.id === i.id ? { ...x, vendorName: e.target.value } : x))} /></td>
             <td className={cell}><input className={`${txt} w-24`} value={i.contractRef ?? ""} onChange={(e) => setInvoices((p) => p.map((x) => x.id === i.id ? { ...x, contractRef: e.target.value } : x))} /></td>
@@ -96,7 +96,7 @@ export function ProcurementView({
           save={<SaveControl url={`/api/development/${projectId}/payments`} build={() => ({ payments })} label={t("Save")} />}
           head={[t("Invoice"), t("Vendor"), t("Amount"), ""]} minW={420}>
           {payments.map((p) => (
-            <tr key={p.id} className="even:bg-surface-2/40">
+            <tr key={p.id} className="zebra-row">
               <td className={cell}><input className={`${txt} w-28`} value={p.invoiceNumber ?? ""} onChange={(e) => setPayments((x) => x.map((y) => y.id === p.id ? { ...y, invoiceNumber: e.target.value } : y))} /></td>
               <td className={cell}><input className={`${txt} w-32`} value={p.vendorName ?? ""} onChange={(e) => setPayments((x) => x.map((y) => y.id === p.id ? { ...y, vendorName: e.target.value } : y))} /></td>
               <td className={cell}><input type="number" className={numI} value={p.amount} onChange={(e) => setPayments((x) => x.map((y) => y.id === p.id ? { ...y, amount: Number(e.target.value) } : y))} /></td>
@@ -110,7 +110,7 @@ export function ProcurementView({
           save={<SaveControl url={`/api/development/${projectId}/vendors`} build={() => ({ vendors })} label={t("Save")} />}
           head={[t("Name"), t("Trade"), t("Contact"), ""]} minW={420}>
           {vendors.map((v) => (
-            <tr key={v.id} className="even:bg-surface-2/40">
+            <tr key={v.id} className="zebra-row">
               <td className={cell}><input className={`${txt} w-32`} value={v.name} onChange={(e) => setVendors((p) => p.map((x) => x.id === v.id ? { ...x, name: e.target.value } : x))} /></td>
               <td className={cell}><input className={`${txt} w-28`} value={v.trade ?? ""} onChange={(e) => setVendors((p) => p.map((x) => x.id === v.id ? { ...x, trade: e.target.value } : x))} /></td>
               <td className={cell}><input className={`${txt} w-36`} value={v.contact ?? ""} onChange={(e) => setVendors((p) => p.map((x) => x.id === v.id ? { ...x, contact: e.target.value } : x))} /></td>

@@ -11,6 +11,8 @@ import { getNarrationStatus } from "@/lib/server/guide-narration";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
+import { getOwnSampleSetStatusAction } from "@/app/(app)/settings/sample-actions";
+import { getServerLang } from "@/lib/i18n/server";
 
 export async function generateMetadata() {
   const tr = await getServerT();
@@ -43,6 +45,11 @@ export default async function SettingsPage() {
     status: m.status,
   }));
   const roles = rolesFromMembers(members);
+
+  // Sample files: this practice's own set (the action takes the company from the
+  // session and answers "not installed" for anyone who may not manage it).
+  const sampleStatus = await getOwnSampleSetStatusAction();
+  const sampleLang = (await getServerLang()) === "es" ? "es" : "en";
 
   // Whether to DRAW the per-member "Set password" control. Derived from the actor's
   // row in the company-scoped team list rather than from the session token, so a
@@ -78,6 +85,8 @@ export default async function SettingsPage() {
         canSave={!!userId}
         isFounder={isFounder}
         canManagePasswords={canManagePasswords}
+        sampleStatus={sampleStatus}
+        sampleLang={sampleLang}
       />
     </div>
   );

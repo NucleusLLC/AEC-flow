@@ -70,7 +70,7 @@ export function ScenarioPlanner({
             </thead>
             <tbody className="divide-y divide-border">
               {compared.map(({ s, r }) => (
-                <tr key={s.id} className="even:bg-surface-2/40">
+                <tr key={s.id} className="zebra-row">
                   <td className="px-4 py-2.5"><span className="font-medium text-fg">{s.name}</span> <span className="text-[11px] text-faint">{t(SCENARIO_KIND_LABEL[s.kind])}</span></td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-fg">{formatCurrency(r.revenue, currency)}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{formatCurrency(r.cost, currency)}</td>

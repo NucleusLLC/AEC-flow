@@ -151,7 +151,7 @@ export function ProjectListView({ projects, startProjects = [], clients = [], on
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.id} onClick={() => onSelect(p)} className="cursor-pointer border-b border-border hover:bg-surface-2">
+              <tr key={p.id} onClick={() => onSelect(p)} className="zebra-row cursor-pointer border-b border-border zebra-hover">
                 <td className="px-3 py-2 font-mono text-[11px] text-muted">{p.projectNumber}</td>
                 <td className="px-3 py-2 text-xs font-medium text-fg">{p.projectName}</td>
                 <td className="px-3 py-2 text-[11px] text-muted">{p.address}</td>

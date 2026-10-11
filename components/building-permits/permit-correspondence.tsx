@@ -222,7 +222,7 @@ export function PermitCorrespondence({
               {letters.map((l) => {
                 const Direction = l.direction === "INCOMING" ? ArrowDownLeft : ArrowUpRight;
                 return (
-                  <tr key={l.id} className="border-t border-border/60 align-top even:bg-surface-2/40">
+                  <tr key={l.id} className="zebra-row border-t border-border/60 align-top">
                     <td className="whitespace-nowrap px-3 py-2 font-mono text-xs tabular-nums">
                       <span className="inline-flex items-center gap-1">
                         <Direction
