@@ -98,8 +98,16 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
+ * 0.25.1 (10 OCT 2026): fix — sending a Bug/Wish report no longer takes the app down when the
+ *   browser is translating the page (Edge / Chrome Translate). The translator replaces text with
+ *   its own elements; pressing Send then made React insert the spinner before a label that was no
+ *   longer on the page ("Failed to execute 'insertBefore' on 'Node'") and, the panel being part of
+ *   the app layout, everything became "Something went wrong" although the report was saved. The
+ *   label now sits in its own element; a failure inside the panel stays inside the panel; a submit
+ *   that fails says so in a plain sentence (never the database's own words) and keeps what was
+ *   typed; and the outer error page now logs what it catches. No SQL.
  */
-export const APP_VERSION = "0.25.0";
+export const APP_VERSION = "0.25.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

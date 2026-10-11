@@ -433,6 +433,12 @@ export const workspace: AreaDict = {
       "La captura de pantalla es demasiado grande para enviarla. Quítela y envíe solo el texto.",
     "Failed to send your report.":
       "No se pudo enviar su reporte.",
+    "We couldn't save your report. Please try again in a moment.":
+      "No pudimos guardar su reporte. Inténtelo de nuevo en un momento.",
+    "We couldn't reach AEC-flow to send your report. Check your connection, or reload the page, and try again.":
+      "No pudimos conectar con AEC-flow para enviar su reporte. Revise su conexión, o recargue la página, e inténtelo de nuevo.",
+    "The feedback panel hit a problem. Your report may already have been sent, so reload the page before sending it again.":
+      "El panel de comentarios tuvo un problema. Es posible que su reporte ya se haya enviado; recargue la página antes de enviarlo de nuevo.",
     "Failed to update status.":
       "No se pudo actualizar el estado.",
     "Planned":
@@ -1132,6 +1138,12 @@ export const workspace: AreaDict = {
       "De schermafbeelding is te groot om te versturen. Verwijder hem en verstuur alleen de tekst.",
     "Failed to send your report.":
       "Je melding versturen mislukt.",
+    "We couldn't save your report. Please try again in a moment.":
+      "We konden je melding niet opslaan. Probeer het over een ogenblik opnieuw.",
+    "We couldn't reach AEC-flow to send your report. Check your connection, or reload the page, and try again.":
+      "We konden AEC-flow niet bereiken om je melding te versturen. Controleer je verbinding, of herlaad de pagina, en probeer het opnieuw.",
+    "The feedback panel hit a problem. Your report may already have been sent, so reload the page before sending it again.":
+      "Er ging iets mis in het feedbackvenster. Je melding is mogelijk al verstuurd; herlaad de pagina voordat je hem opnieuw verstuurt.",
     "Failed to update status.":
       "Status bijwerken mislukt.",
     "Planned":
