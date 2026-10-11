@@ -25,12 +25,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // translate="no" + the google meta below: the app has its own languages, and a browser
+    // page translator (Edge / Chrome) rewrites text nodes under React, which crashed screens
+    // with "Failed to execute 'insertBefore' on 'Node'" (11 OCT 2026). The lang attribute is
+    // corrected to the chosen language after mount by LanguageProvider.
     <html
       lang="en"
+      translate="no"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        <meta name="google" content="notranslate" />
         {/* Apply the saved/system theme before paint to avoid a flash. */}
         <script
           dangerouslySetInnerHTML={{

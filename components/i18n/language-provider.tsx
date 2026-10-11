@@ -54,6 +54,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // The root layout renders lang="en"; say what the page is really in, so the browser does
+  // not offer to translate Spanish it believes is English, and screen readers pronounce it right.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {

@@ -102,8 +102,13 @@
  *   button turns magenta and a callout card flies from one part of the screen to the next, lighting
  *   each up for 5 seconds with what it is for (29 steps; Back / Pause / Next, Esc stops). Parts that
  *   are not on screen are skipped. It only reads the page: nothing is saved or changed. No SQL.
+ * 0.25.6 (10 OCT 2026): fix — the browser's own page translator (Edge / Chrome Translate) is
+ *   switched off for the whole app (translate="no" and the google notranslate meta). It rewrites
+ *   text under React and crashed screens with "Failed to execute 'insertBefore' on 'Node'"; the
+ *   app has its own languages in the top bar. The page's lang attribute now follows the chosen
+ *   language instead of always saying English. No SQL.
  */
-export const APP_VERSION = "0.25.3";
+export const APP_VERSION = "0.25.6";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
