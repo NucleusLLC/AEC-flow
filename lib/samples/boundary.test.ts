@@ -39,7 +39,7 @@ describe("the unscoped client stays inside lib/samples", () => {
       }
     }
     expect(offenders).toEqual([]);
-  });
+  }, 30_000); // walks every source file; 5 s does not fit under the full suite (cf. tenant-scope-findunique)
 
   it("inside lib/samples only the installer and the founder list use it", () => {
     const users = sourceFiles(join(ROOT, "lib/samples"))
@@ -61,7 +61,7 @@ describe("the unscoped client stays inside lib/samples", () => {
       }
     }
     expect(offenders).toEqual([]);
-  });
+  }, 30_000);
 });
 
 describe("the sample set and the tenant extension agree", () => {
