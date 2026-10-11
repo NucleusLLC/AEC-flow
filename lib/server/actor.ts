@@ -39,6 +39,16 @@ export type Actor = {
 };
 
 /**
+ * Thrown by `requireActor` when the caller may not act. Its message is a plain
+ * sentence written for that person, so it is the one error a server action may
+ * show as it is (lib/beta-reports/submit-errors.ts matches it by name); a
+ * database failure in the same lookup is an ordinary Error and must not be.
+ */
+export class ActorError extends Error {
+  override name = "ActorError";
+}
+
+/**
  * Resolve the signed-in actor from their own database row.
  *
  * `findUnique` by the session's own user id needs no company filter — the id IS
@@ -50,20 +60,20 @@ export type Actor = {
 export async function requireActor(): Promise<Actor> {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
-  if (!userId) throw new Error("You must be signed in.");
+  if (!userId) throw new ActorError("You must be signed in.");
 
   const row = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, name: true, email: true, role: true, status: true, companyId: true },
   });
-  if (!row) throw new Error("Your account could not be found.");
+  if (!row) throw new ActorError("Your account could not be found.");
   // A deactivated account may still be holding a valid JWT — it must not act.
-  if (row.status === "INACTIVE") throw new Error("Your account is not active.");
+  if (row.status === "INACTIVE") throw new ActorError("Your account is not active.");
   // No company means no tenant to scope to. We must NOT fall back to
   // `getCurrentCompanyId()` here: that helper resolves an absent companyId to the
   // *founder* company, which would hand a companyless account authority over the
   // founder's own people. Refuse instead.
-  if (!row.companyId) throw new Error("Your account is not linked to a company.");
+  if (!row.companyId) throw new ActorError("Your account is not linked to a company.");
 
   return {
     id: row.id,

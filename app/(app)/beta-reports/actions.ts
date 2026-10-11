@@ -8,6 +8,7 @@ import {
 } from "@/lib/data/beta-reports";
 import { requireActor } from "@/lib/server/actor";
 import { isCurrentUserFounder } from "@/lib/server/founder";
+import { submitFailureMessage } from "@/lib/beta-reports/submit-errors";
 import {
   MAX_SCREENSHOT_CHARS,
   type BetaReportInput,
@@ -54,8 +55,10 @@ export async function submitBetaReport(
     revalidatePath("/beta-reports");
     return { ok: true, id };
   } catch (e) {
-    const error = e instanceof Error ? e.message : "Failed to send your report.";
-    return { ok: false, error };
+    // The tester gets a sentence, the log gets the cause. A database or driver
+    // message must never reach the panel (lib/beta-reports/submit-errors.ts).
+    console.error("[beta-reports] submitBetaReport failed:", e);
+    return { ok: false, error: submitFailureMessage(e) };
   }
 }
 
