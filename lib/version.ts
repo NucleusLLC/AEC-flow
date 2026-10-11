@@ -128,8 +128,17 @@
  *   failure cannot drop the rest, and any failure is one [aecflow-error] line naming the step.
  *   The seeded estimate is keyed by its project, so it opens from the project too. New signups
  *   only; companies already created are not touched. No SQL.
+ * 0.25.11 (11 OCT 2026): feat — sample files. One complete sample project that runs through
+ *   every live module (client, project, service proposal, estimate, schedule, tasks, minutes,
+ *   building permit, construction records, purchase order, materials, deliverables, a letter,
+ *   a contract, a paid invoice with its time and expense), in English or Spanish, every record
+ *   marked SAMPLE / EJEMPLO and numbered on its own SMP- series so no real number is used up.
+ *   A new signup gets it in the language it signed up in. Settings > Practice > Sample files:
+ *   each practice installs or removes its own. /admin > Sample files (founder): dry run, then
+ *   push to one company or to every beta company without one. While installed, the sample
+ *   invoice, payment, time and expense count in that practice's finance figures. No SQL.
  */
-export const APP_VERSION = "0.25.9";
+export const APP_VERSION = "0.25.11";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -110,6 +110,13 @@ export default defineConfig({
       // The signup seed under the tenant scope that broke it (reads answer nothing
       // before there is a session). Prisma is faked; named file, as above.
       "lib/data/company-seed.test.ts",
+      // The complete sample set (beta sample files). Named files: the plan as data
+      // (contents, marking, numbering, arithmetic against the app's own
+      // calculators), the fences around the unscoped Prisma client, and who may
+      // install, remove or push it. No database; Prisma and the session are faked.
+      "lib/samples/build.test.ts",
+      "lib/samples/boundary.test.ts",
+      "lib/samples/actions.test.ts",
       "lib/data/email-log.test.ts",
       // Account security: rate-limit rules and reset-token handling. Named files,
       // same reason as every entry above — pure modules, no Prisma, no requests.
