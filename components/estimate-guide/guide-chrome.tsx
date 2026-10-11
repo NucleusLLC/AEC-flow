@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * INTERACTIVE-GUIDE: what the tour in the Estimates editor (estimate-guide.tsx)
- * and the single card on the Estimates landing screen (estimate-guide-picker.tsx)
- * have in common. The button and where it sits, the overlay's styles, the
+ * INTERACTIVE-GUIDE: what a guide's tour (guide-tour.tsx) and the single card
+ * on its list screen (guide-list-hint.tsx) have in common. The button and where it sits, the overlay's styles, the
  * narration manifest, and the one fact the two need to agree on: whether the
  * editor's own guide is on the page.
  *
@@ -82,24 +81,24 @@ export const GUIDE_CSS = `
 `;
 
 // ---------------------------------------------------------------------------
-// Is the editor's own guide on the page?
+// Is a guide's own tour button on the page?
 // ---------------------------------------------------------------------------
 
-let editorGuides = 0;
+const editorGuides = new Map<string, number>();
 const editorGuideListeners = new Set<() => void>();
 
 /**
- * Called by the editor's guide while its button is on the page; returns the
- * undo. The landing-screen button reads this and steps aside at once, so there
+ * Called by a guide's tour while its button is on the page; returns the undo.
+ * That guide's list-screen button reads this and steps aside at once, so there
  * are never two INTERACTIVE-GUIDE buttons.
  */
-export function registerEditorGuide(): () => void {
-  editorGuides += 1;
-  editorGuideListeners.forEach((notify) => notify());
-  return () => {
-    editorGuides -= 1;
+export function registerEditorGuide(guideId: string): () => void {
+  const bump = (by: number) => {
+    editorGuides.set(guideId, (editorGuides.get(guideId) ?? 0) + by);
     editorGuideListeners.forEach((notify) => notify());
   };
+  bump(1);
+  return () => bump(-1);
 }
 
 function subscribeEditorGuide(notify: () => void): () => void {
@@ -107,10 +106,11 @@ function subscribeEditorGuide(notify: () => void): () => void {
   return () => void editorGuideListeners.delete(notify);
 }
 
+/** Is the tour button of ANY guide on the page? One button at a time, whichever guide it belongs to. */
 export function useEditorGuideMounted(): boolean {
   return useSyncExternalStore(
     subscribeEditorGuide,
-    () => editorGuides > 0,
+    () => [...editorGuides.values()].some((n) => n > 0),
     () => false,
   );
 }
@@ -120,27 +120,29 @@ export function useEditorGuideMounted(): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Is the guide narrated in this language? Asked once per language (one small
- * request, no audio), so that a card's clip can start with the card. "No", or
- * no answer, is silence. A changed language is asked again, so the next run
- * plays that language's clips.
+ * Is this guide narrated in this language? Asked once per guide and language
+ * (one small request, no audio), so that a card's clip can start with the
+ * card. "No", or no answer, is silence. A changed language is asked again, so
+ * the next run plays that language's clips.
  */
-export function useNarrationManifest(lang: string, wanted: boolean): NarrationManifest {
-  const [narration, setNarration] = useState<{ lang: string; manifest: NarrationManifest } | null>(null);
+export function useNarrationManifest(lang: string, wanted: boolean, guideId: string): NarrationManifest {
+  const [narration, setNarration] = useState<{ lang: string; guideId: string; manifest: NarrationManifest } | null>(null);
   useEffect(() => {
     if (!wanted) return;
     const ctl = new AbortController();
-    void fetchNarrationManifest(lang, ctl.signal).then((manifest) => {
-      if (!ctl.signal.aborted) setNarration({ lang, manifest });
+    void fetchNarrationManifest(lang, guideId, ctl.signal).then((manifest) => {
+      if (!ctl.signal.aborted) setNarration({ lang, guideId, manifest });
     });
     return () => ctl.abort();
-  }, [lang, wanted]);
-  return wanted && narration && narration.lang === lang ? narration.manifest : NARRATION_OFF;
+  }, [lang, wanted, guideId]);
+  return wanted && narration && narration.lang === lang && narration.guideId === guideId ? narration.manifest : NARRATION_OFF;
 }
 
 // ---------------------------------------------------------------------------
 // The button
 // ---------------------------------------------------------------------------
+
+const subscribeNever = () => () => {};
 
 /** Olive when idle, the same military look as the Estimates ADD NEW dialog; magenta while the guide runs. */
 const IDLE = "border-[#5c6633] bg-[#4b5320] text-[#e4e8dc] hover:bg-[#3f4a1c]";
@@ -154,6 +156,16 @@ const LIT =
  * button, same state. Client only: it portals into the document.
  */
 export function GuideButtons({ lit, title, onPress }: { lit: boolean; title: string; onPress: () => void }) {
+  // False on the server and while the page hydrates, true from then on. The
+  // button portals into the document, which a server render does not have: a
+  // screen that is server-rendered with its tour on it (the Service Proposal
+  // form) must render nothing here until it is in the browser.
+  const inBrowser = useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+
   // The slot in the shell's top bar, once the top bar says it is live
   // (GUIDE_TOPBAR_SLOT_READY). The top bar sits behind a Suspense boundary: it
   // can be adopted by React after this button exists, and it can be replaced,
@@ -179,6 +191,8 @@ export function GuideButtons({ lit, title, onPress }: { lit: boolean; title: str
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);
+
+  if (!inBrowser) return null;
 
   const button = (visibility: string, floating: boolean) => (
     <button

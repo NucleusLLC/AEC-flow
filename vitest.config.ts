@@ -43,6 +43,10 @@ export default defineConfig({
       // key, the step lookup that refuses free text, the dwell, and the proof
       // that the API key is in nothing sent to a browser. Pure modules.
       "lib/guide-narration/narration.test.ts",
+      // INTERACTIVE-GUIDE engine and the Service Proposals guide: the two
+      // definitions, the namespaced clip lookup that never crosses guides, every
+      // card and its spoken form in Spanish and English. Named file, pure module.
+      "lib/proposals/interactive-guide.test.ts",
       // New client: CLIENT NAME, EMAIL and CELL NUMBER. Pure rule shared by
       // saveClient and every create form. Named file, same reason as above.
       "lib/clients/new-client.test.ts",

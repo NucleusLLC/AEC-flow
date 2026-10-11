@@ -130,8 +130,19 @@
  *   the button now shows on the Estimates landing screen too, where it opens one card saying to
  *   open a project, or create one with New estimate, to start the tour; a new user could not
  *   find the guide before an estimate was open. Every other language still has no button. No SQL.
+ * 0.25.12 (11 OCT 2026): feat — an INTERACTIVE-GUIDE for Service Proposals, in Spanish and English.
+ *   The proposal form (new and edit) gets the same button and a 22-step narrated tour, top to
+ *   bottom: template, title, number, client, project, contact, currency, cost basis, fees, phases,
+ *   payment schedule, reimbursables, tax and discount, scope, terms, validity, saving and the
+ *   live summary. A step whose section is not on the form (no template on an existing proposal,
+ *   no cost basis without a percentage fee) is skipped. The Service Proposals list shows the
+ *   button with one card saying how to start. The guide is now an engine that runs a definition
+ *   per screen: Estimates and Service Proposals share the overlay, button, player, narration
+ *   route and cache, and clip ids are namespaced per guide. The Estimates tour, its texts and
+ *   every cached Estimates clip in both languages are unchanged (pinned by tests). Generate all
+ *   clips now covers every guide and shows progress per guide. No SQL.
  */
-export const APP_VERSION = "0.25.8";
+export const APP_VERSION = "0.25.12";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -7,12 +7,19 @@
  * "nothing to play" and the guide carries on silently, exactly as it does with
  * narration off. Nothing is thrown and nothing is written to the console.
  */
+import { clipIdFor } from "@/lib/guide/definition";
 import { NARRATION_OFF, narrationClipUrl, parseNarrationManifest, type NarrationManifest } from "@/lib/guide-narration/timing";
 
-/** Ask the server whether the guide is narrated in this language. Off on any problem. */
-export async function fetchNarrationManifest(lang: string, signal?: AbortSignal): Promise<NarrationManifest> {
+/** The manifest address of a guide. Estimates keeps the address it always had (no guide named). */
+export function narrationManifestUrl(lang: string, guideId: string): string {
+  const guide = guideId === "estimates" ? "" : `&guide=${encodeURIComponent(guideId)}`;
+  return `/api/guide-narration?lang=${encodeURIComponent(lang)}${guide}`;
+}
+
+/** Ask the server whether a guide is narrated in this language. Off on any problem. */
+export async function fetchNarrationManifest(lang: string, guideId: string, signal?: AbortSignal): Promise<NarrationManifest> {
   try {
-    const response = await fetch(`/api/guide-narration?lang=${encodeURIComponent(lang)}`, {
+    const response = await fetch(narrationManifestUrl(lang, guideId), {
       signal,
       credentials: "same-origin",
       headers: { accept: "application/json" },
@@ -108,6 +115,8 @@ export class GuideNarrationPlayer {
   constructor(
     private readonly lang: string,
     private readonly manifest: NarrationManifest,
+    /** The guide's clip namespace: "" for Estimates (lib/guide/definition.ts). */
+    private readonly namespace: string = "",
   ) {}
 
   has(stepId: string): boolean {
@@ -121,7 +130,7 @@ export class GuideNarrationPlayer {
     if (!pending) {
       pending = (async () => {
         try {
-          const response = await fetch(narrationClipUrl(this.lang, stepId, this.manifest.clips[stepId]), {
+          const response = await fetch(narrationClipUrl(this.lang, clipIdFor({ clipNamespace: this.namespace }, stepId), this.manifest.clips[stepId]), {
             credentials: "same-origin",
           });
           // 204: no clip (no key, switched off, Fish Audio unavailable). Not an error.

@@ -1,27 +1,29 @@
 "use client";
 
 /**
- * INTERACTIVE-GUIDE on the Estimates landing screen (the project picker a new
- * user sees first at /estimates).
+ * INTERACTIVE-GUIDE on a guide's LIST screen (the Estimates project picker,
+ * the Service Proposals list): the screen a person sees before the one the
+ * tour explains.
  *
- * The tour needs an open estimate, and the tour's own button lives in the
- * editor. Before an estimate is open there was no button at all, so a new user
- * could not find the guide. This puts the same button on the landing screen, in
- * the same two places. Pressing it cannot run the tour (there is no editor), so
- * it shows ONE card, in the viewer's language, pointing at "New estimate" and
- * saying how to get to the tour. The card stays until it is closed (X, Esc, or
- * the button again); it is read aloud once when the guide is narrated.
+ * The tour needs its screen open (an estimate, a proposal form), and the
+ * tour's own button lives there. Before that there was no button at all, so a
+ * new user could not find the guide. This puts the same button on the list
+ * screen, in the same two places. Pressing it cannot run the tour, so it shows
+ * ONE card, in the viewer's language, pointing at the control that gets them
+ * there and saying how. The card stays until it is closed (X, Esc, or the
+ * button again); it is read aloud once when the guide is narrated.
  *
- * Mounted from the app shell, NOT from the Estimates screens: those are a
- * protected system and are not touched. So this component works out by itself
- * when it applies:
- *   - the route is /estimates, in a language the guide is offered in;
- *   - the editor's own guide is not on the page (registerEditorGuide), which is
+ * Mounted once from the app shell for every guide, NOT from the screens
+ * themselves (the Estimates screens are a protected system and are not
+ * touched). So each hint works out by itself when it applies:
+ *   - the route is the guide's list path, in a language the guide is offered in;
+ *   - no guide's own tour button is on the page (registerEditorGuide), which is
  *     what guarantees there are never two buttons;
- *   - the picker really is on screen, known by its "New estimate" button, found
- *     by its text in the current language because the screen carries no marker.
- *     While an estimate is loading, or another tab of the workspace is open,
- *     that button is not there and neither is this one.
+ *   - the list really is on screen, known by the control the card points at.
+ *     That control is found by a `data-guide` marker where the screen can
+ *     carry one, and by its own text in the current language where it cannot
+ *     (Estimates). While an estimate is loading, or another tab of its
+ *     workspace is open, that control is not there and neither is this button.
  *
  * Every label sits in its own <span>. A text node beside a conditionally
  * rendered sibling is what browser page translation breaks React on.
@@ -32,23 +34,28 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Volume2, VolumeX, X } from "lucide-react";
 import { useLanguage, useT } from "@/components/i18n/language-provider";
-import {
-  GUIDE_PICKER_HINT_ID,
-  GUIDE_PICKER_PATH,
-  GUIDE_TONE_HEX,
-  clampRect,
-  guideEnabledFor,
-  placeCard,
-  type GuideContent,
-} from "@/lib/estimates/interactive-guide";
-import { guideContentFor } from "@/lib/estimates/interactive-guide-content";
+import { GUIDE_TONE_HEX, clampRect, guideEnabledFor, placeCard, type GuideContent } from "@/lib/estimates/interactive-guide";
+import { guideContentIn, type GuideDefinition } from "@/lib/guide/definition";
+import { GUIDES } from "@/lib/guide/registry";
 import { readNarrationPref, writeNarrationPref, type NarrationManifest } from "@/lib/guide-narration/timing";
 import { GUIDE_CSS, GuideButtons, browserStorage, toRect, useEditorGuideMounted, useNarrationManifest } from "./guide-chrome";
 import { GuideNarrationPlayer, primeGuideAudio } from "./narration-player";
 
-/** The picker's "New estimate" button, or null when the picker is not on screen. */
-function findPickerTarget(label: string): HTMLElement | null {
-  const wanted = label.trim();
+/** How to find the control a list card points at: the resolved form of GuideListTarget. */
+type Finder = { by: "text"; label: string } | { by: "marker"; name: string };
+
+/** One string per finder, for effect dependencies and for telling two finders apart. */
+const finderKey = (f: Finder) => (f.by === "text" ? `text:${f.label}` : `marker:${f.name}`);
+
+/** The control the card points at, or null when the list is not on screen. */
+function findListTarget(finder: Finder): HTMLElement | null {
+  if (finder.by === "marker") {
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>(`main [data-guide="${finder.name}"]`))) {
+      if (el.getClientRects().length > 0) return el;
+    }
+    return null;
+  }
+  const wanted = finder.label.trim();
   for (const el of Array.from(document.querySelectorAll<HTMLElement>("main button"))) {
     if (el.textContent?.trim() === wanted && el.getClientRects().length > 0) return el;
   }
@@ -64,7 +71,8 @@ let pickerVisits = 0;
  * must not reopen by itself on the next). Re-checked when the page changes, at
  * most once a frame. Not watched at all while `watch` is false.
  */
-function usePickerVisit(watch: boolean, label: string): number {
+function usePickerVisit(watch: boolean, finder: Finder): number {
+  const label = finderKey(finder);
   const [found, setFound] = useState<{ label: string; visit: number } | null>(null);
   useEffect(() => {
     if (!watch) return;
@@ -72,7 +80,7 @@ function usePickerVisit(watch: boolean, label: string): number {
     let was: boolean | null = null;
     const check = () => {
       raf = 0;
-      const on = findPickerTarget(label) !== null;
+      const on = findListTarget(finder) !== null;
       if (on === was) return;
       was = on;
       setFound({ label, visit: on ? ++pickerVisits : 0 });
@@ -88,21 +96,25 @@ function usePickerVisit(watch: boolean, label: string): number {
       if (raf) cancelAnimationFrame(raf);
       setFound(null);
     };
+    // The finder is fully described by its key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watch, label]);
   return watch && found !== null && found.label === label ? found.visit : 0;
 }
 
 function PickerCard({
+  guide,
   content,
   lang,
-  label,
+  finder,
   narration,
   onClose,
 }: {
+  guide: GuideDefinition;
   content: GuideContent;
   lang: string;
-  /** The text of the control the card points at. */
-  label: string;
+  /** How the control the card points at is found. */
+  finder: Finder;
   narration: NarrationManifest;
   onClose: () => void;
 }) {
@@ -110,9 +122,11 @@ function PickerCard({
   const ringRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const tailRef = useRef<HTMLSpanElement>(null);
+  const hintId = guide.list.hintId;
+  const label = finderKey(finder);
 
   // Is there a clip for this card? Without one the card is simply silent.
-  const narrated = narration.enabled && typeof narration.clips[GUIDE_PICKER_HINT_ID] === "string";
+  const narrated = narration.enabled && typeof narration.clips[hintId] === "string";
   const [soundOn, setSoundOn] = useState(() => readNarrationPref(browserStorage()));
 
   // Esc closes the card.
@@ -128,9 +142,9 @@ function PickerCard({
   // player owns a blob URL, so it is made and disposed with this effect.
   useEffect(() => {
     if (!narrated || !soundOn) return;
-    const player = new GuideNarrationPlayer(lang, narration);
+    const player = new GuideNarrationPlayer(lang, narration, guide.clipNamespace);
     let cancelled = false;
-    void player.load(GUIDE_PICKER_HINT_ID).then((url) => {
+    void player.load(hintId).then((url) => {
       if (cancelled || !url) return;
       void player.play(url, () => {});
     });
@@ -138,7 +152,7 @@ function PickerCard({
       cancelled = true;
       player.dispose();
     };
-  }, [lang, narration, narrated, soundOn]);
+  }, [lang, narration, narrated, soundOn, hintId, guide.clipNamespace]);
 
   const toggleSound = () => {
     const next = !soundOn;
@@ -159,7 +173,7 @@ function PickerCard({
     const frame = () => {
       raf = requestAnimationFrame(frame);
       const viewport = { width: window.innerWidth, height: window.innerHeight };
-      const el = findPickerTarget(label);
+      const el = findListTarget(finder);
       if (!el) {
         ring.style.display = "none";
         card.style.transform = `translate3d(${Math.round(Math.max(12, (viewport.width - card.offsetWidth) / 2))}px, ${Math.round(Math.max(12, (viewport.height - card.offsetHeight) / 2))}px, 0)`;
@@ -198,6 +212,8 @@ function PickerCard({
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
+    // The finder is fully described by its key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [label]);
 
   return (
@@ -205,8 +221,8 @@ function PickerCard({
       ref={rootRef}
       className="aeg-root"
       data-guide-overlay=""
-      data-guide-picker=""
-      data-step={GUIDE_PICKER_HINT_ID}
+      data-guide-picker={guide.id}
+      data-step={hintId}
       data-narration={narrated && soundOn ? "1" : "0"}
       style={{ ["--aeg" as string]: GUIDE_TONE_HEX.pink }}
     >
@@ -258,18 +274,19 @@ function PickerCard({
   );
 }
 
-/** Mounted once, in the app shell. Renders nothing except on the Estimates landing screen. */
-export function EstimateGuidePicker() {
+/** The list-screen button and card of one guide. Renders nothing except on that guide's list screen. */
+function GuideListHint({ guide }: { guide: GuideDefinition }) {
   const pathname = usePathname();
   const { lang } = useLanguage();
   const t = useT();
   const editorGuide = useEditorGuideMounted();
 
-  const here = pathname === GUIDE_PICKER_PATH;
-  const content = here && guideEnabledFor(lang) ? guideContentFor(lang) : null;
-  // The button on the picker, as that screen labels it in this language.
-  const label = t("New estimate");
-  const visit = usePickerVisit(content !== null && !editorGuide, label);
+  const here = pathname === guide.list.path;
+  const content = here && guideEnabledFor(lang) ? guideContentIn(guide, lang) : null;
+  // A control found by its text is found by the text this language shows.
+  const target = guide.list.target;
+  const finder: Finder = target.by === "text" ? { by: "text", label: t(target.labelKey) } : { by: "marker", name: target.name };
+  const visit = usePickerVisit(content !== null && !editorGuide, finder);
   const show = content !== null && !editorGuide && visit > 0;
 
   // The visit and the language the card was opened in. Leaving the picker, or
@@ -278,7 +295,7 @@ export function EstimateGuidePicker() {
   const [opened, setOpened] = useState<{ visit: number; lang: string } | null>(null);
   const open = show && opened !== null && opened.visit === visit && opened.lang === lang;
 
-  const manifest = useNarrationManifest(lang, show);
+  const manifest = useNarrationManifest(lang, show, guide.id);
 
   if (!show || !content) return null;
 
@@ -295,10 +312,21 @@ export function EstimateGuidePicker() {
       />
       {open
         ? createPortal(
-            <PickerCard content={content} lang={lang} label={label} narration={manifest} onClose={() => setOpened(null)} />,
+            <PickerCard guide={guide} content={content} lang={lang} finder={finder} narration={manifest} onClose={() => setOpened(null)} />,
             document.body,
           )
         : null}
+    </>
+  );
+}
+
+/** Mounted once, in the app shell: the list-screen hint of every guide. At most one of them is ever on screen. */
+export function GuideListHints() {
+  return (
+    <>
+      {GUIDES.map((guide) => (
+        <GuideListHint key={guide.id} guide={guide} />
+      ))}
     </>
   );
 }

@@ -15,8 +15,9 @@
  * Pure (node:crypto only). Server-side: never import from a client component.
  */
 import { createHash } from "node:crypto";
-import { GUIDE_PICKER_HINT_ID, GUIDE_STEPS, guideEnabledFor } from "@/lib/estimates/interactive-guide";
-import { guideContentFor } from "@/lib/estimates/interactive-guide-content";
+import { guideEnabledFor } from "@/lib/estimates/interactive-guide";
+import { clipIdFor, guideCardIds, guideContentIn, type GuideDefinition } from "@/lib/guide/definition";
+import { ESTIMATES_GUIDE, GUIDES, resolveClipId } from "@/lib/guide/registry";
 import { hasSpokenForm, spokenPickerText, spokenStepText } from "./spoken";
 import { narrationLanguage } from "./voices";
 
@@ -29,43 +30,54 @@ export const NARRATION_RECIPE = "fish-tts-1:mp3-128:loudnorm";
 /** Folder inside the private bucket. Flat, so "clear cached audio" is one listing. */
 export const NARRATION_CACHE_PREFIX = "guide-narration";
 
-/** Is the guide narrated in this language at all (gate, content, rules and a voice)? */
+/** Are the guides narrated in this language at all (gate, rules, a voice, and text in at least one guide)? */
 export function narrationLangSupported(lang: string | null | undefined): lang is string {
-  return guideEnabledFor(lang) && hasSpokenForm(lang) && narrationLanguage(lang) !== null && guideContentFor(lang) !== null;
+  return guideEnabledFor(lang) && hasSpokenForm(lang) && narrationLanguage(lang) !== null && GUIDES.some((g) => guideContentIn(g, lang) !== null);
 }
 
+/**
+ * One card that can be spoken. `stepId` is the card's CLIP id: bare for an
+ * Estimates step, `<namespace>.<step>` for every other guide. It is what the
+ * route is asked for and what the clip is filed under.
+ */
 export type NarrationEntry = { lang: string; stepId: string; text: string };
 
 /**
  * The text spoken for one guide card, or null for anything that is not a card
- * of the guide in a narrated language. A card is one of the tour's steps or
- * the single picker card. `stepId` is matched against the step list itself,
- * never used as an object key, so "__proto__" and friends are simply not steps.
+ * of a guide in a narrated language. A card is one of a tour's steps or its
+ * single list card. The clip id says which guide (lib/guide/registry.ts), and
+ * the step is then matched against THAT guide's step list, never used as an
+ * object key, so "__proto__" and friends are simply not steps, and a step of
+ * one guide can never be answered with another guide's card.
  *
  * The language is part of the answer: the same step id gives the Spanish text
  * for "es" and the English text for "en", and the clip is filed under that
  * language (clipCacheKey), so one language can never be served the other's.
  */
-export function narrationEntry(lang: unknown, stepId: unknown): NarrationEntry | null {
-  if (typeof lang !== "string" || typeof stepId !== "string") return null;
+export function narrationEntry(lang: unknown, clipId: unknown): NarrationEntry | null {
+  if (typeof lang !== "string" || typeof clipId !== "string") return null;
   if (!narrationLangSupported(lang)) return null;
-  const content = guideContentFor(lang);
+  const found = resolveClipId(clipId);
+  if (!found) return null;
+  const { guide, stepId } = found;
+  const content = guideContentIn(guide, lang);
   if (!content) return null;
-  if (stepId === GUIDE_PICKER_HINT_ID) {
+  if (stepId === guide.list.hintId) {
     const text = spokenPickerText(lang, content.picker);
-    return text ? { lang, stepId: GUIDE_PICKER_HINT_ID, text } : null;
+    return text ? { lang, stepId: clipIdFor(guide, guide.list.hintId), text } : null;
   }
-  const step = GUIDE_STEPS.find((s) => s.id === stepId);
+  const step = guide.steps.find((s) => s.id === stepId);
   if (!step) return null;
   if (!Object.prototype.hasOwnProperty.call(content.steps, step.id)) return null;
-  const text = spokenStepText(lang, step, content.steps[step.id]);
-  return text ? { lang, stepId: step.id, text } : null;
+  const overrides = Object.prototype.hasOwnProperty.call(guide.spoken, lang) ? guide.spoken[lang] : {};
+  const text = spokenStepText(lang, step, content.steps[step.id], overrides);
+  return text ? { lang, stepId: clipIdFor(guide, step.id), text } : null;
 }
 
-/** Every narrated card of a language: the steps in tour order, then the picker card. */
-export function narrationEntries(lang: string): NarrationEntry[] {
-  return [...GUIDE_STEPS.map((s) => s.id), GUIDE_PICKER_HINT_ID]
-    .map((id) => narrationEntry(lang, id))
+/** Every narrated card of one guide in a language: its steps in tour order, then its list card. */
+export function narrationEntries(lang: string, guide: GuideDefinition = ESTIMATES_GUIDE): NarrationEntry[] {
+  return guideCardIds(guide)
+    .map((id) => narrationEntry(lang, clipIdFor(guide, id)))
     .filter((e): e is NarrationEntry => e !== null);
 }
 
@@ -94,5 +106,6 @@ export function clipCacheKey(entry: Pick<NarrationEntry, "lang" | "stepId">, cli
 
 /** Does this object key belong to the narration cache (and nothing else in the bucket)? */
 export function isNarrationCacheKey(key: string): boolean {
-  return new RegExp(`^${NARRATION_CACHE_PREFIX}/[a-z]{2}-[A-Za-z0-9]+-[0-9a-f]{32}\\.mp3$`).test(key);
+  // <lang>-<step>-<hash>.mp3 for Estimates, <lang>-<namespace>.<step>-<hash>.mp3 for every other guide.
+  return new RegExp(`^${NARRATION_CACHE_PREFIX}/[a-z]{2}-(?:[a-z]+\\.)?[A-Za-z0-9]+-[0-9a-f]{32}\\.mp3$`).test(key);
 }

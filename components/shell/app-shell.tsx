@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { ModuleProvider } from "@/components/shell/module-provider";
-import { EstimateGuidePicker } from "@/components/estimate-guide/estimate-guide-picker";
+import { GuideListHints } from "@/components/estimate-guide/guide-list-hint";
 import type { NotificationItem } from "@/lib/data/notifications.types";
 
 /**
@@ -65,11 +65,12 @@ export function AppShell({
           <main className="flex-1 overflow-y-auto px-6 py-6">{children}</main>
         </div>
       </div>
-      {/* INTERACTIVE-GUIDE on the Estimates landing screen. Renders nothing on
-          any other route, in any language the guide is not offered in, and
-          whenever the Estimates editor shows its own guide button. Mounted
-          here because the Estimates screens themselves are protected. */}
-      <EstimateGuidePicker />
+      {/* INTERACTIVE-GUIDE on each guide's list screen (the Estimates project
+          picker, the Service Proposals list). Renders nothing on any other
+          route, in any language the guides are not offered in, and whenever a
+          guide's own tour button is on the page. Mounted here because the
+          Estimates screens themselves are protected. */}
+      <GuideListHints />
     </ModuleProvider>
   );
 }

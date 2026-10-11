@@ -37,6 +37,7 @@ export default async function ServiceProposalsPage() {
           </Link>
           <Link
             href="/design/service-proposals/new"
+            data-guide="sp-new"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
