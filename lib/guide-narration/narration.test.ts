@@ -61,30 +61,35 @@ const CARD_IDS = [...GUIDE_STEPS.map((s) => s.id), GUIDE_PICKER_HINT_ID];
  * already in the production bucket. If one of these changes, production
  * synthesises that clip again: the Spanish text, the voice id, the model, the
  * recipe and the hash itself are all pinned by the test that reads this.
+ *
+ * v0.25.13 re-pinned 14 of them on purpose: the Spanish cards moved from "tú"
+ * to "usted" (the form the rest of the Spanish app uses) and step 20 stopped
+ * promising a duplicate icon the screen does not have. Changed text is a new
+ * recording; the 15 cards whose text did not change keep their clips.
  */
 const PINNED_ES_FILES: Record<string, string> = {
-  module: "es-module-09423c0f32fbd88a2f704531e984bdc6.mp3",
-  projectNo: "es-projectNo-e61e72d6c35923e8379355c0c13a8e9c.mp3",
+  module: "es-module-575a822fa55e1c48529c36213c597703.mp3",
+  projectNo: "es-projectNo-cb46c73633586d83bea7b8af8cb6c224.mp3",
   client: "es-client-1319f6987b8f712f89e74e61b773cb97.mp3",
-  version: "es-version-fc51082a1f455167b9d78cc8ad100d02.mp3",
-  date: "es-date-f7b56e50311e7951c87e60085c4cc7c2.mp3",
-  location: "es-location-b347b0dba1c4df4385a854f14576b9ac.mp3",
-  area: "es-area-e8630f11a82f85733aae56fc49960d4c.mp3",
-  sideMenu: "es-sideMenu-6c49732419cea3f17f6162170e45ab2d.mp3",
-  pricing: "es-pricing-d7c23dd3e16eaf02a58c1921331c5458.mp3",
-  costBase: "es-costBase-3309870ce05230eb40b402cc4d4b8597.mp3",
-  totalCost: "es-totalCost-2451241d086bda905539abac3180ecf3.mp3",
+  version: "es-version-b132b50126d90948f7a192388d5a082b.mp3",
+  date: "es-date-e2d8bc42f1ec332ee797b9465c5fb695.mp3",
+  location: "es-location-f43bd52bd335e678a0c2f00bb4713f15.mp3",
+  area: "es-area-e4d48e38c8524c9d9182833077e50ab2.mp3",
+  sideMenu: "es-sideMenu-af3900290871c0afa8f5806777e81a30.mp3",
+  pricing: "es-pricing-32b13309236e962a53b2b1c9054a829c.mp3",
+  costBase: "es-costBase-ae17f947038b32da108e227cd624f3ae.mp3",
+  totalCost: "es-totalCost-9c9ae10df515242f36e9c8bedb9e903f.mp3",
   status: "es-status-4761d91a13054a04c80d9d590aad4d47.mp3",
-  table: "es-table-8647bed23a748da890355ba8ab6e0d38.mp3",
+  table: "es-table-b40b7a028f4ec87f43deab49665a6b25.mp3",
   subtotal: "es-subtotal-7aa0c432046051ac6cdcd27d3ce23a65.mp3",
   directCost: "es-directCost-8309ee99685571de22f8cb2991d53fbb.mp3",
   totalDirect: "es-totalDirect-b405568193fc6a943266db226e3e9170.mp3",
   addSection: "es-addSection-b525f2671ef41dcb914de5d8462a06a8.mp3",
   summary: "es-summary-82305263824a3b954bbe08dae65b9ec7.mp3",
-  markups: "es-markups-985bfbe61561c83a35fb7a59afb5ce83.mp3",
-  item: "es-item-170cccb48991501ffc1d9bcee1311f18.mp3",
+  markups: "es-markups-1be4961e03f1d63d210d9935a9fe6b14.mp3",
+  item: "es-item-3f4d948b5ee9022350b9c4347f8d65fb.mp3",
   colQty: "es-colQty-0b60293cbe737388c8cfc7829531d2d7.mp3",
-  colUnit: "es-colUnit-b4eb590d6f15b4032ff2031142049b6c.mp3",
+  colUnit: "es-colUnit-2ef24228042e1b7a1f256c86bd70bb1a.mp3",
   colNorm: "es-colNorm-0253692526e00c1fc44840acacf37c25.mp3",
   colHours: "es-colHours-59163c42132e5353aff48ed583f4864c.mp3",
   colLabor: "es-colLabor-df443defc70b07543f78120da33fba17.mp3",
@@ -132,7 +137,7 @@ const PINNED_EN_FILES: Record<string, string> = {
   colProgress: "en-colProgress-c127612b0778090139befd894c5b1d5c.mp3",
   pickerHint: "en-pickerHint-bed287c0b8b981405fa1432be824dfed.mp3",
 };
-const PINNED_ES_PICKER_FILE = "es-pickerHint-837f9e42e2f29793e5b28b2bd7575b2b.mp3";
+const PINNED_ES_PICKER_FILE = "es-pickerHint-e8ab19232892ae8e4423fd5073aaf2a5.mp3";
 
 // ---------------------------------------------------------------------------
 // Spoken form
@@ -231,27 +236,27 @@ describe("what each of the 29 cards says", () => {
   // card's display text shows up here as a changed sentence to listen to again.
   it("says exactly this", () => {
     expect(spoken).toEqual({
-      module: "Paso uno. Módulo. Aquí ves el módulo en el que estás trabajando. Ábrelo para cambiar de módulo.",
+      module: "Paso uno. Módulo. Aquí ve el módulo en el que está trabajando. Ábralo para cambiar de módulo.",
       projectNo:
-        "Paso dos. Número de proyecto. Código del proyecto. Puedes crear un número interno. Ejemplo: dos mil veintiséis, guion, cero cero uno.",
+        "Paso dos. Número de proyecto. Código del proyecto. Puede crear un número interno. Ejemplo: dos mil veintiséis, guion, cero cero uno.",
       client: "Paso tres. Cliente. Nombre del cliente. Ejemplo: Acme Development.",
       version:
-        "Paso cuatro. Versión. Versión del presupuesto. Puedes dejar la actual, versión uno punto cero, o crear una nueva si haces cambios.",
-      date: "Paso cinco. Fecha. Coloca la fecha con formato día, mes y año.",
-      location: "Paso seis. Ubicación. Escribe dónde se ejecutará la obra.",
-      area: "Paso siete. Área construida. Ingresa el área en metros cuadrados. Ejemplo: ochenta y tres coma ocho.",
+        "Paso cuatro. Versión. Versión del presupuesto. Puede dejar la actual, versión uno punto cero, o crear una nueva si hace cambios.",
+      date: "Paso cinco. Fecha. Coloque la fecha con formato día, mes y año.",
+      location: "Paso seis. Ubicación. Escriba dónde se ejecutará la obra.",
+      area: "Paso siete. Área construida. Ingrese el área en metros cuadrados. Ejemplo: ochenta y tres coma ocho.",
       sideMenu:
-        "Paso ocho. Menú lateral. Aquí navegas entre los módulos del sistema: proyectos, configuración, finanzas, etcétera.",
+        "Paso ocho. Menú lateral. Aquí navega entre los módulos del sistema: proyectos, configuración, finanzas, etcétera.",
       pricing:
-        "Paso nueve. Precios. Aquí defines la tarifa media de mano de obra por hora. Puedes cargar una plantilla, o guardar el presupuesto como plantilla.",
+        "Paso nueve. Precios. Aquí define la tarifa media de mano de obra por hora. Puede cargar una plantilla, o guardar el presupuesto como plantilla.",
       costBase:
-        "Paso diez. Base de costos. Selecciona cómo deseas ver la información. Avance: muestra el avance de la obra. Cliente: vista para presentar al cliente. Dólares: muestra también los importes en dólares. Control de impresión: configura el reporte. Base de datos: usa tu base de costos.",
+        "Paso diez. Base de costos. Seleccione cómo desea ver la información. Avance: muestra el avance de la obra. Cliente: vista para presentar al cliente. Dólares: muestra también los importes en dólares. Control de impresión: configura el reporte. Base de datos: usa su base de costos.",
       totalCost:
-        "Paso once. Costo total del proyecto. Aquí se muestra automáticamente el costo total según lo que vayas diligenciando.",
+        "Paso once. Costo total del proyecto. Aquí se muestra automáticamente el costo total según lo que vaya diligenciando.",
       status:
         "Paso doce. Estado del presupuesto. Indica si se ha guardado correctamente y si está conectado con la base de datos.",
       table:
-        "Paso trece. Tabla de partidas. Aquí registras cada actividad del proyecto; por ejemplo: demolición, muros, pisos, etcétera. Cada fila es una partida.",
+        "Paso trece. Tabla de partidas. Aquí registra cada actividad del proyecto; por ejemplo: demolición, muros, pisos, etcétera. Cada fila es una partida.",
       subtotal: "Paso catorce. Subtotal por sección. Se calcula automáticamente el total de las partidas de esa sección.",
       directCost: "Paso quince. Costo directo. Sumatoria de todas las partidas del proyecto.",
       totalDirect: "Paso dieciséis. Total de costos directos. Muestra el total general de todas las secciones.",
@@ -260,11 +265,11 @@ describe("what each of the 29 cards says", () => {
       summary:
         "Paso dieciocho. Resumen de costos. Aquí se muestra el total por tipo de recurso: mano de obra, material, equipo y subcontratista; y el porcentaje sobre el total.",
       markups:
-        "Paso diecinueve. Recargos y total. Aquí puedes agregar porcentajes de gastos generales o utilidades y se calculará el total final.",
-      item: "Paso veinte. Elemento. Con este botón puedes agregar una nueva fila, es decir, una partida, al presupuesto. También puedes duplicar o eliminar la fila con los iconos de la derecha.",
+        "Paso diecinueve. Recargos y total. Aquí puede agregar porcentajes de gastos generales o utilidades y se calculará el total final.",
+      item: "Paso veinte. Elemento. Con este botón puede agregar una nueva fila, es decir, una partida, a la sección. Para eliminar una fila, use el icono de papelera que está a su derecha.",
       colQty: "Paso veintiuno. Cantidad. Es la cantidad de la partida, en la unidad de medida seleccionada.",
       colUnit:
-        "Paso veintidós. Unidad. Selecciona la unidad de medida. Ejemplos: metros cúbicos, metros, metros cuadrados, unidades, kilogramos, etcétera.",
+        "Paso veintidós. Unidad. Seleccione la unidad de medida. Ejemplos: metros cúbicos, metros, metros cuadrados, unidades, kilogramos, etcétera.",
       colNorm: "Paso veintitrés. Norma, en horas por unidad. Son las horas por unidad, según la norma.",
       colHours: "Paso veinticuatro. Horas totales. Se calculan automáticamente: cantidad por norma.",
       colLabor: "Paso veinticinco. Costo de mano de obra. Se calcula automáticamente según las horas y la tarifa.",
@@ -468,7 +473,7 @@ describe("what each of the 29 English cards says", () => {
 describe("what the picker card says", () => {
   it("is its title and its body, with no step number, in each language", () => {
     expect(spokenPickerText("es", es.picker)).toBe(
-      "Empieza aquí. Abre un proyecto de la lista, o crea uno con Nuevo presupuesto, para iniciar la guía interactiva del presupuesto.",
+      "Empiece aquí. Abra un proyecto de la lista, o cree uno con Nuevo presupuesto, para iniciar la guía interactiva del presupuesto.",
     );
     expect(spokenPickerText("en", en.picker)).toBe(
       "Start here. Open a project from the list, or create one with New estimate, to start the guided tour of the estimate.",
@@ -621,10 +626,10 @@ describe("the cache key", () => {
       const id = { text: entry.text, voice, model: DEFAULT_NARRATION_MODEL };
       return [clipCacheKey(entry, id), clipVersion(id)];
     };
-    expect(key("module", nagi)).toEqual(["guide-narration/es-module-c2e0f8dd399436f380e3f88657c4e172.mp3", "c2e0f8dd399436f3"]);
-    expect(key("area", nagi)).toEqual(["guide-narration/es-area-0ec790c68276c069267dac10385e93fd.mp3", "0ec790c68276c069"]);
+    expect(key("module", nagi)).toEqual(["guide-narration/es-module-9f1dbfe6e9467789cc5e0beff9309d59.mp3", "9f1dbfe6e9467789"]);
+    expect(key("area", nagi)).toEqual(["guide-narration/es-area-f322622b5cba87ab0f9a2be2ba7a6b9d.mp3", "f322622b5cba87ab"]);
     expect(key("colProgress", nagi)).toEqual(["guide-narration/es-colProgress-92f7d1d9433483a3f23ed11b9716571a.mp3", "92f7d1d9433483a3"]);
-    expect(key("area", "8b7187104e32481bb675f0cca0b0a002")[1]).toBe("e8630f11a82f8573");
+    expect(key("area", "8b7187104e32481bb675f0cca0b0a002")[1]).toBe("e4d48e38c8524c9d");
   });
 
   it("keeps the languages apart: no English clip shares an object with a Spanish one", () => {

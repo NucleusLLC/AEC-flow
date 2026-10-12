@@ -329,7 +329,12 @@ describe("every stored figure agrees with the app's own calculator", () => {
     // The first line bills the proposal's first payment milestone.
     const m = rows(en, "serviceProposalPaymentMilestone")[0];
     expect(lines[0].milestoneId).toBe(m.id);
-    expect(lines[0].amount).toBe(m.amount);
+    // Before tax: the milestone is a share of the grand total, tax included, so
+    // the line carries it net and the invoice adds the tax once. Line plus tax
+    // is the milestone the client accepted, not the milestone plus tax again.
+    const rate = Number(inv.taxPercent) / 100;
+    expect(Number(lines[0].amount)).toBeLessThan(Number(m.amount));
+    expect(Math.abs(Number(lines[0].amount) * (1 + rate) - Number(m.amount))).toBeLessThan(0.011);
     expect(inv.serviceProposalId).toBe(rows(en, "serviceProposal")[0].id);
     expect(String(inv.taxName)).toContain("SAMPLE");
   });
