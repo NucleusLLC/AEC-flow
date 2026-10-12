@@ -75,23 +75,23 @@ const es: GuideContent = {
   steps: {
     template: {
       title: "Empezar desde una plantilla",
-      body: "Opcional. Elige una plantilla para un tipo de proyecto habitual y se rellenan los honorarios, las fases y el alcance. Después puedes editarlo todo.",
+      body: "Opcional. Elija una plantilla para un tipo de proyecto habitual y se rellenan los honorarios, las fases y el alcance. Después puede editarlo todo.",
     },
     title: {
       title: "Título",
-      body: "Dale a la propuesta un título claro: el servicio y el proyecto. Ejemplo: Servicios de diseño arquitectónico, Residencia Palm Beach.",
+      body: "Dele a la propuesta un título claro: el servicio y el proyecto. Ejemplo: Servicios de diseño arquitectónico, Residencia Palm Beach.",
     },
     number: {
       title: "Número de propuesta",
-      body: "Déjalo en blanco y se asigna el siguiente número de tu secuencia. Si escribes uno, debe ser único.",
+      body: "Déjelo en blanco y se asigna el siguiente número de su secuencia. Si escribe uno, debe ser único.",
     },
     client: {
       title: "Cliente",
-      body: "Elige el cliente al que va dirigida la propuesta. Si aún no está en la lista, elige + Nuevo cliente y créalo aquí mismo.",
+      body: "Elija el cliente al que va dirigida la propuesta. Si aún no está en la lista, elija + Nuevo cliente y créelo aquí mismo.",
     },
     project: {
       title: "Proyecto",
-      body: "Vincula la propuesta a un proyecto, o elige + Nuevo proyecto para crearlo. Un proyecto pertenece a un cliente, así que elige primero el cliente.",
+      body: "Vincule la propuesta a un proyecto, o elija + Nuevo proyecto para crearlo. Un proyecto pertenece a un cliente, así que elija primero el cliente.",
     },
     contact: {
       title: "Nombre de contacto y Correo de contacto",
@@ -103,68 +103,68 @@ const es: GuideContent = {
     },
     costBasis: {
       title: "Base de costo",
-      body: "De dónde se calculan los honorarios por porcentaje. Elige la Base, por ejemplo Costo estimado de construcción, y escribe su Importe. Ejemplo: 2.500.000. Esta sección aparece cuando una línea usa % de la base de costo.",
+      body: "De dónde se calculan los honorarios por porcentaje. Elija la Base, por ejemplo Costo estimado de construcción, y escriba su Importe. Ejemplo: 2.500.000. Esta sección aparece cuando una línea usa % de la base de costo.",
     },
     fees: {
       title: "Honorarios profesionales",
-      body: "Una línea por disciplina o servicio. Ponle nombre y elige cómo se cobra: % de la base de costo, Honorarios fijos, Por hora y otros. El importe se calcula a la derecha.",
+      body: "Una línea por disciplina o servicio. Póngale nombre y elija cómo se cobra: % de la base de costo, Honorarios fijos, Por hora y otros. El importe se calcula a la derecha.",
     },
     feeType: {
       title: "Tipo",
-      body: "Base es la oferta principal. Opcional se ofrece aparte y solo cuenta cuando marcas Seleccionado (incluir en el total). Adicional es para servicios extra.",
+      body: "Base es la oferta principal. Opcional se ofrece aparte y solo cuenta cuando marca Seleccionado (incluir en el total). Adicional es para servicios extra.",
     },
     addFee: {
       title: "Agregar línea de honorarios",
-      body: "Agrega otra línea, por ejemplo para interiorismo o ingeniería. Para quitar una línea usa el icono de papelera que está al final.",
+      body: "Agrega otra línea, por ejemplo para interiorismo o ingeniería. Para quitar una línea use el icono de papelera que está al final.",
     },
     phases: {
       title: "Fases de diseño",
-      body: "Cómo se reparte el honorario base entre las fases del trabajo. Da un porcentaje a cada fase; entre todas deben sumar 100%.",
+      body: "Cómo se reparte el honorario base entre las fases del trabajo. Dé un porcentaje a cada fase; entre todas deben sumar 100%.",
     },
     payment: {
       title: "Calendario de pagos",
-      body: "Opcional. Agrega un hito por cada pago, con su porcentaje del total general. Entre todos deben sumar 100%.",
+      body: "Opcional. Agregue un hito por cada pago, con su porcentaje del total general. Entre todos deben sumar 100%.",
     },
     reimbursables: {
       title: "Gastos reembolsables",
-      body: "Gastos que trasladas al cliente, como impresión, viajes y tasas de permisos. Se suman al subtotal.",
+      body: "Gastos que traslada al cliente, como impresión, viajes y tasas de permisos. Se suman al subtotal.",
     },
     tax: {
       title: "Nombre del impuesto e Impuesto %",
-      body: "Escribe el nombre del impuesto y su porcentaje. Ejemplo: BBO, 7%. Aparece como Impuesto en el Resumen en vivo.",
+      body: "Escriba el nombre del impuesto y su porcentaje. Ejemplo: BBO, 7%. Aparece como Impuesto en el Resumen en vivo.",
     },
     discount: {
       title: "Descuento",
-      body: "Opcional. Ponle nombre, elige el Tipo, porcentaje o Fijo, y escribe el Valor.",
+      body: "Opcional. Póngale nombre, elija el Tipo, porcentaje o Fijo, y escriba el Valor.",
     },
     scope: {
       title: "Alcance de los servicios",
-      body: "Enumera lo que está incluido y lo que está excluido. Agregar elemento de alcance añade una fila: con la casilla marcada dice Incluido y sin marcar, Excluido. La lista se imprime en la propuesta en este mismo orden; las flechas suben o bajan una fila.",
+      body: "Enumere lo que está incluido y lo que está excluido. Agregar elemento de alcance añade una fila: con la casilla marcada dice Incluido y sin marcar, Excluido. La lista se imprime en la propuesta en este mismo orden; las flechas suben o bajan una fila.",
     },
     narrative: {
       title: "Descripción del alcance y condiciones",
-      body: "Describe el trabajo con tus palabras: Resumen del alcance, Exclusiones y Supuestos. Encierra una frase entre ** para imprimirla en negrita.",
+      body: "Describa el trabajo con sus palabras: Resumen del alcance, Exclusiones y Supuestos. Encierre una frase entre ** para imprimirla en negrita.",
     },
     terms: {
       title: "Términos y condiciones",
-      body: "Las condiciones de tu oferta, como la forma de pago y qué ocurre si cambia el alcance.",
+      body: "Las condiciones de su oferta, como la forma de pago y qué ocurre si cambia el alcance.",
     },
     validity: {
       title: "Válido hasta",
-      body: "El último día en que el cliente puede aceptar la oferta. Marca Mostrar el cálculo de honorarios al cliente para imprimir cómo se calculó cada honorario.",
+      body: "El último día en que el cliente puede aceptar la oferta. Marque Mostrar el cálculo de honorarios al cliente para imprimir cómo se calculó cada honorario.",
     },
     save: {
       title: "Guardar",
-      body: "Crear propuesta guarda una propuesta nueva; en una existente el botón dice Guardar cambios. Después, en la página de la propuesta encuentras Imprimir / vista previa, Enviar propuesta por correo, Nueva revisión y las acciones de estado. Cuando la oferta se acepta, allí aparece también Panel del proyecto.",
+      body: "Crear propuesta guarda una propuesta nueva; en una existente el botón dice Guardar cambios. Después, en la página de la propuesta encuentra Imprimir / vista previa, Enviar propuesta por correo, Nueva revisión y las acciones de estado. Cuando la oferta se acepta, allí aparece también Panel del proyecto.",
     },
     summary: {
       title: "Resumen en vivo",
-      body: "Los totales se actualizan mientras escribes: Honorario base, Subtotal, Impuesto y Total general. Aquí también aparecen los avisos cuando falta algún dato.",
+      body: "Los totales se actualizan mientras escribe: Honorario base, Subtotal, Impuesto y Total general. Aquí también aparecen los avisos cuando falta algún dato.",
     },
   },
   picker: {
-    title: "Empieza aquí",
-    body: "Crea una propuesta con Nueva propuesta, o abre una y elige Editar, para iniciar la guía interactiva.",
+    title: "Empiece aquí",
+    body: "Cree una propuesta con Nueva propuesta, o abra una y elija Editar, para iniciar la guía interactiva.",
   },
 };
 
@@ -284,35 +284,35 @@ const en: GuideContent = {
 const spokenEs: Record<string, SpokenOverride> = {
   // "+" is part of the menu entry's label; aloud it is just the entry.
   client: {
-    body: "Elige el cliente al que va dirigida la propuesta. Si aún no está en la lista, elige Nuevo cliente y créalo aquí mismo.",
+    body: "Elija el cliente al que va dirigida la propuesta. Si aún no está en la lista, elija Nuevo cliente y créelo aquí mismo.",
   },
   project: {
-    body: "Vincula la propuesta a un proyecto, o elige Nuevo proyecto para crearlo. Un proyecto pertenece a un cliente, así que elige primero el cliente.",
+    body: "Vincule la propuesta a un proyecto, o elija Nuevo proyecto para crearlo. Un proyecto pertenece a un cliente, así que elija primero el cliente.",
   },
   // A figure in the millions is said as a figure, not as three groups of digits.
   costBasis: {
-    body: "De dónde se calculan los honorarios por porcentaje. Elige la base, por ejemplo costo estimado de construcción, y escribe su importe. Ejemplo: dos millones quinientos mil. Esta sección aparece cuando una línea usa porcentaje de la base de costo.",
+    body: "De dónde se calculan los honorarios por porcentaje. Elija la base, por ejemplo costo estimado de construcción, y escriba su importe. Ejemplo: dos millones quinientos mil. Esta sección aparece cuando una línea usa porcentaje de la base de costo.",
   },
   // "% de la base de costo" is a menu entry; the rule would say "porcentaje de de la base".
   fees: {
-    body: "Una línea por disciplina o servicio. Ponle nombre y elige cómo se cobra: porcentaje de la base de costo, honorarios fijos, por hora y otros. El importe se calcula a la derecha.",
+    body: "Una línea por disciplina o servicio. Póngale nombre y elija cómo se cobra: porcentaje de la base de costo, honorarios fijos, por hora y otros. El importe se calcula a la derecha.",
   },
   // The bracket is part of a label; read as an aside it breaks the sentence.
   feeType: {
-    body: "Base es la oferta principal. Opcional se ofrece aparte y solo cuenta cuando marcas Seleccionado, incluir en el total. Adicional es para servicios extra.",
+    body: "Base es la oferta principal. Opcional se ofrece aparte y solo cuenta cuando marca Seleccionado, incluir en el total. Adicional es para servicios extra.",
   },
   // "Impuesto %" is a field label.
   tax: {
     title: "Nombre y porcentaje del impuesto",
-    body: "Escribe el nombre del impuesto y su porcentaje. Ejemplo: be be o, siete por ciento. Aparece como Impuesto en el Resumen en vivo.",
+    body: "Escriba el nombre del impuesto y su porcentaje. Ejemplo: be be o, siete por ciento. Aparece como Impuesto en el Resumen en vivo.",
   },
   // Two asterisks are typed, not read as symbols.
   narrative: {
-    body: "Describe el trabajo con tus palabras: resumen del alcance, exclusiones y supuestos. Encierra una frase entre dos asteriscos a cada lado para imprimirla en negrita.",
+    body: "Describa el trabajo con sus palabras: resumen del alcance, exclusiones y supuestos. Encierre una frase entre dos asteriscos a cada lado para imprimirla en negrita.",
   },
   // The slash is part of a button's label.
   save: {
-    body: "Crear propuesta guarda una propuesta nueva; en una existente el botón dice Guardar cambios. Después, en la página de la propuesta encuentras Imprimir o vista previa, Enviar propuesta por correo, Nueva revisión y las acciones de estado. Cuando la oferta se acepta, allí aparece también Panel del proyecto.",
+    body: "Crear propuesta guarda una propuesta nueva; en una existente el botón dice Guardar cambios. Después, en la página de la propuesta encuentra Imprimir o vista previa, Enviar propuesta por correo, Nueva revisión y las acciones de estado. Cuando la oferta se acepta, allí aparece también Panel del proyecto.",
   },
 };
 

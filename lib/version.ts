@@ -163,8 +163,19 @@
  *   route and cache, and clip ids are namespaced per guide. The Estimates tour, its texts and
  *   every cached Estimates clip in both languages are unchanged (pinned by tests). Generate all
  *   clips now covers every guide and shows progress per guide. No SQL.
+ * 0.25.13 (12 OCT 2026): fix — four open items. (1) FINANCE: an invoice raised from a proposal's
+ *   payment milestone billed the tax twice when the proposal's tax is added on top. The milestone
+ *   is a share of the grand total, tax included, and the invoice then added the tax again (a
+ *   535.00 milestone was invoiced as 572.45). The line now carries the milestone before tax and
+ *   the invoice adds it once (lib/finance/proposal-billing.ts); included taxes are unchanged; a
+ *   partly taxed proposal gives a taxed and an untaxed line. Invoices already raised are NOT
+ *   changed. The sample invoice had the same fault and is corrected for new installs. (2) GUIDE:
+ *   Spanish Estimates step 20 no longer promises a duplicate icon the screen does not have.
+ *   (3) GUIDE: Spanish cards use "usted", like the rest of the Spanish app; the changed cards are
+ *   narrated again on first listen. (4) The floating INTERACTIVE-GUIDE button steps aside while
+ *   the Bug / Wish panel is open, so it no longer covers Send on narrower screens. No SQL.
  */
-export const APP_VERSION = "0.25.12";
+export const APP_VERSION = "0.25.13";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

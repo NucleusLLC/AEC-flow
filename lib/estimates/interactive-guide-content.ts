@@ -34,11 +34,11 @@ const es: GuideContent = {
   steps: {
     module: {
       title: "Módulo",
-      body: "Aquí ves el módulo en el que estás trabajando. Ábrelo para cambiar de módulo.",
+      body: "Aquí ve el módulo en el que está trabajando. Ábralo para cambiar de módulo.",
     },
     projectNo: {
       title: "N.º de proyecto",
-      body: "Código del proyecto. Puedes crear un número interno. Ejemplo: 2026-001.",
+      body: "Código del proyecto. Puede crear un número interno. Ejemplo: 2026-001.",
     },
     client: {
       title: "Cliente",
@@ -46,42 +46,42 @@ const es: GuideContent = {
     },
     version: {
       title: "Versión",
-      body: "Versión del presupuesto. Puedes dejar la actual (V1.0) o crear una nueva si haces cambios.",
+      body: "Versión del presupuesto. Puede dejar la actual (V1.0) o crear una nueva si hace cambios.",
     },
     date: {
       title: "Fecha",
-      body: "Coloca la fecha con formato dd/mm/aaaa.",
+      body: "Coloque la fecha con formato dd/mm/aaaa.",
     },
     location: {
       title: "Ubicación",
-      body: "Escribe dónde se ejecutará la obra.",
+      body: "Escriba dónde se ejecutará la obra.",
     },
     area: {
       title: "Área construida",
-      body: "Ingresa el área en metros cuadrados (m²). Ejemplo: 83,8.",
+      body: "Ingrese el área en metros cuadrados (m²). Ejemplo: 83,8.",
     },
     sideMenu: {
       title: "Menú lateral",
-      body: "Aquí navegas entre los módulos del sistema (proyectos, configuración, finanzas, etc.).",
+      body: "Aquí navega entre los módulos del sistema (proyectos, configuración, finanzas, etc.).",
     },
     pricing: {
       title: "Precios",
-      body: "Aquí defines la tarifa media de mano de obra (por hora). Puedes cargar una plantilla o guardar el presupuesto como plantilla.",
+      body: "Aquí define la tarifa media de mano de obra (por hora). Puede cargar una plantilla o guardar el presupuesto como plantilla.",
     },
     costBase: {
       title: "Base de costos",
-      body: "Selecciona cómo deseas ver la información:",
+      body: "Seleccione cómo desea ver la información:",
       points: [
         { term: "Avance", text: "muestra el avance de la obra." },
         { term: "Cliente", text: "vista para presentar al cliente." },
         { term: "$ USD", text: "muestra también los importes en dólares." },
         { term: "Control de impresión", text: "configura el reporte." },
-        { term: "Base de datos", text: "usa tu base de costos." },
+        { term: "Base de datos", text: "usa su base de costos." },
       ],
     },
     totalCost: {
       title: "Costo total del proyecto",
-      body: "Aquí se muestra automáticamente el costo total según lo que vayas diligenciando.",
+      body: "Aquí se muestra automáticamente el costo total según lo que vaya diligenciando.",
     },
     status: {
       title: "Estado del presupuesto",
@@ -89,7 +89,7 @@ const es: GuideContent = {
     },
     table: {
       title: "Tabla de partidas",
-      body: "Aquí registras cada actividad del proyecto (ej. demolición, muros, pisos, etc.). Cada fila es una partida.",
+      body: "Aquí registra cada actividad del proyecto (ej. demolición, muros, pisos, etc.). Cada fila es una partida.",
     },
     subtotal: {
       title: "Subtotal por sección",
@@ -113,11 +113,11 @@ const es: GuideContent = {
     },
     markups: {
       title: "Recargos y total",
-      body: "Aquí puedes agregar porcentajes de gastos generales o utilidades y se calculará el total final.",
+      body: "Aquí puede agregar porcentajes de gastos generales o utilidades y se calculará el total final.",
     },
     item: {
       title: "Elemento",
-      body: "Con este botón puedes agregar una nueva fila (partida) al presupuesto. También puedes duplicar o eliminar la fila con los iconos de la derecha.",
+      body: "Con este botón puede agregar una nueva fila (partida) a la sección. Para eliminar una fila, use el icono de papelera que está a su derecha.",
     },
     colQty: {
       title: "Cant.",
@@ -125,7 +125,7 @@ const es: GuideContent = {
     },
     colUnit: {
       title: "Unidad",
-      body: "Selecciona la unidad de medida. Ejemplos: m³, m, m², und, kg, etc.",
+      body: "Seleccione la unidad de medida. Ejemplos: m³, m, m², und, kg, etc.",
     },
     colNorm: {
       title: "Norma h/u",
@@ -157,8 +157,8 @@ const es: GuideContent = {
     },
   },
   picker: {
-    title: "Empieza aquí",
-    body: "Abre un proyecto de la lista, o crea uno con Nuevo presupuesto, para iniciar la guía interactiva del presupuesto.",
+    title: "Empiece aquí",
+    body: "Abra un proyecto de la lista, o cree uno con Nuevo presupuesto, para iniciar la guía interactiva del presupuesto.",
   },
 };
 

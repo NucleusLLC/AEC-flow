@@ -329,15 +329,15 @@ const es: SpokenLang = {
   rules: ES_RULES,
   overrides: {
     // The "(m²)" only repeats the words before it; read once. The example is a decimal.
-    area: { body: "Ingresa el área en metros cuadrados. Ejemplo: ochenta y tres coma ocho." },
+    area: { body: "Ingrese el área en metros cuadrados. Ejemplo: ochenta y tres coma ocho." },
     // A list in brackets reads better introduced by a colon than as an aside.
-    sideMenu: { body: "Aquí navegas entre los módulos del sistema: proyectos, configuración, finanzas, etcétera." },
+    sideMenu: { body: "Aquí navega entre los módulos del sistema: proyectos, configuración, finanzas, etcétera." },
     // "(por hora)" qualifies the rate; say it as part of the sentence.
     pricing: {
-      body: "Aquí defines la tarifa media de mano de obra por hora. Puedes cargar una plantilla, o guardar el presupuesto como plantilla.",
+      body: "Aquí define la tarifa media de mano de obra por hora. Puede cargar una plantilla, o guardar el presupuesto como plantilla.",
     },
     table: {
-      body: "Aquí registras cada actividad del proyecto; por ejemplo: demolición, muros, pisos, etcétera. Cada fila es una partida.",
+      body: "Aquí registra cada actividad del proyecto; por ejemplo: demolición, muros, pisos, etcétera. Cada fila es una partida.",
     },
     addSection: {
       body: "Sirve para crear una nueva sección del proyecto; por ejemplo: estructura, acabados, instalaciones, etcétera.",
@@ -347,13 +347,13 @@ const es: SpokenLang = {
     },
     // "(partida)" names the row; as a bare aside it sounds like a stray word.
     item: {
-      body: "Con este botón puedes agregar una nueva fila, es decir, una partida, al presupuesto. También puedes duplicar o eliminar la fila con los iconos de la derecha.",
+      body: "Con este botón puede agregar una nueva fila, es decir, una partida, a la sección. Para eliminar una fila, use el icono de papelera que está a su derecha.",
     },
     // The title is an abbreviation of the first word of the body; say what the column is.
     colQty: { title: "Cantidad", body: "Es la cantidad de la partida, en la unidad de medida seleccionada." },
     // A lone "m" is "metros" only because this is a list of units.
     colUnit: {
-      body: "Selecciona la unidad de medida. Ejemplos: metros cúbicos, metros, metros cuadrados, unidades, kilogramos, etcétera.",
+      body: "Seleccione la unidad de medida. Ejemplos: metros cúbicos, metros, metros cuadrados, unidades, kilogramos, etcétera.",
     },
     colNorm: { title: "Norma, en horas por unidad", body: "Son las horas por unidad, según la norma." },
     // "% Avance" and "Importe avance" are column labels, not sentences.

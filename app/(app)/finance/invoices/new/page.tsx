@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, Clock, FileSignature } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { InvoiceForm } from "@/components/finance/invoice-form";
 import { getProposalBilling, listBillableProposals } from "@/lib/data/invoices";
+import { milestoneInvoiceLines } from "@/lib/finance/proposal-billing";
 import { projectsWithUnbilledWork, unbilledWork } from "@/lib/data/work-billing";
 import { UnbilledWorkPicker } from "@/components/finance/unbilled-work-picker";
 import { getClients } from "@/lib/data/clients";
@@ -47,15 +48,20 @@ export default async function NewInvoicePage({
 
   // Step 2: a proposal is chosen and milestones ticked — go straight to the form.
   if (billing && chosen.size > 0) {
-    const lines: InvoiceLineInput[] = billing.milestones
-      .filter((m) => chosen.has(m.id) && m.remaining > 0)
-      .map((m) => ({
-        description: m.name,
-        milestoneId: m.id,
-        milestoneName: m.name,
-        amount: m.remaining,
-        taxable: true,
-      }));
+    // `remaining` is before tax when the proposal's tax is added on top, so the
+    // invoice adds it once. A milestone that is only partly taxed becomes two
+    // lines against the same milestone — lib/finance/proposal-billing.ts.
+    const picked = billing.milestones.filter((m) => chosen.has(m.id) && m.remaining > 0);
+    const lines: InvoiceLineInput[] = picked.flatMap((m) =>
+      milestoneInvoiceLines(
+        { id: m.id, name: m.name, remaining: m.remaining, billable: m.amount, taxable: m.taxable },
+        {
+          currency: billing.currency,
+          taxPercent: billing.taxPercent,
+          notTaxedLabel: (name) => fmt(t("{name} (not taxed)"), { name }),
+        },
+      ),
+    );
 
     return (
       <div className="w-full space-y-6">
@@ -71,7 +77,7 @@ export default async function NewInvoicePage({
             {fmt(t("Invoice from {number}"), { number: billing.proposalNumber })}
           </h2>
           <p className="text-sm text-muted">
-            {lines.length === 1 ? t("1 milestone") : fmt(t("{count} milestones"), { count: lines.length })} ·{" "}
+            {picked.length === 1 ? t("1 milestone") : fmt(t("{count} milestones"), { count: picked.length })} ·{" "}
             {billing.title}
           </p>
         </div>
@@ -194,6 +200,16 @@ export default async function NewInvoicePage({
               * rather than hidden behind client state. */}
             <form method="GET" className="space-y-3">
               <input type="hidden" name="proposal" value={billing.serviceProposalId} />
+              {billing.taxOnTop ? (
+                <p className="text-sm text-muted">
+                  {fmt(
+                    t(
+                      "These amounts are before {tax}. The invoice adds {tax} on top, so what the client pays matches the proposal.",
+                    ),
+                    { tax: `${billing.taxName || t("Tax")} ${billing.taxPercent}%` },
+                  )}
+                </p>
+              ) : null}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
@@ -223,6 +239,9 @@ export default async function NewInvoicePage({
                           {m.percent}%{m.trigger ? ` · ${m.trigger}` : ""}
                           {m.invoiceNumbers.length > 0
                             ? ` · ${fmt(t("on {numbers}"), { numbers: m.invoiceNumbers.join(", ") })}`
+                            : ""}
+                          {billing.taxOnTop
+                            ? ` · ${fmt(t("{amount} with tax"), { amount: money(m.gross) })}`
                             : ""}
                         </div>
                       </td>

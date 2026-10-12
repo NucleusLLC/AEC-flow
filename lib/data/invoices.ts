@@ -33,6 +33,7 @@ import {
   invoiceTotals,
   nextInvoiceNumber,
 } from "@/lib/finance/calc";
+import { milestoneBasis } from "@/lib/finance/proposal-billing";
 import type {
   BillableMilestone,
   InvoiceDTO,
@@ -433,8 +434,20 @@ export async function getProposalBilling(
     billed.set(key, entry);
   }
 
+  // The milestone rows are shares of the GRAND total, so a tax added on top is
+  // already inside them. `basis` takes it back out once, so the invoice adds it
+  // once instead of twice — see lib/finance/proposal-billing.ts.
+  const basis = milestoneBasis({
+    currency,
+    grandTotal: num(proposal.grandTotal),
+    taxTotal: num(proposal.taxTotal),
+    taxableSubtotal: num(proposal.taxableSubtotal),
+    taxes: proposal.taxes.map((t) => ({ name: t.name, percent: num(t.percent), mode: t.mode as TaxMode })),
+    milestones: proposal.paymentMilestones.map((m) => ({ id: m.id, amount: num(m.amount) })),
+  });
+
   const milestones: BillableMilestone[] = proposal.paymentMilestones.map((m) => {
-    const amount = num(m.amount);
+    const { billable: amount, taxable } = basis.amounts[m.id];
     const already = billed.get(m.id);
     const invoiced = already?.amount ?? 0;
     return {
@@ -443,13 +456,15 @@ export async function getProposalBilling(
       trigger: m.trigger,
       percent: num(m.percent),
       amount,
+      taxable,
+      gross: num(m.amount),
       invoiced,
       remaining: Math.max(0, Math.round((amount - invoiced) * 100) / 100),
       invoiceNumbers: already?.numbers ?? [],
     };
   });
 
-  const warnings: string[] = [];
+  const warnings: string[] = [...basis.warnings];
   const percentTotal = milestones.reduce((n, m) => n + m.percent, 0);
   if (milestones.length > 0 && Math.abs(percentTotal - 100) > 0.01) {
     warnings.push(
@@ -460,7 +475,6 @@ export async function getProposalBilling(
     warnings.push("This proposal has no payment milestones, so there is nothing to bill from it.");
   }
 
-  const tax = proposal.taxes[0];
   return {
     serviceProposalId: proposal.id,
     proposalNumber: proposal.number,
@@ -474,9 +488,10 @@ export async function getProposalBilling(
     contactName: proposal.contactName,
     contactEmail: proposal.contactEmail,
     grandTotal: num(proposal.grandTotal),
-    taxName: tax?.name ?? null,
-    taxPercent: tax ? num(tax.percent) : 0,
-    taxMode: (tax?.mode as TaxMode) ?? "EXCLUSIVE",
+    taxName: basis.taxName,
+    taxPercent: basis.taxPercent,
+    taxMode: basis.taxMode,
+    taxOnTop: basis.taxOnTop,
     milestones,
     warnings,
   };

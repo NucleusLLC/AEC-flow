@@ -212,6 +212,7 @@ export function BetaReportWidget() {
       fallback={(reset) => (
         <div
           role="alertdialog"
+          data-beta-report-panel=""
           aria-label={t("Beta feedback")}
           className="no-print fixed bottom-4 right-4 z-50 flex w-[min(26rem,calc(100vw-2rem))] flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-8 text-center shadow-2xl print:hidden"
         >
@@ -247,6 +248,7 @@ export function BetaReportWidget() {
 
           <div
             role="dialog"
+            data-beta-report-panel=""
             aria-modal="true"
             aria-label={t("Beta feedback")}
             className={cn(

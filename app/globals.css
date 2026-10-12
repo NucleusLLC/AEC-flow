@@ -758,3 +758,12 @@ body,
     box-shadow: 0 0 8px 1px rgba(220, 38, 38, 0.6);
   }
 }
+
+/* The INTERACTIVE-GUIDE button floats in the bottom-right corner on screens
+ * narrower than the top bar's slot (components/estimate-guide/guide-chrome.tsx).
+ * The Bug / Wish panel opens in that same corner and its Send button sat under
+ * the floating button, so while the panel is open the floating button steps
+ * aside. Unlayered on purpose: it has to beat the button's own display utility. */
+body:has([data-beta-report-panel]) [data-guide-button][data-float] {
+  display: none;
+}

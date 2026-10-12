@@ -31,6 +31,7 @@ import { buildWriteData } from "@/lib/proposals/persist";
 import { estimateTotals } from "@/lib/estimates/calc";
 import type { CostEstimate as EstimateDto } from "@/lib/data/estimates";
 import { invoiceTotals } from "@/lib/finance/calc";
+import { milestoneBasis } from "@/lib/finance/proposal-billing";
 import { poTotals } from "@/lib/procurement/calc";
 import type { PurchaseOrderLine } from "@/lib/procurement/types";
 import { changeOrderTotal, progressPayment } from "@/lib/ca/calc";
@@ -1451,6 +1452,17 @@ export function buildSampleSet(input: SampleBuildInput): SamplePlan {
   const invoiceId = newId();
   const invoiceNumber = num("INV");
   const firstMilestone = plan.serviceProposalPaymentMilestone[0];
+  // The milestone is a share of the proposal's grand total, which already
+  // contains the tax. The invoice line carries it before tax and the invoice
+  // adds the tax once, exactly as /finance/invoices/new does.
+  const milestoneNet = milestoneBasis({
+    currency,
+    grandTotal: Number(sp.header.grandTotal),
+    taxTotal: Number(sp.header.taxTotal),
+    taxableSubtotal: Number(sp.header.taxableSubtotal),
+    taxes: [{ name: taxName, percent: TAX_PERCENT, mode: "EXCLUSIVE" }],
+    milestones: plan.serviceProposalPaymentMilestone.map((m) => ({ id: String(m.id), amount: Number(m.amount) })),
+  }).amounts[String(firstMilestone.id)].billable;
   const CHARGE_RATE = 95;
   const COST_RATE = 55;
   const billedHours = 6;
@@ -1465,7 +1477,7 @@ export function buildSampleSet(input: SampleBuildInput): SamplePlan {
       milestoneName: firstMilestone.name,
       quantity: null as number | null,
       unitRate: null as number | null,
-      amount: Number(firstMilestone.amount),
+      amount: milestoneNet,
     },
     {
       id: lineIds[1],
