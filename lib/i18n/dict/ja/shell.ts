@@ -525,6 +525,9 @@ export const shell: Dict = {
   "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "利用規約またはプライバシーポリシーが変更されました。新しい版をお読みのうえ、同意してください。",
   "I accept": "同意します",
   "Accepted — thank you": "同意しました — ありがとうございます",
+  "A new version of AEC-flow is available (v{version}). Save your work, then reload to get it.": "AEC-flow の新しいバージョン (v{version}) が利用可能です。作業を保存してから再読み込みしてください。",
+  "Reload now": "今すぐ再読み込み",
+  "Later": "後で",
   "Could not save. Please try again.": "保存できませんでした。もう一度お試しください。",
   // Sample files (Settings card and the founder push in /admin)
   "Sample files": "サンプルファイル",
