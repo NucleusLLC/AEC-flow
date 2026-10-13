@@ -525,6 +525,9 @@ export const shell: Dict = {
   "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "服务条款或隐私政策已更新。请阅读并接受新版本。",
   "I accept": "我接受",
   "Accepted — thank you": "已接受 — 谢谢",
+  "A new version of AEC-flow is available (v{version}). Save your work, then reload to get it.": "AEC-flow 有新版本可用 (v{version})。请先保存您的工作，然后重新加载。",
+  "Reload now": "立即重新加载",
+  "Later": "稍后",
   "Could not save. Please try again.": "无法保存。请重试。",
   // Sample files (Settings card and the founder push in /admin)
   "Sample files": "示例文件",

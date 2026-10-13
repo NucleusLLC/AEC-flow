@@ -171,6 +171,8 @@ export default defineConfig({
       // Finance. Invoice arithmetic (exact money, ageing, status from payments)
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
+      // The updater: when an open tab is told a newer release is deployed.
+      "lib/update/check.test.ts",
       // Invoicing a proposal milestone: the tax is billed once, not twice.
       "lib/finance/proposal-billing.test.ts",
       // Credit notes: the one balance function (invoiceBalance) and the

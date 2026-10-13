@@ -531,6 +531,9 @@ export const shell: AreaDict = {
     "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "Los Términos del servicio o la Política de privacidad han cambiado. Lea y acepte la nueva versión.",
     "I accept": "Acepto",
     "Accepted — thank you": "Aceptado — gracias",
+    "A new version of AEC-flow is available (v{version}). Save your work, then reload to get it.": "Hay una nueva versión de AEC-flow disponible (v{version}). Guarde su trabajo y recargue para obtenerla.",
+    "Reload now": "Recargar ahora",
+    "Later": "Más tarde",
     "Could not save. Please try again.": "No se pudo guardar. Inténtelo de nuevo.",
     // Sample files (Settings card and the founder push in /admin)
     "Sample files": "Archivos de ejemplo",
@@ -1101,6 +1104,9 @@ export const shell: AreaDict = {
     "The Terms of Service or the Privacy Policy have changed. Please read and accept the new version.": "De Servicevoorwaarden of het Privacybeleid zijn gewijzigd. Lees de nieuwe versie en ga akkoord.",
     "I accept": "Ik ga akkoord",
     "Accepted — thank you": "Geaccepteerd — dank u",
+    "A new version of AEC-flow is available (v{version}). Save your work, then reload to get it.": "Er is een nieuwe versie van AEC-flow beschikbaar (v{version}). Sla uw werk op en laad daarna opnieuw.",
+    "Reload now": "Nu opnieuw laden",
+    "Later": "Later",
     "Could not save. Please try again.": "Opslaan is niet gelukt. Probeer het opnieuw.",
     // Sample files (Settings card and the founder push in /admin)
     "Sample files": "Voorbeeldbestanden",
