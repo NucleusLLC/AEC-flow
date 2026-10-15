@@ -184,8 +184,9 @@
  * 0.27.1 (15 OCT 2026): fix — the 0.26.0 and 0.27.0 merges left two APP_VERSION constants and two
  *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
  *   type-checked against the new initialCode prop. The build failed; this is the repair.
+ * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
  */
-export const APP_VERSION = "0.27.1";
+export const APP_VERSION = "0.27.3";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

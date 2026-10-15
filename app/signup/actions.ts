@@ -2,8 +2,9 @@
 
 /**
  * Beta-tester self-signup. Creates a new company and its owner — a DIRECTOR —
- * gated behind a beta access code, stamps the free-access window onto the account, and
- * records the report-back agreement. Never throws to the client — returns a
+ * gated behind a single-use pool code that becomes its licence key. Stamps the
+ * free-access window onto the account and records the report-back agreement.
+ * Never throws to the client — returns a
  * tagged result the signup form can act on. The client logs the user in with
  * `signIn` after a successful create (NextAuth credentials sign-in is client-side).
  */
@@ -49,7 +50,6 @@ export async function registerBetaTester(input: {
     const email = input.email?.trim().toLowerCase();
     const company = input.company?.trim() || null;
     const password = input.password ?? "";
-    const expectedCode = process.env.BETA_SIGNUP_CODE;
 
     if (!name) return { ok: false, error: "Please enter your name." };
     if (!email || !isValidEmail(email)) {
@@ -75,14 +75,9 @@ export async function registerBetaTester(input: {
       return { ok: false, error: tooManyAttemptsMessage("sign-up attempts", perIp.retryAfterSeconds) };
     }
     // ── Beta code resolution ────────────────────────────────────────────────
-    // Two paths during the transition to per-tester codes:
-    //   1. A POOL code (AECFLOW-BETA-XXXX-YYYY) — single-use, and it IS the Nucleus licence key.
-    //   2. The legacy shared BETA_SIGNUP_CODE — everyone types the same string, so it yields no
-    //      per-tester attribution. Still accepted so nobody mid-signup is locked out, but every
-    //      use is flagged in preferences and the account gets no licence key.
-    // Retire path 2 by unsetting BETA_SIGNUP_CODE once the pool is distributed.
+    // A single-use pool code (AECFLOW-BETA-XXXX-YYYY) is required and becomes
+    // the Nucleus licence key, attributing every account to its pool code.
     const submitted = input.code?.trim().toUpperCase() ?? "";
-    const sharedCode = expectedCode?.trim().toUpperCase();
     if (!submitted) {
       return { ok: false, error: "Please enter your beta access code." };
     }
@@ -101,10 +96,9 @@ export async function registerBetaTester(input: {
       priorCodeStatus = found.status;
       priorClaimedEmail = found.claimedEmail;
       poolCode = { id: found.id, code: found.code, keyPrefix: found.keyPrefix };
-    } else if (!sharedCode || submitted !== sharedCode) {
+    } else {
       return { ok: false, error: "That beta access code isn't valid." };
     }
-    const usedSharedCode = poolCode === null;
 
     const existing = await prisma.user.findUnique({
       where: { email },
@@ -152,8 +146,7 @@ export async function registerBetaTester(input: {
         expiresAt: accessUntil,
         modules: [],
         // The redeemed code IS the Nucleus licence key. Storing the plaintext here (and only its
-        // sha256 in Nucleus) is the same split CAD-Flow uses. Shared-code signups get no key —
-        // there is nothing unique to bind — so they stay unlicensed until backfilled.
+        // sha256 in Nucleus) is the same split CAD-Flow uses.
         licenseKey: poolCode?.code ?? null,
         licenseKeyPrefix: poolCode?.keyPrefix ?? null,
       },
@@ -187,9 +180,8 @@ export async function registerBetaTester(input: {
           betaSignupIp: signupIp,
           betaSignupCountry: signupCountry,
           betaUserAgent: userAgent,
-          // Which gate let them in. `sharedCode` accounts have no licence key and need the
-          // backfill; pool accounts are attributable in Nucleus by keyPrefix from day one.
-          betaCodeSource: usedSharedCode ? "sharedCode" : "pool",
+          // Pool accounts are attributable in Nucleus by keyPrefix from day one.
+          betaCodeSource: "pool",
           betaKeyPrefix: poolCode?.keyPrefix ?? null,
         },
       },
