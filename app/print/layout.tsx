@@ -5,8 +5,10 @@
 // requires the database to be reachable during the build and fails the deploy
 // when it isn't (e.g. env not yet configured on the host). Mirrors the
 // `export const dynamic = "force-dynamic"` guard already used by the (app) group.
+import { PrintViewTracker } from "@/components/print/print-view-tracker";
+
 export const dynamic = "force-dynamic";
 
 export default function PrintLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <>{children}<PrintViewTracker /></>;
 }

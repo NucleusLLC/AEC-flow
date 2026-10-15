@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { track } from "@vercel/analytics";
 import { UserPlus, AlertTriangle, Loader2 } from "lucide-react";
 import { registerBetaTester } from "@/app/signup/actions";
 import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
@@ -40,6 +41,9 @@ export function SignupForm() {
       setLoading(false);
       return;
     }
+
+    const source = new URLSearchParams(window.location.search).get("utm_source") || "direct";
+    track("signup_completed", { source });
 
     // Account created — sign them straight in.
     const signin = await signIn("credentials", {

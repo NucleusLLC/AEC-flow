@@ -67,6 +67,13 @@ They only call `lib/data/<module>.ts`. When the DB goes live, swap those functio
 Design tokens live in `app/globals.css` (`@theme`): `bg-surface`, `text-fg/muted/faint`,
 `border-border`, `bg-brand/text-brand-fg`, `--radius-card`, the dark "blueprint" sidebar.
 
+### Analytics
+
+Vercel Web Analytics collects page visits and the custom events `portal_cta_click`,
+`signup_completed` (UTM source or direct, no account details), and `print_view` (document
+route type only, no IDs). Custom events require a Vercel plan that supports them.
+Vercel Web Analytics is cookieless, so no cookie banner is needed.
+
 ---
 
 ## Scripts
