@@ -1,6 +1,16 @@
 import type { Dict } from "../../types";
 
 export const shell: Dict = {
+    "No code yet? Get one here.": "Ainda não tem código? Peça um aqui.",
+    "Request your code": "Peça seu código",
+    "Requesting your code…": "Solicitando seu código…",
+    "If that address can receive mail, your code is on its way. Check spam too.": "Se esse endereço puder receber e-mails, seu código está a caminho. Confira também o spam.",
+    "Could not request your code. Please try again.": "Não foi possível solicitar seu código. Tente novamente.",
+    "Your AEC-flow beta code": "Seu código beta do AEC-flow",
+    "6 months free, no card": "6 meses grátis, sem cartão",
+    "The beta is full for now. You are on the list and we will send a code when a seat opens.": "A beta está lotada por enquanto. Você está na lista e enviaremos um código quando houver uma vaga.",
+    "Too many code requests. Try again in {count} minute.": "Muitas solicitações de código. Tente novamente em {count} minuto.",
+    "Too many code requests. Try again in {count} minutes.": "Muitas solicitações de código. Tente novamente em {count} minutos.",
   "{count} at risk": "{count} em risco",
   "across {count} open proposals": "em {count} propostas abertas",
   "{amount} pending": "{amount} pendente",

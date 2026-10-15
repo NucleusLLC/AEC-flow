@@ -16,7 +16,7 @@ const inputCls =
   "h-10 w-full rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg placeholder:text-faint focus:border-brand focus:bg-surface focus:outline-none focus:ring-2 focus:ring-brand/15";
 const labelCls = "mb-1 block text-xs font-medium text-muted";
 
-export function SignupForm() {
+export function SignupForm({ initialCode }: { initialCode?: string }) {
   const router = useRouter();
   const t = useT();
 
@@ -24,7 +24,7 @@ export function SignupForm() {
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode ?? "");
   const [agreed, setAgreed] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);

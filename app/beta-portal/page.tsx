@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TrackLink } from "@/components/beta-portal/track-link";
+import { RequestCodeForm } from "@/components/beta-portal/request-code-form";
 import {
   Calculator,
   CalendarClock,
@@ -101,7 +102,8 @@ export default async function BetaPortalPage() {
               {t("Sign in")}
             </Link>
           </div>
-          <p className="mt-4 text-xs text-faint">{t("A beta invite code is required to create an account.")}</p>
+          <p className="mt-4 text-xs text-faint">{t("No code yet? Get one here.")}</p>
+          <RequestCodeForm />
         </div>
       </section>
 
@@ -178,8 +180,9 @@ export default async function BetaPortalPage() {
           <div className="rounded-[var(--radius-card)] border border-border bg-surface-2 p-8 text-center">
             <h3 className="text-xl font-bold tracking-tight text-fg">{t("Ready to start?")}</h3>
             <p className="mx-auto mt-2 max-w-xs text-sm text-muted">
-              {t("Create your beta account in under a minute. Invite code required.")}
+              {t("No code yet? Get one here.")}
             </p>
+            <RequestCodeForm />
             <Link
               href="/signup"
               className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3 text-base font-semibold text-brand-fg transition-opacity hover:opacity-90"

@@ -42,6 +42,8 @@ export async function registerBetaTester(input: {
 }): Promise<SignupResult> {
   // Declared outside the try so the catch can hand a reserved code back to the pool.
   let claimedCodeId: string | null = null;
+  let priorCodeStatus = "available";
+  let priorClaimedEmail: string | null = null;
   try {
     const name = input.name?.trim();
     const email = input.email?.trim().toLowerCase();
@@ -88,14 +90,16 @@ export async function registerBetaTester(input: {
     let poolCode: { id: string; code: string; keyPrefix: string } | null = null;
     const found = await prisma.betaCode.findUnique({
       where: { code: submitted },
-      select: { id: true, code: true, keyPrefix: true, status: true },
+      select: { id: true, code: true, keyPrefix: true, status: true, claimedEmail: true },
     });
     if (found) {
       // A real pool code that's already spent is a dead end — say so plainly rather than
       // falling through to "isn't valid", which would send the tester hunting for a typo.
-      if (found.status !== "available") {
+      if (found.status !== "available" && found.status !== "issued") {
         return { ok: false, error: "That beta access code has already been used." };
       }
+      priorCodeStatus = found.status;
+      priorClaimedEmail = found.claimedEmail;
       poolCode = { id: found.id, code: found.code, keyPrefix: found.keyPrefix };
     } else if (!sharedCode || submitted !== sharedCode) {
       return { ok: false, error: "That beta access code isn't valid." };
@@ -120,7 +124,7 @@ export async function registerBetaTester(input: {
     // rather than issuing the same licence key to two testers (not recoverable).
     if (poolCode) {
       const claimed = await prisma.betaCode.updateMany({
-        where: { id: poolCode.id, status: "available" },
+        where: { id: poolCode.id, status: { in: ["available", "issued"] } },
         data: { status: "claimed", claimedEmail: email, claimedAt: now },
       });
       if (claimed.count !== 1) {
@@ -227,7 +231,7 @@ export async function registerBetaTester(input: {
       try {
         await prisma.betaCode.updateMany({
           where: { id: claimedCodeId, status: "claimed" },
-          data: { status: "available", claimedEmail: null, claimedAt: null, companyId: null },
+          data: { status: priorCodeStatus, claimedEmail: priorClaimedEmail, claimedAt: null, companyId: null },
         });
       } catch {
         /* leave it claimed; a burned code is recoverable, a double-issued key is not */

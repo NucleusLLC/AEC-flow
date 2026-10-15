@@ -26,6 +26,8 @@ export default defineConfig({
     include: [
       "components/auth/signup-form.test.tsx",
       "components/print/print-view-tracker.test.tsx",
+      "lib/account-security/beta-code-request.test.ts",
+      "lib/account-security/beta-code-signup.test.ts",
       "lib/proposals/**/*.test.ts",
       "lib/firm-identity.test.ts",
       // Emailing a service proposal: the message, and the guard that stops a
