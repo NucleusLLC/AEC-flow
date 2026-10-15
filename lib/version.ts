@@ -179,8 +179,9 @@
  *   minute after opening, every five minutes, and on coming back to the tab) and, when that is a
  *   different release, shows "A new version of AEC-flow is available" with Reload now and Later.
  *   It never reloads by itself: there may be unsaved work in the tab. Six languages. No SQL.
+ * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill; issued codes redeem at signup.
  */
-export const APP_VERSION = "0.25.14";
+export const APP_VERSION = "0.26.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

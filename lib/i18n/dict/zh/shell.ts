@@ -1,6 +1,16 @@
 import type { Dict } from "../../types";
 
 export const shell: Dict = {
+    "No code yet? Get one here.": "还没有代码？在这里获取。",
+    "Request your code": "申请代码",
+    "Requesting your code…": "正在申请代码…",
+    "If that address can receive mail, your code is on its way. Check spam too.": "如果该地址可以接收邮件，你的代码已在发送途中。也请检查垃圾邮件。",
+    "Could not request your code. Please try again.": "无法申请代码。请重试。",
+    "Your AEC-flow beta code": "你的 AEC-flow 测试代码",
+    "6 months free, no card": "免费使用6个月，无需银行卡",
+    "The beta is full for now. You are on the list and we will send a code when a seat opens.": "测试名额暂时已满。你已加入名单，有空位时我们会发送代码。",
+    "Too many code requests. Try again in {count} minute.": "代码申请次数过多。请在 {count} 分钟后重试。",
+    "Too many code requests. Try again in {count} minutes.": "代码申请次数过多。请在 {count} 分钟后重试。",
   "{count} at risk": "{count} 项存在风险",
   "across {count} open proposals": "涉及 {count} 份未结提案",
   "{amount} pending": "{amount} 待处理",
