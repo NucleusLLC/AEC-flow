@@ -179,12 +179,14 @@
  *   minute after opening, every five minutes, and on coming back to the tab) and, when that is a
  *   different release, shows "A new version of AEC-flow is available" with Reload now and Later.
  *   It never reloads by itself: there may be unsaved work in the tab. Six languages. No SQL.
- * 0.27.0 (15 OCT 2026): feat — Vercel Web Analytics with portal CTA, signup and first-print events.
- */
-export const APP_VERSION = "0.27.0";
  * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill; issued codes redeem at signup.
+ * 0.27.0 (15 OCT 2026): feat — Vercel Web Analytics with portal CTA, signup and first-print events.
+ * 0.27.1 (15 OCT 2026): fix — the 0.26.0 and 0.27.0 merges left two APP_VERSION constants and two
+ *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
+ *   type-checked against the new initialCode prop. The build failed; this is the repair.
+ * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
  */
-export const APP_VERSION = "0.26.0";
+export const APP_VERSION = "0.27.3";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
