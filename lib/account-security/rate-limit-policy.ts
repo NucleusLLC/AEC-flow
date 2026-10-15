@@ -29,6 +29,8 @@ export type RateLimitRule = {
 export const RATE_LIMITS = {
   loginIp: { prefix: "login:ip", limit: 30, windowSeconds: 15 * 60 },
   loginEmail: { prefix: "login:email", limit: 10, windowSeconds: 15 * 60 },
+  codeRequestIp: { prefix: "code-request:ip", limit: 5, windowSeconds: 3600 },
+  codeRequestEmail: { prefix: "code-request:email", limit: 2, windowSeconds: 3600 },
   signupIp: { prefix: "signup:ip", limit: 5, windowSeconds: 60 * 60 },
   resetRequestIp: { prefix: "reset-request:ip", limit: 5, windowSeconds: 15 * 60 },
   resetRequestEmail: { prefix: "reset-request:email", limit: 3, windowSeconds: 60 * 60 },

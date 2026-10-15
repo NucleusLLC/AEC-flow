@@ -10,6 +10,7 @@
  *                     send returns `{ ok: false }` without contacting anyone;
  *                     production currently holds the variable with an empty
  *                     value, which lands here.
+ *   BETA_NOTIFY_EMAIL — optional recipient for beta-code request notifications.
  *   EMAIL_FROM      — verified sender, e.g. `AEC-Flow <noreply@aec-flow.com>`.
  *                     REQUIRED. Unset means every send returns `{ ok: false }`
  *                     without contacting anyone — see resolveFrom() for why
@@ -327,4 +328,19 @@ function stripHtml(html: string): string {
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Send the same public response whether a seat is available or the pool is empty. */
+export async function sendBetaCodeEmail(opts: { to: string; code?: string }): Promise<SendResult> {
+  const { getServerT } = await import("@/lib/i18n/server");
+  const t = await getServerT();
+  const base = (process.env.NEXT_PUBLIC_APP_URL?.trim() || process.env.NEXTAUTH_URL?.trim() || "https://aec-flow.com").replace(/\/+$/, "");
+  const signupUrl = `${base}/signup?code=${encodeURIComponent(opts.code ?? "")}`;
+  const text = opts.code
+    ? `${opts.code}\n${signupUrl}\n${t("6 months free, no card")}`
+    : t("The beta is full for now. You are on the list and we will send a code when a seat opens.");
+  const html = opts.code
+    ? `<p>${escapeHtml(opts.code)}</p><p><a href="${escapeHtml(signupUrl)}">${escapeHtml(signupUrl)}</a></p><p>${escapeHtml(t("6 months free, no card"))}</p>`
+    : `<p>${escapeHtml(text)}</p>`;
+  return sendEmail({ to: opts.to, subject: t("Your AEC-flow beta code"), text, html });
 }

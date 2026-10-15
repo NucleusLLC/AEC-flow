@@ -1,6 +1,16 @@
 import type { Dict } from "../../types";
 
 export const shell: Dict = {
+    "No code yet? Get one here.": "コードをお持ちでない方はこちら。",
+    "Request your code": "コードを申請",
+    "Requesting your code…": "コードを申請中…",
+    "If that address can receive mail, your code is on its way. Check spam too.": "このアドレスでメールを受信できる場合、コードをお送りします。迷惑メールもご確認ください。",
+    "Could not request your code. Please try again.": "コードを申請できませんでした。もう一度お試しください。",
+    "Your AEC-flow beta code": "AEC-flow ベータコード",
+    "6 months free, no card": "6か月無料、カード不要",
+    "The beta is full for now. You are on the list and we will send a code when a seat opens.": "現在ベータ版は満員です。待機リストに登録しました。空きが出たらコードをお送りします。",
+    "Too many code requests. Try again in {count} minute.": "コードの申請回数が多すぎます。{count} 分後に再試行してください。",
+    "Too many code requests. Try again in {count} minutes.": "コードの申請回数が多すぎます。{count} 分後に再試行してください。",
   "{count} at risk": "リスク {count} 件",
   "across {count} open proposals": "未決の提案書 {count} 件の合計",
   "{amount} pending": "{amount} 保留中",

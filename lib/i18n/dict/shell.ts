@@ -7,6 +7,16 @@ import type { AreaDict } from "../types";
 
 export const shell: AreaDict = {
   es: {
+    "No code yet? Get one here.": "¿Aún no tienes código? Consigue uno aquí.",
+    "Request your code": "Solicita tu código",
+    "Requesting your code…": "Solicitando tu código…",
+    "If that address can receive mail, your code is on its way. Check spam too.": "Si esa dirección puede recibir correo, tu código está en camino. Revisa también el spam.",
+    "Could not request your code. Please try again.": "No se pudo solicitar tu código. Inténtalo de nuevo.",
+    "Your AEC-flow beta code": "Tu código beta de AEC-flow",
+    "6 months free, no card": "6 meses gratis, sin tarjeta",
+    "The beta is full for now. You are on the list and we will send a code when a seat opens.": "La beta está completa por ahora. Estás en la lista y te enviaremos un código cuando haya una plaza.",
+    "Too many code requests. Try again in {count} minute.": "Demasiadas solicitudes de código. Inténtalo de nuevo en {count} minuto.",
+    "Too many code requests. Try again in {count} minutes.": "Demasiadas solicitudes de código. Inténtalo de nuevo en {count} minutos.",
     "{count} at risk": "{count} en riesgo",
     "across {count} open proposals": "en {count} propuestas abiertas",
     "{amount} pending": "{amount} pendiente",
@@ -580,6 +590,16 @@ export const shell: AreaDict = {
     "Install": "Instalar",
   },
   nl: {
+    "No code yet? Get one here.": "Nog geen code? Vraag er hier een aan.",
+    "Request your code": "Vraag je code aan",
+    "Requesting your code…": "Je code wordt aangevraagd…",
+    "If that address can receive mail, your code is on its way. Check spam too.": "Als dat adres e-mail kan ontvangen, is je code onderweg. Controleer ook je spam.",
+    "Could not request your code. Please try again.": "Je code kon niet worden aangevraagd. Probeer het opnieuw.",
+    "Your AEC-flow beta code": "Je AEC-flow-bètacode",
+    "6 months free, no card": "6 maanden gratis, geen betaalkaart",
+    "The beta is full for now. You are on the list and we will send a code when a seat opens.": "De bèta zit voorlopig vol. Je staat op de lijst en we sturen een code zodra er een plek vrijkomt.",
+    "Too many code requests. Try again in {count} minute.": "Te veel codeaanvragen. Probeer het over {count} minuut opnieuw.",
+    "Too many code requests. Try again in {count} minutes.": "Te veel codeaanvragen. Probeer het over {count} minuten opnieuw.",
     "{count} at risk": "{count} met risico",
     "across {count} open proposals": "over {count} openstaande offertes",
     "{amount} pending": "{amount} in afwachting",
