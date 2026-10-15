@@ -24,6 +24,8 @@ export default defineConfig({
     // Files are named explicitly rather than broadened to `lib/**`: a wider glob
     // would collect the node:test suites described above, which Vitest can't run.
     include: [
+      "components/auth/signup-form.test.tsx",
+      "components/print/print-view-tracker.test.tsx",
       "lib/account-security/beta-code-request.test.ts",
       "lib/account-security/beta-code-signup.test.ts",
       "lib/proposals/**/*.test.ts",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TrackLink } from "@/components/beta-portal/track-link";
 import { RequestCodeForm } from "@/components/beta-portal/request-code-form";
 import {
   Calculator,
@@ -88,12 +89,12 @@ export default async function BetaPortalPage() {
             {t("Estimates, schedules, proposals and construction administration — for architecture, engineering and construction teams, in one place. Get 6 months free as a beta tester.")}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
+            <TrackLink
               href="/signup"
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3 text-base font-semibold text-brand-fg transition-opacity hover:opacity-90 sm:w-auto"
             >
               {t("Join the beta — 6 months free")} <ArrowRight className="h-5 w-5" />
-            </Link>
+            </TrackLink>
             <Link
               href="/login"
               className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-surface px-6 py-3 text-base font-medium text-fg transition-colors hover:bg-surface-2 sm:w-auto"
