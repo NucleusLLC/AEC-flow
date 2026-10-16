@@ -24,6 +24,8 @@ export default defineConfig({
     // Files are named explicitly rather than broadened to `lib/**`: a wider glob
     // would collect the node:test suites described above, which Vitest can't run.
     include: [
+      // Pure drawing take-off engine; explicitly scoped to avoid node:test suites.
+      "lib/takeoff/**/*.test.ts",
       "components/auth/signup-form.test.tsx",
       "components/print/print-view-tracker.test.tsx",
       "lib/account-security/beta-code-request.test.ts",
