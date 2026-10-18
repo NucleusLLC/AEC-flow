@@ -187,6 +187,9 @@
  * 0.27.2 (15 OCT 2026): fix — a signed-out visitor to / lands on the beta portal, not the login form.
  */
 export const APP_VERSION = "0.27.2";
+ * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
+ */
+export const APP_VERSION = "0.27.3";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
