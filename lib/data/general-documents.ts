@@ -339,6 +339,51 @@ export async function voidGeneralDocument(
   return documentDto(updated as Row);
 }
 
+/** Thrown when the project to file a document under is not this practice's. */
+export class DocumentProjectNotFoundError extends Error {
+  constructor() {
+    super("That project could not be found.");
+    this.name = "DocumentProjectNotFoundError";
+  }
+}
+
+/**
+ * File the document under a project, move it to another, or take it off one
+ * (`projectId` null). Allowed at ANY status, signed and void included: which
+ * project a document belongs to is filing, not content — the wording, dates and
+ * signatures stay exactly as they were issued. The project's name is read from
+ * the project itself (through the tenant extension), never from the caller.
+ *
+ * Returns the project it was filed under before, so the caller can refresh both
+ * project pages.
+ */
+export async function linkGeneralDocumentProject(
+  id: string,
+  projectId: string | null,
+): Promise<{ document: GeneralDocumentDTO; previousProjectId: string | null }> {
+  const current = await prisma.generalDocument.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, projectId: true },
+  });
+  if (!current) throw new DocumentNotFoundError();
+
+  let projectName: string | null = null;
+  if (projectId) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId },
+      select: { id: true, name: true },
+    });
+    if (!project) throw new DocumentProjectNotFoundError();
+    projectName = project.name;
+  }
+
+  const updated = await prisma.generalDocument.update({
+    where: { id },
+    data: { projectId: projectId ?? null, projectName },
+  });
+  return { document: documentDto(updated as Row), previousProjectId: current.projectId };
+}
+
 /**
  * Supersede it: a new DRAFT carrying the same content, and the old one marked
  * SUPERSEDED. This is how an issued document is "edited" — the record of what
