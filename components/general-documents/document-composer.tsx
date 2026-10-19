@@ -69,6 +69,8 @@ export function DocumentComposer({
   mode,
   initial,
   initialType,
+  initialProjectId,
+  initialClientId,
   clients: clientsOnFile,
   projects: projectsOnFile,
   firmName,
@@ -78,6 +80,10 @@ export function DocumentComposer({
   initial?: GeneralDocumentDTO;
   /** Preselected from the picker, e.g. /documents/general/new?type=poa */
   initialType?: string;
+  /** Preselected when the document is started from a project's Documents tab. */
+  initialProjectId?: string;
+  /** That project's client, picked with it. */
+  initialClientId?: string;
   clients: PickerOption[];
   projects: PickerOption[];
   firmName: string;
@@ -89,8 +95,8 @@ export function DocumentComposer({
   const [error, setError] = useState<string | null>(null);
 
   const [docType, setDocType] = useState(initial?.docType ?? initialType ?? "");
-  const [clientId, setClientId] = useState(initial?.clientId ?? "");
-  const [projectId, setProjectId] = useState(initial?.projectId ?? "");
+  const [clientId, setClientId] = useState(initial?.clientId ?? initialClientId ?? "");
+  const [projectId, setProjectId] = useState(initial?.projectId ?? initialProjectId ?? "");
   // Grown in place when a client or project is added from this form, so the
   // new record is selected and named in the letter without a reload.
   const [clients, setClients] = useState<PickerOption[]>(clientsOnFile);

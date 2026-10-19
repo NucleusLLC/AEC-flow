@@ -185,11 +185,15 @@
  *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
  *   type-checked against the new initialCode prop. The build failed; this is the repair.
  * 0.27.2 (15 OCT 2026): fix — a signed-out visitor to / lands on the beta portal, not the login form.
- */
-export const APP_VERSION = "0.27.2";
  * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
+ * 0.27.4 (19 OCT 2026): fix — the 0.27.2 and 0.27.3 merges again left two APP_VERSION constants
+ *   and two "version" keys; the build failed. One of each again. No other change.
+ * 0.31.0 (19 OCT 2026): feat — a project's Documents tab lists only that project's paperwork: its General
+ *   Documents (with New document pre-filed to the project and Link an existing document), its
+ *   construction contracts and its building permit files. Any General Document, signed ones too,
+ *   can be filed under a project from its own page; the wording is never altered. No SQL.
  */
-export const APP_VERSION = "0.27.3";
+export const APP_VERSION = "0.31.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
