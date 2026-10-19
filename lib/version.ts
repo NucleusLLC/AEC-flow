@@ -194,8 +194,17 @@
  *   Take-Off sheet (engine only; the measuring screen follows).
  * 0.29.0 (16 OCT 2026): measure on drawings - conditions, calibrated areas,
  *   lengths, counts and cut-outs feed the existing Quantity Take-Off sheet.
+ * 0.30.0 (19 OCT 2026): feat — INVOICE where the work is. /finance, the Finance overview: a big
+ *   + INVOICE button, outstanding / overdue / received this month / drafts per currency, the latest
+ *   invoices and every finance register; first item of the Finance section, which Modules 2 and 3
+ *   now have too. An Invoice button on an accepted Service Proposal (straight to its milestones),
+ *   on every project header (the new-invoice screen for that project) and on the Dashboard, and
+ *   New invoice in the + New menu. Settings > Invoicing (Admin / Director): default payment terms,
+ *   bank details and terms & conditions; the printed invoice carries the bank details under the
+ *   totals and the T&C after the notes or on a second A4 sheet. Voiding an invoice, deleting a
+ *   payment and deleting a draft are now Admin / Director only. No SQL.
  */
-export const APP_VERSION = "0.29.0";
+export const APP_VERSION = "0.30.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

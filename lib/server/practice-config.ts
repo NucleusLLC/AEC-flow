@@ -12,9 +12,16 @@
  */
 import { PRACTICE, type PracticeProfile } from "@/lib/data/settings";
 import { DEFAULT_FONT_ID, selectableFonts } from "@/lib/documents/fonts";
+import { parseInvoiceSettings, type InvoiceSettings } from "@/lib/finance/invoice-settings";
 import { readAppConfig, writeAppConfig } from "./app-config-store";
 
 type AppConfig = {
+  /**
+   * Firm-wide invoice settings: default payment terms, bank details and T&C.
+   * Read through `parseInvoiceSettings` (lib/finance/invoice-settings.ts), so
+   * whatever is stored is clamped before any invoice sees it.
+   */
+  invoice?: Partial<InvoiceSettings>;
   anthropicApiKey?: string;
   practiceProfile?: Partial<PracticeProfile>;
   /** Logo as a data URL (e.g. "data:image/png;base64,…"); stored inline for portability. */
@@ -141,6 +148,25 @@ export async function saveFooter(footer: FooterSettings): Promise<void> {
     fontSize: Math.max(5, Math.min(24, Math.round(footer.fontSize) || DEFAULT_FOOTER.fontSize)),
   };
   await writeConfig(cfg);
+}
+
+/** The practice's invoice settings, with every missing or bad value defaulted. */
+export async function getInvoiceSettings(): Promise<InvoiceSettings> {
+  const cfg = await readConfig();
+  return parseInvoiceSettings(cfg.invoice);
+}
+
+/**
+ * Persists the invoice settings, through the same parser the reads use, so a
+ * value that would be clamped on the way out is clamped on the way in too.
+ * Read-modify-write of the whole blob, like every other setter here.
+ */
+export async function saveInvoiceSettings(input: unknown): Promise<InvoiceSettings> {
+  const next = parseInvoiceSettings(input);
+  const cfg = await readConfig();
+  cfg.invoice = next;
+  await writeConfig(cfg);
+  return next;
 }
 
 /** The org-wide system monetary unit (used as the default across all modules). */

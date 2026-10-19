@@ -25,6 +25,8 @@ import { getServerSession } from "next-auth";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
+import { requireActor } from "@/lib/server/actor";
+import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/lib/finance/invoice-permissions";
 import { releaseWork } from "@/lib/data/work-billing";
 import { creditNoteSummaryDto } from "@/lib/data/credit-notes";
 import {
@@ -66,6 +68,24 @@ export class InvoiceLockedError extends Error {
     super(`This invoice has been issued, so it cannot be ${what}.`);
     this.name = "InvoiceLockedError";
   }
+}
+
+/**
+ * Voiding an invoice, deleting a payment and deleting a draft are for an
+ * administrator, a director or the founder (lib/finance/invoice-permissions.ts).
+ * Checked here as well as in the actions in front of this file: an action is a
+ * public endpoint, and the data layer is the last place the rule can live.
+ */
+export class InvoiceForbiddenError extends Error {
+  constructor() {
+    super(INVOICE_MANAGER_ONLY);
+    this.name = "InvoiceForbiddenError";
+  }
+}
+
+async function requireInvoiceAction(action: InvoiceAction): Promise<void> {
+  const who = await requireActor();
+  if (!canDoInvoiceAction(action, who.role, who.isFounder)) throw new InvoiceForbiddenError();
 }
 
 async function actor(): Promise<{ id: string | null; name: string | null }> {
@@ -499,7 +519,16 @@ export async function getProposalBilling(
 
 /** Accepted proposals worth offering on the "raise an invoice" screen. */
 export async function listBillableProposals(): Promise<
-  { id: string; number: string; title: string; clientName: string | null; status: string; currency: string; grandTotal: number }[]
+  {
+    id: string;
+    number: string;
+    title: string;
+    clientName: string | null;
+    projectId: string | null;
+    status: string;
+    currency: string;
+    grandTotal: number;
+  }[]
 > {
   const rows = await prisma.serviceProposal.findMany({
     where: {
@@ -511,6 +540,7 @@ export async function listBillableProposals(): Promise<
       number: true,
       title: true,
       clientName: true,
+      projectId: true,
       status: true,
       currency: true,
       grandTotal: true,
@@ -659,6 +689,7 @@ export async function issueInvoice(
 }
 
 export async function voidInvoice(id: string, reason: string): Promise<InvoiceDTO> {
+  await requireInvoiceAction("void");
   await requireInvoice(id);
   await prisma.invoice.update({
     where: { id },
@@ -675,6 +706,7 @@ export async function voidInvoice(id: string, reason: string): Promise<InvoiceDT
 
 /** Soft delete, drafts only. An issued invoice is a record and stays. */
 export async function deleteInvoice(id: string): Promise<void> {
+  await requireInvoiceAction("deleteDraft");
   const current = await requireInvoice(id);
   if (current.status !== "DRAFT") throw new InvoiceLockedError("deleted");
   const affected = await prisma.invoice.updateMany({
@@ -724,6 +756,7 @@ export async function recordPayment(
 }
 
 export async function deletePayment(id: string): Promise<void> {
+  await requireInvoiceAction("deletePayment");
   const affected = await prisma.invoicePayment.deleteMany({ where: { id } });
   if (affected.count === 0) throw new InvoiceNotFoundError();
 }

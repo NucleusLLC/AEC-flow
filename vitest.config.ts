@@ -239,6 +239,14 @@ export default defineConfig({
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
       "lib/finance/receivables.test.ts",
+      // Finance overview (/finance): tiles per currency from the existing receivables
+      // maths; firm-wide invoice settings (terms, bank details, T&C) parse + clamp; who
+      // may void an invoice or delete a payment or a draft; the most-specific sidebar
+      // item is the lit one. Pure.
+      "lib/finance/hub.test.ts",
+      "lib/finance/invoice-settings.test.ts",
+      "lib/finance/invoice-permissions.test.ts",
+      "lib/nav-active.test.ts",
       // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
       "lib/projects/architecture-type.test.ts",
       // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with

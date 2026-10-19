@@ -12,10 +12,17 @@
  * There is deliberately no action that edits an issued invoice, and none that
  * sets a status to PAID: payments are recorded, and the status follows the
  * money (lib/finance/calc.ts).
+ *
+ * VOID, DELETE A PAYMENT and DELETE A DRAFT are for an administrator, a director
+ * or the founder (lib/finance/invoice-permissions.ts) — checked here first, so
+ * the refusal is a plain sentence, and again in lib/data/invoices.ts. Raising,
+ * editing a draft, issuing and recording a payment stay open to every member.
  */
 
 import { revalidatePath } from "next/cache";
 import { getServerT } from "@/lib/i18n/server";
+import { requireActor } from "@/lib/server/actor";
+import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/lib/finance/invoice-permissions";
 import {
   createInvoice,
   deleteInvoice,
@@ -24,6 +31,7 @@ import {
   recordPayment,
   updateInvoice,
   voidInvoice,
+  InvoiceForbiddenError,
   InvoiceLockedError,
   InvoiceNotFoundError,
   InvoiceNumberInUseError,
@@ -53,6 +61,7 @@ async function issuesError(issues: { path: string; message: string }[]): Promise
 
 function failure(e: unknown, fallback: string): { ok: false; error: string } {
   if (
+    e instanceof InvoiceForbiddenError ||
     e instanceof InvoiceNumberInUseError ||
     e instanceof InvoiceNotFoundError ||
     e instanceof InvoiceLockedError
@@ -60,6 +69,17 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
     return { ok: false, error: e.message };
   }
   return { ok: false, error: e instanceof Error ? e.message : fallback };
+}
+
+/** Signed in AND allowed this action; a refusal is the reason, not a digest. */
+async function invoiceGate(action: InvoiceAction): Promise<{ ok: false; error: string } | null> {
+  try {
+    const actor = await requireActor();
+    if (!canDoInvoiceAction(action, actor.role, actor.isFounder)) return { ok: false, error: INVOICE_MANAGER_ONLY };
+    return null;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
+  }
 }
 
 export async function createInvoiceAction(input: InvoiceInput): Promise<InvoiceActionResult> {
@@ -103,6 +123,8 @@ export async function issueInvoiceAction(
 }
 
 export async function voidInvoiceAction(id: string, reason: string): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("void");
+  if (denied) return denied;
   try {
     const invoice = await voidInvoice(id, reason);
     revalidateInvoice(invoice.id);
@@ -113,6 +135,8 @@ export async function voidInvoiceAction(id: string, reason: string): Promise<Inv
 }
 
 export async function deleteInvoiceAction(id: string): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("deleteDraft");
+  if (denied) return denied;
   try {
     await deleteInvoice(id);
     revalidateInvoice(id);
@@ -141,6 +165,8 @@ export async function deletePaymentAction(
   invoiceId: string,
   id: string,
 ): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("deletePayment");
+  if (denied) return denied;
   try {
     await deletePayment(id);
     revalidateInvoice(invoiceId);

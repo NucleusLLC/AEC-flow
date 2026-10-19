@@ -12,6 +12,7 @@ import {
   X,
   Trash2,
   Type,
+  ReceiptText,
 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,8 @@ import { MembersManager } from "@/components/settings/members-manager";
 import { DocumentControlForm } from "@/components/settings/document-control-form";
 import { GuideNarrationCard } from "@/components/settings/guide-narration-card";
 import { SampleFilesCard } from "@/components/settings/sample-files-card";
+import { InvoiceSettingsCard } from "@/components/settings/invoice-settings-card";
+import { DEFAULT_INVOICE_SETTINGS, type InvoiceSettings } from "@/lib/finance/invoice-settings";
 import type { SampleSetStatus } from "@/lib/samples/install";
 import {
   saveAnthropicApiKeyAction,
@@ -41,11 +44,12 @@ import {
   type Preferences,
 } from "@/lib/data/settings";
 
-type Tab = "practice" | "documentControl" | "templates" | "members" | "preferences" | "integrations";
+type Tab = "practice" | "documentControl" | "invoicing" | "templates" | "members" | "preferences" | "integrations";
 
 const TABS: Array<{ key: Tab; label: string; icon: typeof Building2 }> = [
   { key: "practice", label: "Practice", icon: Building2 },
   { key: "documentControl", label: "Document Control", icon: Type },
+  { key: "invoicing", label: "Invoicing", icon: ReceiptText },
   { key: "templates", label: "Proposal Templates", icon: FileText },
   { key: "members", label: "Members & Roles", icon: Users },
   { key: "preferences", label: "Preferences", icon: SlidersHorizontal },
@@ -59,6 +63,7 @@ export function SettingsView({
   footer,
   logoSettings,
   documentFontId,
+  invoiceSettings = DEFAULT_INVOICE_SETTINGS,
   templates,
   members,
   roles,
@@ -77,6 +82,8 @@ export function SettingsView({
   footer: FooterSettings;
   logoSettings: LogoSettings;
   documentFontId: string;
+  /** Settings > Invoicing: default terms, bank details, T&C (per company). */
+  invoiceSettings?: InvoiceSettings;
   templates: ProposalTemplate[];
   members: Member[];
   roles: RoleInfo[];
@@ -131,6 +138,11 @@ export function SettingsView({
 
       {tab === "documentControl" ? (
         <DocumentControlForm initialFontId={documentFontId} canSave={canSave && canManagePasswords} />
+      ) : null}
+
+      {/* Printed on every invoice the practice sends: the letterhead gate. */}
+      {tab === "invoicing" ? (
+        <InvoiceSettingsCard initial={invoiceSettings} canSave={canSave && canManagePasswords} />
       ) : null}
 
       {tab === "templates" ? (
