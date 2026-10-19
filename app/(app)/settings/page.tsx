@@ -3,7 +3,7 @@ import { getServerT } from "@/lib/i18n/server";
 import { SettingsView } from "@/components/settings/settings-view";
 import { rolesFromMembers, type Member } from "@/lib/data/settings";
 import { getUserPreferences } from "@/lib/data/preferences";
-import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getInvoiceSettings, getPracticeSettings } from "@/lib/server/practice-config";
 import { listTemplates } from "@/lib/data/proposal-templates";
 import { getTeam } from "@/lib/data/team";
 import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
@@ -25,7 +25,7 @@ export default async function SettingsPage() {
   const userId = session?.user?.id ?? null;
   const isFounder = isFounderEmail(session?.user?.email);
 
-  const [practice, templates, team, preferences, keyStatus, narrationStatus] = await Promise.all([
+  const [practice, templates, team, preferences, keyStatus, narrationStatus, invoiceSettings] = await Promise.all([
     getPracticeSettings(),
     listTemplates(),
     getTeam(),
@@ -33,6 +33,7 @@ export default async function SettingsPage() {
     getAnthropicKeyStatus(),
     // Guide narration is a platform setting: only the founder is shown it.
     isFounder ? getNarrationStatus() : Promise.resolve(null),
+    getInvoiceSettings(),
   ]);
 
   // Real User rows projected to the settings Member shape; roles derived from them.
@@ -76,6 +77,7 @@ export default async function SettingsPage() {
         footer={practice.footer}
         logoSettings={practice.logo}
         documentFontId={practice.documentFontId}
+        invoiceSettings={invoiceSettings}
         templates={templates}
         members={members}
         roles={roles}

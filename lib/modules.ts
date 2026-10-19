@@ -30,6 +30,7 @@ import {
   GENERAL_DOCUMENTS_ITEM,
   WRITE_WITH_AI_ITEM,
   CONTRACTS_ITEM,
+  FINANCE_OVERVIEW_ITEM,
   INVOICES_ITEM,
   CREDIT_NOTES_ITEM,
   RECEIVABLES_ITEM,
@@ -93,6 +94,23 @@ const DOC_TEMPLATES = { label: "Templates", href: "/documents/templates", icon: 
 const DRAWINGS_REGISTER = DRAWINGS_REGISTER_ITEM;
 const DRAWINGS_INTAKE = DRAWINGS_INTAKE_ITEM;
 
+/**
+ * The Finance section, the same in every module that has one. Invoicing is not
+ * a design-practice-only feature: a construction administrator bills stages and
+ * an estimator bills a priced job, so Modules 2 and 3 carry it too (they had no
+ * Finance section, and therefore no way to an invoice, before 0.30.0).
+ */
+const FINANCE_ITEMS = [
+  FINANCE_OVERVIEW_ITEM,
+  INVOICES_ITEM,
+  CREDIT_NOTES_ITEM,
+  RECEIVABLES_ITEM,
+  TIME_ITEM,
+  EXPENSES_ITEM,
+  PROFIT_ITEM,
+  TAX_ITEM,
+];
+
 const DASHBOARD_HREF: Record<ModuleKey, string> = {
   design: "/modules/design",
   construction_admin: "/modules/construction-admin",
@@ -118,6 +136,7 @@ const MODULE_3: AppModule = {
     { title: "Overview", items: [{ label: "Module 3 Dashboard", href: DASHBOARD_HREF.estimating_timeframe, icon: LayoutDashboard }] },
     { title: "Estimating", items: [{ label: "Estimates", href: "/estimates", icon: Calculator }] },
     { title: "Planning", items: [{ label: "Schedule", href: "/schedule", icon: CalendarClock }] },
+    { title: "Finance", items: FINANCE_ITEMS },
     { title: "Documents", items: [DOC_GENERATOR, DOC_REGISTER, DOC_TEMPLATES] },
   ],
 };
@@ -149,7 +168,7 @@ const MODULE_1: AppModule = {
     // Estimates system itself is untouched (docs/protected-systems.md).
     { title: "Estimating", items: [{ label: "Estimates", href: "/estimates", icon: Calculator }] },
     { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }] },
-    { title: "Finance", items: [INVOICES_ITEM, CREDIT_NOTES_ITEM, RECEIVABLES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM, TAX_ITEM] },
+    { title: "Finance", items: FINANCE_ITEMS },
     {
       title: DRAWINGS_AND_DOCUMENTS,
       items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, GENERAL_DOCUMENTS_ITEM, WRITE_WITH_AI_ITEM, CONTRACTS_ITEM, DOC_GENERATOR, DOC_REGISTER],
@@ -180,6 +199,7 @@ const MODULE_2: AppModule = {
         { label: "Material Selection", href: "/materials", icon: Boxes },
       ],
     },
+    { title: "Finance", items: FINANCE_ITEMS },
     {
       title: DRAWINGS_AND_DOCUMENTS,
       items: [DRAWINGS_REGISTER, DRAWINGS_INTAKE, GENERAL_DOCUMENTS_ITEM, WRITE_WITH_AI_ITEM, CONTRACTS_ITEM, DOC_GENERATOR, DOC_REGISTER],

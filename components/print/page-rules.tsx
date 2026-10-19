@@ -256,6 +256,12 @@ const PRINT_BREAK_CSS = `
 
 .aec-doc [data-break-before] { break-before: page; page-break-before: always; }
 
+/* Set by the DOCUMENT, never by the measuring pass (which clears only its own
+ * stamps): a heading that always begins a page, e.g. an invoice's terms &
+ * conditions on a second sheet. PagedPreview models it as a pinned break; this
+ * rule carries it to the printer even when the pass declined to run. */
+.aec-doc [data-page-start] { break-before: page; page-break-before: always; }
+
 .aec-doc p,
 .aec-doc li { orphans: ${BREAK_RULES.minimumOrphanLines}; widows: ${BREAK_RULES.minimumWidowLines}; }
 

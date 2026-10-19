@@ -187,6 +187,18 @@ export const TAX_ITEM: NavItem = {
   icon: Landmark,
 };
 
+/**
+ * The Finance overview (/finance): the big INVOICE button, what is owed, overdue,
+ * received this month and in draft, and the way into every finance register.
+ * First in every Finance section, so the heading the owner looked under for an
+ * invoice button now leads straight to one.
+ */
+export const FINANCE_OVERVIEW_ITEM: NavItem = {
+  label: "Finance overview",
+  href: "/finance",
+  icon: LayoutDashboard,
+};
+
 /** Section title used wherever the drawings bin appears. */
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
@@ -250,7 +262,7 @@ export const navSections: NavSection[] = [
   },
   {
     title: "Finance",
-    items: [INVOICES_ITEM, CREDIT_NOTES_ITEM, RECEIVABLES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM, TAX_ITEM],
+    items: [FINANCE_OVERVIEW_ITEM, INVOICES_ITEM, CREDIT_NOTES_ITEM, RECEIVABLES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM, TAX_ITEM],
   },
   {
     title: "People",

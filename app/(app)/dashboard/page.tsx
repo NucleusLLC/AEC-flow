@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock, ReceiptText } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { getBetaMembership } from "@/lib/data/account";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
@@ -98,13 +98,23 @@ export default async function DashboardPage() {
             {t("Here's what's happening across the practice today.")}
           </p>
         </div>
-        <Link
-          href="/reports"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-        >
-          <BarChart3 className="h-4 w-4 text-muted" />
-          {t("View reports")}
-        </Link>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {/* Quick action: raise an invoice from the first screen of the day. */}
+          <Link
+            href="/finance/invoices/new"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <ReceiptText className="h-4 w-4" aria-hidden="true" />
+            <span>{t("Invoice")}</span>
+          </Link>
+          <Link
+            href="/reports"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <BarChart3 className="h-4 w-4 text-muted" />
+            {t("View reports")}
+          </Link>
+        </div>
       </div>
 
       {/* Building permit revision deadlines inside their warning window */}

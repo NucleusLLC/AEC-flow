@@ -10,7 +10,8 @@ import { milestoneInvoiceLines } from "@/lib/finance/proposal-billing";
 import { projectsWithUnbilledWork, unbilledWork } from "@/lib/data/work-billing";
 import { UnbilledWorkPicker } from "@/components/finance/unbilled-work-picker";
 import { getClients } from "@/lib/data/clients";
-import { getProjects } from "@/lib/data/projects";
+import { getProject, getProjects } from "@/lib/data/projects";
+import { getInvoiceSettings } from "@/lib/server/practice-config";
 import { dueDateFrom } from "@/lib/finance/calc";
 import { ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
@@ -29,14 +30,27 @@ export async function generateMetadata(): Promise<Metadata> {
  * against it and what is left, because "bill stage 2" is a question about the
  * proposal's history, not just its schedule. A proposal whose milestones do not
  * add up to 100% says so here rather than quietly under-billing.
+ *
+ * `?project=<id>` (the project header's Invoice button) narrows the first step
+ * to that job: its accepted proposals, its unbilled work, and a from-scratch
+ * form with the project and its client already filled in.
+ *
+ * Payment terms default to the practice's own (Settings > Invoicing) rather
+ * than a fixed 30 days; each invoice can still change them.
  */
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ proposal?: string; milestones?: string; work?: string }>;
+  searchParams: Promise<{ proposal?: string; milestones?: string; work?: string; project?: string }>;
 }) {
-  const [{ proposal: proposalId, milestones: picked, work: workProjectId }, clients, projects, proposals] =
-    await Promise.all([searchParams, getClients(), getProjects(), listBillableProposals()]);
+  const [
+    { proposal: proposalId, milestones: picked, work: workProjectId, project: forProjectId },
+    clients,
+    projects,
+    allProposals,
+    invoiceSettings,
+  ] = await Promise.all([searchParams, getClients(), getProjects(), listBillableProposals(), getInvoiceSettings()]);
+  const termsDays = invoiceSettings.defaultTermsDays;
 
   const today = ymd(new Date());
   const t = await getServerT();
@@ -101,8 +115,8 @@ export default async function NewInvoicePage({
             taxPercent: billing.taxPercent,
             taxMode: billing.taxMode,
             issueDate: today,
-            termsDays: 30,
-            dueDate: dueDateFrom(today, 30),
+            termsDays,
+            dueDate: dueDateFrom(today, termsDays),
             lines,
           }}
         />
@@ -279,8 +293,11 @@ export default async function NewInvoicePage({
   }
 
   // Step 1a: choose a proposal, a job with unbilled work, or write one from
-  // scratch.
-  const withWork = await projectsWithUnbilledWork();
+  // scratch — for one project when the link came from that project.
+  const forProject = forProjectId ? await getProject(forProjectId) : null;
+  const proposals = forProject ? allProposals.filter((p) => p.projectId === forProject.id) : allProposals;
+  const allWork = await projectsWithUnbilledWork();
+  const withWork = forProject ? allWork.filter((w) => w.projectId === forProject.id) : allWork;
 
   return (
     <div className="w-full max-w-4xl space-y-6">
@@ -296,6 +313,16 @@ export default async function NewInvoicePage({
         <p className="text-sm text-muted">
           {t("From an accepted proposal, so the amounts and the tax come across — or from scratch.")}
         </p>
+        {forProject ? (
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-md bg-brand/10 px-2 py-0.5 font-medium text-brand">
+              {fmt(t("For {project}"), { project: `${forProject.projectNumber} · ${forProject.name}` })}
+            </span>
+            <Link href="/finance/invoices/new" className="text-muted underline-offset-2 hover:text-fg hover:underline">
+              {t("Show every project")}
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <Card>
@@ -399,7 +426,19 @@ export default async function NewInvoicePage({
             clients={clientOptions}
             projects={projectOptions}
             today={today}
-            prefill={{ issueDate: today, termsDays: 30, dueDate: dueDateFrom(today, 30) }}
+            prefill={{
+              issueDate: today,
+              termsDays,
+              dueDate: dueDateFrom(today, termsDays),
+              ...(forProject
+                ? {
+                    projectId: forProject.id,
+                    projectName: forProject.name,
+                    clientId: forProject.clientId,
+                    clientName: forProject.clientName,
+                  }
+                : {}),
+            }}
           />
         </CardBody>
       </Card>

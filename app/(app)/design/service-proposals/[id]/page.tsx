@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer } from "lucide-react";
+import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer, ReceiptText } from "lucide-react";
 import {
   getServiceProposal,
   getServiceProposalIdentification,
@@ -172,6 +172,18 @@ export default async function ServiceProposalDetailPage({
             >
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
               {t("Project Dashboard")}
+            </Link>
+          ) : null}
+          {projectIsOn ? (
+            /* An accepted proposal is billable: straight to its payment
+             * milestones on the new-invoice screen (?proposal=, the same link
+             * that screen's own proposal list uses). */
+            <Link
+              href={`/finance/invoices/new?proposal=${p.id}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand/90"
+            >
+              <ReceiptText className="h-4 w-4" aria-hidden="true" />
+              <span>{t("Invoice")}</span>
             </Link>
           ) : null}
           {!locked ? (

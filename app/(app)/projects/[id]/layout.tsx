@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ReceiptText } from "lucide-react";
 import { StatusBadge, PriorityBadge } from "@/components/ui/badge";
 import { ProjectTabBar } from "@/components/projects/project-tab-bar";
 import { getProject } from "@/lib/data/projects";
@@ -42,6 +42,16 @@ export default async function ProjectWorkspaceLayout({ children, params }: Layou
           </Link>
         </div>
         <div className="flex flex-wrap items-start justify-end gap-2">
+          {/* Always offered, not only when unbilled work exists: the wizard opens
+            * on this project (its accepted proposals, its unbilled work, and a
+            * from-scratch invoice with the project and client filled in). */}
+          <Link
+            href={`/finance/invoices/new?project=${project.id}`}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <ReceiptText className="h-4 w-4" aria-hidden="true" />
+            <span>{t("Invoice")}</span>
+          </Link>
           <Link
             href={`/projects/${project.id}/overview`}
             className="inline-flex h-9 shrink-0 items-center rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"

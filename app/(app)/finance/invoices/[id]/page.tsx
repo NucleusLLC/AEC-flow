@@ -10,6 +10,8 @@ import { InvoicePanel } from "@/components/finance/invoice-panel";
 import { getInvoice } from "@/lib/data/invoices";
 import { militaryDate, ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
+import { requireActor } from "@/lib/server/actor";
+import { canManageInvoices } from "@/lib/finance/invoice-permissions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -22,6 +24,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   if (!invoice) notFound();
   const today = ymd(new Date());
   const t = await getServerT();
+  // Draws Void / Delete draft / delete payment; the actions enforce it again.
+  const actor = await requireActor().catch(() => null);
+  const canManage = actor ? canManageInvoices(actor.role, actor.isFounder) : false;
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -60,7 +65,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         />
       </div>
 
-      <InvoicePanel invoice={invoice} today={today} />
+      <InvoicePanel invoice={invoice} today={today} canManage={canManage} />
 
       <Card>
         <CardHeader title={t("Details")} />
