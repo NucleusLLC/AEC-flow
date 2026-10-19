@@ -185,6 +185,10 @@
  * 0.27.1 (15 OCT 2026): fix — the 0.26.0 and 0.27.0 merges left two APP_VERSION constants and two
  *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
  *   type-checked against the new initialCode prop. The build failed; this is the repair.
+ * 0.27.2 (15 OCT 2026): fix — a signed-out visitor to / lands on the beta portal, not the login form.
+ * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
+ * 0.27.4 (19 OCT 2026): fix — the 0.27.2 and 0.27.3 merges again left two APP_VERSION constants
+ *   and two "version" keys; the build failed. One of each again. No other change.
  * 0.28.0 (16 OCT 2026): own take-off engine — area, length and count measured on drawings in
  *   PDF points, scale notes read (1:100, 1/4" = 1'-0"), totals per condition feeding the Quantity
  *   Take-Off sheet (engine only; the measuring screen follows).

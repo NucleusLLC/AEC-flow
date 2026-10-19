@@ -30,6 +30,8 @@ export default defineConfig({
       "components/print/print-view-tracker.test.tsx",
       "lib/account-security/beta-code-request.test.ts",
       "lib/account-security/beta-code-signup.test.ts",
+      "proxy.test.ts",
+      "app/signup/actions.test.ts",
       "lib/proposals/**/*.test.ts",
       "lib/firm-identity.test.ts",
       // Emailing a service proposal: the message, and the guard that stops a
