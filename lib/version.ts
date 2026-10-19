@@ -179,7 +179,8 @@
  *   minute after opening, every five minutes, and on coming back to the tab) and, when that is a
  *   different release, shows "A new version of AEC-flow is available" with Reload now and Later.
  *   It never reloads by itself: there may be unsaved work in the tab. Six languages. No SQL.
- * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill; issued codes redeem at signup.
+ * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill;
+ *   issued codes redeem at signup.
  * 0.27.0 (15 OCT 2026): feat — Vercel Web Analytics with portal CTA, signup and first-print events.
  * 0.27.1 (15 OCT 2026): fix — the 0.26.0 and 0.27.0 merges left two APP_VERSION constants and two
  *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
@@ -187,8 +188,10 @@
  * 0.28.0 (16 OCT 2026): own take-off engine — area, length and count measured on drawings in
  *   PDF points, scale notes read (1:100, 1/4" = 1'-0"), totals per condition feeding the Quantity
  *   Take-Off sheet (engine only; the measuring screen follows).
+ * 0.29.0 (16 OCT 2026): measure on drawings - conditions, calibrated areas,
+ *   lengths, counts and cut-outs feed the existing Quantity Take-Off sheet.
  */
-export const APP_VERSION = "0.28.0";
+export const APP_VERSION = "0.29.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
