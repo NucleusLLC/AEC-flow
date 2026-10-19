@@ -247,6 +247,10 @@ export default defineConfig({
       "components/beta-report/send-button.test.tsx",
       // Bug/Wish submit: a failure reaches the tester as a plain sentence, never a raw error.
       "lib/beta-reports/submit-errors.test.ts",
+      // Scheduling: wall-clock-as-UTC times, planned vs actual hours, the upcoming/past
+      // split, SCH- numbering, and the zod gate with its enum/SQL agreement. Pure.
+      "lib/scheduling/calc.test.ts",
+      "lib/scheduling/schema.test.ts",
     ],
     environment: "node",
   },

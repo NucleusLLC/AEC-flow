@@ -192,8 +192,14 @@
  *   Documents (with New document pre-filed to the project and Link an existing document), its
  *   construction contracts and its building permit files. Any General Document, signed ones too,
  *   can be filed under a project from its own page; the wording is never altered. No SQL.
+ * 0.32.0 (19 OCT 2026): feat — SCHEDULING: book meetings, inspections, measuring, supervision and site
+ *   visits for a project or a potential project (a Service Proposal) at /scheduling; a project's new
+ *   Scheduling tab shows its upcoming visits, its history and the hours of completed field work (visits
+ *   booked on a proposal later converted to the project included); completing a visit records the actual
+ *   hours and outcome and can put DRAFT entries on the attendees' timesheets, once. Six languages.
+ *   Needs prisma/sql/0035_appointments.sql applied FIRST.
  */
-export const APP_VERSION = "0.31.0";
+export const APP_VERSION = "0.32.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

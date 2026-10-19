@@ -36,6 +36,7 @@ import {
   TIME_ITEM,
   EXPENSES_ITEM,
   PROFIT_ITEM,
+  SCHEDULING_ITEM,
   TAX_ITEM,
   navSections,
   type NavSection,
@@ -148,7 +149,7 @@ const MODULE_1: AppModule = {
     // prices its architecture and interior projects too. Link only: the protected
     // Estimates system itself is untouched (docs/protected-systems.md).
     { title: "Estimating", items: [{ label: "Estimates", href: "/estimates", icon: Calculator }] },
-    { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }] },
+    { title: "Delivery", items: [{ label: "Projects", href: "/projects", icon: FolderKanban }, SCHEDULING_ITEM] },
     { title: "Finance", items: [INVOICES_ITEM, CREDIT_NOTES_ITEM, RECEIVABLES_ITEM, TIME_ITEM, EXPENSES_ITEM, PROFIT_ITEM, TAX_ITEM] },
     {
       title: DRAWINGS_AND_DOCUMENTS,

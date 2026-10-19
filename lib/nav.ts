@@ -8,6 +8,7 @@ import {
   Database,
   CalendarDays,
   CalendarClock,
+  CalendarCheck,
   FileStack,
   FolderOpen,
   HardHat,
@@ -187,6 +188,17 @@ export const TAX_ITEM: NavItem = {
   icon: Landmark,
 };
 
+/**
+ * Scheduling — meetings, inspections, measuring and supervision visits booked
+ * for a project or a potential project — defined once like the registers above:
+ * it appears in this list (beside Tasks) and in Module 1's sidebar.
+ */
+export const SCHEDULING_ITEM: NavItem = {
+  label: "Scheduling",
+  href: "/scheduling",
+  icon: CalendarCheck,
+};
+
 /** Section title used wherever the drawings bin appears. */
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
@@ -222,6 +234,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Schedule", href: "/schedule", icon: CalendarClock },
       { label: "Tasks", href: "/tasks", icon: ListChecks },
+      SCHEDULING_ITEM,
       { label: "Projects", href: "/projects", icon: FolderKanban },
       { label: "Land Development", href: "/development", icon: Map, disabled: true },
     ],
