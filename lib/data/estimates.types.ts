@@ -117,6 +117,7 @@ export type TakeoffRow = {
  * Despite the name it carries every structured extra that hangs off the sheet.
  */
 export type EstimateBudget = {
+  drawingTakeoff?: import("@/lib/takeoff/state").DrawingTakeoffState;
   schedule?: import("@/lib/estimates/budget-timeline").ScheduleConfig;
   payment?: import("@/lib/estimates/budget-timeline").PaymentConfig;
   /** Quantity Take-Off measurements. */

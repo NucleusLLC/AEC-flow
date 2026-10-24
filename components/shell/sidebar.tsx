@@ -9,6 +9,7 @@ import { useModule } from "@/components/shell/module-provider";
 import { ModuleSwitcher } from "@/components/shell/module-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { isNavItemActive } from "@/lib/nav-active";
 import { VERSION_COLOR } from "@/lib/version";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -34,6 +35,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
   const pathname = usePathname();
   const { data: session } = useSession();
   const { module } = useModule();
+  const navHrefs = module.nav.flatMap((s) => s.items.map((i) => i.href));
   const t = useT();
   const user = session?.user;
   const displayName = user?.name ?? t("Account");
@@ -67,7 +69,7 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
       </div>
 
       {/* Nav — reflects the active module. */}
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav data-guide="shell-nav" className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
         {module.nav.map((section, i) => (
           <div key={i}>
             {section.title ? (
@@ -95,8 +97,8 @@ export function Sidebar({ version, collapsed = false, isFounder = false }: { ver
                     </li>
                   );
                 }
-                const active =
-                  pathname === item.href || pathname.startsWith(item.href + "/");
+                // Most specific wins: /finance lights only on the overview itself.
+                const active = isNavItemActive(pathname, item.href, navHrefs);
                 return (
                   <li key={item.href}>
                     <Link

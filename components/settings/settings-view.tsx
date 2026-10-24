@@ -12,6 +12,7 @@ import {
   X,
   Trash2,
   Type,
+  ReceiptText,
 } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +21,18 @@ import { PracticeForm } from "@/components/settings/practice-form";
 import { TemplatesManager } from "@/components/settings/templates-manager";
 import { MembersManager } from "@/components/settings/members-manager";
 import { DocumentControlForm } from "@/components/settings/document-control-form";
+import { GuideNarrationCard } from "@/components/settings/guide-narration-card";
+import { SampleFilesCard } from "@/components/settings/sample-files-card";
+import { InvoiceSettingsCard } from "@/components/settings/invoice-settings-card";
+import { DEFAULT_INVOICE_SETTINGS, type InvoiceSettings } from "@/lib/finance/invoice-settings";
+import type { SampleSetStatus } from "@/lib/samples/install";
 import {
   saveAnthropicApiKeyAction,
   clearAnthropicApiKeyAction,
   testAnthropicKeyAction,
 } from "@/app/(app)/settings/actions";
 import type { AnthropicKeyStatus } from "@/lib/server/ai-config";
+import type { NarrationStatus } from "@/lib/guide-narration/config";
 import type { FooterSettings, LogoSettings } from "@/lib/server/practice-config";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n/language-provider";
@@ -37,11 +44,12 @@ import {
   type Preferences,
 } from "@/lib/data/settings";
 
-type Tab = "practice" | "documentControl" | "templates" | "members" | "preferences" | "integrations";
+type Tab = "practice" | "documentControl" | "invoicing" | "templates" | "members" | "preferences" | "integrations";
 
 const TABS: Array<{ key: Tab; label: string; icon: typeof Building2 }> = [
   { key: "practice", label: "Practice", icon: Building2 },
   { key: "documentControl", label: "Document Control", icon: Type },
+  { key: "invoicing", label: "Invoicing", icon: ReceiptText },
   { key: "templates", label: "Proposal Templates", icon: FileText },
   { key: "members", label: "Members & Roles", icon: Users },
   { key: "preferences", label: "Preferences", icon: SlidersHorizontal },
@@ -55,14 +63,18 @@ export function SettingsView({
   footer,
   logoSettings,
   documentFontId,
+  invoiceSettings = DEFAULT_INVOICE_SETTINGS,
   templates,
   members,
   roles,
   preferences,
   keyStatus,
+  narrationStatus = null,
   canSave,
   isFounder = false,
   canManagePasswords = false,
+  sampleStatus = { installed: false },
+  sampleLang = "en",
 }: {
   profile: PracticeProfile;
   logoDataUrl: string | null;
@@ -70,15 +82,23 @@ export function SettingsView({
   footer: FooterSettings;
   logoSettings: LogoSettings;
   documentFontId: string;
+  /** Settings > Invoicing: default terms, bank details, T&C (per company). */
+  invoiceSettings?: InvoiceSettings;
   templates: ProposalTemplate[];
   members: Member[];
   roles: RoleInfo[];
   preferences: Preferences;
   keyStatus: AnthropicKeyStatus;
+  /** Guide narration is a platform setting: the page passes this for the founder only. */
+  narrationStatus?: NarrationStatus | null;
   canSave: boolean;
   isFounder?: boolean;
   /** Draws the per-member "Set password" control. Presentation only — the server enforces the real gate. */
   canManagePasswords?: boolean;
+  /** This practice's sample set (Practice tab > Sample files). */
+  sampleStatus?: SampleSetStatus;
+  /** The language the Install picker starts on: the viewer's, when it is one the set comes in. */
+  sampleLang?: "en" | "es";
 }) {
   const t = useT();
   const [tab, setTab] = useState<Tab>("practice");
@@ -111,8 +131,18 @@ export function SettingsView({
         <PracticeForm profile={profile} logoDataUrl={logoDataUrl} currency={currency} footer={footer} logoSettings={logoSettings} canSave={canSave && canManagePasswords} canEditFooter={isFounder} />
       ) : null}
 
+      {/* Each practice installs or removes its own sample set; the actions re-check the role. */}
+      {tab === "practice" ? (
+        <SampleFilesCard initial={sampleStatus} canManage={canSave && canManagePasswords} defaultLang={sampleLang} />
+      ) : null}
+
       {tab === "documentControl" ? (
         <DocumentControlForm initialFontId={documentFontId} canSave={canSave && canManagePasswords} />
+      ) : null}
+
+      {/* Printed on every invoice the practice sends: the letterhead gate. */}
+      {tab === "invoicing" ? (
+        <InvoiceSettingsCard initial={invoiceSettings} canSave={canSave && canManagePasswords} />
       ) : null}
 
       {tab === "templates" ? (
@@ -130,7 +160,13 @@ export function SettingsView({
       {/* Practice-wide settings (letterhead, logo, currency, font, AI key) are for
        * the people who manage the practice — the same gate as members, enforced
        * again in app/(app)/settings/actions.ts. */}
-      {tab === "integrations" ? <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} /> : null}
+      {tab === "integrations" ? (
+        <div className="space-y-5">
+          <IntegrationsTab initial={keyStatus} canManage={canManagePasswords} />
+          {/* Platform-wide, founder only; the actions behind it check the founder again. */}
+          {isFounder && narrationStatus ? <GuideNarrationCard initial={narrationStatus} /> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

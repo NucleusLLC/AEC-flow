@@ -78,7 +78,7 @@ function Row({ company }: { company: AdminCompanyRow }) {
 
   return (
     <>
-      <tr className="border-b border-border/60">
+      <tr className="zebra-row border-b border-border/60">
         <td className="px-5 py-3">
           <div className="font-medium text-fg">
             {company.name}

@@ -62,7 +62,8 @@ again.
 A DRAFT may be edited or deleted. An ISSUED invoice may not: it changes by
 being paid or by being voided with a reason. Tax is snapshotted, and INCLUSIVE
 tax is backed out of the line amounts rather than added to them — adding it
-would bill the tax twice.
+would bill the tax twice. An invoice may carry a second tax beside the first
+(BBO + BAVP) — see §6a.
 
 ## 3. F2 — Receivables
 
@@ -198,7 +199,7 @@ balance, and no line can be credited for more than is left on it. The server
 checks this when a draft is saved and again at issue, inside a transaction
 that locks the invoice row, so two credits issued at once cannot both pass.
 
-**Snapshot.** Client, currency and tax are copied from the invoice, never
+**Snapshot.** Client, currency and tax (both taxes, §6a) are copied from the invoice, never
 taken from the form. A credit note in another currency from its invoice cannot
 be built, and `invoiceBalance` throws rather than add one.
 
@@ -217,6 +218,57 @@ Account, where it is a CREDIT line on its own date.
 **Not done.** Crediting an invoice does not free the proposal milestone it
 billed (a credit is a concession, not an un-billing) and does not release
 billed time or expenses. Refunds of overpayments are not credit notes.
+
+## 6a. Two taxes on one invoice (0.26.0)
+
+`prisma/sql/0032_invoice_second_tax.sql` · `lib/finance/calc.ts` (`invoiceTotals`) ·
+`lib/finance/tax-report.ts` · `lib/finance/export.ts` · `lib/finance/two-taxes.test.ts`
+
+Aruba charges BBO and BAVP on the same turnover, so an invoice may carry an
+optional SECOND tax: `tax2Name`, `tax2Percent` and the stored `tax2Total`, on
+`invoices` and `credit_notes`. `taxTotal` stays the FIRST tax only. No rate is
+built in — the code has a 7% BBO default for proposals and no BAVP rate, so the
+second tax's name and percent are typed on the invoice (placeholder "BAVP").
+A second tax needs a first, needs a name, and the two together may not exceed
+100% (`lib/finance/schema.ts`).
+
+**Not compounded.** Both taxes are charged on the same taxable subtotal; the
+second is never charged on the first.
+
+**EXCLUSIVE.** Each tax is its own percentage of the taxable subtotal, rounded
+half-up to the cent on its own; total = subtotal + tax 1 + tax 2.
+
+**INCLUSIVE.** The COMBINED rate (p1 + p2) is backed out of the taxable lines
+once — net = gross ÷ (1 + (p1 + p2)/100), contained tax = gross − net — and
+that contained tax is split between the two in proportion to their rates by
+`allocate` (largest remainder; the odd cent goes to the larger fractional
+share), so the two parts add up to the contained tax exactly and the total is
+still the sum of the lines. Example: 100.00 at 3% + 4% contains 6.54, split
+2.80 + 3.74. The two parts always sum to what a single tax at p1 + p2 would
+contain.
+
+**One tax is unchanged.** With no second tax (null name, 0 percent) every
+figure is the one-tax figure to the cent, and screens and prints show exactly
+what they showed before. Existing rows were not backfilled — the columns'
+defaults ARE "no second tax".
+
+**Snapshots.** The second tax is snapshotted like the first: raising from a
+proposal copies its second tax row when it is in the same mode as the first
+(an invoice has one mode). A credit note copies both from its invoice and
+credits both in proportion to the lines it credits.
+
+**Tax report.** Each tax is a row under its own name and rate, so a BBO + BAVP
+invoice contributes to both rows, with the same base on each. On the received
+basis each tax is pro-rated on its own, so the payments' slices of each add
+back to that tax's stored total to the cent. Invoice and payment rows show both
+taxes and carry `tax` (both) and `tax2` (the second's part).
+
+**Accounting export.** The invoices and credit-notes files gain `Tax 2 name`,
+`Tax 2 %` and `Tax 2` after `Tax`; the tax ledger gains the same three, and on
+every row Net + Tax + Tax 2 = Gross (`Tax` is the first tax).
+
+**Not done.** Raising an invoice from time and expenses still offers one tax;
+a second can be added on the draft before it is issued.
 
 ## 7. Not built yet
 

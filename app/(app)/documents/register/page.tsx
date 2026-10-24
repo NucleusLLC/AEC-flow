@@ -70,7 +70,7 @@ export default async function DocumentRegisterPage() {
               </thead>
               <tbody>
                 {docs.map((d) => (
-                  <tr key={d.id} className="border-b border-border/60 last:border-0">
+                  <tr key={d.id} className="zebra-row border-b border-border/60 last:border-0">
                     <td className="px-5 py-3">
                       <div className="font-medium text-fg">{t(docLabel(d.sourceSystem as SourceSystem, d.docType))}</div>
                       <div className="truncate text-xs text-muted">{d.title}</div>

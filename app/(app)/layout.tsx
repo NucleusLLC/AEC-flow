@@ -27,7 +27,8 @@ import { getCurrentCompany, isLicenseExpired } from "@/lib/server/tenant";
 import { checkCompanyLicense } from "@/lib/server/license";
 import { isCurrentUserFounder } from "@/lib/server/founder";
 import { setSystemCurrency } from "@/lib/format";
-import { appVersionLabel } from "@/lib/version";
+import { APP_VERSION, appBuildId, appVersionLabel } from "@/lib/version";
+import { UpdateNotice } from "@/components/shell/update-notice";
 import { MODULE_COOKIE } from "@/lib/modules";
 
 // Every route in this group is auth-gated and reads per-request data (the
@@ -122,6 +123,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
          * the moment they have. Every account that existed before verification
          * shipped was backfilled as confirmed, so this is only ever seen by
          * someone who signed up after it. */}
+        {/* The updater: tells a tab left open that a newer release is deployed,
+         * and offers a reload. It never reloads by itself. */}
+        <UpdateNotice version={APP_VERSION} build={appBuildId()} />
         {unverifiedEmail ? <VerifyEmailBanner email={unverifiedEmail} /> : null}
         {terms !== "current" ? <AcceptTermsBanner status={terms} /> : null}
         {billingBanner ? <BillingBanner kind={billingBanner} canManage={canManagePasswords(me?.role, isFounder)} /> : null}

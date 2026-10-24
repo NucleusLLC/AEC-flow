@@ -18,7 +18,7 @@ function ExportRow({ href, title, sub }: { href: string; title: string; sub: str
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-surface-2"
+      className="flex items-center justify-between gap-3 px-5 py-3 transition-colors zebra-hover"
     >
       <div className="min-w-0">
         <div className="truncate text-sm font-medium text-fg">{title}</div>
@@ -64,7 +64,7 @@ export default async function ExportCenterPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="overflow-hidden">
           <CardHeader title={t("Change Orders")} action={<FileSignature className="h-4 w-4 text-faint" />} />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {changeOrders.map((c) => (
               <ExportRow key={c.id} href={`/print/construction-admin/change-orders/${c.id}`} title={c.title} sub={c.changeOrderNumber} />
             ))}
@@ -73,7 +73,7 @@ export default async function ExportCenterPage() {
 
         <Card className="overflow-hidden">
           <CardHeader title={t("Reports")} action={<FileText className="h-4 w-4 text-faint" />} />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {reports.map((r) => (
               <ExportRow key={r.id} href={`/print/construction-admin/reports/${r.id}`} title={`${t(CA_REPORT_TYPE_LABEL[r.reportType])} — ${r.projectName}`} sub={r.reportNumber} />
             ))}
@@ -82,7 +82,7 @@ export default async function ExportCenterPage() {
 
         <Card className="overflow-hidden">
           <CardHeader title={t("RFIs")} action={<MessageSquareWarning className="h-4 w-4 text-faint" />} />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {rfis.map((r) => (
               <ExportRow key={r.id} href={`/print/construction-admin/rfis/${r.id}`} title={r.subject} sub={r.rfiNumber} />
             ))}
@@ -91,7 +91,7 @@ export default async function ExportCenterPage() {
 
         <Card className="overflow-hidden">
           <CardHeader title={t("Certifications")} action={<BadgeCheck className="h-4 w-4 text-faint" />} />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {certs.map((c) => (
               <ExportRow key={c.id} href={`/print/construction-admin/certifications/${c.id}`} title={c.projectName} sub={c.certificationNumber} />
             ))}
@@ -100,7 +100,7 @@ export default async function ExportCenterPage() {
 
         <Card className="overflow-hidden">
           <CardHeader title={t("Punch List")} action={<ListChecks className="h-4 w-4 text-faint" />} />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {punchItems.length > 0 ? (
               <ExportRow href="/print/construction-admin/punch-list/all" title={t("Portfolio snag register")} sub={fmt(t("All projects · {count} items"), { count: punchItems.length })} />
             ) : null}

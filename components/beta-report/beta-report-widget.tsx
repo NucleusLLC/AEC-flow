@@ -8,16 +8,18 @@ import {
   Lightbulb,
   Camera,
   Trash2,
-  Send,
   X,
   Check,
-  Loader2,
+  AlertTriangle,
   MessageSquarePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { submitBetaReport } from "@/app/(app)/beta-reports/actions";
 import { BETA_REPORT_OPEN_EVENT, type BetaReportPrefill } from "@/components/beta-report/open-beta-report";
+import { BetaReportSendButton } from "@/components/beta-report/send-button";
+import { BetaReportPanelBoundary } from "@/components/beta-report/panel-error-boundary";
 import { MAX_SCREENSHOT_CHARS, type BetaReportKind } from "@/lib/data/beta-reports.types";
+import { PANEL_CRASHED_MESSAGE, SUBMIT_UNREACHABLE_MESSAGE } from "@/lib/beta-reports/submit-errors";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
@@ -177,16 +179,24 @@ export function BetaReportWidget() {
     }
     setError(null);
     setPhase("sending");
-    const res = await submitBetaReport({
-      kind,
-      title: title.trim(),
-      description: description.trim(),
-      pageUrl: typeof window !== "undefined" ? window.location.href : pathname,
-      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      screenshot,
-      reporterName: session?.user?.name ?? null,
-      reporterEmail: session?.user?.email ?? null,
-    });
+    let res: Awaited<ReturnType<typeof submitBetaReport>>;
+    try {
+      res = await submitBetaReport({
+        kind,
+        title: title.trim(),
+        description: description.trim(),
+        pageUrl: typeof window !== "undefined" ? window.location.href : pathname,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        screenshot,
+        reporterName: session?.user?.name ?? null,
+        reporterEmail: session?.user?.email ?? null,
+      });
+    } catch {
+      // The call itself failed (offline, timed out, or this page is older than
+      // the running app). Without this the panel sat on "Sending…" for good.
+      // What was typed stays in the form.
+      res = { ok: false, error: SUBMIT_UNREACHABLE_MESSAGE };
+    }
     if (res.ok) {
       setPhase("done");
     } else {
@@ -198,7 +208,32 @@ export function BetaReportWidget() {
   const isWish = kind === "WISH";
 
   return (
-    <>
+    <BetaReportPanelBoundary
+      fallback={(reset) => (
+        <div
+          role="alertdialog"
+          data-beta-report-panel=""
+          aria-label={t("Beta feedback")}
+          className="no-print fixed bottom-4 right-4 z-50 flex w-[min(26rem,calc(100vw-2rem))] flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-8 text-center shadow-2xl print:hidden"
+        >
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 ring-1 ring-red-200">
+            <AlertTriangle className="h-6 w-6" />
+          </span>
+          <p className="text-sm text-fg">{t(PANEL_CRASHED_MESSAGE)}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+              reset();
+            }}
+            className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand/90"
+          >
+            {t("Close")}
+          </button>
+        </div>
+      )}
+    >
       {open ? (
         <>
           {/* Backdrop (click to dismiss) — invisible while capturing so it's not in the shot */}
@@ -213,6 +248,7 @@ export function BetaReportWidget() {
 
           <div
             role="dialog"
+            data-beta-report-panel=""
             aria-modal="true"
             aria-label={t("Beta feedback")}
             className={cn(
@@ -368,25 +404,18 @@ export function BetaReportWidget() {
                 <span className="truncate text-[11px] text-faint">
                   {session?.user?.name ? fmt(t("Sending as {name}"), { name: session.user.name }) : t("Sending anonymously")}
                 </span>
-                <button
-                  type="button"
+                <BetaReportSendButton
+                  sending={phase === "sending"}
                   onClick={submit}
-                  disabled={phase === "sending"}
-                  className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
-                >
-                  {phase === "sending" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  {phase === "sending" ? t("Sending…") : t("Send")}
-                </button>
+                  label={t("Send")}
+                  sendingLabel={t("Sending…")}
+                />
               </div>
             ) : null}
           </div>
         </>
       ) : null}
-    </>
+    </BetaReportPanelBoundary>
   );
 }
 

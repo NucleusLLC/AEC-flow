@@ -185,7 +185,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                 <table className="w-full text-sm">
                   <tbody className="divide-y divide-border">
                     {lineItems.map((li) => (
-                      <tr key={li.id} className="transition-colors hover:bg-surface-2/60">
+                      <tr key={li.id} className="zebra-row transition-colors zebra-hover">
                         <td className="px-5 py-2">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="font-semibold text-fg">{li.description}</span>
@@ -238,7 +238,7 @@ export default async function ProposalDetailPage({ params }: PageProps) {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {proposal.milestones.map((m) => (
-                      <tr key={m.id} className="transition-colors hover:bg-surface-2/60">
+                      <tr key={m.id} className="zebra-row transition-colors zebra-hover">
                         <td className="px-5 py-2 font-semibold text-fg">{m.name}</td>
                         <td className="px-3 py-2 text-center text-muted">
                           {m.dueWeek === null ? "—" : m.dueWeek === 0 ? t("Kickoff") : fmt(t("Week {n}"), { n: m.dueWeek })}

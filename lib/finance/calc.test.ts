@@ -21,6 +21,7 @@ describe("invoiceTotals", () => {
       subtotal: 1500,
       taxableSubtotal: 1500,
       taxTotal: 90,
+      tax2Total: 0,
       total: 1590,
     });
   });
@@ -28,7 +29,7 @@ describe("invoiceTotals", () => {
   it("leaves a non-taxable line out of the tax but not out of the total", () => {
     expect(
       invoiceTotals([{ amount: 1000 }, { amount: 200, taxable: false }], EXCLUSIVE, AWG),
-    ).toEqual({ subtotal: 1200, taxableSubtotal: 1000, taxTotal: 60, total: 1260 });
+    ).toEqual({ subtotal: 1200, taxableSubtotal: 1000, taxTotal: 60, tax2Total: 0, total: 1260 });
   });
 
   it("backs inclusive tax OUT of the amounts instead of adding it again", () => {
@@ -37,6 +38,7 @@ describe("invoiceTotals", () => {
       subtotal: 1060,
       taxableSubtotal: 1060,
       taxTotal: 60,
+      tax2Total: 0,
       total: 1060,
     });
   });
@@ -49,6 +51,7 @@ describe("invoiceTotals", () => {
       subtotal: 12.34,
       taxableSubtotal: 12.34,
       taxTotal: 0.74,
+      tax2Total: 0,
       total: 13.08,
     });
   });
@@ -58,6 +61,7 @@ describe("invoiceTotals", () => {
       subtotal: 0,
       taxableSubtotal: 0,
       taxTotal: 0,
+      tax2Total: 0,
       total: 0,
     });
   });

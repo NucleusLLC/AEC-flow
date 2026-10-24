@@ -102,7 +102,7 @@ export default async function PurchaseOrderDetailPage({
                 const recv = lineReceived(l);
                 const full = l.quantity > 0 && recv >= l.quantity;
                 return (
-                  <tr key={i} className="border-b border-border/60 last:border-0">
+                  <tr key={i} className="zebra-row border-b border-border/60 last:border-0">
                     <td className="px-4 py-2.5 text-fg">{l.description || "—"}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted">{l.quantity}</td>
                     <td className="px-4 py-2.5 text-muted">{l.unit || "—"}</td>

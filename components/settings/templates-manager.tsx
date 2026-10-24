@@ -119,7 +119,7 @@ export function TemplatesManager({
         </div>
       ) : null}
 
-      <div className="divide-y divide-border">
+      <div className="zebra-list divide-y divide-border">
         {templates.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-muted">{t("No templates yet. Create your first one.")}</p>
         ) : null}

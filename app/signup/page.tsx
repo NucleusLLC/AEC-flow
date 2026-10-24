@@ -14,7 +14,8 @@ const PERKS = [
   "Early access to new modules as they ship",
 ];
 
-export default async function SignupPage() {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
+  const { code } = await searchParams;
   const t = await getServerT();
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-2 px-4 py-10">
@@ -56,7 +57,7 @@ export default async function SignupPage() {
             <p className="mb-5 text-sm text-muted">
               {t("6 months free · feedback welcome anytime.")}
             </p>
-            <SignupForm />
+            <SignupForm initialCode={code} />
           </div>
         </div>
       </div>

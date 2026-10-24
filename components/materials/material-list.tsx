@@ -98,7 +98,7 @@ export function MaterialList({ items }: { items: MaterialSelectionDTO[] }) {
           </thead>
           <tbody>
             {filtered.map((m) => (
-              <tr key={m.id} className="border-b border-border/60 last:border-0 hover:bg-surface-2/30">
+              <tr key={m.id} className="zebra-row border-b border-border/60 last:border-0 zebra-hover">
                 <td className="px-4 py-2.5">
                   <Link href={`/materials/${m.id}`} className="font-mono text-xs font-medium text-brand hover:underline">
                     {m.tag}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer } from "lucide-react";
+import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer, ReceiptText } from "lucide-react";
 import {
   getServiceProposal,
   getServiceProposalIdentification,
@@ -27,6 +27,7 @@ import { ServiceProposalStatusBadge } from "@/components/service-proposals/statu
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { VersionTag } from "@/components/service-proposals/version-tag";
+import { ProposalSchedulingCard } from "@/components/scheduling/proposal-scheduling-card";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { getServerT } from "@/lib/i18n/server";
@@ -174,6 +175,18 @@ export default async function ServiceProposalDetailPage({
               {t("Project Dashboard")}
             </Link>
           ) : null}
+          {projectIsOn ? (
+            /* An accepted proposal is billable: straight to its payment
+             * milestones on the new-invoice screen (?proposal=, the same link
+             * that screen's own proposal list uses). */
+            <Link
+              href={`/finance/invoices/new?proposal=${p.id}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand/90"
+            >
+              <ReceiptText className="h-4 w-4" aria-hidden="true" />
+              <span>{t("Invoice")}</span>
+            </Link>
+          ) : null}
           {!locked ? (
             <Link href={`/design/service-proposals/${p.id}/edit`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted hover:border-brand hover:text-fg">
               <Pencil className="h-4 w-4" /> {t("Edit")}
@@ -236,7 +249,7 @@ export default async function ServiceProposalDetailPage({
                 </thead>
                 <tbody>
                   {calc.components.map((c) => (
-                    <tr key={c.id} className="border-b border-border/60">
+                    <tr key={c.id} className="zebra-row border-b border-border/60">
                       <td className="py-2 text-fg">
                         {c.label}
                         {c.overrideAmount !== null ? <span className="ml-1.5 text-xs text-amber-600">{t("overridden")}</span> : null}
@@ -297,7 +310,7 @@ export default async function ServiceProposalDetailPage({
                 <table className="w-full text-sm">
                   <tbody>
                     {calc.phases.map((ph) => (
-                      <tr key={ph.id} className="border-b border-border/60 last:border-0">
+                      <tr key={ph.id} className="zebra-row border-b border-border/60 last:border-0">
                         <td className="py-2 text-fg">{ph.name}</td>
                         <td className="py-2 text-right tabular-nums text-muted">{ph.percent}%</td>
                         <td className="py-2 text-right tabular-nums text-fg">{money(ph.amount)}</td>
@@ -326,7 +339,7 @@ export default async function ServiceProposalDetailPage({
                   </thead>
                   <tbody>
                     {calc.paymentSchedule.map((m) => (
-                      <tr key={m.id} className="border-b border-border/60">
+                      <tr key={m.id} className="zebra-row border-b border-border/60">
                         <td className="py-2 text-fg">{m.name}</td>
                         <td className="py-2 text-right tabular-nums text-muted">{m.percent}%</td>
                         <td className="py-2 text-right tabular-nums text-fg">{money(m.amount)}</td>
@@ -420,6 +433,9 @@ export default async function ServiceProposalDetailPage({
               </p>
             ) : null}
           </div>
+
+          {/* Meetings and visits booked on this proposal (lib/data/appointments.ts). */}
+          <ProposalSchedulingCard proposalId={p.id} />
 
           {p.validUntil ? (
             <div className="card-surface rounded-xl border border-border bg-surface p-4 text-sm">

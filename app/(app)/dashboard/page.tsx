@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Minus, BarChart3, CalendarClock, ReceiptText } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { getBetaMembership } from "@/lib/data/account";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
@@ -98,13 +98,23 @@ export default async function DashboardPage() {
             {t("Here's what's happening across the practice today.")}
           </p>
         </div>
-        <Link
-          href="/reports"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-        >
-          <BarChart3 className="h-4 w-4 text-muted" />
-          {t("View reports")}
-        </Link>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {/* Quick action: raise an invoice from the first screen of the day. */}
+          <Link
+            href="/finance/invoices/new"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <ReceiptText className="h-4 w-4" aria-hidden="true" />
+            <span>{t("Invoice")}</span>
+          </Link>
+          <Link
+            href="/reports"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <BarChart3 className="h-4 w-4 text-muted" />
+            {t("View reports")}
+          </Link>
+        </div>
       </div>
 
       {/* Building permit revision deadlines inside their warning window */}
@@ -139,12 +149,12 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {projects.map((p) => (
               <Link
                 key={p.id}
                 href={`/projects/${p.id}`}
-                className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2"
+                className="group flex items-center gap-4 px-5 py-3.5 transition-colors zebra-hover"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -182,7 +192,7 @@ export default async function DashboardPage() {
               </Link>
             }
           />
-          <div className="divide-y divide-border">
+          <div className="zebra-list divide-y divide-border">
             {onLeave.map((person) => (
               <div key={person.id} className="flex items-center gap-3 px-5 py-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">

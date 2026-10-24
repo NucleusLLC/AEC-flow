@@ -4,7 +4,8 @@ import { fmt } from "@/lib/i18n/format";
 import { notFound } from "next/navigation";
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { PrintSurface } from "@/components/print/print-surface";
-import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getInvoiceSettings, getPracticeSettings } from "@/lib/server/practice-config";
+import { termsPlacement } from "@/lib/finance/invoice-settings";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { getInvoice } from "@/lib/data/invoices";
 import { creditsOf, invoiceBalance } from "@/lib/finance/calc";
@@ -28,13 +29,20 @@ export async function generateMetadata(): Promise<Metadata> {
  * too, with the balance — a client who has paid half should not receive a demand
  * for the whole. Issued credit notes print as a Credits line under them and are
  * taken off the balance by the same function every screen uses.
+ *
+ * The practice's own parts come from Settings > Invoicing and are read at print
+ * time: the bank details in a framed block under the totals, and the terms &
+ * conditions either after the notes or on a second sheet of their own (a
+ * heading marked `data-page-start`, which the paged preview and the printer
+ * both start a page at). "Page N of M" is the shared PrintSurface footer.
  */
 export default async function InvoicePrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [invoice, practice, firm] = await Promise.all([
+  const [invoice, practice, firm, invoiceSettings] = await Promise.all([
     getInvoice(id),
     getPracticeSettings(),
     getFirmIdentity(),
+    getInvoiceSettings(),
   ]);
   if (!invoice) notFound();
   const t = await getServerT();
@@ -48,6 +56,22 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
     credits: creditsOf(invoice.creditNotes),
   });
   const issuedCredits = invoice.creditNotes.filter((c) => c.status === "ISSUED");
+  const terms = termsPlacement(invoiceSettings);
+  // One paragraph per blank-line-separated block, so the preview can move a
+  // short clause whole rather than split it across sheets.
+  const termsParagraphs = invoiceSettings.termsText
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const termsBlock = (
+    <div style={{ fontSize: `${invoiceSettings.termsFontSize}pt` }} className="leading-relaxed text-gray-800">
+      {termsParagraphs.map((p, i) => (
+        <p key={i} className="mt-1.5 whitespace-pre-line first:mt-0">
+          {p}
+        </p>
+      ))}
+    </div>
+  );
 
   return (
     <PrintSurface backHref={`/finance/invoices/${invoice.id}`} backLabel={invoice.number}>
@@ -155,6 +179,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
                 <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.taxTotal)}</td>
               </tr>
             ) : null}
+            {/* A second tax (BBO + BAVP) prints as its own line; one-tax documents are unchanged. */}
+            {invoice.tax2Percent > 0 ? (
+              <tr>
+                <td className="py-0.5 text-gray-500">
+                  {invoice.tax2Name ?? t("Tax")} {invoice.tax2Percent}%
+                  {invoice.taxMode === "INCLUSIVE" ? ` ${t("(included)")}` : ""}
+                </td>
+                <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.tax2Total)}</td>
+              </tr>
+            ) : null}
             <tr className="border-t border-gray-900">
               <td className="py-1 font-semibold text-gray-900">{t("Total")}</td>
               <td className="py-1 text-right font-mono text-sm font-bold text-gray-900">
@@ -186,6 +220,18 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           </tbody>
         </table>
       </div>
+
+      {invoiceSettings.bankDetails ? (
+        <div className="mt-6 flex justify-end" data-keep-together>
+          <div className="w-72 rounded border border-gray-400 px-3 py-2 text-[10px] leading-relaxed">
+            <div className="mb-1 font-semibold uppercase tracking-wide text-gray-500">{t("Payment details")}</div>
+            <div className="whitespace-pre-line font-mono text-gray-900">{invoiceSettings.bankDetails}</div>
+            <div className="mt-1 text-gray-500">
+              {fmt(t("Please quote {number} with your payment."), { number: invoice.number })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {invoice.payments.length > 0 ? (
         <div className="mt-6 break-inside-avoid">
@@ -233,6 +279,15 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         </p>
       ) : null}
 
+      {terms === "inline" ? (
+        <div className="mt-6">
+          <h2 className="border-b border-gray-300 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            {t("Terms & conditions")}
+          </h2>
+          <div className="mt-2">{termsBlock}</div>
+        </div>
+      ) : null}
+
       {invoice.status === "VOID" ? (
         <p className="mt-6 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
           {invoice.voidReason
@@ -244,6 +299,21 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
       <div className="mt-6 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
         {firm.name} · {invoice.number} · {money(invoice.total)} {invoice.currency}
       </div>
+
+      {terms === "second-page" ? (
+        <div>
+          <h2
+            data-page-start
+            className="border-b-2 border-gray-900 pb-1 text-sm font-semibold uppercase tracking-wide text-gray-900"
+          >
+            {t("Terms & conditions")}
+          </h2>
+          <div className="mt-1 text-[10px] text-gray-500">
+            {firm.name} · {invoice.number}
+          </div>
+          <div className="mt-3">{termsBlock}</div>
+        </div>
+      ) : null}
     </PrintSurface>
   );
 }

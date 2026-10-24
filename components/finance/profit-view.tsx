@@ -156,7 +156,7 @@ export function ProfitView({ analyses }: { analyses: CurrencyAnalysis[] }) {
               return (
                 <tr
                   key={p.projectId ?? "none"}
-                  className="border-b border-border/60 transition-colors last:border-0 even:bg-surface-2/40 hover:bg-surface-2"
+                  className="zebra-row border-b border-border/60 transition-colors last:border-0 zebra-hover"
                 >
                   <td className="px-4 py-2.5 align-top">
                     <div className="truncate font-medium text-fg">

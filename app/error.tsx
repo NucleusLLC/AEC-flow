@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { useT } from "@/components/i18n/language-provider";
+import { reportClientError } from "@/lib/observability/report-client-error";
 
 /**
  * Error boundary for pages outside the app shell: sign-in, sign-up, password
  * reset, invitations, the legal pages and the print routes. The server logged
  * the failure under its digest (instrumentation.ts); the ref shown here is
  * that digest, so a user can quote it.
+ *
+ * It is also where a failure in the app LAYOUT lands (anything mounted beside
+ * the pages rather than inside one), so it reports what the browser saw, as
+ * the error page of the app shell does. It did not, and two such crashes on
+ * 11 OCT 2026 left no log line at all.
  */
 export default function RootError({
   error,
@@ -21,6 +27,7 @@ export default function RootError({
   const t = useT();
   useEffect(() => {
     console.error(error);
+    reportClientError(error, "boundary", error.digest);
   }, [error]);
 
   return (
