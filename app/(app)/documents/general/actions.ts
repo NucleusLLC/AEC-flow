@@ -21,6 +21,7 @@ import {
   deleteGeneralDocument,
   getGeneralDocument,
   issueGeneralDocument,
+  linkGeneralDocumentProject,
   markGeneralDocumentSigned,
   supersedeGeneralDocument,
   updateGeneralDocument,
@@ -28,6 +29,7 @@ import {
   DocumentLockedError,
   DocumentNotFoundError,
   DocumentNumberInUseError,
+  DocumentProjectNotFoundError,
 } from "@/lib/data/general-documents";
 import {
   issueBlockers,
@@ -137,6 +139,35 @@ export async function voidDocumentAction(
     return { ok: true, id: doc.id };
   } catch (e) {
     return failure(e, "Failed to void the document.");
+  }
+}
+
+/**
+ * File a document under a project (or take it off one). Works at any status —
+ * see `linkGeneralDocumentProject`. Both the old and the new project's
+ * Documents tab are refreshed.
+ */
+export async function linkDocumentProjectAction(
+  id: string,
+  projectId: string | null,
+): Promise<DocumentActionResult> {
+  try {
+    await requireActor();
+  } catch {
+    return { ok: false, error: "You must be signed in." };
+  }
+  if (typeof id !== "string" || !id) return { ok: false, error: "That document could not be found." };
+  const target = typeof projectId === "string" && projectId ? projectId : null;
+  try {
+    const { document, previousProjectId } = await linkGeneralDocumentProject(id, target);
+    revalidateDocument(document.id);
+    for (const pid of new Set([previousProjectId, target])) {
+      if (pid) revalidatePath(`/projects/${pid}/documents`);
+    }
+    return { ok: true, id: document.id };
+  } catch (e) {
+    if (e instanceof DocumentProjectNotFoundError) return { ok: false, error: e.message };
+    return failure(e, "Failed to link the document to the project.");
   }
 }
 

@@ -27,6 +27,7 @@ import { ServiceProposalStatusBadge } from "@/components/service-proposals/statu
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { VersionTag } from "@/components/service-proposals/version-tag";
+import { ProposalSchedulingCard } from "@/components/scheduling/proposal-scheduling-card";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { getServerT } from "@/lib/i18n/server";
@@ -432,6 +433,9 @@ export default async function ServiceProposalDetailPage({
               </p>
             ) : null}
           </div>
+
+          {/* Meetings and visits booked on this proposal (lib/data/appointments.ts). */}
+          <ProposalSchedulingCard proposalId={p.id} />
 
           {p.validUntil ? (
             <div className="card-surface rounded-xl border border-border bg-surface p-4 text-sm">

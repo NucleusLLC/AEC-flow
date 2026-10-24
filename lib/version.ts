@@ -203,8 +203,21 @@
  *   bank details and terms & conditions; the printed invoice carries the bank details under the
  *   totals and the T&C after the notes or on a second A4 sheet. Voiding an invoice, deleting a
  *   payment and deleting a draft are now Admin / Director only. No SQL.
+ * 0.31.0 (19 OCT 2026): feat — a project's Documents tab lists only that project's paperwork: its General
+ *   Documents (with New document pre-filed to the project and Link an existing document), its
+ *   construction contracts and its building permit files. Any General Document, signed ones too,
+ *   can be filed under a project from its own page; the wording is never altered. No SQL.
+ * 0.32.0 (19 OCT 2026): feat — SCHEDULING: book meetings, inspections, measuring, supervision and site
+ *   visits for a project or a potential project (a Service Proposal) at /scheduling; a project's new
+ *   Scheduling tab shows its upcoming visits, its history and the hours of completed field work (visits
+ *   booked on a proposal later converted to the project included); completing a visit records the actual
+ *   hours and outcome and can put DRAFT entries on the attendees' timesheets, once. Six languages.
+ *   Needs prisma/sql/0035_appointments.sql applied FIRST.
+ * 0.33.0 (23 OCT 2026): release — the take-off engine (0.28.0), measuring on drawings (0.29.0) and the
+ *   Finance overview with the INVOICE button (0.30.0) brought onto main after 0.31.0 and 0.32.0. The
+ *   Finance overview is now also first in Module 1's Finance section. No SQL.
  */
-export const APP_VERSION = "0.30.0";
+export const APP_VERSION = "0.33.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

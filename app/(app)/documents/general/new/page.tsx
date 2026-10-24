@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { DocumentComposer } from "@/components/general-documents/document-composer";
 import { getClients } from "@/lib/data/clients";
-import { getProjects } from "@/lib/data/projects";
+import { getProject, getProjects } from "@/lib/data/projects";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { ymd } from "@/lib/building-permits/register";
 import { getServerT } from "@/lib/i18n/server";
@@ -17,9 +17,9 @@ export const maxDuration = 120;
 export default async function NewGeneralDocumentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; project?: string }>;
 }) {
-  const [{ type }, clients, projects, firm] = await Promise.all([
+  const [{ type, project: projectParam }, clients, projects, firm] = await Promise.all([
     searchParams,
     getClients(),
     getProjects(),
@@ -27,14 +27,19 @@ export default async function NewGeneralDocumentPage({
   ]);
   const t = await getServerT();
 
+  // Started from a project's Documents tab: file it there, under that client.
+  // Only a project this practice can see is honoured; anything else is ignored.
+  const fromProject = projectParam ? await getProject(projectParam) : null;
+  const fromClient = fromProject ? clients.find((c) => c.id === fromProject.clientId) : undefined;
+
   return (
     <div className="w-full space-y-6">
       <Link
-        href="/documents/general"
+        href={fromProject ? `/projects/${fromProject.id}/documents` : "/documents/general"}
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
       >
         <ArrowLeft className="h-4 w-4" />
-        {t("General Documents")}
+        {fromProject ? fromProject.name : t("General Documents")}
       </Link>
       <div>
         <h2 className="text-xl font-semibold text-fg">{t("New document")}</h2>
@@ -47,6 +52,8 @@ export default async function NewGeneralDocumentPage({
       <DocumentComposer
         mode="new"
         initialType={type}
+        initialProjectId={fromProject?.id}
+        initialClientId={fromClient?.id}
         clients={clients.map((c) => ({ id: c.id, name: c.name }))}
         projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         firmName={firm.name}

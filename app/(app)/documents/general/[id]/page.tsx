@@ -14,6 +14,8 @@ import { catalogueEntry } from "@/lib/general-documents/catalogue";
 import { militaryDate, ymd } from "@/lib/building-permits/register";
 import { getServerT } from "@/lib/i18n/server";
 import { A4Sheet } from "@/components/general-documents/a4-sheet";
+import { DocumentProjectLink } from "@/components/general-documents/project-link";
+import { getProjects } from "@/lib/data/projects";
 
 export const metadata: Metadata = { title: "Document · AEC-flow" };
 
@@ -23,7 +25,7 @@ export default async function GeneralDocumentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const doc = await getGeneralDocument(id);
+  const [doc, projects] = await Promise.all([getGeneralDocument(id), getProjects()]);
   if (!doc) notFound();
   const t = await getServerT();
 
@@ -86,6 +88,24 @@ export default async function GeneralDocumentPage({
           {t("Superseded by a later document. It stays here as the record of what was issued.")}
         </p>
       ) : null}
+
+      <Card>
+        <CardHeader
+          title={t("Project")}
+          subtitle={t("File it under the project it belongs to. This can be changed at any time, even after it is signed — the document itself is not altered.")}
+        />
+        <CardBody>
+          <DocumentProjectLink
+            documentId={doc.id}
+            projectId={doc.projectId}
+            projectName={doc.projectName}
+            projects={projects.map((p) => ({
+              id: p.id,
+              name: p.projectNumber ? `${p.projectNumber} · ${p.name}` : p.name,
+            }))}
+          />
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader
