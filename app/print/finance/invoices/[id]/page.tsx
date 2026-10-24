@@ -8,6 +8,7 @@ import { getInvoiceSettings, getPracticeSettings } from "@/lib/server/practice-c
 import { termsPlacement } from "@/lib/finance/invoice-settings";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { getInvoice } from "@/lib/data/invoices";
+import { payLinkFor } from "@/lib/data/pay-now";
 import { creditsOf, invoiceBalance } from "@/lib/finance/calc";
 import { militaryDate } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
@@ -56,6 +57,8 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
     credits: creditsOf(invoice.creditNotes),
   });
   const issuedCredits = invoice.creditNotes.filter((c) => c.status === "ISSUED");
+  // Printed only while it can be used: Stripe connected and money still owed.
+  const payLink = await payLinkFor(invoice);
   const terms = termsPlacement(invoiceSettings);
   // One paragraph per blank-line-separated block, so the preview can move a
   // short clause whole rather than split it across sheets.
@@ -270,6 +273,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               ))}
             </tbody>
           </table>
+        </div>
+      ) : null}
+
+      {payLink ? (
+        <div className="mt-6 break-inside-avoid rounded border border-gray-300 px-3 py-2 text-[11px] text-gray-800">
+          <span className="font-semibold text-gray-900">{t("Pay online")}:</span>{" "}
+          <span className="break-all font-mono text-gray-900">{payLink}</span>
+          <div className="text-[10px] text-gray-500">
+            {fmt(t("By card, for the balance due of {amount}."), { amount: money(outstanding) })}
+          </div>
         </div>
       ) : null}
 

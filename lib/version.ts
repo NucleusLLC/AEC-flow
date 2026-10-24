@@ -224,8 +224,21 @@
  *   prints show a second tax line. One-tax invoices are unchanged. Raising from a proposal with two
  *   taxes in one mode now carries them as two taxes instead of one combined line (three or more still
  *   combine, with a warning). Needs prisma/sql/0032_invoice_second_tax.sql applied FIRST.
+ * 0.35.0 (23 OCT 2026): feat — SUBSCRIPTION BILLING for AEC-flow itself (decision D-5: Stripe Billing
+ *   on the Nucleus LLC account). Settings › Billing (Admin / Director): plan, status, renewal date,
+ *   seats; SUBSCRIBE (monthly / yearly) through Stripe Checkout and MANAGE BILLING through the
+ *   Stripe Customer Portal. /api/billing/webhook (signed, idempotent) keeps the status current. A
+ *   dismissable banner for past-due / canceled; NOTHING is locked (BILLING_ENFORCED = false); the
+ *   founder practice never pays. Hidden until the Stripe env vars are set.
+ *   Needs prisma/sql/0033_billing_subscriptions.sql applied FIRST.
+ * 0.36.0 (23 OCT 2026): feat — PAY ONLINE. A practice connects its own Stripe account (Settings →
+ *   Integrations → Online payments, Stripe Connect, Admin / Director only); its issued invoices then
+ *   carry a "Pay online" link (on screen and printed) to a public /pay page where the client pays
+ *   the amount owed by card, straight into the practice's Stripe account (no platform fee). The
+ *   signed Stripe webhook records the payment ("Card (Stripe)"), once. Off until STRIPE_SECRET_KEY
+ *   and STRIPE_WEBHOOK_SECRET are set. Needs prisma/sql/0034_stripe_pay_now.sql applied FIRST.
  */
-export const APP_VERSION = "0.34.0";
+export const APP_VERSION = "0.36.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

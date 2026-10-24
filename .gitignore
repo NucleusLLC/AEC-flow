@@ -47,3 +47,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# The example env file holds no secrets and documents the variables.
+!.env.example

@@ -10,6 +10,7 @@ import { projects } from "./projects";
 import { drawings } from "./drawings";
 import { shell } from "./shell";
 import { workspace } from "./workspace";
+import { billing } from "./billing";
 
 export const pt: Record<string, Dict> = {
   core,
@@ -22,4 +23,5 @@ export const pt: Record<string, Dict> = {
   drawings,
   shell,
   workspace,
+  billing,
 };

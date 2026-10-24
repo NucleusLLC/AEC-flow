@@ -15,6 +15,7 @@ import { projects } from "./projects";
 import { drawings } from "./drawings";
 import { shell } from "./shell";
 import { workspace } from "./workspace";
+import { billing } from "./billing";
 
 export const AREAS: Record<string, AreaDict> = {
   core,
@@ -27,4 +28,5 @@ export const AREAS: Record<string, AreaDict> = {
   drawings,
   shell,
   workspace,
+  billing,
 };

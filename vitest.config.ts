@@ -264,6 +264,22 @@ export default defineConfig({
       // split, SCH- numbering, and the zod gate with its enum/SQL agreement. Pure.
       "lib/scheduling/calc.test.ts",
       "lib/scheduling/schema.test.ts",
+      // AEC-flow subscription billing (Stripe, D-5): webhook signature, status mapping,
+      // accessFor, the Stripe REST wrapper (fetch mocked) and webhook idempotency /
+      // ordering against an in-memory store. Pure, no Prisma, no network.
+      "lib/billing/signature.test.ts",
+      "lib/billing/status.test.ts",
+      "lib/billing/stripe.test.ts",
+      "lib/billing/webhook.test.ts",
+      // Pay online (Stripe Connect): webhook signature verification, the pay
+      // token and the checkout amount (money.ts), the REST calls against a fake
+      // fetch, and the webhook -> payment mapping with its idempotency. Pure:
+      // no Prisma, no network. Plus runAsCompany, which scopes the webhook.
+      "lib/payments/stripe-signature.test.ts",
+      "lib/payments/pay-link.test.ts",
+      "lib/payments/stripe.test.ts",
+      "lib/payments/webhook.test.ts",
+      "lib/server/request-company.test.ts",
     ],
     environment: "node",
   },

@@ -159,9 +159,49 @@ model Company {
   licenseValidUntil   DateTime? // grace horizon; only consulted once enforcement is switched on
   licenseEntitlements Json? // plan/modules/features/limits from the last good validation
 
+  // ── Online payments (Stripe Connect) ─────────────────────────────────────
+  // The practice's OWN Stripe account (a Standard account connected to the Nucleus
+  // platform). Card payments for this practice's invoices are direct charges on it,
+  // so the money goes to the practice, never to Nucleus. Status flags are the last
+  // values Stripe reported (account.updated webhook, or the onboarding return).
+  // See docs/finance/STRIPE.md and prisma/sql/0034_stripe_pay_now.sql.
+  stripeAccountId        String?   @unique
+  stripeChargesEnabled   Boolean   @default(false)
+  stripePayoutsEnabled   Boolean   @default(false)
+  stripeDetailsSubmitted Boolean   @default(false)
+  stripeStatusAt         DateTime?
+
+  // ── AEC-flow subscription (Stripe Billing, decision D-5) ─────────────────
+  // What the practice pays Nucleus LLC for AEC-flow. Written ONLY by the Stripe
+  // webhook (app/api/billing/webhook) and the Subscribe action (the customer id).
+  // Nothing is enforced yet: lib/billing/status.ts BILLING_ENFORCED = false.
+  // Needs prisma/sql/0033_billing_subscriptions.sql.
+  stripeCustomerId              String?   @unique // cus_… on the Nucleus Stripe account
+  stripeSubscriptionId          String? // sub_…
+  subscriptionStatus            String? // none | trialing | active | past_due | canceled (lib/billing/status.ts)
+  subscriptionPriceId           String? // price_… (monthly or yearly)
+  subscriptionCurrentPeriodEnd  DateTime? // renews / ends on
+  subscriptionCancelAtPeriodEnd Boolean   @default(false)
+  subscriptionEventAt           DateTime? // created time of the last applied Stripe event (out-of-order guard)
+
   users User[]
 
   @@map("companies")
+}
+
+/// One Stripe billing webhook event that has been applied: the idempotency
+/// record for /api/billing/webhook (id = Stripe's evt_… id). PLATFORM table, not
+/// tenant data: it holds no practice content, only which event touched which
+/// company, so it is deliberately NOT in TENANT_MODELS and its company column is
+/// named billingCompanyId (not companyId) for that reason. Needs 0033.
+model BillingWebhookEvent {
+  id               String   @id // evt_…
+  type             String
+  billingCompanyId String?
+  receivedAt       DateTime @default(now())
+
+  @@index([billingCompanyId])
+  @@map("billing_webhook_events")
 }
 
 /// A beta access code for the AEC-Flow beta. A code IS a Nucleus licence key: the plaintext lives
@@ -3196,6 +3236,9 @@ enum InvoicePaymentMethod {
   CHEQUE
   CARD
   OTHER
+  /// Card, paid online through the practice's Stripe account. Recorded only by the
+  /// Stripe webhook (app/api/stripe/webhook), never chosen by hand.
+  STRIPE
 }
 
 /// One invoice. The aggregate root: lines and payments hang off it.
@@ -3276,6 +3319,12 @@ model Invoice {
   /// Soft delete, and only ever for a DRAFT (the data layer enforces that).
   deletedAt DateTime?
 
+  /// The "Pay online" link: /pay/<payToken>. 32 random bytes, base64url. Stored as
+  /// is (not hashed) because the practice must be able to show and print the same
+  /// link again on every reprint; it opens a page showing only the number, the
+  /// practice and the amount owed. Created lazily, the first time it is shown.
+  payToken String? @unique
+
   lines       InvoiceLine[]
   payments    InvoicePayment[]
   creditNotes CreditNote[]
@@ -3335,6 +3384,10 @@ model InvoicePayment {
 
   recordedById   String?
   recordedByName String?
+
+  /// The Stripe PaymentIntent behind an online card payment. UNIQUE: a replayed
+  /// webhook can never record the same money twice. Null for every manual payment.
+  stripePaymentIntentId String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
