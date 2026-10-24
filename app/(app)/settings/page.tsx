@@ -3,13 +3,16 @@ import { getServerT } from "@/lib/i18n/server";
 import { SettingsView } from "@/components/settings/settings-view";
 import { rolesFromMembers, type Member } from "@/lib/data/settings";
 import { getUserPreferences } from "@/lib/data/preferences";
-import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getInvoiceSettings, getPracticeSettings } from "@/lib/server/practice-config";
 import { listTemplates } from "@/lib/data/proposal-templates";
 import { getTeam } from "@/lib/data/team";
 import { getAnthropicKeyStatus } from "@/lib/server/ai-config";
+import { getNarrationStatus } from "@/lib/server/guide-narration";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords as canManagePasswordsFor } from "@/lib/password-policy";
 import { authOptions } from "@/lib/auth";
+import { getOwnSampleSetStatusAction } from "@/app/(app)/settings/sample-actions";
+import { getServerLang } from "@/lib/i18n/server";
 
 export async function generateMetadata() {
   const tr = await getServerT();
@@ -22,12 +25,15 @@ export default async function SettingsPage() {
   const userId = session?.user?.id ?? null;
   const isFounder = isFounderEmail(session?.user?.email);
 
-  const [practice, templates, team, preferences, keyStatus] = await Promise.all([
+  const [practice, templates, team, preferences, keyStatus, narrationStatus, invoiceSettings] = await Promise.all([
     getPracticeSettings(),
     listTemplates(),
     getTeam(),
     getUserPreferences(userId),
     getAnthropicKeyStatus(),
+    // Guide narration is a platform setting: only the founder is shown it.
+    isFounder ? getNarrationStatus() : Promise.resolve(null),
+    getInvoiceSettings(),
   ]);
 
   // Real User rows projected to the settings Member shape; roles derived from them.
@@ -40,6 +46,11 @@ export default async function SettingsPage() {
     status: m.status,
   }));
   const roles = rolesFromMembers(members);
+
+  // Sample files: this practice's own set (the action takes the company from the
+  // session and answers "not installed" for anyone who may not manage it).
+  const sampleStatus = await getOwnSampleSetStatusAction();
+  const sampleLang = (await getServerLang()) === "es" ? "es" : "en";
 
   // Whether to DRAW the per-member "Set password" control. Derived from the actor's
   // row in the company-scoped team list rather than from the session token, so a
@@ -66,14 +77,18 @@ export default async function SettingsPage() {
         footer={practice.footer}
         logoSettings={practice.logo}
         documentFontId={practice.documentFontId}
+        invoiceSettings={invoiceSettings}
         templates={templates}
         members={members}
         roles={roles}
         preferences={preferences}
         keyStatus={keyStatus}
+        narrationStatus={narrationStatus}
         canSave={!!userId}
         isFounder={isFounder}
         canManagePasswords={canManagePasswords}
+        sampleStatus={sampleStatus}
+        sampleLang={sampleLang}
       />
     </div>
   );

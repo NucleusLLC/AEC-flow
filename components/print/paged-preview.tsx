@@ -585,11 +585,19 @@ export function PagedPreview({
         };
       });
 
+      // A heading the document marks `data-page-start` begins a page whatever the
+      // measurement says (an invoice's T&C on a sheet of their own). Passed in
+      // as pinned, so the preview draws the boundary where the printer puts it.
+      const pinned = headings
+        .map((h, i) => (h.hasAttribute("data-page-start") ? i : -1))
+        .filter((i) => i >= 0);
+
       const { cuts, forcedHeadings, softSplits } = resolveHeadingBreaks({
         contentHeight,
         pageHeight: pageH,
         blocks: atoms,
         headings: metrics,
+        pinned,
       });
 
       // A block this pass made unbreakable, which the layout then decided to run

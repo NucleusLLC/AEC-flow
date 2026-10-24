@@ -93,9 +93,9 @@ export function DisciplineDrawings({ drawings }: { drawings: Drawing[] }) {
             </button>
 
             {shut ? null : (
-              <ul className="divide-y divide-border">
+              <ul className="zebra-list divide-y divide-border">
                 {p.sheets.map((d) => (
-                  <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2 hover:bg-surface-2">
+                  <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2 zebra-hover">
                     <span className="font-mono text-[11px] text-faint">{d.code}</span>
                     <Link href={`/drawings/${d.id}`} className="min-w-0 flex-1 truncate text-sm text-fg hover:text-brand">
                       {d.title}

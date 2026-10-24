@@ -3827,3 +3827,102 @@ model ConstructionContract {
   @@index([companyId, createdAt])
   @@map("construction_contracts")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHEDULING — FIELD WORK AND MEETINGS
+//
+// An appointment is a meeting, an inspection, a measuring visit, a supervision
+// visit or any other piece of field work booked for a Project or for a
+// potential project (a Service Proposal). At least one of the two links is
+// required; both are allowed. When a proposal is converted (its projectId set),
+// the project's Scheduling tab shows the visits booked on the proposal too.
+//
+// TIMES ARE WALL-CLOCK, STORED AS UTC. "09:00" typed on the form is stored as
+// 09:00Z and always formatted with timeZone "UTC" — the same convention the
+// rest of the app uses for a YYYY-MM-DD date (UTC midnight). The practice
+// works in one local time, so a visit booked for nine reads as nine on every
+// screen, whatever the server's or the viewer's time zone.
+//
+// Names (project, proposal, client, attendees) are SNAPSHOTS resolved
+// server-side from tenant-scoped records, like every other register here.
+// No foreign keys, following TimeEntry. Company-owned: in TENANT_MODELS
+// (lib/db.ts). See prisma/sql/0035_appointments.sql.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AppointmentType {
+  MEETING
+  INSPECTION
+  MEASURING
+  SUPERVISION
+  SITE_VISIT
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  POSTPONED
+}
+
+model Appointment {
+  companyId String?
+  id        String  @id @default(cuid())
+
+  /// `SCH-{year}-{NNN}`, sequential within the practice and never reused.
+  number String
+  type   AppointmentType   @default(MEETING)
+  status AppointmentStatus @default(SCHEDULED)
+
+  title    String
+  location String?
+  /// Agenda or instructions for the visit.
+  notes    String?
+  /// What happened, written when the visit is completed.
+  outcome  String?
+
+  /// Wall-clock times stored as UTC (09:00 entered = 09:00Z). Always format
+  /// with timeZone "UTC". See the note above.
+  startsAt DateTime
+  endsAt   DateTime
+
+  /// The real duration of the visit, entered on completion. Planned hours are
+  /// derived from startsAt/endsAt and never stored.
+  actualHours Decimal?
+
+  projectId         String?
+  projectName       String?
+  serviceProposalId String?
+  proposalNumber    String?
+  proposalTitle     String?
+  clientId          String?
+  clientName        String?
+
+  /// Internal team, resolved server-side within the company.
+  attendeeIds       String[]
+  attendeeNames     String[]
+  /// Anyone outside the practice, as free text.
+  externalAttendees String?
+
+  /// Set when the hours were put on the timesheets, so they never go on twice.
+  timeLoggedAt DateTime?
+  /// Why it was cancelled — or, for a POSTPONED visit, why it was moved.
+  cancelReason String?
+
+  createdById     String?
+  createdByName   String?
+  completedByName String?
+  completedAt     DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft delete, and only for a SCHEDULED visit with no time logged.
+  deletedAt DateTime?
+
+  @@unique([companyId, number])
+  @@index([companyId, startsAt])
+  @@index([companyId, status])
+  @@index([companyId, projectId])
+  @@index([companyId, serviceProposalId])
+  @@map("appointments")
+}

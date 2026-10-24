@@ -98,15 +98,134 @@
  *   invoice — whole or chosen lines, never more than it still owes; issuing or voiding one is for
  *   Admin / Director only. Issued credits reduce the balance, receivables and the statement.
  *   Needs prisma/sql/0030_credit_notes.sql (applied 9 OCT).
- * 0.26.0 (10 OCT 2026): feat — an invoice can carry TWO taxes (Aruba: BBO + BAVP). The second tax
+ * 0.25.3 (10 OCT 2026): feat — INTERACTIVE-GUIDE on the Estimates editor, Spanish only for now: the
+ *   button turns magenta and a callout card flies from one part of the screen to the next, lighting
+ *   each up for 5 seconds with what it is for (29 steps; Back / Pause / Next, Esc stops). Parts that
+ *   are not on screen are skipped. It only reads the page: nothing is saved or changed. No SQL.
+ * 0.25.4 (10 OCT 2026): fix — sending a Bug/Wish report no longer takes the app down when the
+ *   browser is translating the page (Edge / Chrome Translate). The translator replaces text with
+ *   its own elements; pressing Send then made React insert the spinner before a label that was no
+ *   longer on the page ("Failed to execute 'insertBefore' on 'Node'") and, the panel being part of
+ *   the app layout, everything became "Something went wrong" although the report was saved. The
+ *   label now sits in its own element; a failure inside the panel stays inside the panel; a submit
+ *   that fails says so in a plain sentence (never the database's own words) and keeps what was
+ *   typed; and the outer error page now logs what it catches. No SQL.
+ * 0.25.5 (10 OCT 2026): feat — ESTIMATES in the Architecture & Engineering Design module: the
+ *   Module 1 sidebar gets an Estimating section opening the same /estimates as Module 3 and
+ *   Complete AEC, so architecture and interior projects are priced without switching module.
+ *   Navigation only; no SQL.
+ * 0.25.7 (10 OCT 2026): feat — the INTERACTIVE-GUIDE is read aloud in Spanish by a Fish Audio
+ *   voice: each card's text is spoken while it is lit (symbols and abbreviations read as words),
+ *   the card holds for max(5 s, clip + 0.6 s), Pause / Next / Back / stop silence it, and a
+ *   speaker button mutes it per browser. Clips are made once and kept in the private bucket.
+ *   Founder only: Settings > Integrations > Guide narration (key, voice, model, on/off, test,
+ *   clear cache). Silent exactly as before until a key is saved there. No SQL.
+ * 0.25.8 (11 OCT 2026): feat — the INTERACTIVE-GUIDE in English as well as Spanish: the button and
+ *   the full 29-step tour appear when the interface is in English, with cards written for the
+ *   English screen (every control named as that screen names it) and read aloud by an English
+ *   voice ("square metres", "version one point zero", "per cent"). Voices are per language in
+ *   Settings > Integrations > Guide narration, each with its own shortlist and Test voice;
+ *   Generate all clips makes both languages and Clear cached audio clears both. The Spanish
+ *   texts, voice and cached clips are untouched (their cache keys are pinned by a test). Also:
+ *   the button now shows on the Estimates landing screen too, where it opens one card saying to
+ *   open a project, or create one with New estimate, to start the tour; a new user could not
+ *   find the guide before an estimate was open. Every other language still has no button. No SQL.
+ * 0.25.9 (11 OCT 2026): fix — a new beta signup got three sample clients and four tasks and
+ *   nothing else: no sample project, schedule, estimate or proposal, and no error anywhere.
+ *   The seed re-read the clients it had just created, and at signup (a request with no session
+ *   yet) the tenant scope answers every read with nothing, so there was no client to file a
+ *   project under. It now keeps the rows it creates, each entity is seeded on its own so one
+ *   failure cannot drop the rest, and any failure is one [aecflow-error] line naming the step.
+ *   The seeded estimate is keyed by its project, so it opens from the project too. New signups
+ *   only; companies already created are not touched. No SQL.
+ * 0.25.10 (11 OCT 2026): feat — ZEBRA shading on every list: one stripe, defined once (tokens and
+ *   the zebra-row / zebra-list classes in globals.css), on every register and row list, the
+ *   Estimates project list included. Hover and selected rows are tinted so they never read as a
+ *   stripe; grouped, filtered and expanded tables stay in step. The Estimate editor, the Gantt,
+ *   the Take-Off and everything printed are unchanged. Presentation only. No SQL.
+ * 0.25.11 (11 OCT 2026): feat — sample files. One complete sample project that runs through
+ *   every live module (client, project, service proposal, estimate, schedule, tasks, minutes,
+ *   building permit, construction records, purchase order, materials, deliverables, a letter,
+ *   a contract, a paid invoice with its time and expense), in English or Spanish, every record
+ *   marked SAMPLE / EJEMPLO and numbered on its own SMP- series so no real number is used up.
+ *   A new signup gets it in the language it signed up in. Settings > Practice > Sample files:
+ *   each practice installs or removes its own. /admin > Sample files (founder): dry run, then
+ *   push to one company or to every beta company without one. While installed, the sample
+ *   invoice, payment, time and expense count in that practice's finance figures. No SQL.
+ * 0.25.12 (11 OCT 2026): feat — an INTERACTIVE-GUIDE for Service Proposals, in Spanish and English.
+ *   The proposal form (new and edit) gets the same button and a 22-step narrated tour, top to
+ *   bottom: template, title, number, client, project, contact, currency, cost basis, fees, phases,
+ *   payment schedule, reimbursables, tax and discount, scope, terms, validity, saving and the
+ *   live summary. A step whose section is not on the form (no template on an existing proposal,
+ *   no cost basis without a percentage fee) is skipped. The Service Proposals list shows the
+ *   button with one card saying how to start. The guide is now an engine that runs a definition
+ *   per screen: Estimates and Service Proposals share the overlay, button, player, narration
+ *   route and cache, and clip ids are namespaced per guide. The Estimates tour, its texts and
+ *   every cached Estimates clip in both languages are unchanged (pinned by tests). Generate all
+ *   clips now covers every guide and shows progress per guide. No SQL.
+ * 0.25.13 (12 OCT 2026): fix — four open items. (1) FINANCE: an invoice raised from a proposal's
+ *   payment milestone billed the tax twice when the proposal's tax is added on top. The milestone
+ *   is a share of the grand total, tax included, and the invoice then added the tax again (a
+ *   535.00 milestone was invoiced as 572.45). The line now carries the milestone before tax and
+ *   the invoice adds it once (lib/finance/proposal-billing.ts); included taxes are unchanged; a
+ *   partly taxed proposal gives a taxed and an untaxed line. Invoices already raised are NOT
+ *   changed. The sample invoice had the same fault and is corrected for new installs. (2) GUIDE:
+ *   Spanish Estimates step 20 no longer promises a duplicate icon the screen does not have.
+ *   (3) GUIDE: Spanish cards use "usted", like the rest of the Spanish app; the changed cards are
+ *   narrated again on first listen. (4) The floating INTERACTIVE-GUIDE button steps aside while
+ *   the Bug / Wish panel is open, so it no longer covers Send on narrower screens. No SQL.
+ * 0.25.14 (12 OCT 2026): feat — the updater. A tab left open kept running the release it started
+ *   with and nothing said so. Every signed-in screen now asks /api/version what is deployed (one
+ *   minute after opening, every five minutes, and on coming back to the tab) and, when that is a
+ *   different release, shows "A new version of AEC-flow is available" with Reload now and Later.
+ *   It never reloads by itself: there may be unsaved work in the tab. Six languages. No SQL.
+ * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill;
+ *   issued codes redeem at signup.
+ * 0.27.0 (15 OCT 2026): feat — Vercel Web Analytics with portal CTA, signup and first-print events.
+ * 0.27.1 (15 OCT 2026): fix — the 0.26.0 and 0.27.0 merges left two APP_VERSION constants and two
+ *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
+ *   type-checked against the new initialCode prop. The build failed; this is the repair.
+ * 0.27.2 (15 OCT 2026): fix — a signed-out visitor to / lands on the beta portal, not the login form.
+ * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
+ * 0.27.4 (19 OCT 2026): fix — the 0.27.2 and 0.27.3 merges again left two APP_VERSION constants
+ *   and two "version" keys; the build failed. One of each again. No other change.
+ * 0.28.0 (16 OCT 2026): own take-off engine — area, length and count measured on drawings in
+ *   PDF points, scale notes read (1:100, 1/4" = 1'-0"), totals per condition feeding the Quantity
+ *   Take-Off sheet (engine only; the measuring screen follows).
+ * 0.29.0 (16 OCT 2026): measure on drawings - conditions, calibrated areas,
+ *   lengths, counts and cut-outs feed the existing Quantity Take-Off sheet.
+ * 0.30.0 (19 OCT 2026): feat — INVOICE where the work is. /finance, the Finance overview: a big
+ *   + INVOICE button, outstanding / overdue / received this month / drafts per currency, the latest
+ *   invoices and every finance register; first item of the Finance section, which Modules 2 and 3
+ *   now have too. An Invoice button on an accepted Service Proposal (straight to its milestones),
+ *   on every project header (the new-invoice screen for that project) and on the Dashboard, and
+ *   New invoice in the + New menu. Settings > Invoicing (Admin / Director): default payment terms,
+ *   bank details and terms & conditions; the printed invoice carries the bank details under the
+ *   totals and the T&C after the notes or on a second A4 sheet. Voiding an invoice, deleting a
+ *   payment and deleting a draft are now Admin / Director only. No SQL.
+ * 0.31.0 (19 OCT 2026): feat — a project's Documents tab lists only that project's paperwork: its General
+ *   Documents (with New document pre-filed to the project and Link an existing document), its
+ *   construction contracts and its building permit files. Any General Document, signed ones too,
+ *   can be filed under a project from its own page; the wording is never altered. No SQL.
+ * 0.32.0 (19 OCT 2026): feat — SCHEDULING: book meetings, inspections, measuring, supervision and site
+ *   visits for a project or a potential project (a Service Proposal) at /scheduling; a project's new
+ *   Scheduling tab shows its upcoming visits, its history and the hours of completed field work (visits
+ *   booked on a proposal later converted to the project included); completing a visit records the actual
+ *   hours and outcome and can put DRAFT entries on the attendees' timesheets, once. Six languages.
+ *   Needs prisma/sql/0035_appointments.sql applied FIRST.
+ * 0.33.0 (23 OCT 2026): release — the take-off engine (0.28.0), measuring on drawings (0.29.0) and the
+ *   Finance overview with the INVOICE button (0.30.0) brought onto main after 0.31.0 and 0.32.0. The
+ *   Finance overview is now also first in Module 1's Finance section. No SQL.
+ * 0.34.0 (23 OCT 2026): feat — an invoice can carry TWO taxes (Aruba: BBO + BAVP). The second tax
  *   (name + percent, optional) is charged on the same amounts as the first, never on top of it, and
  *   rounded on its own; "already in the amounts" backs the combined rate out and splits it by rate.
  *   Snapshotted like the first; credit notes take back both in proportion; the tax report counts each
  *   under its own name; the accounting CSV gains Tax 2 columns; invoice and credit-note screens and
- *   prints show a second tax line. One-tax invoices are unchanged. A proposal's second tax row comes
- *   across when raising from it. Needs prisma/sql/0032_invoice_second_tax.sql applied FIRST.
+ *   prints show a second tax line. One-tax invoices are unchanged. Raising from a proposal with two
+ *   taxes in one mode now carries them as two taxes instead of one combined line (three or more still
+ *   combine, with a warning). Needs prisma/sql/0032_invoice_second_tax.sql applied FIRST.
  */
-export const APP_VERSION = "0.26.0";
+export const APP_VERSION = "0.34.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

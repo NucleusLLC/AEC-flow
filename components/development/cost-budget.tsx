@@ -82,7 +82,7 @@ export function CostBudget({ projectId, budget, currency }: { projectId: string;
             </thead>
             <tbody>
               {computed.map(({ row: r, calc: c }) => (
-                <tr key={r.id} className="even:bg-surface-2/40">
+                <tr key={r.id} className="zebra-row">
                   <td className={cell}>
                     <select className="h-8 w-24 rounded border border-border bg-surface px-1 text-xs" value={r.costCode} onChange={(e) => set(r.id, "costCode", Number(e.target.value))}>
                       {COST_CODES.map((cc) => <option key={cc.code} value={cc.code}>{cc.code}</option>)}

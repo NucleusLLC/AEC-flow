@@ -149,7 +149,7 @@ export function PunchListView({ items }: { items: PunchListItem[] }) {
             </thead>
             <tbody className="divide-y divide-border">
               {rows.map((p) => (
-                <tr key={p.id} className="group transition-colors even:bg-surface-2/60 hover:bg-surface-2">
+                <tr key={p.id} className="zebra-row group transition-colors zebra-hover">
                   <td className="px-5 py-3">
                     <Link href={`/construction-admin/punch-list/${p.id}`} className="block">
                       <span className="font-mono text-[11px] text-faint">{p.itemNumber}</span>

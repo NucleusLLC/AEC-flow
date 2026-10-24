@@ -89,12 +89,12 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
             {t("No meeting minutes logged for this project yet.")}
           </div>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="zebra-list divide-y divide-border">
             {meetings.map((m) => (
               <li key={m.id}>
                 <Link
                   href={`/meetings/${m.id}`}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors zebra-hover"
                 >
                   <span className="w-24 shrink-0 text-xs tabular-nums text-faint">{formatDate(m.meetingDate, locale)}</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{m.title}</span>
@@ -116,7 +116,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
           <div className="border-b border-border px-4 py-3">
             <h3 className="text-sm font-semibold text-fg">{t("Recent Activity")}</h3>
           </div>
-          <ol className="divide-y divide-border">
+          <ol className="zebra-list divide-y divide-border">
             {activity.slice(0, 8).map((entry) => (
               <li key={entry.id} className="flex items-start gap-3 px-4 py-2.5">
                 <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand/70" />

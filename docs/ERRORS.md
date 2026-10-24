@@ -11,6 +11,7 @@ AEC-flow records every error in one place: the Vercel function logs, as single l
 | `client` | `boundary` | `app/(app)/error.tsx` | An app page shows "Something went wrong" |
 | `client` | `window` | `components/observability/client-error-listener.tsx` | An uncaught exception in the browser |
 | `client` | `promise` | same | An unhandled promise rejection in the browser |
+| `server` | — | `lib/server/guide-narration.ts` (`name: "GuideNarration"`) | The Estimates guide could not be read aloud: Fish Audio refused, timed out or is out of credit, or the clip cache is unreachable. Not an error for the user: the guide runs silent. One line per problem, then Fish Audio is left alone for five minutes |
 
 Client reports go to `POST /api/client-error` (signed-in only, 16 KB cap, 60 per minute per
 server instance, 5 per page load) and carry the user and company ids.

@@ -20,9 +20,11 @@ import {
   saveFooter,
   saveLogoSettings,
   saveDocumentFontId,
+  saveInvoiceSettings,
   type FooterSettings,
   type LogoSettings,
 } from "@/lib/server/practice-config";
+import type { InvoiceSettings } from "@/lib/finance/invoice-settings";
 import {
   createTemplate,
   updateTemplate,
@@ -195,6 +197,34 @@ export async function saveDocumentFontAction(fontId: string): Promise<ActionResu
     return { ok: true };
   } catch (e) {
     return fail(e, "Failed to save the document font.");
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Invoicing                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Firm-wide invoice settings: default payment terms, bank details and T&C.
+ * They print on every invoice the practice sends, so they are the letterhead's
+ * kind of setting and take the letterhead's gate (Admin / Director / founder).
+ * The values are clamped by `saveInvoiceSettings`; the saved, clamped copy is
+ * returned so the form shows what was actually stored.
+ */
+export async function saveInvoiceSettingsAction(
+  settings: InvoiceSettings,
+): Promise<ActionResult<InvoiceSettings>> {
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
+  try {
+    const saved = await saveInvoiceSettings(settings);
+    revalidatePath("/settings");
+    // New invoices read the default terms; every printed invoice reads the rest.
+    revalidatePath("/finance", "layout");
+    revalidatePath("/print/finance/invoices", "layout");
+    return { ok: true, data: saved };
+  } catch (e) {
+    return fail(e, "Failed to save the invoice settings.");
   }
 }
 

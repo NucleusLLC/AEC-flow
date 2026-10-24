@@ -13,6 +13,10 @@
  * Issued credit notes reduce the balance through the same function
  * (`invoiceBalance`) — they are listed under the payments, and a credit note
  * is raised from here, against this invoice, while money is still owed.
+ *
+ * Void, Delete draft and the delete-payment bin are drawn only for an
+ * administrator, a director or the founder (`canManage`). That is presentation:
+ * the actions and lib/data/invoices.ts refuse everyone else whatever is drawn.
  */
 
 import { useState } from "react";
@@ -49,9 +53,12 @@ const label = "mb-1 block text-xs font-medium text-muted";
 export function InvoicePanel({
   invoice,
   today,
+  canManage = false,
 }: {
   invoice: InvoiceDTO;
   today: string;
+  /** Draws Void, Delete draft and the delete-payment bin (Admin / Director / founder). */
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const t = useT();
@@ -176,9 +183,11 @@ export function InvoicePanel({
             >
               <Send className="h-4 w-4" /> {t("Issue")}
             </button>
-            <button type="button" disabled={pending} onClick={() => setAsking("delete")} className={`${BTN} text-red-600`}>
-              <Trash2 className="h-4 w-4" /> {t("Delete draft")}
-            </button>
+            {canManage ? (
+              <button type="button" disabled={pending} onClick={() => setAsking("delete")} className={`${BTN} text-red-600`}>
+                <Trash2 className="h-4 w-4" /> <span>{t("Delete draft")}</span>
+              </button>
+            ) : null}
           </>
         ) : null}
         {canTakePayment ? (
@@ -194,7 +203,7 @@ export function InvoicePanel({
             <FileMinus className="h-4 w-4" /> {t("Raise credit note")}
           </Link>
         ) : null}
-        {!isDraft && invoice.status !== "VOID" ? (
+        {canManage && !isDraft && invoice.status !== "VOID" ? (
           <button type="button" disabled={pending} onClick={() => setAsking("void")} className={`${BTN} text-red-600`}>
             <Ban className="h-4 w-4" /> {t("Void this invoice")}
           </button>
@@ -272,7 +281,7 @@ export function InvoicePanel({
         </Card>
       ) : null}
 
-      {asking === "void" ? (
+      {canManage && asking === "void" ? (
         <Card>
           <CardBody className="flex flex-wrap items-end gap-2">
             <div className="min-w-[260px] flex-1">
@@ -304,7 +313,7 @@ export function InvoicePanel({
         </Card>
       ) : null}
 
-      {asking === "delete" ? (
+      {canManage && asking === "delete" ? (
         <Card>
           <CardBody className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-fg">{t("Delete this draft invoice?")}</span>
@@ -338,7 +347,7 @@ export function InvoicePanel({
           <table className="w-full text-sm">
             <tbody>
               {invoice.lines.map((l) => (
-                <tr key={l.id} className="border-b border-border/60 last:border-0">
+                <tr key={l.id} className="zebra-row border-b border-border/60 last:border-0">
                   <td className="py-2 pr-3">
                     <div className="text-fg">{l.description}</div>
                     {l.milestoneName ? (
@@ -419,21 +428,23 @@ export function InvoicePanel({
               </thead>
               <tbody>
                 {invoice.payments.map((p) => (
-                  <tr key={p.id} className="border-t border-border/60">
+                  <tr key={p.id} className="zebra-row border-t border-border/60">
                     <td className="py-2 font-mono text-xs tabular-nums">{militaryDate(p.paidAt)}</td>
                     <td className="py-2 text-muted">{t(PAYMENT_METHOD_LABEL[p.method])}</td>
                     <td className="py-2 font-mono text-xs text-muted">{p.reference ?? "—"}</td>
                     <td className="py-2 text-right font-mono tabular-nums text-fg">{money(p.amount)}</td>
                     <td className="py-2 text-right">
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => run(() => deletePaymentAction(invoice.id, p.id))}
-                        aria-label={t("Delete payment")}
-                        className="text-faint transition-colors hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {canManage ? (
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => run(() => deletePaymentAction(invoice.id, p.id))}
+                          aria-label={t("Delete payment")}
+                          className="text-faint transition-colors hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -462,7 +473,7 @@ export function InvoicePanel({
               </thead>
               <tbody>
                 {invoice.creditNotes.map((c) => (
-                  <tr key={c.id} className="border-t border-border/60">
+                  <tr key={c.id} className="zebra-row border-t border-border/60">
                     <td className="py-2">
                       <Link href={`/finance/credit-notes/${c.id}`} className="font-mono text-xs font-semibold text-brand hover:underline">
                         {c.number}

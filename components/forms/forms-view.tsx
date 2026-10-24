@@ -83,7 +83,7 @@ export function FormsView({ forms }: { forms: FormItem[] }) {
           </thead>
           <tbody>
             {filtered.map((f) => (
-              <tr key={f.id} className="border-b border-border/70 odd:bg-surface even:bg-surface-2 hover:bg-brand/5">
+              <tr key={f.id} className="zebra-row border-b border-border/70 zebra-hover">
                 <td className="px-3 py-2 font-mono text-[11px] text-muted">{f.code}</td>
                 <td className="px-3 py-2">
                   <div className="text-xs font-medium text-fg">{f.name}</div>

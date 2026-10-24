@@ -83,7 +83,7 @@ export function SalesCrm({ projectId, leads, lots, reservations: r0, salesContra
             </thead>
             <tbody className="divide-y divide-border">
               {leads.map((l) => (
-                <tr key={l.id} className="even:bg-surface-2/40">
+                <tr key={l.id} className="zebra-row">
                   <td className="px-4 py-2.5">
                     <div className="font-medium text-fg">{l.name}</div>
                     <div className="text-[11px] text-faint">{l.contact ?? "—"}{l.source ? ` · ${l.source}` : ""}</div>
@@ -120,7 +120,7 @@ export function SalesCrm({ projectId, leads, lots, reservations: r0, salesContra
               </tr></thead>
               <tbody>
                 {reservations.map((r) => (
-                  <tr key={r.id} className="even:bg-surface-2/40">
+                  <tr key={r.id} className="zebra-row">
                     <td className={cell}><input className={`${txt} w-20`} value={r.lotNumber} onChange={(e) => setReservations((p) => p.map((x) => x.id === r.id ? { ...x, lotNumber: e.target.value } : x))} /></td>
                     <td className={cell}><input className={`${txt} w-32`} value={r.buyerName} onChange={(e) => setReservations((p) => p.map((x) => x.id === r.id ? { ...x, buyerName: e.target.value } : x))} /></td>
                     <td className={cell}><input type="number" className={numI} value={r.depositAmount} onChange={(e) => setReservations((p) => p.map((x) => x.id === r.id ? { ...x, depositAmount: Number(e.target.value) } : x))} /></td>
@@ -150,7 +150,7 @@ export function SalesCrm({ projectId, leads, lots, reservations: r0, salesContra
               </tr></thead>
               <tbody>
                 {salesContracts.map((c) => (
-                  <tr key={c.id} className="even:bg-surface-2/40">
+                  <tr key={c.id} className="zebra-row">
                     <td className={cell}><input className={`${txt} w-24`} value={c.contractNumber} onChange={(e) => setSalesContracts((p) => p.map((x) => x.id === c.id ? { ...x, contractNumber: e.target.value } : x))} /></td>
                     <td className={cell}><input className={`${txt} w-20`} value={c.lotNumber} onChange={(e) => setSalesContracts((p) => p.map((x) => x.id === c.id ? { ...x, lotNumber: e.target.value } : x))} /></td>
                     <td className={cell}><input type="number" className={numI} value={c.salePrice} onChange={(e) => setSalesContracts((p) => p.map((x) => x.id === c.id ? { ...x, salePrice: Number(e.target.value) } : x))} /></td>

@@ -357,7 +357,16 @@ export type BillableMilestone = {
   name: string;
   trigger: string | null;
   percent: number;
+  /**
+   * What an invoice may bill for this milestone. Before tax when the
+   * proposal's tax is added on top (the invoice adds it once); otherwise the
+   * milestone as the proposal states it. See lib/finance/proposal-billing.ts.
+   */
   amount: number;
+  /** The part of `amount` the tax applies to. */
+  taxable: number;
+  /** The milestone as the proposal states it: its share of the grand total. */
+  gross: number;
   invoiced: number;
   remaining: number;
   /** The invoices that already bill this milestone, for the "why" of a zero. */
@@ -383,6 +392,8 @@ export type ProposalBilling = {
   /** Optional second tax, same mode, same base, not compounded. Null / 0 when absent. */
   tax2Name: string | null;
   tax2Percent: number;
+  /** True when the milestone amounts are before tax and the invoice adds it. */
+  taxOnTop: boolean;
   milestones: BillableMilestone[];
   /** Engine warnings worth refusing on — e.g. milestones that do not total 100%. */
   warnings: string[];

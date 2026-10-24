@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Search, Menu, Maximize2, Minimize2 } from "lucide-react";
 import { allModuleNavItems } from "@/lib/modules";
@@ -11,6 +12,7 @@ import { UserMenu } from "@/components/shell/user-menu";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import type { NotificationItem } from "@/lib/data/notifications.types";
+import { GUIDE_TOPBAR_SLOT_ID, GUIDE_TOPBAR_SLOT_READY } from "@/lib/estimates/interactive-guide";
 
 function usePageTitle(): string {
   const pathname = usePathname();
@@ -35,6 +37,14 @@ export function Topbar({
   const title = usePageTitle();
   const currentQ = useSearchParams().get("q") ?? "";
   const t = useT();
+
+  // Tell the INTERACTIVE-GUIDE button its slot may be used. An effect runs only
+  // after this top bar is live in the browser, so the button is never put into
+  // server markup React has not adopted yet.
+  const guideSlot = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    guideSlot.current?.setAttribute(GUIDE_TOPBAR_SLOT_READY, "1");
+  }, []);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur sm:px-6 print:hidden">
@@ -67,6 +77,12 @@ export function Topbar({
       </h1>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* Empty slot beside the full-screen toggle. The Estimates editor moves
+            its INTERACTIVE-GUIDE button in here on wide screens (so does the
+            Estimates landing screen); on every other page, and in every
+            language the guide is not offered in, it stays empty and
+            (display: contents) takes no room. */}
+        <div ref={guideSlot} id={GUIDE_TOPBAR_SLOT_ID} className="contents" />
         {/* Full-screen toggle (desktop only) — collapses/expands the sidebar. */}
         {onToggleSidebar ? (
           <button

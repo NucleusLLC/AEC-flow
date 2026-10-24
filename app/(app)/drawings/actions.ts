@@ -10,6 +10,10 @@
  * a vague one costs more than it hides.
  */
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { getProjectDrawings } from "@/lib/data/drawings";
 import { revalidatePath } from "next/cache";
 import {
   analyseUploadedDrawing,
@@ -113,5 +117,39 @@ export async function drawingFileUrlAction(id: string): Promise<FileUrlResult> {
     return url ? { ok: true, url } : { ok: false, error: "That file is not available." };
   } catch (e) {
     return { ok: false, error: message(e, "Could not open the file.") };
+  }
+}
+
+/** PDF choices for estimate measuring; the project and register are tenant-scoped. */
+export type EstimateDrawing = {
+  id: string;
+  sheetNumber: string;
+  title: string;
+  revision: string;
+  pageCount: number | null;
+};
+
+type EstimateDrawingsResult = { ok: true; drawings: EstimateDrawing[] } | { ok: false; error: string };
+
+export async function estimateDrawingsAction(projectId: string): Promise<EstimateDrawingsResult> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return { ok: false, error: "Not authenticated." };
+    const id = String(projectId ?? "").trim();
+    if (!id) return { ok: false, error: "Choose a project." };
+    const project = await prisma.project.findFirst({ where: { id }, select: { id: true } });
+    if (!project) return { ok: false, error: "That project does not exist, or is not yours." };
+    const drawings = (await getProjectDrawings(id))
+      .filter(drawing => drawing.fileType === "PDF" && drawing.hasFile)
+      .map(drawing => ({
+        id: drawing.id,
+        sheetNumber: drawing.code,
+        title: drawing.title,
+        revision: drawing.revision,
+        pageCount: drawing.pageCount ?? null,
+      }));
+    return { ok: true, drawings };
+  } catch (error) {
+    return { ok: false, error: message(error, "Could not load project drawings.") };
   }
 }

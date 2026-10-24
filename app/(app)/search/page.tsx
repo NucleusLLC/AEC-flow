@@ -186,12 +186,12 @@ export default async function SearchPage({
                   <h3 className="text-sm font-semibold text-fg">{group.label}</h3>
                   <span className="text-xs text-faint">{group.results.length}</span>
                 </div>
-                <Card className="divide-y divide-border overflow-hidden">
+                <Card className="zebra-list divide-y divide-border overflow-hidden">
                   {group.results.map((r) => (
                     <Link
                       key={r.id}
                       href={r.href}
-                      className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-2"
+                      className="flex items-center gap-3 px-5 py-3 transition-colors zebra-hover"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-fg">{r.title}</div>

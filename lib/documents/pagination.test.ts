@@ -369,6 +369,32 @@ describe("resolveHeadingBreaks — the fixed-point loop", () => {
     expect(r.settled).toBe(true);
   });
 
+  it("starts a page at a pinned heading even when nothing strands it", () => {
+    // An invoice's terms & conditions on a sheet of their own: the heading sits
+    // well clear of the foot, and still begins page two.
+    const r = resolveHeadingBreaks({
+      contentHeight: 1400,
+      pageHeight: PAGE,
+      blocks: [],
+      headings: [heading(200, 100), heading(600, 100)],
+      pinned: [1],
+    });
+    expect(r.forcedHeadings).toEqual([1]);
+    expect(r.cuts.map((c) => c.at)).toEqual([600]);
+    expect(r.cuts[0]).toMatchObject({ kind: "forced", forcedIndex: 1 });
+  });
+
+  it("ignores a pinned heading that already begins its page, and bad indices", () => {
+    const r = resolveHeadingBreaks({
+      contentHeight: 1500,
+      pageHeight: PAGE,
+      blocks: [],
+      headings: [heading(0, 100), heading(1000, 100)],
+      pinned: [0, 1, 1, 7, -1],
+    });
+    expect(r.cuts.map((c) => c.at)).toEqual([1000]);
+  });
+
   it("re-solves the headings a push moved", () => {
     // Pushing the first heading drags the second one onto a page foot it was
     // clear of before. A single pass would leave it stranded.

@@ -6,10 +6,12 @@ import { AlertTriangle, ArrowLeft, Clock, FileSignature } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { InvoiceForm } from "@/components/finance/invoice-form";
 import { getProposalBilling, listBillableProposals } from "@/lib/data/invoices";
+import { milestoneInvoiceLines } from "@/lib/finance/proposal-billing";
 import { projectsWithUnbilledWork, unbilledWork } from "@/lib/data/work-billing";
 import { UnbilledWorkPicker } from "@/components/finance/unbilled-work-picker";
 import { getClients } from "@/lib/data/clients";
-import { getProjects } from "@/lib/data/projects";
+import { getProject, getProjects } from "@/lib/data/projects";
+import { getInvoiceSettings } from "@/lib/server/practice-config";
 import { dueDateFrom } from "@/lib/finance/calc";
 import { ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
@@ -28,14 +30,27 @@ export async function generateMetadata(): Promise<Metadata> {
  * against it and what is left, because "bill stage 2" is a question about the
  * proposal's history, not just its schedule. A proposal whose milestones do not
  * add up to 100% says so here rather than quietly under-billing.
+ *
+ * `?project=<id>` (the project header's Invoice button) narrows the first step
+ * to that job: its accepted proposals, its unbilled work, and a from-scratch
+ * form with the project and its client already filled in.
+ *
+ * Payment terms default to the practice's own (Settings > Invoicing) rather
+ * than a fixed 30 days; each invoice can still change them.
  */
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ proposal?: string; milestones?: string; work?: string }>;
+  searchParams: Promise<{ proposal?: string; milestones?: string; work?: string; project?: string }>;
 }) {
-  const [{ proposal: proposalId, milestones: picked, work: workProjectId }, clients, projects, proposals] =
-    await Promise.all([searchParams, getClients(), getProjects(), listBillableProposals()]);
+  const [
+    { proposal: proposalId, milestones: picked, work: workProjectId, project: forProjectId },
+    clients,
+    projects,
+    allProposals,
+    invoiceSettings,
+  ] = await Promise.all([searchParams, getClients(), getProjects(), listBillableProposals(), getInvoiceSettings()]);
+  const termsDays = invoiceSettings.defaultTermsDays;
 
   const today = ymd(new Date());
   const t = await getServerT();
@@ -47,15 +62,20 @@ export default async function NewInvoicePage({
 
   // Step 2: a proposal is chosen and milestones ticked — go straight to the form.
   if (billing && chosen.size > 0) {
-    const lines: InvoiceLineInput[] = billing.milestones
-      .filter((m) => chosen.has(m.id) && m.remaining > 0)
-      .map((m) => ({
-        description: m.name,
-        milestoneId: m.id,
-        milestoneName: m.name,
-        amount: m.remaining,
-        taxable: true,
-      }));
+    // `remaining` is before tax when the proposal's tax is added on top, so the
+    // invoice adds it once. A milestone that is only partly taxed becomes two
+    // lines against the same milestone — lib/finance/proposal-billing.ts.
+    const picked = billing.milestones.filter((m) => chosen.has(m.id) && m.remaining > 0);
+    const lines: InvoiceLineInput[] = picked.flatMap((m) =>
+      milestoneInvoiceLines(
+        { id: m.id, name: m.name, remaining: m.remaining, billable: m.amount, taxable: m.taxable },
+        {
+          currency: billing.currency,
+          taxPercent: billing.taxPercent,
+          notTaxedLabel: (name) => fmt(t("{name} (not taxed)"), { name }),
+        },
+      ),
+    );
 
     return (
       <div className="w-full space-y-6">
@@ -71,7 +91,7 @@ export default async function NewInvoicePage({
             {fmt(t("Invoice from {number}"), { number: billing.proposalNumber })}
           </h2>
           <p className="text-sm text-muted">
-            {lines.length === 1 ? t("1 milestone") : fmt(t("{count} milestones"), { count: lines.length })} ·{" "}
+            {picked.length === 1 ? t("1 milestone") : fmt(t("{count} milestones"), { count: picked.length })} ·{" "}
             {billing.title}
           </p>
         </div>
@@ -97,8 +117,8 @@ export default async function NewInvoicePage({
             tax2Name: billing.tax2Name,
             tax2Percent: billing.tax2Percent,
             issueDate: today,
-            termsDays: 30,
-            dueDate: dueDateFrom(today, 30),
+            termsDays,
+            dueDate: dueDateFrom(today, termsDays),
             lines,
           }}
         />
@@ -196,6 +216,16 @@ export default async function NewInvoicePage({
               * rather than hidden behind client state. */}
             <form method="GET" className="space-y-3">
               <input type="hidden" name="proposal" value={billing.serviceProposalId} />
+              {billing.taxOnTop ? (
+                <p className="text-sm text-muted">
+                  {fmt(
+                    t(
+                      "These amounts are before {tax}. The invoice adds {tax} on top, so what the client pays matches the proposal.",
+                    ),
+                    { tax: `${billing.taxName || t("Tax")} ${billing.taxPercent}%` },
+                  )}
+                </p>
+              ) : null}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
@@ -208,7 +238,7 @@ export default async function NewInvoicePage({
                 </thead>
                 <tbody>
                   {billing.milestones.map((m) => (
-                    <tr key={m.id} className="border-t border-border/60">
+                    <tr key={m.id} className="zebra-row border-t border-border/60">
                       <td className="py-2 pr-2">
                         <input
                           type="checkbox"
@@ -225,6 +255,9 @@ export default async function NewInvoicePage({
                           {m.percent}%{m.trigger ? ` · ${m.trigger}` : ""}
                           {m.invoiceNumbers.length > 0
                             ? ` · ${fmt(t("on {numbers}"), { numbers: m.invoiceNumbers.join(", ") })}`
+                            : ""}
+                          {billing.taxOnTop
+                            ? ` · ${fmt(t("{amount} with tax"), { amount: money(m.gross) })}`
                             : ""}
                         </div>
                       </td>
@@ -262,8 +295,11 @@ export default async function NewInvoicePage({
   }
 
   // Step 1a: choose a proposal, a job with unbilled work, or write one from
-  // scratch.
-  const withWork = await projectsWithUnbilledWork();
+  // scratch — for one project when the link came from that project.
+  const forProject = forProjectId ? await getProject(forProjectId) : null;
+  const proposals = forProject ? allProposals.filter((p) => p.projectId === forProject.id) : allProposals;
+  const allWork = await projectsWithUnbilledWork();
+  const withWork = forProject ? allWork.filter((w) => w.projectId === forProject.id) : allWork;
 
   return (
     <div className="w-full max-w-4xl space-y-6">
@@ -279,6 +315,16 @@ export default async function NewInvoicePage({
         <p className="text-sm text-muted">
           {t("From an accepted proposal, so the amounts and the tax come across — or from scratch.")}
         </p>
+        {forProject ? (
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-md bg-brand/10 px-2 py-0.5 font-medium text-brand">
+              {fmt(t("For {project}"), { project: `${forProject.projectNumber} · ${forProject.name}` })}
+            </span>
+            <Link href="/finance/invoices/new" className="text-muted underline-offset-2 hover:text-fg hover:underline">
+              {t("Show every project")}
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <Card>
@@ -294,12 +340,12 @@ export default async function NewInvoicePage({
               )}
             </p>
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="zebra-list divide-y divide-border/60">
               {proposals.map((p) => (
                 <li key={p.id}>
                   <Link
                     href={`/finance/invoices/new?proposal=${p.id}`}
-                    className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:bg-surface-2"
+                    className="flex items-center justify-between gap-3 py-2.5 transition-colors zebra-hover"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <FileSignature className="h-4 w-4 shrink-0 text-muted" />
@@ -341,12 +387,12 @@ export default async function NewInvoicePage({
               )}
             </p>
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="zebra-list divide-y divide-border/60">
               {withWork.map((w) => (
                 <li key={`${w.projectId}:${w.currency}`}>
                   <Link
                     href={`/finance/invoices/new?work=${w.projectId}`}
-                    className="flex items-center justify-between gap-3 py-2.5 transition-colors hover:bg-surface-2"
+                    className="flex items-center justify-between gap-3 py-2.5 transition-colors zebra-hover"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <Clock className="h-4 w-4 shrink-0 text-muted" />
@@ -382,7 +428,19 @@ export default async function NewInvoicePage({
             clients={clientOptions}
             projects={projectOptions}
             today={today}
-            prefill={{ issueDate: today, termsDays: 30, dueDate: dueDateFrom(today, 30) }}
+            prefill={{
+              issueDate: today,
+              termsDays,
+              dueDate: dueDateFrom(today, termsDays),
+              ...(forProject
+                ? {
+                    projectId: forProject.id,
+                    projectName: forProject.name,
+                    clientId: forProject.clientId,
+                    clientName: forProject.clientName,
+                  }
+                : {}),
+            }}
           />
         </CardBody>
       </Card>

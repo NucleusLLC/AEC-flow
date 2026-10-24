@@ -140,10 +140,10 @@ export default async function ConstructionAdminPage() {
               {tr("View all")}
             </Link>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="zebra-list divide-y divide-border">
             {changeOrders.slice(0, 5).map((c) => (
               <li key={c.id}>
-                <Link href={`/construction-admin/change-orders/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2">
+                <Link href={`/construction-admin/change-orders/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 zebra-hover">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg">{c.title}</div>
                     <div className="font-mono text-[11px] text-faint">{c.changeOrderNumber}</div>
@@ -165,10 +165,10 @@ export default async function ConstructionAdminPage() {
               {tr("View all")}
             </Link>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="zebra-list divide-y divide-border">
             {rfis.filter((r) => r.status === "OPEN").slice(0, 3).map((r) => (
               <li key={r.id}>
-                <Link href={`/construction-admin/rfis/${r.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2">
+                <Link href={`/construction-admin/rfis/${r.id}`} className="flex items-center justify-between gap-3 px-5 py-3 zebra-hover">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-fg">{r.subject}</div>
                     <div className="font-mono text-[11px] text-faint">{r.rfiNumber}</div>

@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { isCurrentUserFounder } from "@/lib/server/founder";
 import { listCompaniesForAdmin } from "@/lib/server/admin";
 import { AdminCompanies } from "@/components/admin/admin-companies";
+import { SampleFilesPanel } from "@/components/admin/sample-files-panel";
+import { listSampleSetCompanies } from "@/lib/samples/admin";
 import { getServerT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   if (!(await isCurrentUserFounder())) redirect("/dashboard");
   const companies = await listCompaniesForAdmin();
+  // Founder-gated again inside; an empty list for anyone else.
+  const sampleCompanies = await listSampleSetCompanies();
   const t = await getServerT();
 
   return (
@@ -20,6 +24,7 @@ export default async function AdminPage() {
         </p>
       </div>
       <AdminCompanies companies={companies} />
+      <SampleFilesPanel companies={sampleCompanies} />
     </div>
   );
 }

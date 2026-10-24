@@ -302,7 +302,7 @@ export function TimesheetWeek({
               </thead>
               <tbody>
                 {entries.map((e) => (
-                  <tr key={e.id} className="border-b border-border/60 last:border-0">
+                  <tr key={e.id} className="zebra-row border-b border-border/60 last:border-0">
                     <td className="whitespace-nowrap px-3 py-2 align-top font-mono text-xs tabular-nums text-muted">
                       {e.date}
                     </td>
