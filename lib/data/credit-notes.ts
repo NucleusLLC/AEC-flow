@@ -122,9 +122,12 @@ type CreditNoteRow = {
   taxName: string | null;
   taxPercent: DecimalLike;
   taxMode: TaxMode;
+  tax2Name: string | null;
+  tax2Percent: DecimalLike;
   subtotal: DecimalLike;
   taxableSubtotal: DecimalLike;
   taxTotal: DecimalLike;
+  tax2Total: DecimalLike;
   total: DecimalLike;
   notes: string | null;
   createdByName: string | null;
@@ -165,6 +168,7 @@ export function creditNoteSummaryDto(r: CreditNoteRow): CreditNoteSummaryDTO {
     reason: r.reason,
     subtotal: num(r.subtotal),
     taxTotal: num(r.taxTotal),
+    tax2Total: num(r.tax2Total),
     total: num(r.total),
     updatedAt: r.updatedAt.toISOString(),
   };
@@ -179,6 +183,8 @@ function creditNoteDto(r: CreditNoteRow): CreditNoteDTO {
     taxName: r.taxName,
     taxPercent: num(r.taxPercent),
     taxMode: r.taxMode,
+    tax2Name: r.tax2Name,
+    tax2Percent: num(r.tax2Percent),
     taxableSubtotal: num(r.taxableSubtotal),
     notes: r.notes,
     createdByName: r.createdByName,
@@ -307,6 +313,8 @@ export async function getCreditableInvoice(
     taxName: inv.taxName,
     taxPercent: num(inv.taxPercent),
     taxMode: inv.taxMode as TaxMode,
+    tax2Name: inv.tax2Name,
+    tax2Percent: num(inv.tax2Percent),
     total: num(inv.total),
     paid: balance.paid,
     credited: balance.credited,
@@ -363,7 +371,9 @@ function buildCredit(inv: LoadedInvoice, input: CreditNoteInput) {
 
   const totals = invoiceTotals(
     lines,
-    { percent: num(inv.taxPercent), mode: inv.taxMode as TaxMode },
+    // Both taxes, at the invoice's rates: each is credited in proportion to
+    // the lines credited, exactly as it was charged.
+    { percent: num(inv.taxPercent), mode: inv.taxMode as TaxMode, percent2: num(inv.tax2Percent) },
     currency,
   );
 
@@ -409,12 +419,15 @@ function headerFrom(inv: LoadedInvoice, input: CreditNoteInput, totals: ReturnTy
     taxName: inv.taxName,
     taxPercent: inv.taxPercent,
     taxMode: inv.taxMode,
+    tax2Name: inv.tax2Name,
+    tax2Percent: inv.tax2Percent,
     date: toDate(input.date),
     reason: input.reason.trim(),
     notes: input.notes ?? null,
     subtotal: totals.subtotal,
     taxableSubtotal: totals.taxableSubtotal,
     taxTotal: totals.taxTotal,
+    tax2Total: totals.tax2Total,
     total: totals.total,
   };
 }

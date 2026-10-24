@@ -328,13 +328,23 @@ export function resolveHeadingBreaks(input: {
   pageHeight: number;
   blocks: readonly PaginationBlock[];
   headings: readonly HeadingMetric[];
+  /**
+   * Heading indices the DOCUMENT says must begin a page (an invoice's terms &
+   * conditions on a sheet of their own). They start in the forced set, so the
+   * layout — and the `data-break-before` stamp that carries it to the printer —
+   * honours them like a pushed heading. One already at the top of a page cuts
+   * nothing, exactly as a pushed one would not.
+   */
+  pinned?: readonly number[];
   maxPasses?: number;
   maxPages?: number;
 }): HeadingBreakResult {
   const { contentHeight, pageHeight, blocks, headings } = input;
   const maxPasses = input.maxPasses ?? 3;
 
-  const forced: number[] = [];
+  const forced: number[] = [...new Set(input.pinned ?? [])].filter(
+    (i) => Number.isInteger(i) && i >= 0 && i < headings.length,
+  );
   const run = () =>
     computeCuts({
       contentHeight,

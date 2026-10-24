@@ -3243,12 +3243,19 @@ model Invoice {
   taxName    String?
   taxPercent Decimal @default(0)
   taxMode    TaxMode @default(EXCLUSIVE)
+  /// An optional SECOND tax (Aruba: BBO + BAVP), snapshotted like the first and
+  /// in the same mode. Charged on the same taxable subtotal, never on the first
+  /// tax. Null name and 0 percent on every invoice raised with one tax.
+  tax2Name    String?
+  tax2Percent Decimal @default(0)
 
   /// Derived from the lines by lib/finance/calc.ts and stored so a sent
   /// document cannot change under the client's feet.
   subtotal        Decimal @default(0)
   taxableSubtotal Decimal @default(0)
+  /// The first tax only; the second is `tax2Total`. total = subtotal + both (EXCLUSIVE).
   taxTotal        Decimal @default(0)
+  tax2Total       Decimal @default(0)
   total           Decimal @default(0)
 
   notes  String?
@@ -3380,10 +3387,15 @@ model CreditNote {
   taxName    String?
   taxPercent Decimal @default(0)
   taxMode    TaxMode @default(EXCLUSIVE)
+  /// Second tax, copied from the invoice with the first (see Invoice.tax2Name).
+  tax2Name    String?
+  tax2Percent Decimal @default(0)
 
   subtotal        Decimal @default(0)
   taxableSubtotal Decimal @default(0)
+  /// The first tax only; the second is `tax2Total`. total = subtotal + both (EXCLUSIVE).
   taxTotal        Decimal @default(0)
+  tax2Total       Decimal @default(0)
   total           Decimal @default(0)
 
   notes String?

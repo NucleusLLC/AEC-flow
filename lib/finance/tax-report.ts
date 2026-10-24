@@ -5,10 +5,13 @@
  * WHAT IT DOES AND, AS IMPORTANTLY, WHAT IT DOES NOT. It adds up the tax the
  * practice's invoices actually hold. It does not know Aruban tax law: it never
  * decides a rate, never imputes the 7% BBO default to an invoice that carries
- * none, and never splits one tax into two. An invoice stores ONE tax snapshot
+ * none, and never splits one tax into two. An invoice stores one tax snapshot
  * (name, percent, mode, stored tax total — see prisma/schema.prisma, model
- * Invoice), so that is what is summed, grouped by the name and rate on the
- * invoice. An invoice with no tax is listed in the notes, not guessed at.
+ * Invoice) and, since 0.26.0, an optional SECOND one (tax2Name, tax2Percent,
+ * tax2Total — BBO and BAVP on one invoice). Each is summed under its own name
+ * and rate, so an invoice carrying both contributes to both lines, with the
+ * same base on each (both are charged on the same taxable turnover). An
+ * invoice with no tax is listed in the notes, not guessed at.
  *
  * TWO BASES, NEVER MIXED:
  *  - INVOICED (accrual): every invoice issued in the period, by issue date.
@@ -17,7 +20,8 @@
  *  - RECEIVED (cash): every payment dated in the period, whatever date its
  *    invoice was issued. The tax inside a payment is the invoice's tax pro rata
  *    to what has been paid, worked out cumulatively so the tax of all an
- *    invoice's payments adds back to the invoice's own tax to the cent.
+ *    invoice's payments adds back to the invoice's own tax to the cent — per
+ *    tax, so each of two taxes adds back to its own stored figure.
  *
  * Currencies are never added together: every total is per currency.
  *
@@ -179,6 +183,10 @@ export type TaxInvoice = {
   taxName: string | null;
   taxPercent: number;
   taxMode: "EXCLUSIVE" | "INCLUSIVE";
+  /** The optional second tax. Absent / null / 0 on a one-tax invoice. */
+  tax2Name?: string | null;
+  tax2Percent?: number | null;
+  tax2Total?: number | null;
   payments: { id?: string; paidAt: string; amount: number }[];
 };
 
@@ -233,8 +241,14 @@ export type TaxInvoiceRow = {
   taxName: string | null;
   taxPercent: number;
   taxMode: "EXCLUSIVE" | "INCLUSIVE";
+  /** The second tax, when the invoice carries one; null / 0 otherwise. */
+  tax2Name: string | null;
+  tax2Percent: number;
   net: number;
+  /** ALL the tax on the invoice (both taxes). net + tax = gross. */
   tax: number;
+  /** The second tax's part of `tax`. */
+  tax2: number;
   gross: number;
 };
 
@@ -247,10 +261,14 @@ export type TaxPaymentRow = {
   taxName: string | null;
   taxPercent: number;
   taxMode: "EXCLUSIVE" | "INCLUSIVE";
+  tax2Name: string | null;
+  tax2Percent: number;
   /** The payment, tax included. */
   gross: number;
-  /** The invoice's tax contained in this payment, pro rata. */
+  /** The invoice's tax (both taxes) contained in this payment, pro rata. */
   tax: number;
+  /** The second tax's part of `tax`, pro rata on its own. */
+  tax2: number;
   net: number;
 };
 
@@ -300,13 +318,31 @@ function cleanName(name: string | null | undefined): string | null {
   return n ? n : null;
 }
 
-/** True when the invoice carries no tax at all: no rate and no stored tax. */
-function carriesNoTax(inv: TaxInvoice): boolean {
-  return !(inv.taxPercent > 0) && fromMajor(inv.taxTotal, inv.currency).minor === 0;
+/** One of the (at most two) taxes an invoice carries, as the report reads it. */
+type TaxPart = { name: string | null; percent: number; mode: "EXCLUSIVE" | "INCLUSIVE"; total: Money };
+
+/**
+ * The taxes on an invoice: the first always (it may be nothing), the second
+ * only when it has a rate or a stored amount — a one-tax invoice has one part.
+ */
+function taxParts(inv: TaxInvoice): TaxPart[] {
+  const cur = inv.currency;
+  const parts: TaxPart[] = [
+    { name: cleanName(inv.taxName), percent: inv.taxPercent, mode: inv.taxMode, total: fromMajor(inv.taxTotal, cur) },
+  ];
+  const p2 = typeof inv.tax2Percent === "number" && Number.isFinite(inv.tax2Percent) ? inv.tax2Percent : 0;
+  const t2 = fromMajor(inv.tax2Total ?? 0, cur);
+  if (p2 > 0 || t2.minor !== 0) parts.push({ name: cleanName(inv.tax2Name), percent: p2, mode: inv.taxMode, total: t2 });
+  return parts;
 }
 
-function lineKey(inv: TaxInvoice): string {
-  return `${(cleanName(inv.taxName) ?? "").toUpperCase()}|${inv.taxPercent}|${inv.taxMode}`;
+/** True when the invoice carries no tax at all: no rate and no stored tax. */
+function carriesNoTax(parts: TaxPart[]): boolean {
+  return parts.every((t) => !(t.percent > 0) && t.total.minor === 0);
+}
+
+function lineKey(t: TaxPart): string {
+  return `${(t.name ?? "").toUpperCase()}|${t.percent}|${t.mode}`;
 }
 
 function accFor(map: Map<string, Acc>, currency: string): Acc {
@@ -318,12 +354,11 @@ function accFor(map: Map<string, Acc>, currency: string): Acc {
   return a;
 }
 
-function addToLine(acc: Acc, inv: TaxInvoice, base: Money, tax: Money): void {
-  const key = lineKey(inv);
+function addToLine(acc: Acc, t: TaxPart, base: Money, tax: Money): void {
+  const key = lineKey(t);
   let b = acc.lines.get(key);
   if (!b) {
-    const name = cleanName(inv.taxName);
-    b = { name, kind: taxKind(name), percent: inv.taxPercent, mode: inv.taxMode, base: zero(base.currency), tax: zero(base.currency), count: 0 };
+    b = { name: t.name, kind: taxKind(t.name), percent: t.percent, mode: t.mode, base: zero(base.currency), tax: zero(base.currency), count: 0 };
     acc.lines.set(key, b);
   }
   b.base = add(b.base, base);
@@ -383,13 +418,18 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
     const cur = inv.currency;
     const issuedInPeriod = inPeriod(inv.issueDate, range);
     const total = fromMajor(inv.total, cur);
-    const tax = fromMajor(inv.taxTotal, cur);
+    const parts = taxParts(inv);
+    const second = parts[1];
+    // ALL the tax on the invoice: one tax, or both.
+    const tax = parts.reduce<Money>((acc, t) => add(acc, t.total), zero(cur));
     const subtotal = fromMajor(inv.subtotal, cur);
     const taxable = fromMajor(inv.taxableSubtotal, cur);
-    // Exclusive: the taxable lines are the base. Inclusive: they contain the tax.
+    // Exclusive: the taxable lines are the base. Inclusive: they contain the tax
+    // (both taxes). Either way it is the SAME base for each tax: neither is
+    // charged on the other.
     const base = inv.taxMode === "INCLUSIVE" ? subtract(taxable, tax) : taxable;
     const exempt = subtract(subtotal, taxable);
-    const noTax = carriesNoTax(inv);
+    const noTax = carriesNoTax(parts);
 
     if (inv.status === "DRAFT") {
       if (issuedInPeriod) excluded.drafts += 1;
@@ -413,9 +453,9 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
         notes.push({ kind: "no-tax", invoiceId: inv.id, invoiceNumber: inv.number, currency: cur, amount: toMajor(net) });
       } else {
         a.untaxed = add(a.untaxed, exempt);
-        addToLine(a, inv, base, tax);
+        for (const t of parts) addToLine(a, t, base, t.total);
         if (tax.minor === 0) notes.push({ kind: "zero-tax", invoiceId: inv.id, invoiceNumber: inv.number, currency: cur, amount: toMajor(net) });
-        if (!cleanName(inv.taxName)) notes.push({ kind: "unnamed-tax", invoiceId: inv.id, invoiceNumber: inv.number, currency: cur });
+        if (parts.some((t) => !t.name)) notes.push({ kind: "unnamed-tax", invoiceId: inv.id, invoiceNumber: inv.number, currency: cur });
       }
       invoiceRows.push({
         id: inv.id,
@@ -427,8 +467,11 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
         taxName: cleanName(inv.taxName),
         taxPercent: noTax ? 0 : inv.taxPercent,
         taxMode: inv.taxMode,
+        tax2Name: second?.name ?? null,
+        tax2Percent: second?.percent ?? 0,
         net: toMajor(net),
         tax: toMajor(tax),
+        tax2: second ? toMajor(second.total) : 0,
         gross: toMajor(total),
       });
     }
@@ -455,7 +498,9 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
         notes.push({ kind: "overpaid", invoiceId: inv.id, invoiceNumber: inv.number, currency: cur, amount: toMajor(subtract(paidSoFar, total)) });
       }
 
-      const pTax = subtract(shareOf(paidSoFar, total, tax), shareOf(before, total, tax));
+      // Each tax pro rata on its own, so each adds back to its own stored total.
+      const pParts = parts.map((t) => subtract(shareOf(paidSoFar, total, t.total), shareOf(before, total, t.total)));
+      const pTax = pParts.reduce<Money>((acc, m) => add(acc, m), zero(cur));
       const pBase = subtract(shareOf(paidSoFar, total, base), shareOf(before, total, base));
       const pNet = subtract(amount, pTax);
 
@@ -466,7 +511,7 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
       if (noTax) a.untaxed = add(a.untaxed, pNet);
       else {
         a.untaxed = add(a.untaxed, subtract(pNet, pBase));
-        addToLine(a, inv, pBase, pTax);
+        parts.forEach((t, i) => addToLine(a, t, pBase, pParts[i]));
       }
       paymentRows.push({
         paidAt: p.paidAt.slice(0, 10),
@@ -477,8 +522,11 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
         taxName: cleanName(inv.taxName),
         taxPercent: noTax ? 0 : inv.taxPercent,
         taxMode: inv.taxMode,
+        tax2Name: second?.name ?? null,
+        tax2Percent: second?.percent ?? 0,
         gross: toMajor(amount),
         tax: toMajor(pTax),
+        tax2: second ? toMajor(pParts[1]) : 0,
         net: toMajor(pNet),
       });
     }

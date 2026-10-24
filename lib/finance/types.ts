@@ -141,7 +141,10 @@ export type InvoiceSummaryDTO = {
   issueDate: string | null;
   dueDate: string | null;
   subtotal: number;
+  /** The first tax only. */
   taxTotal: number;
+  /** The second tax (BBO + BAVP); 0 when there is one tax. */
+  tax2Total: number;
   total: number;
   /** Derived from the payments, never stored: see lib/finance/calc.ts. */
   paid: number;
@@ -164,6 +167,9 @@ export type InvoiceDTO = InvoiceSummaryDTO & {
   taxName: string | null;
   taxPercent: number;
   taxMode: TaxMode;
+  /** Optional second tax, same mode, same base, not compounded. Null / 0 when absent. */
+  tax2Name: string | null;
+  tax2Percent: number;
   taxableSubtotal: number;
   notes: string | null;
   footer: string | null;
@@ -205,7 +211,10 @@ export type CreditNoteSummaryDTO = {
   date: string;
   reason: string;
   subtotal: number;
+  /** The first tax only. */
   taxTotal: number;
+  /** The second tax (BBO + BAVP); 0 when there is one tax. */
+  tax2Total: number;
   total: number;
   updatedAt: string;
 };
@@ -217,6 +226,9 @@ export type CreditNoteDTO = CreditNoteSummaryDTO & {
   taxName: string | null;
   taxPercent: number;
   taxMode: TaxMode;
+  /** Optional second tax, same mode, same base, not compounded. Null / 0 when absent. */
+  tax2Name: string | null;
+  tax2Percent: number;
   taxableSubtotal: number;
   notes: string | null;
   createdByName: string | null;
@@ -251,6 +263,9 @@ export type CreditableInvoice = {
   taxName: string | null;
   taxPercent: number;
   taxMode: TaxMode;
+  /** Optional second tax, same mode, same base, not compounded. Null / 0 when absent. */
+  tax2Name: string | null;
+  tax2Percent: number;
   total: number;
   paid: number;
   credited: number;
@@ -307,6 +322,9 @@ export type InvoiceInput = {
   taxName?: string | null;
   taxPercent?: number | null;
   taxMode?: TaxMode;
+  /** Optional second tax (e.g. BAVP beside BBO), in the same mode. */
+  tax2Name?: string | null;
+  tax2Percent?: number | null;
   notes?: string | null;
   footer?: string | null;
   lines: InvoiceLineInput[];
@@ -371,6 +389,9 @@ export type ProposalBilling = {
   taxName: string | null;
   taxPercent: number;
   taxMode: TaxMode;
+  /** Optional second tax, same mode, same base, not compounded. Null / 0 when absent. */
+  tax2Name: string | null;
+  tax2Percent: number;
   /** True when the milestone amounts are before tax and the invoice adds it. */
   taxOnTop: boolean;
   milestones: BillableMilestone[];

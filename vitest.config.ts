@@ -24,6 +24,8 @@ export default defineConfig({
     // Files are named explicitly rather than broadened to `lib/**`: a wider glob
     // would collect the node:test suites described above, which Vitest can't run.
     include: [
+      // Pure drawing take-off engine; explicitly scoped to avoid node:test suites.
+      "lib/takeoff/**/*.test.ts",
       "components/auth/signup-form.test.tsx",
       "components/print/print-view-tracker.test.tsx",
       "lib/account-security/beta-code-request.test.ts",
@@ -220,6 +222,9 @@ export default defineConfig({
       // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
       // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
       "lib/finance/tax-report.test.ts",
+      // Two taxes on one invoice (BBO + BAVP): per-tax rounding, the INCLUSIVE
+      // proportional split, credit notes, the tax report rows and the CSV columns. Pure.
+      "lib/finance/two-taxes.test.ts",
       // Expense receipts: allowed types and size, server-chosen storage keys, who may
       // see and change one (frozen once invoiced). Pure.
       "lib/finance/receipt.test.ts",
@@ -237,6 +242,14 @@ export default defineConfig({
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
       "lib/finance/receivables.test.ts",
+      // Finance overview (/finance): tiles per currency from the existing receivables
+      // maths; firm-wide invoice settings (terms, bank details, T&C) parse + clamp; who
+      // may void an invoice or delete a payment or a draft; the most-specific sidebar
+      // item is the lit one. Pure.
+      "lib/finance/hub.test.ts",
+      "lib/finance/invoice-settings.test.ts",
+      "lib/finance/invoice-permissions.test.ts",
+      "lib/nav-active.test.ts",
       // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
       "lib/projects/architecture-type.test.ts",
       // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with

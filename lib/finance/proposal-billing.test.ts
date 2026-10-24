@@ -27,7 +27,8 @@ function invoiceFor(input: MilestoneBasisInput, id: string) {
     { id, name: "Stage", remaining: billable, billable, taxable },
     { currency: input.currency, taxPercent: basis.taxPercent, notTaxedLabel },
   );
-  return { basis, lines, totals: invoiceTotals(lines, { percent: basis.taxPercent, mode: basis.taxMode }, input.currency) };
+  const tax = { percent: basis.taxPercent, mode: basis.taxMode, percent2: basis.tax2Percent };
+  return { basis, lines, totals: invoiceTotals(lines, tax, input.currency) };
 }
 
 describe("a tax that is added on top of the price", () => {
@@ -36,7 +37,7 @@ describe("a tax that is added on top of the price", () => {
     const { basis, lines, totals } = invoiceFor(exclusive, "a");
     expect(basis).toMatchObject({ taxName: "BBO", taxPercent: 7, taxMode: "EXCLUSIVE", taxOnTop: true, warnings: [] });
     expect(lines).toEqual([{ description: "Stage", milestoneId: "a", milestoneName: "Stage", amount: 500, taxable: true }]);
-    expect(totals).toEqual({ subtotal: 500, taxableSubtotal: 500, taxTotal: 35, total: 535 });
+    expect(totals).toEqual({ subtotal: 500, taxableSubtotal: 500, taxTotal: 35, tax2Total: 0, total: 535 });
   });
 
   it("makes every milestone, invoiced in turn, add up to the proposal's grand total", () => {
@@ -80,7 +81,7 @@ describe("a tax that is added on top of the price", () => {
       { description: "Stage", milestoneId: "a", milestoneName: "Stage", amount: 500, taxable: true },
       { description: "Stage (not taxed)", milestoneId: "a", milestoneName: "Stage", amount: 100, taxable: false },
     ]);
-    expect(totals).toEqual({ subtotal: 600, taxableSubtotal: 500, taxTotal: 35, total: 635 });
+    expect(totals).toEqual({ subtotal: 600, taxableSubtotal: 500, taxTotal: 35, tax2Total: 0, total: 635 });
   });
 
   it("bills only what is left of a milestone that was partly invoiced", () => {
@@ -100,7 +101,7 @@ describe("a tax that is added on top of the price", () => {
     expect(basis.amounts).toEqual({ a: { billable: 500, taxable: 500 }, b: { billable: 300, taxable: 300 } });
   });
 
-  it("combines two added taxes into the one tax line an invoice has, and says so", () => {
+  it("carries two added taxes (BBO + BAVP) as the invoice's two taxes, with no warning", () => {
     const { basis, totals } = invoiceFor(
       {
         ...exclusive,
@@ -114,9 +115,39 @@ describe("a tax that is added on top of the price", () => {
       },
       "a",
     );
-    expect(basis).toMatchObject({ taxName: "BBO + BAVP", taxPercent: 9, taxMode: "EXCLUSIVE", taxOnTop: true });
-    expect(basis.warnings).toHaveLength(1);
+    expect(basis).toMatchObject({
+      taxName: "BBO",
+      taxPercent: 7,
+      tax2Name: "BAVP",
+      tax2Percent: 2,
+      taxMode: "EXCLUSIVE",
+      taxOnTop: true,
+      warnings: [],
+    });
+    expect(basis.amounts.a).toEqual({ billable: 1000, taxable: 1000 });
+    expect(totals.taxTotal).toBe(70);
+    expect(totals.tax2Total).toBe(20);
     expect(totals.total).toBe(1090);
+  });
+
+  it("folds three or more taxes into one line, and says so", () => {
+    const { basis, totals } = invoiceFor(
+      {
+        ...exclusive,
+        grandTotal: 1100,
+        taxTotal: 100,
+        taxes: [
+          { name: "BBO", percent: 7, mode: "EXCLUSIVE" },
+          { name: "BAVP", percent: 2, mode: "EXCLUSIVE" },
+          { name: "AZV", percent: 1, mode: "EXCLUSIVE" },
+        ],
+        milestones: [{ id: "a", amount: 1100 }],
+      },
+      "a",
+    );
+    expect(basis).toMatchObject({ taxName: "BBO + BAVP + AZV", taxPercent: 10, tax2Name: null, tax2Percent: 0 });
+    expect(basis.warnings).toHaveLength(1);
+    expect(totals.total).toBe(1100);
   });
 });
 
@@ -138,7 +169,7 @@ describe("a tax that is included in the price", () => {
     );
     expect(basis).toMatchObject({ taxPercent: 7, taxMode: "INCLUSIVE", taxOnTop: false });
     expect(lines.map((l) => [l.amount, l.taxable])).toEqual([[535, true]]);
-    expect(totals).toEqual({ subtotal: 535, taxableSubtotal: 535, taxTotal: 35, total: 535 });
+    expect(totals).toEqual({ subtotal: 535, taxableSubtotal: 535, taxTotal: 35, tax2Total: 0, total: 535 });
   });
 });
 

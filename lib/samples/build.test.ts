@@ -322,7 +322,7 @@ describe("every stored figure agrees with the app's own calculator", () => {
     const inv = rows(en, "invoice")[0];
     const lines = rows(en, "invoiceLine");
     const t = invoiceTotals(lines.map((l) => ({ amount: Number(l.amount), taxable: true })), { percent: Number(inv.taxPercent), mode: "EXCLUSIVE" }, "AWG");
-    expect({ subtotal: inv.subtotal, taxableSubtotal: inv.taxableSubtotal, taxTotal: inv.taxTotal, total: inv.total }).toEqual(t);
+    expect({ subtotal: inv.subtotal, taxableSubtotal: inv.taxableSubtotal, taxTotal: inv.taxTotal, tax2Total: 0, total: inv.total }).toEqual(t);
     expect(rows(en, "invoicePayment")[0].amount).toBe(inv.total);
     // Never store PAID: the app derives it from the payment.
     expect(inv.status).toBe("ISSUED");

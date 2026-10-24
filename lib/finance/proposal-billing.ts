@@ -46,6 +46,12 @@ export type MilestoneBasis = {
   taxName: string | null;
   taxPercent: number;
   taxMode: TaxMode;
+  /**
+   * The invoice's second tax (BBO + BAVP): same mode, same taxable amounts, not
+   * compounded. Null / 0 unless the proposal has exactly two taxes in one mode.
+   */
+  tax2Name: string | null;
+  tax2Percent: number;
   /** True when the amounts below are before tax and the invoice adds it. */
   taxOnTop: boolean;
   /**
@@ -91,7 +97,8 @@ export function milestoneBasis(input: MilestoneBasisInput): MilestoneBasis {
   const build = (
     billable: Money[],
     taxable: Money[],
-    tax: Pick<MilestoneBasis, "taxName" | "taxPercent" | "taxMode" | "taxOnTop">,
+    tax: Pick<MilestoneBasis, "taxName" | "taxPercent" | "taxMode" | "taxOnTop"> &
+      Partial<Pick<MilestoneBasis, "tax2Name" | "tax2Percent">>,
   ): MilestoneBasis => {
     const amounts: MilestoneBasis["amounts"] = {};
     input.milestones.forEach((m, i) => {
@@ -99,7 +106,7 @@ export function milestoneBasis(input: MilestoneBasisInput): MilestoneBasis {
       const t = taxable[i].minor > b.minor ? b : taxable[i];
       amounts[m.id] = { billable: toMajor(b), taxable: toMajor(t) };
     });
-    return { ...tax, amounts, warnings };
+    return { tax2Name: null, tax2Percent: 0, ...tax, amounts, warnings };
   };
 
   // No tax at all: the milestone is the line, as it always was.
@@ -128,9 +135,26 @@ export function milestoneBasis(input: MilestoneBasisInput): MilestoneBasis {
     return build(gross, gross, { taxName: null, taxPercent: 0, taxMode: "EXCLUSIVE", taxOnTop: false });
   }
 
-  if (active.length > 1) {
+  // The tax snapshot the invoice carries. Two taxes in one mode (BBO + BAVP)
+  // travel as the invoice's two taxes, each on the same taxable amounts, so the
+  // combined rate, and every amount below, is unchanged. Three or more still
+  // fold into one line, and the person is told.
+  let snapshot: Pick<MilestoneBasis, "taxName" | "taxPercent" | "tax2Name" | "tax2Percent"> = {
+    taxName: name,
+    taxPercent: percent,
+    tax2Name: null,
+    tax2Percent: 0,
+  };
+  if (active.length === 2) {
+    snapshot = {
+      taxName: active[0].name.trim() || null,
+      taxPercent: percentOf(active[0]),
+      tax2Name: active[1].name.trim() || null,
+      tax2Percent: percentOf(active[1]),
+    };
+  } else if (active.length > 2) {
     warnings.push(
-      `This proposal has ${active.length} taxes (${name}). An invoice carries one tax line, so they are combined as ${percent}%.`,
+      `This proposal has ${active.length} taxes (${name}). An invoice carries at most two tax lines, so they are combined as ${percent}%.`,
     );
   }
 
@@ -138,7 +162,7 @@ export function milestoneBasis(input: MilestoneBasisInput): MilestoneBasis {
   // taxed part of each is its share of the proposal's taxable subtotal.
   if (modes.has("INCLUSIVE")) {
     const taxableShare = allocate(scale(taxableSubtotal, grossSum, grandTotal), weights);
-    return build(gross, taxableShare, { taxName: name, taxPercent: percent, taxMode: "INCLUSIVE", taxOnTop: false });
+    return build(gross, taxableShare, { ...snapshot, taxMode: "INCLUSIVE", taxOnTop: false });
   }
 
   // Added on top: take the tax back out of every milestone, once, so the
@@ -149,7 +173,7 @@ export function milestoneBasis(input: MilestoneBasisInput): MilestoneBasis {
     scale(taxableSubtotal.minor > net.minor ? net : taxableSubtotal, grossSum, grandTotal),
     weights,
   );
-  return build(netShare, taxableShare, { taxName: name, taxPercent: percent, taxMode: "EXCLUSIVE", taxOnTop: true });
+  return build(netShare, taxableShare, { ...snapshot, taxMode: "EXCLUSIVE", taxOnTop: true });
 }
 
 /**

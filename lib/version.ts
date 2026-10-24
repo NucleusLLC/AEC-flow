@@ -179,7 +179,8 @@
  *   minute after opening, every five minutes, and on coming back to the tab) and, when that is a
  *   different release, shows "A new version of AEC-flow is available" with Reload now and Later.
  *   It never reloads by itself: there may be unsaved work in the tab. Six languages. No SQL.
- * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill; issued codes redeem at signup.
+ * 0.26.0 (15 OCT 2026): feat — request a beta code from the portal; /signup?code= prefill;
+ *   issued codes redeem at signup.
  * 0.27.0 (15 OCT 2026): feat — Vercel Web Analytics with portal CTA, signup and first-print events.
  * 0.27.1 (15 OCT 2026): fix — the 0.26.0 and 0.27.0 merges left two APP_VERSION constants and two
  *   "version" keys in package.json and package-lock.json, and a SignupForm test that no longer
@@ -188,6 +189,20 @@
  * 0.27.3 (15 OCT 2026): the shared BETA_SIGNUP_CODE is no longer accepted; every beta account now carries a pool code.
  * 0.27.4 (19 OCT 2026): fix — the 0.27.2 and 0.27.3 merges again left two APP_VERSION constants
  *   and two "version" keys; the build failed. One of each again. No other change.
+ * 0.28.0 (16 OCT 2026): own take-off engine — area, length and count measured on drawings in
+ *   PDF points, scale notes read (1:100, 1/4" = 1'-0"), totals per condition feeding the Quantity
+ *   Take-Off sheet (engine only; the measuring screen follows).
+ * 0.29.0 (16 OCT 2026): measure on drawings - conditions, calibrated areas,
+ *   lengths, counts and cut-outs feed the existing Quantity Take-Off sheet.
+ * 0.30.0 (19 OCT 2026): feat — INVOICE where the work is. /finance, the Finance overview: a big
+ *   + INVOICE button, outstanding / overdue / received this month / drafts per currency, the latest
+ *   invoices and every finance register; first item of the Finance section, which Modules 2 and 3
+ *   now have too. An Invoice button on an accepted Service Proposal (straight to its milestones),
+ *   on every project header (the new-invoice screen for that project) and on the Dashboard, and
+ *   New invoice in the + New menu. Settings > Invoicing (Admin / Director): default payment terms,
+ *   bank details and terms & conditions; the printed invoice carries the bank details under the
+ *   totals and the T&C after the notes or on a second A4 sheet. Voiding an invoice, deleting a
+ *   payment and deleting a draft are now Admin / Director only. No SQL.
  * 0.31.0 (19 OCT 2026): feat — a project's Documents tab lists only that project's paperwork: its General
  *   Documents (with New document pre-filed to the project and Link an existing document), its
  *   construction contracts and its building permit files. Any General Document, signed ones too,
@@ -198,8 +213,19 @@
  *   booked on a proposal later converted to the project included); completing a visit records the actual
  *   hours and outcome and can put DRAFT entries on the attendees' timesheets, once. Six languages.
  *   Needs prisma/sql/0035_appointments.sql applied FIRST.
+ * 0.33.0 (23 OCT 2026): release — the take-off engine (0.28.0), measuring on drawings (0.29.0) and the
+ *   Finance overview with the INVOICE button (0.30.0) brought onto main after 0.31.0 and 0.32.0. The
+ *   Finance overview is now also first in Module 1's Finance section. No SQL.
+ * 0.34.0 (23 OCT 2026): feat — an invoice can carry TWO taxes (Aruba: BBO + BAVP). The second tax
+ *   (name + percent, optional) is charged on the same amounts as the first, never on top of it, and
+ *   rounded on its own; "already in the amounts" backs the combined rate out and splits it by rate.
+ *   Snapshotted like the first; credit notes take back both in proportion; the tax report counts each
+ *   under its own name; the accounting CSV gains Tax 2 columns; invoice and credit-note screens and
+ *   prints show a second tax line. One-tax invoices are unchanged. Raising from a proposal with two
+ *   taxes in one mode now carries them as two taxes instead of one combined line (three or more still
+ *   combine, with a warning). Needs prisma/sql/0032_invoice_second_tax.sql applied FIRST.
  */
-export const APP_VERSION = "0.32.0";
+export const APP_VERSION = "0.34.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
