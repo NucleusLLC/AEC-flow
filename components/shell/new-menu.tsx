@@ -12,6 +12,7 @@ import {
   UserPlus,
   CalendarDays,
   NotebookPen,
+  ReceiptText,
 } from "lucide-react";
 import { useT } from "@/components/i18n/language-provider";
 
@@ -20,6 +21,7 @@ const ACTIONS = [
   { label: "New client", href: "/clients/new", icon: Users },
   { label: "New proposal", href: "/proposals/new", icon: FileText },
   { label: "New order", href: "/orders/new", icon: ClipboardList },
+  { label: "New invoice", href: "/finance/invoices/new", icon: ReceiptText },
   { label: "New project", href: "/projects/new", icon: FolderKanban },
   { label: "New meeting minutes", href: "/meetings/new", icon: NotebookPen },
   { label: "New change order", href: "/construction-admin/change-orders/new", icon: FileSignature },

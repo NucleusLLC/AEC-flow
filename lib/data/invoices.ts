@@ -25,6 +25,8 @@ import { getServerSession } from "next-auth";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
+import { requireActor } from "@/lib/server/actor";
+import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/lib/finance/invoice-permissions";
 import { releaseWork } from "@/lib/data/work-billing";
 import { creditNoteSummaryDto } from "@/lib/data/credit-notes";
 import {
@@ -33,6 +35,7 @@ import {
   invoiceTotals,
   nextInvoiceNumber,
 } from "@/lib/finance/calc";
+import { milestoneBasis } from "@/lib/finance/proposal-billing";
 import type {
   BillableMilestone,
   InvoiceDTO,
@@ -65,6 +68,24 @@ export class InvoiceLockedError extends Error {
     super(`This invoice has been issued, so it cannot be ${what}.`);
     this.name = "InvoiceLockedError";
   }
+}
+
+/**
+ * Voiding an invoice, deleting a payment and deleting a draft are for an
+ * administrator, a director or the founder (lib/finance/invoice-permissions.ts).
+ * Checked here as well as in the actions in front of this file: an action is a
+ * public endpoint, and the data layer is the last place the rule can live.
+ */
+export class InvoiceForbiddenError extends Error {
+  constructor() {
+    super(INVOICE_MANAGER_ONLY);
+    this.name = "InvoiceForbiddenError";
+  }
+}
+
+async function requireInvoiceAction(action: InvoiceAction): Promise<void> {
+  const who = await requireActor();
+  if (!canDoInvoiceAction(action, who.role, who.isFounder)) throw new InvoiceForbiddenError();
 }
 
 async function actor(): Promise<{ id: string | null; name: string | null }> {
@@ -167,9 +188,12 @@ type InvoiceRow = {
   taxName: string | null;
   taxPercent: DecimalLike;
   taxMode: TaxMode;
+  tax2Name: string | null;
+  tax2Percent: DecimalLike;
   subtotal: DecimalLike;
   taxableSubtotal: DecimalLike;
   taxTotal: DecimalLike;
+  tax2Total: DecimalLike;
   total: DecimalLike;
   notes: string | null;
   footer: string | null;
@@ -253,6 +277,7 @@ function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
     dueDate: ymd(r.dueDate),
     subtotal: num(r.subtotal),
     taxTotal: num(r.taxTotal),
+    tax2Total: num(r.tax2Total),
     total,
     paid,
     credited,
@@ -275,6 +300,8 @@ function invoiceDto(r: InvoiceRow): InvoiceDTO {
     taxName: r.taxName,
     taxPercent: num(r.taxPercent),
     taxMode: r.taxMode,
+    tax2Name: r.tax2Name,
+    tax2Percent: num(r.tax2Percent),
     taxableSubtotal: num(r.taxableSubtotal),
     notes: r.notes,
     footer: r.footer,
@@ -433,8 +460,20 @@ export async function getProposalBilling(
     billed.set(key, entry);
   }
 
+  // The milestone rows are shares of the GRAND total, so a tax added on top is
+  // already inside them. `basis` takes it back out once, so the invoice adds it
+  // once instead of twice — see lib/finance/proposal-billing.ts.
+  const basis = milestoneBasis({
+    currency,
+    grandTotal: num(proposal.grandTotal),
+    taxTotal: num(proposal.taxTotal),
+    taxableSubtotal: num(proposal.taxableSubtotal),
+    taxes: proposal.taxes.map((t) => ({ name: t.name, percent: num(t.percent), mode: t.mode as TaxMode })),
+    milestones: proposal.paymentMilestones.map((m) => ({ id: m.id, amount: num(m.amount) })),
+  });
+
   const milestones: BillableMilestone[] = proposal.paymentMilestones.map((m) => {
-    const amount = num(m.amount);
+    const { billable: amount, taxable } = basis.amounts[m.id];
     const already = billed.get(m.id);
     const invoiced = already?.amount ?? 0;
     return {
@@ -443,13 +482,15 @@ export async function getProposalBilling(
       trigger: m.trigger,
       percent: num(m.percent),
       amount,
+      taxable,
+      gross: num(m.amount),
       invoiced,
       remaining: Math.max(0, Math.round((amount - invoiced) * 100) / 100),
       invoiceNumbers: already?.numbers ?? [],
     };
   });
 
-  const warnings: string[] = [];
+  const warnings: string[] = [...basis.warnings];
   const percentTotal = milestones.reduce((n, m) => n + m.percent, 0);
   if (milestones.length > 0 && Math.abs(percentTotal - 100) > 0.01) {
     warnings.push(
@@ -460,7 +501,6 @@ export async function getProposalBilling(
     warnings.push("This proposal has no payment milestones, so there is nothing to bill from it.");
   }
 
-  const tax = proposal.taxes[0];
   return {
     serviceProposalId: proposal.id,
     proposalNumber: proposal.number,
@@ -474,9 +514,12 @@ export async function getProposalBilling(
     contactName: proposal.contactName,
     contactEmail: proposal.contactEmail,
     grandTotal: num(proposal.grandTotal),
-    taxName: tax?.name ?? null,
-    taxPercent: tax ? num(tax.percent) : 0,
-    taxMode: (tax?.mode as TaxMode) ?? "EXCLUSIVE",
+    taxName: basis.taxName,
+    taxPercent: basis.taxPercent,
+    taxMode: basis.taxMode,
+    tax2Name: basis.tax2Name,
+    tax2Percent: basis.tax2Percent,
+    taxOnTop: basis.taxOnTop,
     milestones,
     warnings,
   };
@@ -484,7 +527,16 @@ export async function getProposalBilling(
 
 /** Accepted proposals worth offering on the "raise an invoice" screen. */
 export async function listBillableProposals(): Promise<
-  { id: string; number: string; title: string; clientName: string | null; status: string; currency: string; grandTotal: number }[]
+  {
+    id: string;
+    number: string;
+    title: string;
+    clientName: string | null;
+    projectId: string | null;
+    status: string;
+    currency: string;
+    grandTotal: number;
+  }[]
 > {
   const rows = await prisma.serviceProposal.findMany({
     where: {
@@ -496,6 +548,7 @@ export async function listBillableProposals(): Promise<
       number: true,
       title: true,
       clientName: true,
+      projectId: true,
       status: true,
       currency: true,
       grandTotal: true,
@@ -537,9 +590,13 @@ function headerData(input: InvoiceInput, totals: ReturnType<typeof invoiceTotals
     taxName: input.taxName ?? null,
     taxPercent: input.taxPercent ?? 0,
     taxMode: input.taxMode ?? "EXCLUSIVE",
+    // No rate, no second tax: a name alone would be a label on nothing.
+    tax2Name: (input.tax2Percent ?? 0) > 0 ? input.tax2Name?.trim() || null : null,
+    tax2Percent: input.tax2Percent ?? 0,
     subtotal: totals.subtotal,
     taxableSubtotal: totals.taxableSubtotal,
     taxTotal: totals.taxTotal,
+    tax2Total: totals.tax2Total,
     total: totals.total,
     notes: input.notes ?? null,
     footer: input.footer ?? null,
@@ -567,6 +624,7 @@ export async function createInvoice(input: InvoiceInput): Promise<InvoiceDTO> {
   const totals = invoiceTotals(input.lines, {
     percent: input.taxPercent ?? 0,
     mode: input.taxMode ?? "EXCLUSIVE",
+    percent2: input.tax2Percent ?? 0,
   }, currency);
 
   const asked = input.number?.trim() || undefined;
@@ -598,6 +656,7 @@ export async function updateInvoice(id: string, input: InvoiceInput): Promise<In
   const totals = invoiceTotals(input.lines, {
     percent: input.taxPercent ?? 0,
     mode: input.taxMode ?? "EXCLUSIVE",
+    percent2: input.tax2Percent ?? 0,
   }, currency);
 
   const asked = input.number?.trim() || undefined;
@@ -644,6 +703,7 @@ export async function issueInvoice(
 }
 
 export async function voidInvoice(id: string, reason: string): Promise<InvoiceDTO> {
+  await requireInvoiceAction("void");
   await requireInvoice(id);
   await prisma.invoice.update({
     where: { id },
@@ -660,6 +720,7 @@ export async function voidInvoice(id: string, reason: string): Promise<InvoiceDT
 
 /** Soft delete, drafts only. An issued invoice is a record and stays. */
 export async function deleteInvoice(id: string): Promise<void> {
+  await requireInvoiceAction("deleteDraft");
   const current = await requireInvoice(id);
   if (current.status !== "DRAFT") throw new InvoiceLockedError("deleted");
   const affected = await prisma.invoice.updateMany({
@@ -751,6 +812,7 @@ export async function recordStripePayment(
 }
 
 export async function deletePayment(id: string): Promise<void> {
+  await requireInvoiceAction("deletePayment");
   const affected = await prisma.invoicePayment.deleteMany({ where: { id } });
   if (affected.count === 0) throw new InvoiceNotFoundError();
 }

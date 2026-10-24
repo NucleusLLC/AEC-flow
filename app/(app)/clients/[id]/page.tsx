@@ -158,12 +158,12 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               }
             />
             {serviceProposals.length ? (
-              <div className="divide-y divide-border">
+              <div className="zebra-list divide-y divide-border">
                 {serviceProposals.map((p) => (
                   <Link
                     key={p.id}
                     href={`/design/service-proposals/${p.id}`}
-                    className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-surface-2"
+                    className="flex items-center gap-4 px-5 py-3 transition-colors zebra-hover"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               action={<FolderKanban className="h-4 w-4 text-faint" />}
             />
             {client.projects.length ? (
-              <div className="divide-y divide-border">
+              <div className="zebra-list divide-y divide-border">
                 {client.projects.map((p) => (
                   <div key={p.id} className="flex items-center gap-4 px-5 py-3">
                     <div className="min-w-0 flex-1">
@@ -223,12 +223,12 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               action={<Calculator className="h-4 w-4 text-faint" />}
             />
             {client.estimates.length ? (
-              <div className="divide-y divide-border">
+              <div className="zebra-list divide-y divide-border">
                 {client.estimates.map((e) => (
                   <Link
                     key={e.id}
                     href={`/estimates?project=${e.id}`}
-                    className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-surface-2"
+                    className="flex items-center gap-4 px-5 py-3 transition-colors zebra-hover"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -339,7 +339,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           {client.contacts.length ? (
             <Card>
               <CardHeader title={t("Key Contacts")} />
-              <div className="divide-y divide-border">
+              <div className="zebra-list divide-y divide-border">
                 {client.contacts.map((p) => (
                   <div key={p.name} className="flex items-center gap-3 px-5 py-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold text-muted">

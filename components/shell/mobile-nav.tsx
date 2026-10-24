@@ -9,11 +9,13 @@ import { useModule } from "@/components/shell/module-provider";
 import { ModuleSwitcher } from "@/components/shell/module-switcher";
 import { useT } from "@/components/i18n/language-provider";
 import { cn } from "@/lib/utils";
+import { isNavItemActive } from "@/lib/nav-active";
 
 export function MobileNav({ isFounder = false }: { isFounder?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { module } = useModule();
+  const navHrefs = module.nav.flatMap((s) => s.items.map((i) => i.href));
   const t = useT();
 
   return (
@@ -90,8 +92,8 @@ export function MobileNav({ isFounder = false }: { isFounder?: boolean }) {
                           </li>
                         );
                       }
-                      const active =
-                        pathname === item.href || pathname.startsWith(item.href + "/");
+                      // Most specific wins: /finance lights only on the overview itself.
+                      const active = isNavItemActive(pathname, item.href, navHrefs);
                       return (
                         <li key={item.href}>
                           <Link

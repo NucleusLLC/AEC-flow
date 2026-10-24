@@ -24,6 +24,14 @@ export default defineConfig({
     // Files are named explicitly rather than broadened to `lib/**`: a wider glob
     // would collect the node:test suites described above, which Vitest can't run.
     include: [
+      // Pure drawing take-off engine; explicitly scoped to avoid node:test suites.
+      "lib/takeoff/**/*.test.ts",
+      "components/auth/signup-form.test.tsx",
+      "components/print/print-view-tracker.test.tsx",
+      "lib/account-security/beta-code-request.test.ts",
+      "lib/account-security/beta-code-signup.test.ts",
+      "proxy.test.ts",
+      "app/signup/actions.test.ts",
       "lib/proposals/**/*.test.ts",
       "lib/firm-identity.test.ts",
       // Emailing a service proposal: the message, and the guard that stops a
@@ -36,6 +44,17 @@ export default defineConfig({
       "lib/estimates/copy-lines.test.ts",
       "lib/estimates/norm-task-draft.test.ts",
       "lib/estimates/section-sources.test.ts",
+      // INTERACTIVE-GUIDE on the Estimates editor: the language gate, the step
+      // order with its skip rule, and the card placement that keeps it on screen.
+      "lib/estimates/interactive-guide.test.ts",
+      // Guide narration (Fish Audio): the spoken form of all 29 cards, the cache
+      // key, the step lookup that refuses free text, the dwell, and the proof
+      // that the API key is in nothing sent to a browser. Pure modules.
+      "lib/guide-narration/narration.test.ts",
+      // INTERACTIVE-GUIDE engine and the Service Proposals guide: the two
+      // definitions, the namespaced clip lookup that never crosses guides, every
+      // card and its spoken form in Spanish and English. Named file, pure module.
+      "lib/proposals/interactive-guide.test.ts",
       // New client: CLIENT NAME, EMAIL and CELL NUMBER. Pure rule shared by
       // saveClient and every create form. Named file, same reason as above.
       "lib/clients/new-client.test.ts",
@@ -84,6 +103,12 @@ export default defineConfig({
       // elapsed-time smoother. Named file, same reason as every entry above —
       // pure module, no React, no Prisma, no DOM.
       "lib/ui/progress-loader.test.ts",
+      // LIST ZEBRA tripwire: a static scan of app/ and components/ for a table that
+      // has neither the shared stripe class nor an entry in the commented
+      // allow-list, plus the contrast arithmetic on the real token values in
+      // app/globals.css. Named file, same reason as every entry above -- it reads
+      // source off disk and needs no DOM.
+      "lib/ui/zebra.test.ts",
       // Outbound document email. Four named files, same reason as every entry
       // above. None of them touches the network or the database: the two
       // lib/email modules are pure, and the other two mock their I/O at the
@@ -100,6 +125,16 @@ export default defineConfig({
       // supplies and Vitest cannot resolve), so it reaches no network.
       "lib/server/email.test.ts",
       "lib/server/document-email.test.ts",
+      // The signup seed under the tenant scope that broke it (reads answer nothing
+      // before there is a session). Prisma is faked; named file, as above.
+      "lib/data/company-seed.test.ts",
+      // The complete sample set (beta sample files). Named files: the plan as data
+      // (contents, marking, numbering, arithmetic against the app's own
+      // calculators), the fences around the unscoped Prisma client, and who may
+      // install, remove or push it. No database; Prisma and the session are faked.
+      "lib/samples/build.test.ts",
+      "lib/samples/boundary.test.ts",
+      "lib/samples/actions.test.ts",
       "lib/data/email-log.test.ts",
       // Account security: rate-limit rules and reset-token handling. Named files,
       // same reason as every entry above — pure modules, no Prisma, no requests.
@@ -144,6 +179,10 @@ export default defineConfig({
       // Finance. Invoice arithmetic (exact money, ageing, status from payments)
       // and the enum tripwire — both pure, no Prisma, no requests.
       "lib/finance/calc.test.ts",
+      // The updater: when an open tab is told a newer release is deployed.
+      "lib/update/check.test.ts",
+      // Invoicing a proposal milestone: the tax is billed once, not twice.
+      "lib/finance/proposal-billing.test.ts",
       // Credit notes: the one balance function (invoiceBalance) and the
       // over-credit guard. Named file, same reason as every entry above.
       "lib/finance/credit-notes.test.ts",
@@ -183,6 +222,9 @@ export default defineConfig({
       // Tax report (BBO / BAVP): periods, per-currency sums, void/draft exclusion,
       // pro-rata cash basis, no-tax notes, the "tax" CSV. Pure.
       "lib/finance/tax-report.test.ts",
+      // Two taxes on one invoice (BBO + BAVP): per-tax rounding, the INCLUSIVE
+      // proportional split, credit notes, the tax report rows and the CSV columns. Pure.
+      "lib/finance/two-taxes.test.ts",
       // Expense receipts: allowed types and size, server-chosen storage keys, who may
       // see and change one (frozen once invoiced). Pure.
       "lib/finance/receipt.test.ts",
@@ -200,11 +242,35 @@ export default defineConfig({
       // Project PHASES: validation, equal-weighted project progress, hours by phase. Pure.
       "lib/projects/phases.test.ts",
       "lib/finance/receivables.test.ts",
+      // Finance overview (/finance): tiles per currency from the existing receivables
+      // maths; firm-wide invoice settings (terms, bank details, T&C) parse + clamp; who
+      // may void an invoice or delete a payment or a draft; the most-specific sidebar
+      // item is the lit one. Pure.
+      "lib/finance/hub.test.ts",
+      "lib/finance/invoice-settings.test.ts",
+      "lib/finance/invoice-permissions.test.ts",
+      "lib/nav-active.test.ts",
       // Project ARCHITECTURE TYPE: type list, tag text, tick-box/type/OTHER validation. Pure.
       "lib/projects/architecture-type.test.ts",
       // /progressdash BUILD TIMELINE: days -> Gantt positions, the axis that grows with
       // today, the overall %, chip and phase colours, and a sanity check on the seeded data. Pure.
       "lib/progressdash/timeline.test.ts",
+      // Bug/Wish Send button: its markup must survive a browser page translator (the
+      // insertBefore crash of 11 OCT 2026). Rendered to a string, no DOM needed.
+      "components/beta-report/send-button.test.tsx",
+      // Bug/Wish submit: a failure reaches the tester as a plain sentence, never a raw error.
+      "lib/beta-reports/submit-errors.test.ts",
+      // Scheduling: wall-clock-as-UTC times, planned vs actual hours, the upcoming/past
+      // split, SCH- numbering, and the zod gate with its enum/SQL agreement. Pure.
+      "lib/scheduling/calc.test.ts",
+      "lib/scheduling/schema.test.ts",
+      // AEC-flow subscription billing (Stripe, D-5): webhook signature, status mapping,
+      // accessFor, the Stripe REST wrapper (fetch mocked) and webhook idempotency /
+      // ordering against an in-memory store. Pure, no Prisma, no network.
+      "lib/billing/signature.test.ts",
+      "lib/billing/status.test.ts",
+      "lib/billing/stripe.test.ts",
+      "lib/billing/webhook.test.ts",
       // Pay online (Stripe Connect): webhook signature verification, the pay
       // token and the checkout amount (money.ts), the REST calls against a fake
       // fetch, and the webhook -> payment mapping with its idempotency. Pure:

@@ -97,7 +97,7 @@ export function CashFlowPlanner({ projectId, months: initial, currency }: { proj
             </thead>
             <tbody>
               {months.map((m, i) => (
-                <tr key={m.id} className="even:bg-surface-2/40">
+                <tr key={m.id} className="zebra-row">
                   <td className={`${cell} font-mono text-xs text-muted`}>{m.month}</td>
                   {COLS.map((c) => (
                     <td key={c.key} className={cell}><input type="number" className={numInput} value={m[c.key]} onChange={(e) => set(m.id, c.key, Number(e.target.value))} /></td>

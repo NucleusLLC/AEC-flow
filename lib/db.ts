@@ -65,6 +65,9 @@ const TENANT_MODELS = new Set<string>([
   "BuildingPermit", "BuildingPermitSubmission", "BuildingPermitMeeting",
   "BuildingPermitCorrespondence", "BuildingPermitApproval", "BuildingPermitDocument",
   "BuildingPermitDeadline",
+  // Scheduling. An appointment says where a practice's people will be, for
+  // which client and project, and how many hours the visit took.
+  "Appointment",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

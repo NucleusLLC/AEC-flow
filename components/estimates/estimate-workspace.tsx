@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileSpreadsheet, Ruler, Tags, BookOpen, ListChecks, LayoutGrid, CalendarClock, HardHat, Grid2x2, FileDown, Lock, LockOpen, CopyPlus, Check } from "lucide-react";
+import {
+  FileSpreadsheet,
+  Ruler,
+  Tags,
+  BookOpen,
+  ListChecks,
+  LayoutGrid,
+  CalendarClock,
+  HardHat,
+  Grid2x2,
+  FileDown,
+  Lock,
+  LockOpen,
+  CopyPlus,
+  Check,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { CostEstimate, EstimateItem } from "@/lib/data/estimates";
@@ -19,6 +34,8 @@ import {
 import { EstimateView } from "./estimate-view";
 import { BudgetTimelineView } from "./budget-timeline-view";
 import { TakeoffView } from "./takeoff-view";
+import { DrawingTakeoff } from "./drawing-takeoff";
+import { mergeTakeoffRows, sanitiseDrawingTakeoff } from "@/lib/takeoff/state";
 import { NormSetView } from "./normset-view";
 import { RebarCalculatorView, type RebarState } from "./rebar-calculator-view";
 import { GeneralConditionsView } from "./general-conditions-view";
@@ -51,12 +68,63 @@ type PriceBook = { materials: PriceItem[]; equipment: PriceItem[] };
 
 /** Sample measurements, shown only on an estimate that has never had a take-off saved. */
 const SEED_TAKEOFF: TakeoffRow[] = [
-  { id: "to-seed1", desc: "External walls — block", normId: "n-blk200", method: "area", unit: "m²", length: 42, width: 3.2, height: 0, count: 1, waste: 5 },
-  { id: "to-seed2", desc: "Ground slab", normId: "n-sog", method: "area", unit: "m²", length: 12, width: 15, height: 0, count: 1, waste: 3 },
-  { id: "to-seed3", desc: "Footings concrete", normId: "n-foot", method: "volume", unit: "m³", length: 42, width: 0.6, height: 0.8, count: 1, waste: 5 },
+  {
+    id: "to-seed1",
+    desc: "External walls — block",
+    normId: "n-blk200",
+    method: "area",
+    unit: "m²",
+    length: 42,
+    width: 3.2,
+    height: 0,
+    count: 1,
+    waste: 5,
+  },
+  {
+    id: "to-seed2",
+    desc: "Ground slab",
+    normId: "n-sog",
+    method: "area",
+    unit: "m²",
+    length: 12,
+    width: 15,
+    height: 0,
+    count: 1,
+    waste: 3,
+  },
+  {
+    id: "to-seed3",
+    desc: "Footings concrete",
+    normId: "n-foot",
+    method: "volume",
+    unit: "m³",
+    length: 42,
+    width: 0.6,
+    height: 0.8,
+    count: 1,
+    waste: 5,
+  },
 ];
 
-export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet, generalConditions: initialGC, templates: initialTemplates, wiki, logoDataUrl, footer }: { estimate: CostEstimate; priceBook: PriceBook; normSet: NormSetTask[]; generalConditions: GeneralConditionItem[]; templates: EstimateTemplate[]; wiki: WikiArticle[]; logoDataUrl?: string | null; footer?: import("@/lib/server/practice-config").FooterSettings }) {
+export function EstimateWorkspace({
+  estimate,
+  priceBook,
+  normSet: initialNormSet,
+  generalConditions: initialGC,
+  templates: initialTemplates,
+  wiki,
+  logoDataUrl,
+  footer,
+}: {
+  estimate: CostEstimate;
+  priceBook: PriceBook;
+  normSet: NormSetTask[];
+  generalConditions: GeneralConditionItem[];
+  templates: EstimateTemplate[];
+  wiki: WikiArticle[];
+  logoDataUrl?: string | null;
+  footer?: import("@/lib/server/practice-config").FooterSettings;
+}) {
   const t = useT();
   const [tab, setTab] = useState<TabKey>("estimate");
   // Print/PDF is ONE path: the EstimatePrintDoc preview overlay. "Export" opens it
@@ -75,13 +143,18 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   const [gcActive, setGcActive] = useState<boolean>(() => estimate.budget?.gcActive ?? false);
   // Budget & Timeline config — lifted here so it survives tab switches and is
   // available to the Estimate print document (Timeline / Phase Disbursement pages).
-  const [schedule, setSchedule] = useState<ScheduleConfig>(() => estimate.budget?.schedule ?? defaultSchedule(estimate));
+  const [schedule, setSchedule] = useState<ScheduleConfig>(
+    () => estimate.budget?.schedule ?? defaultSchedule(estimate),
+  );
   const [payment, setPayment] = useState<PaymentConfig>(() => estimate.budget?.payment ?? defaultPayment());
   // Quantity Take-Off — lifted here for the same reason as the budget config: the tabs
   // are a ternary, so leaving the Take-Off tab used to unmount the sheet and destroy
   // every measurement. `?? SEED_TAKEOFF` only fires when the key is absent, so an
   // estimate whose rows were all deliberately deleted stays empty instead of re-seeding.
   const [takeoff, setTakeoff] = useState<TakeoffRow[]>(() => estimate.budget?.takeoff ?? SEED_TAKEOFF);
+  const [drawingTakeoff, setDrawingTakeoff] = useState(() => sanitiseDrawingTakeoff(estimate.budget?.drawingTakeoff));
+  const [drawingBytes] = useState(() => new Map<string, Promise<ArrayBuffer>>());
+  const [measureMode, setMeasureMode] = useState(false);
   const [takeoffSection, setTakeoffSection] = useState<string>(() => estimate.budget?.takeoffSection ?? "Take-Off");
   // USD secondary unit — lifted here (like the take-off rows) so it survives tab switches
   // and rides in the same `budget` payload; the rate used to be local to the sheet and
@@ -112,13 +185,17 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
       schedule,
       payment,
       takeoff,
+      drawingTakeoff,
       takeoffSection,
       fx: { usd: usdSecondary, rate: usdRate },
       gcActive,
       rebar,
       cover: { on: coverOn, image: coverImage, fit: coverFit },
     }),
-    [schedule, payment, takeoff, takeoffSection, usdSecondary, usdRate, gcActive, rebar, coverOn, coverImage, coverFit],
+    [
+      schedule, payment, takeoff, drawingTakeoff, takeoffSection, usdSecondary, usdRate,
+      gcActive, rebar, coverOn, coverImage, coverFit,
+    ],
   );
 
   // Explicit Save on the Take-Off tab. It writes the WHOLE estimate through the same
@@ -165,6 +242,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
   useEffect(() => {
     if (tab === "estimate") return; // EstimateView owns the save while it's mounted
     if (!est.id || est.locked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mark budget dirty when arming autosave
     setBgSaved(false);
     const t = window.setTimeout(async () => {
       setBgSaving(true);
@@ -242,6 +320,7 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
       setSchedule(copy.budget?.schedule ?? defaultSchedule(copy));
       setPayment(copy.budget?.payment ?? defaultPayment());
       setTakeoff(copy.budget?.takeoff ?? []);
+      setDrawingTakeoff(sanitiseDrawingTakeoff(copy.budget?.drawingTakeoff));
       setTakeoffSection(copy.budget?.takeoffSection ?? "Take-Off");
       setUsdSecondary(copy.budget?.fx?.usd ?? false);
       setUsdRate(copy.budget?.fx?.rate ?? defaultUsdRate(copy.currency));
@@ -262,7 +341,9 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
                 key={tabDef.key}
                 type="button"
                 onClick={() => setTab(tabDef.key)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors ${i > 0 ? "border-l border-border" : ""} ${active ? "bg-slate-800 text-white" : "bg-surface text-muted hover:bg-surface-2 hover:text-fg"}`}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium transition-colors
+                  ${i > 0 ? "border-l border-border" : ""}
+                  ${active ? "bg-slate-800 text-white" : "bg-surface text-muted hover:bg-surface-2 hover:text-fg"}`}
               >
                 <Icon className="h-4 w-4" />
                 {t(tabDef.label)}
@@ -288,8 +369,11 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
               type="button"
               onClick={toggleLock}
               disabled={!est.id || lockBusy}
-              title={locked ? t("Unlock — allow edits to this version again") : t("Lock this version — no edits, anywhere, until unlocked")}
-              className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
+              title={locked
+                ? t("Unlock — allow edits to this version again")
+                : t("Lock this version — no edits, anywhere, until unlocked")}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium
+                transition-colors disabled:opacity-40 ${
                 locked
                   ? "border-amber-500/40 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
                   : "border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg"
@@ -303,14 +387,17 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
               onClick={openDuplicate}
               disabled={!est.id}
               title={t("Copy this estimate into a new, editable version")}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-40"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface
+                px-2.5 text-sm font-medium text-fg transition-colors hover:bg-surface-2
+                disabled:opacity-40"
             >
               <CopyPlus className="h-4 w-4" />
               {t("New Version")}
             </button>
 
             {dupOpen ? (
-              <div className="absolute right-0 top-10 z-30 w-72 rounded-lg border border-border bg-surface p-3 shadow-xl">
+              <div className="absolute right-0 top-10 z-30 w-72 rounded-lg border border-border bg-surface p-3
+                shadow-xl">
                 <div className="mb-1 text-xs font-semibold text-fg">{t("Copy to a new version")}</div>
                 <p className="mb-2 text-[11px] leading-snug text-muted">
                   {fmt(t("Copies every section, line item, take-off and budget setting into a new editable estimate. {version} is left untouched — lock it to freeze it."), { version: est.version })}
@@ -321,7 +408,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
                   onChange={(e) => setDupName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && dupName.trim() && void doDuplicate()}
                   placeholder={t("Version name")}
-                  className="mb-2 w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-fg outline-none focus:ring-1 focus:ring-brand/40"
+                  className="mb-2 w-full rounded-md border border-border bg-surface-2 px-2 py-1.5 text-sm text-fg
+                outline-none focus:ring-1 focus:ring-brand/40"
                 />
                 <div className="flex justify-end gap-2">
                   <button
@@ -346,7 +434,10 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
 
           {/* Autosave state for the tabs the sheet's own indicator can't reach. */}
           {tab !== "estimate" && est.id && !locked ? (
-            <span className="hidden items-center gap-1 text-[11px] text-faint sm:inline-flex" title={t("Changes on this tab autosave to the server")}>
+            <span
+              className="hidden items-center gap-1 text-[11px] text-faint sm:inline-flex"
+              title={t("Changes on this tab autosave to the server")}
+            >
               {bgSaving ? t("Saving…") : bgSaved ? (
                 <>
                   <Check className="h-3.5 w-3.5 text-emerald-500" /> {t("Saved")}
@@ -360,7 +451,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           <button
             type="button"
             onClick={() => { setTab("estimate"); setPreview(true); }}
-            className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+            className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface
+                px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
             title={t("Open the print preview to print or save as PDF — exactly what prints")}
           >
             <FileDown className="h-4 w-4" />
@@ -370,7 +462,8 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
       </Card>
 
       {locked ? (
-        <div className="no-print flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
+        <div className="no-print flex items-center gap-2 rounded-lg border border-amber-500/40
+                bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
           <Lock className="h-4 w-4 shrink-0" />
           <span>
             <b>{fmt(t("{version} is locked."), { version: est.version })}</b>{" "}
@@ -426,19 +519,57 @@ export function EstimateWorkspace({ estimate, priceBook, normSet: initialNormSet
           gcActive={gcActive}
         />
       ) : tab === "takeoff" ? (
-        <TakeoffView
-          onPush={pushFromTakeoff}
-          onGoToEstimate={() => setTab("estimate")}
-          normSet={normSet}
-          onNormTaskAdded={(task) => setNormSet((ns) => [...ns, task])}
-          rows={takeoff}
-          setRows={editTakeoff}
-          section={takeoffSection}
-          setSection={editTakeoffSection}
-          onSave={saveTakeoff}
-          saving={takeoffSaving}
-          saved={takeoffSaved}
-        />
+        <div className="space-y-3">
+          <div className="flex gap-2" role="group" aria-label={t("Take-Off")}>
+            <button
+              className="rounded border border-border px-3 py-1 text-sm"
+              aria-pressed={!measureMode}
+              onClick={() => setMeasureMode(false)}
+            >
+              {t("Sheet")}
+            </button>
+            <button
+              className="rounded border border-border px-3 py-1 text-sm"
+              aria-pressed={measureMode}
+              onClick={() => setMeasureMode(true)}
+            >
+              {t("Measure on drawing")}
+            </button>
+          </div>
+          {measureMode ? (
+            <DrawingTakeoff
+              key={est.id}
+              bytesCache={drawingBytes}
+              projectId={est.projectId}
+              state={drawingTakeoff}
+              normSet={normSet}
+              locked={locked}
+              onChange={value => {
+                if (!locked) {
+                  setTakeoffSaved(false);
+                  setDrawingTakeoff(value);
+                }
+              }}
+              onSend={rows => {
+                if (!locked) editTakeoff(existing => mergeTakeoffRows(existing, rows));
+              }}
+            />
+          ) : (
+            <TakeoffView
+              onPush={pushFromTakeoff}
+              onGoToEstimate={() => setTab("estimate")}
+              normSet={normSet}
+              onNormTaskAdded={task => setNormSet(ns => [...ns, task])}
+              rows={takeoff}
+              setRows={editTakeoff}
+              section={takeoffSection}
+              setSection={editTakeoffSection}
+              onSave={saveTakeoff}
+              saving={takeoffSaving}
+              saved={takeoffSaved}
+            />
+          )}
+        </div>
       ) : tab === "rebar" ? (
         <RebarCalculatorView value={rebar} onChange={setRebar} />
       ) : tab === "normset" ? (

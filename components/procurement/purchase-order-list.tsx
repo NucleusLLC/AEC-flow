@@ -79,7 +79,7 @@ export function PurchaseOrderList({ orders }: { orders: PurchaseOrderDTO[] }) {
           </thead>
           <tbody>
             {filtered.map((o) => (
-              <tr key={o.id} className="border-b border-border/60 last:border-0 hover:bg-surface-2/30">
+              <tr key={o.id} className="zebra-row border-b border-border/60 last:border-0 zebra-hover">
                 <td className="px-4 py-2.5">
                   <Link href={`/procurement/${o.id}`} className="font-medium text-brand hover:underline">
                     {o.poNumber}

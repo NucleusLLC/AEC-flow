@@ -90,7 +90,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {r.manpowerSummary.map((m, i) => (
-                      <tr key={i}>
+                      <tr key={i} className="zebra-row">
                         <td className="px-5 py-2.5 text-fg">{m.trade}</td>
                         <td className="px-3 py-2.5 text-right text-fg">{m.count}</td>
                         <td className="px-5 py-2.5 text-right text-fg">{m.hours}</td>

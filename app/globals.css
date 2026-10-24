@@ -29,6 +29,14 @@
   --c-brand: #1d4ed8;
   --c-brand-fg: #ffffff;
   --c-accent: #2563eb;
+
+  /* Zebra shading for lists — see LIST ZEBRA below. The stripe is deliberately
+   * the same value as --c-surface-2, so text on a shaded row has exactly the
+   * contrast it already had on a hovered row; hover and selected are tinted
+   * with the brand hue so neither can be mistaken for a stripe. */
+  --c-zebra: #f9fafb;
+  --c-zebra-hover: #eef2fc;
+  --c-zebra-selected: #e2e8fa;
 }
 
 .dark {
@@ -48,6 +56,10 @@
   --c-brand: #3b82f6;
   --c-brand-fg: #ffffff;
   --c-accent: #60a5fa;
+
+  --c-zebra: #1a202c;
+  --c-zebra-hover: #1a2c4a;
+  --c-zebra-selected: #1e365f;
 
   /* Dropdowns get their own military (olive drab / gunmetal) palette in dark mode —
    * deliberately distinct from the navy surfaces above. Scoped to <select> only. */
@@ -106,6 +118,83 @@ body,
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--c-faint) transparent;
+}
+
+/*
+ * LIST ZEBRA — the one alternating-row treatment for every register and row
+ * list in the app. Defined here once; nothing per screen.
+ *
+ *   zebra-row      on each DATA row (<tr>, <li>, a row <div>). Every second
+ *                  one is shaded. The count is "of .zebra-row", so sibling rows
+ *                  WITHOUT the class — a group header, a subtotal, an expanded
+ *                  detail row, an empty-state row — are skipped and never knock
+ *                  the stripe out of step. Rows a filter removed are not in the
+ *                  DOM, so the stripe always alternates by visible data row.
+ *   zebra-list     on the CONTAINER, for flat lists whose rows are components
+ *                  or links: every second direct child is shaded.
+ *   zebra-hover    on the row (or the link that fills it) in place of
+ *                  `hover:bg-surface-2`, which is the stripe's own colour and
+ *                  so vanishes on a shaded row.
+ *   zebra-selected / aria-selected="true" for a picked row.
+ *
+ * The stripe sits in the `components` layer at zero specificity, so any
+ * background utility on a row (a status tint, a totals row, a disabled row)
+ * still wins without anyone having to think about it; hover and selected
+ * outrank the stripe by specificity, not by source order.
+ *
+ * NOT for: the Estimate editor's bill of quantities, the Schedule Gantt, the
+ * Take-Off, calendars, kanban boards (colour already means something there),
+ * and nothing under /print — paper keeps its own rules. The scan in
+ * lib/ui/zebra.test.ts fails when a new table is added without one of these
+ * classes and without an entry in its commented allow-list.
+ */
+@layer components {
+  :where(.zebra-row:nth-child(even of .zebra-row)),
+  :where(.zebra-list > :nth-child(even)) {
+    background-color: var(--c-zebra);
+  }
+
+  .zebra-hover:hover {
+    background-color: var(--c-zebra-hover);
+  }
+
+  .zebra-row[aria-selected="true"],
+  .zebra-selected,
+  .zebra-selected:hover {
+    background-color: var(--c-zebra-selected);
+  }
+
+  /* On paper a list is ink on white: no stripe, no hover, no selection. */
+  @media print {
+    :where(.zebra-row:nth-child(even of .zebra-row)),
+    :where(.zebra-list > :nth-child(even)),
+    .zebra-hover:hover,
+    .zebra-row[aria-selected="true"],
+    .zebra-selected {
+      background-color: transparent;
+    }
+  }
+}
+
+/* Over the dashboard photograph an opaque stripe would punch a plate through
+ * the glass. There the stripe is simply MORE of the glass's own colour, which
+ * can only raise the contrast of the text on it, in either theme. Unlayered,
+ * like the rest of the glass rules, so it outranks the layered stripe above. */
+[data-dashboard-bg="on"] .card-surface :where(.zebra-row:nth-child(even of .zebra-row)),
+[data-dashboard-bg="on"] .card-surface :where(.zebra-list > :nth-child(even)) {
+  background-color: color-mix(in srgb, var(--glass-surface-color) 38%, transparent);
+}
+
+[data-dashboard-bg="on"] .card-surface .zebra-hover:hover {
+  background-color: color-mix(in srgb, var(--c-brand) 14%, transparent);
+}
+
+@media print {
+  [data-dashboard-bg="on"] .card-surface :where(.zebra-row:nth-child(even of .zebra-row)),
+  [data-dashboard-bg="on"] .card-surface :where(.zebra-list > :nth-child(even)),
+  [data-dashboard-bg="on"] .card-surface .zebra-hover:hover {
+    background-color: transparent;
+  }
 }
 
 /*
@@ -668,4 +757,13 @@ body,
     animation: none;
     box-shadow: 0 0 8px 1px rgba(220, 38, 38, 0.6);
   }
+}
+
+/* The INTERACTIVE-GUIDE button floats in the bottom-right corner on screens
+ * narrower than the top bar's slot (components/estimate-guide/guide-chrome.tsx).
+ * The Bug / Wish panel opens in that same corner and its Send button sat under
+ * the floating button, so while the panel is open the floating button steps
+ * aside. Unlayered on purpose: it has to beat the button's own display utility. */
+body:has([data-beta-report-panel]) [data-guide-button][data-float] {
+  display: none;
 }

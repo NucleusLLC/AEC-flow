@@ -1,7 +1,7 @@
 /**
  * Route gating (Next 16 "proxy" convention — formerly middleware).
  *
- * Two responsibilities:
+ * Three responsibilities:
  *
  * 1. BETA PORTAL host routing. The public beta subdomain (beta.aec-flow.com,
  *    also bet.*) serves the marketing/onboarding portal, NOT the app. On that
@@ -9,7 +9,10 @@
  *    and any stray app path funnels back to the portal. `/beta-portal` itself is
  *    public on every host (it's a landing page), regardless of AUTH_ENFORCE.
  *
- * 2. AUTH gating for the main app, behind AUTH_ENFORCE:
+ * 2. PRIMARY HOST root routing, regardless of AUTH_ENFORCE: `/` redirects to
+ *    `/dashboard` for a token with an id, or `/beta-portal` when signed out.
+ *
+ * 3. AUTH gating for every other main app path, behind AUTH_ENFORCE:
  *     - AUTH_ENFORCE unset / != "true"  → pass-through (no gating). DEFAULT.
  *     - AUTH_ENFORCE === "true"         → unauthenticated requests redirect to
  *       /login?callbackUrl=<path>.
@@ -104,7 +107,10 @@ export async function proxy(req: NextRequest) {
 
   // Stripe's webhook has no session; its signature is its authentication,
   // verified by the route itself (app/api/stripe/webhook/route.ts).
-  if (pathname === "/api/stripe/webhook") {
+  // Stripe's billing webhook (AEC-flow subscriptions, decision D-5). Stripe has no
+  // session, so the route checks the Stripe-Signature itself (lib/billing/signature.ts)
+  // and refuses anything unsigned. Exactly this path, nothing under it.
+  if (pathname === "/api/stripe/webhook" || pathname === "/api/billing/webhook") {
     return NextResponse.next();
   }
 
@@ -129,10 +135,17 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Read once for root routing or the enforced gate; other paths still pass
+  // through without a token lookup when enforcement is off.
+  const token = pathname === "/" || ENFORCE
+    ? await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+    : null;
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL(token?.id ? "/dashboard" : "/beta-portal", req.url));
+  }
+
   // Main app auth gate.
   if (!ENFORCE) return NextResponse.next();
-
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   // `token.id` rather than `token`: a revoked session (lib/auth.ts, password
   // changed elsewhere) comes back as an EMPTY token, which is still truthy.
   if (token?.id) return NextResponse.next();

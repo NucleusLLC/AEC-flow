@@ -3,6 +3,10 @@ import { prisma } from "@/lib/db";
 import { needsVerification } from "@/lib/account-security/verification-token";
 import { VerifyEmailBanner } from "@/components/account/verify-email-banner";
 import { AcceptTermsBanner } from "@/components/account/accept-terms-banner";
+import { BillingBanner } from "@/components/billing/billing-banner";
+import { bannerFor } from "@/lib/billing/status";
+import { getBillingBannerStatus } from "@/lib/data/billing";
+import { canManagePasswords } from "@/lib/password-policy";
 import { termsStatus } from "@/lib/legal/policy";
 import { cookies, headers } from "next/headers";
 import { getServerSession } from "next-auth";
@@ -23,7 +27,8 @@ import { getCurrentCompany, isLicenseExpired } from "@/lib/server/tenant";
 import { checkCompanyLicense } from "@/lib/server/license";
 import { isCurrentUserFounder } from "@/lib/server/founder";
 import { setSystemCurrency } from "@/lib/format";
-import { appVersionLabel } from "@/lib/version";
+import { APP_VERSION, appBuildId, appVersionLabel } from "@/lib/version";
+import { UpdateNotice } from "@/components/shell/update-notice";
 import { MODULE_COOKIE } from "@/lib/modules";
 
 // Every route in this group is auth-gated and reads per-request data (the
@@ -90,12 +95,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const me = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { email: true, emailVerifiedAt: true, status: true, preferences: true },
+        select: { email: true, emailVerifiedAt: true, status: true, preferences: true, role: true },
       })
     : null;
   const unverifiedEmail = me && needsVerification(me) ? me.email : null;
   // Accounts made before the Terms existed, or before their latest version.
   const terms = me ? termsStatus(me.preferences) : "current";
+  // AEC-flow subscription (D-5): a banner for past due / canceled, never a lock.
+  // Nothing at all unless Stripe is configured; never for the founder practice.
+  const billing = me ? await getBillingBannerStatus(company?.id) : null;
+  const billingBanner = billing ? bannerFor(billing.status, billing.isFounder) : null;
 
   // Seed the System Currency for server-rendered formatting this request…
   setSystemCurrency(systemCurrency);
@@ -114,8 +123,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
          * the moment they have. Every account that existed before verification
          * shipped was backfilled as confirmed, so this is only ever seen by
          * someone who signed up after it. */}
+        {/* The updater: tells a tab left open that a newer release is deployed,
+         * and offers a reload. It never reloads by itself. */}
+        <UpdateNotice version={APP_VERSION} build={appBuildId()} />
         {unverifiedEmail ? <VerifyEmailBanner email={unverifiedEmail} /> : null}
         {terms !== "current" ? <AcceptTermsBanner status={terms} /> : null}
+        {billingBanner ? <BillingBanner kind={billingBanner} canManage={canManagePasswords(me?.role, isFounder)} /> : null}
         {content}
       </AppShell>
       {/* Global ⌘K / Ctrl+K command palette (renders null until opened). */}
