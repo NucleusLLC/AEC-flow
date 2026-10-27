@@ -3979,3 +3979,30 @@ model Appointment {
   @@index([companyId, serviceProposalId])
   @@map("appointments")
 }
+
+/// An API token a desktop add-in (M.E.P.flow) signs in with: `Authorization:
+/// Bearer aecf_…`. Created by an Admin / Director in Settings → Integrations →
+/// Connected apps and shown ONCE; only its sha256 is stored, so a leaked database
+/// does not leak a usable token. The token alone names the company, so the lookup
+/// by hash runs BEFORE any company is known (raw SQL in lib/server/api-token.ts,
+/// like the Stripe webhook's) and everything after it runs inside runAsCompany.
+/// Revoked = revokedAt set; a revoked row is kept so the list shows its history.
+/// Needs prisma/sql/0036_api_tokens.sql.
+model ApiToken {
+  companyId   String
+  id          String    @id @default(cuid())
+  /// What the admin called it, e.g. "M.E.P.flow — drafting PC".
+  name        String
+  /// sha256 of the whole token, lowercase hex.
+  tokenHash   String    @unique
+  /// The first 12 characters of the token ("aecf_" + 7), for telling tokens apart on screen.
+  prefix      String
+  /// Who created it — a user id, kept loose so removing the user never blocks.
+  createdById String?
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+
+  @@index([companyId, createdAt])
+  @@map("api_tokens")
+}

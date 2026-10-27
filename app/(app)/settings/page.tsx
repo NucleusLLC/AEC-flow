@@ -17,6 +17,7 @@ import Link from "next/link";
 import { CreditCard } from "lucide-react";
 import { isBillingConfigured } from "@/lib/billing/config";
 import { getOwnSampleSetStatusAction } from "@/app/(app)/settings/sample-actions";
+import { listApiTokens, type ApiTokenListItem } from "@/lib/data/api-tokens";
 
 export async function generateMetadata() {
   const tr = await getServerT();
@@ -83,6 +84,10 @@ export default async function SettingsPage({
         statusAt: null,
       };
 
+  // Connected-app tokens: only those who may manage them see the list at all.
+  const apiTokens: ApiTokenListItem[] =
+    canManagePasswords && companyId ? await listApiTokens(companyId) : [];
+
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -121,6 +126,7 @@ export default async function SettingsPage({
         isFounder={isFounder}
         canManagePasswords={canManagePasswords}
         onlinePayments={onlinePayments}
+        apiTokens={apiTokens}
         initialTab={q.tab}
         stripeNotice={q.stripe === "returned" || q.stripe === "error" ? q.stripe : null}
         sampleStatus={sampleStatus}

@@ -136,6 +136,12 @@ export type EstimateBudget = {
    * rendering belongs to this project.
    */
   cover?: { on?: boolean; image?: string | null; fit?: CoverFit };
+  /**
+   * Where a sheet came from when a connected app sent it in (POST /api/v1/estimates/import,
+   * lib/api/v1/estimate-import.ts): the add-in, its version and the take-off title.
+   * Provenance only — nothing reads it to calculate.
+   */
+  import?: { source: string; sourceVersion: string | null; title: string; importedAt: string };
 };
 
 /**
