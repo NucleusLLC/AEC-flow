@@ -237,8 +237,15 @@
  *   the amount owed by card, straight into the practice's Stripe account (no platform fee). The
  *   signed Stripe webhook records the payment ("Card (Stripe)"), once. Off until STRIPE_SECRET_KEY
  *   and STRIPE_WEBHOOK_SECRET are set. Needs prisma/sql/0034_stripe_pay_now.sql applied FIRST.
+ * 0.37.0 (27 OCT 2026): feat — CONNECTED APPS. A public API (/api/v1, docs/api/v1.md) for desktop
+ *   add-ins, first M.E.P.flow: an Admin / Director creates an API token in Settings → Integrations →
+ *   Connected apps (shown once, only its sha256 stored; list, last used, revoke). With
+ *   `Authorization: Bearer aecf_…` an add-in reads GET /api/v1/me and GET /api/v1/projects and sends
+ *   its material take-off to POST /api/v1/estimates/import, which creates a DRAFT cost estimate
+ *   (quantities only, every unit cost 0) in the token's practice, optionally filed under a project.
+ *   Expired licence → 403. Needs prisma/sql/0036_api_tokens.sql applied FIRST.
  */
-export const APP_VERSION = "0.36.0";
+export const APP_VERSION = "0.37.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

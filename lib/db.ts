@@ -68,6 +68,11 @@ const TENANT_MODELS = new Set<string>([
   // Scheduling. An appointment says where a practice's people will be, for
   // which client and project, and how many hours the visit took.
   "Appointment",
+  // API tokens (desktop add-ins such as M.E.P.flow). A token row says which
+  // practice an add-in acts for; listing or revoking another practice's tokens
+  // would be a takeover. The pre-company lookup by hash is raw SQL on purpose
+  // (lib/server/api-token.ts) and never goes through this extension.
+  "ApiToken",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

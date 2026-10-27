@@ -22,6 +22,8 @@ import { TemplatesManager } from "@/components/settings/templates-manager";
 import { MembersManager } from "@/components/settings/members-manager";
 import { DocumentControlForm } from "@/components/settings/document-control-form";
 import { OnlinePaymentsCard } from "@/components/settings/online-payments-card";
+import { ConnectedAppsCard } from "@/components/settings/connected-apps-card";
+import type { ApiTokenListItem } from "@/lib/data/api-tokens";
 import type { OnlinePaymentsStatus } from "@/lib/data/pay-now";
 import { GuideNarrationCard } from "@/components/settings/guide-narration-card";
 import { SampleFilesCard } from "@/components/settings/sample-files-card";
@@ -76,6 +78,7 @@ export function SettingsView({
   isFounder = false,
   canManagePasswords = false,
   onlinePayments,
+  apiTokens = [],
   initialTab,
   stripeNotice = null,
   sampleStatus = { installed: false },
@@ -102,6 +105,8 @@ export function SettingsView({
   canManagePasswords?: boolean;
   /** Settings → Integrations → Online payments (Stripe Connect). */
   onlinePayments: OnlinePaymentsStatus;
+  /** Connected-app tokens (Admin / Director only; empty for anyone else). */
+  apiTokens?: ApiTokenListItem[];
   /** `?tab=` — Stripe onboarding returns to Integrations. */
   initialTab?: string;
   stripeNotice?: "returned" | "error" | null;
@@ -178,6 +183,7 @@ export function SettingsView({
           {/* Platform-wide, founder only; the actions behind it check the founder again. */}
           {isFounder && narrationStatus ? <GuideNarrationCard initial={narrationStatus} /> : null}
           <OnlinePaymentsCard initial={onlinePayments} canManage={canManagePasswords} notice={stripeNotice} />
+          <ConnectedAppsCard initial={apiTokens} canManage={canManagePasswords} />
         </div>
       ) : null}
     </div>

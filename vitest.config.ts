@@ -280,6 +280,13 @@ export default defineConfig({
       "lib/payments/stripe.test.ts",
       "lib/payments/webhook.test.ts",
       "lib/server/request-company.test.ts",
+      // Connected apps (/api/v1, M.E.P.flow): the token's shape, hash, prefix and
+      // Bearer parsing; authenticateApiToken's outcomes against a faked Prisma;
+      // and the import payload's zod gate and its mapping to sections and lines.
+      // Named files, same reason as every entry above. No database, no network.
+      "lib/api-tokens/token.test.ts",
+      "lib/server/api-token.test.ts",
+      "lib/api/v1/estimate-import.test.ts",
     ],
     environment: "node",
   },

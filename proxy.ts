@@ -114,6 +114,15 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // The public API for connected apps (M.E.P.flow and other desktop add-ins). A
+  // desktop client has no session cookie: its `Authorization: Bearer aecf_…`
+  // token is the authentication, checked by every route itself
+  // (lib/api/v1/http.ts → lib/server/api-token.ts), which answers 401 JSON — a
+  // redirect to /login would be meaningless to it.
+  if (pathname.startsWith("/api/v1/")) {
+    return NextResponse.next();
+  }
+
   // Beta subdomain: it's the portal, not the app.
   if (isBetaHost(req)) {
     if (pathname === "/") {
