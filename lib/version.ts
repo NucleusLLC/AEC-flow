@@ -264,8 +264,14 @@
  *   payment milestones sent ?milestones=a&milestones=b, which Next passes as an array; the page
  *   called .split on it and showed "Something went wrong". Now read through lib/search-params.ts
  *   (array, single or comma-separated). No SQL.
+ * 0.42.0 (14 NOV 2026): feat — TAKE-OFF TO PURCHASE ORDER. POST /api/v1/purchase-orders/import, the
+ *   sibling of the estimates import with the SAME body, limits and errors: a connected app (M.E.P.flow,
+ *   W&Dflow) sends its take-off and gets ONE DRAFT purchase order in Procurement — one line per item
+ *   ("<category> — <task> <size> (<note>)"), quantities only (every unit price and total 0), supplier
+ *   "To be assigned", numbered by the app's own PO-{year}-{NNN} generator (a lost race for a number is
+ *   retried). Answers 201 { id, poNumber, url }. No schema change, no SQL.
  */
-export const APP_VERSION = "0.41.1";
+export const APP_VERSION = "0.42.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -298,6 +298,11 @@ export default defineConfig({
       "lib/finance/phase-b.test.ts",
       "lib/finance/invoice-pdf.test.ts",
       "lib/server/invoice-email.test.ts",
+      // The sibling import into Procurement: the take-off -> one draft PO row
+      // (descriptions, order, zero prices, provenance), and the PO number with its
+      // lost-race retry against a faked Prisma. Named files, no database.
+      "lib/api/v1/po-import.test.ts",
+      "lib/data/api-v1-po-import.test.ts",
     ],
     environment: "node",
   },
