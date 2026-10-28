@@ -287,6 +287,11 @@ export default defineConfig({
       "lib/api-tokens/token.test.ts",
       "lib/server/api-token.test.ts",
       "lib/api/v1/estimate-import.test.ts",
+      // The sibling import into Procurement: the take-off -> one draft PO row
+      // (descriptions, order, zero prices, provenance), and the PO number with its
+      // lost-race retry against a faked Prisma. Named files, no database.
+      "lib/api/v1/po-import.test.ts",
+      "lib/data/api-v1-po-import.test.ts",
     ],
     environment: "node",
   },

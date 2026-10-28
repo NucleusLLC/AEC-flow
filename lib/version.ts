@@ -244,8 +244,14 @@
  *   its material take-off to POST /api/v1/estimates/import, which creates a DRAFT cost estimate
  *   (quantities only, every unit cost 0) in the token's practice, optionally filed under a project.
  *   Expired licence → 403. Needs prisma/sql/0036_api_tokens.sql applied FIRST.
+ * 0.38.0 (28 OCT 2026): feat — TAKE-OFF TO PURCHASE ORDER. POST /api/v1/purchase-orders/import, the
+ *   sibling of the estimates import with the SAME body, limits and errors: a connected app (M.E.P.flow,
+ *   W&Dflow) sends its take-off and gets ONE DRAFT purchase order in Procurement — one line per item
+ *   ("<category> — <task> <size> (<note>)"), quantities only (every unit price and total 0), supplier
+ *   "To be assigned", numbered by the app's own PO-{year}-{NNN} generator (a lost race for a number is
+ *   retried). Answers 201 { id, poNumber, url }. No schema change, no SQL.
  */
-export const APP_VERSION = "0.37.0";
+export const APP_VERSION = "0.38.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
