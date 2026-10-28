@@ -4,9 +4,11 @@ What the finance module is, what it refuses to do, and why. Three files already
 point here (`lib/finance/calc.ts`, `lib/db.ts`, `components/finance/invoice-register.tsx`);
 this is the document they meant.
 
-The module ships in stages. **F1 invoices** and **F2 receivables** are live.
-**F3 time and expenses** is this release. **F4 profit and work-in-progress** is
-half-built — the arithmetic exists and is tested, the screens do not.
+The module ships in stages. **F1 invoices**, **F2 receivables**, **F3 time and
+expenses** (including billing them onto an invoice) and **F4 profit** are live.
+**Invoicing Phase B** (0.38.0, §6c) adds emailing an invoice with its PDF, the
+SENT status, re-issuing a void invoice, numbered receipts, payment reversal and
+a discount before tax.
 
 ---
 
@@ -161,7 +163,7 @@ still outstanding (the balance, not the original total) and the due date.
 Nothing is sent; the text is pasted into an email or a WhatsApp message by a
 person.
 
-## 5. F4 — Profit and WIP (arithmetic only, so far)
+## 5. F4 — Profit and WIP
 
 `projectProfitability` compares what a job earned at charge-out against what it
 cost: labour at internal cost rates plus every expense the job incurred.
@@ -310,20 +312,128 @@ React `cache` — what `companyOverride()` relies on — does not hold in a rout
 handler. STRIPE cannot be chosen when recording a payment by hand.
 
 **Not done.** Refunds and disputes are handled in the practice's Stripe
-dashboard and are not mirrored back (a refunded card payment must be deleted
-from the invoice by hand). Money taken against an invoice voided while the
+dashboard and are not mirrored back (a refunded card payment must be reversed
+on the invoice by hand, with a reason — §6c). Money taken against an invoice voided while the
 client was on the Checkout page is logged as PAID BUT NOT RECORDED and must be
 refunded in Stripe. Two tabs paying at once can overpay; the invoice then shows
 the overpayment like any other.
 
+## 6c. Invoicing Phase B (0.38.0)
+
+`prisma/sql/0037_invoice_phase_b.sql` · `lib/finance/calc.ts` (`discountedTotals`,
+`discountAmount`, `nextReceiptNumber`, `reissueNumber`, `livePayments`) ·
+`lib/finance/invoice-pdf.ts` · `lib/server/invoice-email.ts` ·
+`lib/data/invoices.ts` · `app/print/finance/receipts/[paymentId]` ·
+`lib/finance/phase-b.test.ts`, `invoice-pdf.test.ts`, `lib/server/invoice-email.test.ts`
+
+**SENT, and the PDF that goes with it.** "Email invoice" (any member, issued
+invoices only — never a draft or a void) sends the invoice as a PDF attachment
+through `sendDocumentEmail`, the app's one email path. To is prefilled from the
+invoice's contact email and takes several addresses; subject and body are
+prefilled and editable. The invoice is stamped — `sentAt`, `sentTo`,
+`sentByName` (snapshots), `sentCount` + 1 — and moved ISSUED → SENT **only when
+the provider returned a message id** (`ok: true`). A failure of any kind (no API
+key, a refused address, an unconfirmed send) leaves the invoice exactly as it
+was and the composed message on screen; every attempt, failed or not, is in the
+email log against the invoice. Re-sending is allowed: the stamp shows the LAST
+send plus the count, and the email log is the full history — no second history
+table.
+
+SENT is ISSUED that has also been emailed. It is open exactly like ISSUED
+(`OPEN_STATUSES`): receivables, ageing, the overdue chase, the register's "Not
+paid" filter, the tax report, the export, the finance overview and the Pay
+online link all treat it the same, and payments derive PART_PAID / PAID from it
+as from ISSUED. A reversed payment drops it back to SENT.
+
+**The PDF is built on the server without a browser** — `pdf-lib` 1.17.1, pinned
+exactly. Vercel's Node functions have no Chromium; pdf-lib is plain JavaScript
+writing PDF operators with the standard fonts, so there is nothing native,
+nothing WebAssembly and no font file to ship. It carries the print page's
+facts: the practice's name, location and logo (PNG or JPEG), number and dates,
+who it is billed to, the lines, the discount, both taxes, the totals, payments
+received (with receipt numbers) and the balance, the bank details and the terms
+& conditions from Settings > Invoicing (inline or on their own sheet), and
+"Page x of y" on every sheet. The standard fonts are WinAnsi only: a label whose
+translation needs another script (Chinese, Japanese) prints in English, and
+characters in data that cannot be drawn print as "?". The same file opens at
+`/finance/invoices/[id]/pdf` ("Download PDF").
+
+**Re-issue as `-2`.** A VOID invoice can be re-issued (administrator, director
+or founder): a new DRAFT with the same client, lines, taxes, discount, notes and
+footer, dated today, numbered `<root>-2`, then `-3` …, where `root` is the first
+invoice in the chain and the suffix is one past the highest ever used on that
+root (soft-deleted drafts included) — never reused, and still unique per
+practice by `@@unique([companyId, number])`. The new invoice carries
+`reissuedFromId` / `reissuedFromNumber` ("Re-issue of …" on screen, "Replaces …"
+on its print); the void one finds its re-issues by that link ("Re-issued as …").
+Only one live re-issue at a time. **Milestones:** voiding freed them; re-issuing
+claims them again, so it is refused if, re-read on the server, another live
+invoice (drafts included) now bills one of them. **Not re-claimed:** time and
+expenses the void released to the unbilled list — the copied lines do not carry
+them, so they could be billed again by hand.
+
+**Numbered receipts.** Every payment, manual or recorded by the Stripe webhook,
+gets `RCT-{year it was received}-{NNN}`, one past the highest receipt number the
+practice has ever used, allocated **inside the same transaction as the payment
+insert** under a per-practice advisory lock, and unique per practice
+(`invoice_payments_companyId_receiptNumber_key`). Reversed payments keep their
+number. **Backfill:** 0037 numbers every existing payment deterministically —
+per practice, in the order received (paidAt, createdAt, id), continuing after
+any number already present — and only where the number is still null, so a
+second run changes nothing. A payment that slipped in between the SQL and the
+deploy (or a sample-data row) is numbered the first time its receipt is opened.
+The receipt prints at `/print/finance/receipts/[paymentId]` (same shell and
+footer as the invoice) and is emailed as a PDF from the payment row.
+
+**Reversal, not deletion.** A payment can no longer be deleted from the screens
+or by any action. It is REVERSED (administrator, director or founder) with a
+required reason: `reversedAt`, `reversedById`, `reversedByName`,
+`reverseReason`. It stays on the invoice, struck through, and its receipt prints
+REVERSED with the reason. It counts towards nothing: the data layer keeps
+reversed payments OUT of `InvoiceDTO.payments` (they are in `reversedPayments`),
+so every reader of payments — the balance, the derived status, receivables and
+the Statement of Account, the overdue chase, the tax report (both bases), the
+accounting export, the finance overview, the credit-note ceiling — ignores them
+without a filter of its own to forget; `invoiceBalance` also skips any payment
+with `reversedAt` as a second lock. A Stripe card payment refunded in Stripe is
+reversed the same way.
+
+**Discount before tax.** An invoice may carry one discount: PERCENT of the
+subtotal or a fixed AMOUNT (`InvoiceDiscountType`), snapshotted as
+`discountType`, `discountValue` and the `discountTotal` it came to. It comes off
+the subtotal BEFORE tax: its share of the taxable lines (split between taxed and
+untaxed lines in proportion, by `allocate`, so the shares add back to the cent)
+comes off the base each tax is charged on, and `taxableSubtotal` stores that
+discounted base. EXCLUSIVE: total = subtotal − discount + taxes. INCLUSIVE: the
+discount comes off the gross amounts and the tax is backed out of what is left;
+total = subtotal − discount. A percentage is rounded half-up to the cent; 100%
+leaves nothing to pay; a negative discount, a percentage over 100 and an amount
+over the subtotal are refused (zod and the data layer), never clamped. With no
+discount every figure is the pre-0.38 one (`invoiceTotals` is
+`discountedTotals` with none). It shows on the form, the invoice screen, the
+print, the PDF and the export (`Discount type`, `Discount %`, `Discount`); the
+tax report's untaxed figure is net of it.
+
+**Who.** Emailing, issuing and recording payments: any member. Voiding,
+re-issuing, reversing a payment and deleting a draft: administrator, director
+or founder (`lib/finance/invoice-permissions.ts`), checked in the actions and
+again in `lib/data/invoices.ts`.
+
+**Not done.** A credit note against a discounted invoice credits line amounts
+before the discount (its ceiling — never more than the balance — still holds).
+Raising from a proposal or from time and expenses offers no discount; add one on
+the draft. The email log is the send history; there is no per-send table.
+
 ## 7. Not built yet
 
-- Billing time and expenses ONTO an invoice — the columns exist
-  (`invoicedAt`, `invoiceId`, `invoiceNumber`, `invoiceLineId`) and the guard
-  is written, but nothing sets them yet.
-- The profit / WIP screens. (The per-project finance tab shipped in 0.23.0:
-  app/(app)/projects/[id]/finance, lib/finance/project-finance.ts.)
-- Any billing provider beyond card payments through Stripe (0.28.0, §6a).
-  (The accounting export — invoices, lines, payments,
-  approved time and expenses as CSV for a period — shipped in 0.11.0:
-  lib/finance/export.ts, app/api/export/finance/[kind]/route.ts.)
+- Work-in-progress as a screen of its own (the arithmetic, `unbilledByProject`,
+  feeds "Raise from time and expenses" and the project finance tab).
+- Refunds of overpayments, and mirroring Stripe refunds and disputes back
+  automatically (a refunded card payment is reversed by hand, §6c).
+- Any billing provider beyond card payments through Stripe (0.36.0, §6b).
+
+Shipped since this list was first written: billing time and expenses onto an
+invoice (`lib/data/work-billing.ts`, "Raise from time and expenses"), the
+profit screen (`/finance/profit`), the per-project finance tab (0.23.0,
+`app/(app)/projects/[id]/finance`) and the accounting export (0.11.0,
+`lib/finance/export.ts`).

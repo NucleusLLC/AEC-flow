@@ -144,7 +144,8 @@ describe("payments", () => {
   it("filters on the payment date, not the invoice's, and sorts by date", () => {
     const pay = (id: string, paidAt: string, amount: number) => ({
       id, invoiceId: "i", paidAt, amount, method: "BANK_TRANSFER" as const, reference: `ref-${id}`,
-      notes: null, recordedByName: "Greg", createdAt: "",
+      notes: null, recordedByName: "Greg", createdAt: "", receiptNumber: `RCT-2026-${id}`,
+      reversedAt: null, reversedByName: null, reverseReason: null,
     });
     const t = paymentsTable(
       [
@@ -208,7 +209,7 @@ describe("CSV", () => {
 
   it("writes a header even when nothing is in range", () => {
     const csv = toCsv(buildTable("payments", { invoices: [] }, ALL));
-    expect(csv).toBe(`${BOM}Paid on,Invoice number,Client,Project,Amount,Currency,Method,Reference,Recorded by\r\n`);
+    expect(csv).toBe(`${BOM}Paid on,Invoice number,Client,Project,Amount,Currency,Method,Reference,Recorded by,Receipt number\r\n`);
   });
 });
 

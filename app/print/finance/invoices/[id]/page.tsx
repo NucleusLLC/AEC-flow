@@ -26,8 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
  * when the invoice was raised, and a tax rate or a proposal that has moved on
  * since must not change what a client was asked to pay.
  *
- * A draft prints DRAFT beside its number. Payments already received are printed
- * too, with the balance — a client who has paid half should not receive a demand
+ * A draft prints DRAFT beside its number; a re-issue prints the number it
+ * replaces, and a void one the number it was re-issued as. Payments already
+ * received are printed too (reversed ones are not — they count for nothing),
+ * each with its receipt number, with the balance — a client who has paid half should not receive a demand
  * for the whole. Issued credit notes print as a Credits line under them and are
  * taken off the balance by the same function every screen uses.
  *
@@ -97,6 +99,11 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               {militaryDate(invoice.issueDate)}
               {invoice.status === "DRAFT" ? ` · ${t("DRAFT")}` : ""}
             </div>
+            {invoice.reissuedFromNumber ? (
+              <div className="text-[10px] text-gray-500">
+                {fmt(t("Replaces {number}"), { number: invoice.reissuedFromNumber })}
+              </div>
+            ) : null}
           </div>
         }
       />
@@ -173,6 +180,17 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               <td className="py-0.5 text-gray-500">{t("Subtotal")}</td>
               <td className="py-0.5 text-right font-mono text-gray-900">{money(invoice.subtotal)}</td>
             </tr>
+            {/* A discount before tax (0.38.0); the taxes below are on the discounted amount. */}
+            {invoice.discountTotal > 0 ? (
+              <tr>
+                <td className="py-0.5 text-gray-500">
+                  {invoice.discountType === "PERCENT"
+                    ? fmt(t("Discount {percent}%"), { percent: invoice.discountValue })
+                    : t("Discount")}
+                </td>
+                <td className="py-0.5 text-right font-mono text-gray-900">−{money(invoice.discountTotal)}</td>
+              </tr>
+            ) : null}
             {invoice.taxPercent > 0 ? (
               <tr>
                 <td className="py-0.5 text-gray-500">
@@ -247,6 +265,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
                 <tr key={p.id} className="border-b border-gray-200">
                   <td className="py-1 pr-2 font-mono text-gray-700">{militaryDate(p.paidAt)}</td>
                   <td className="py-1 px-2 text-gray-700">{t(PAYMENT_METHOD_LABEL[p.method])}</td>
+                  <td className="py-1 px-2 font-mono text-gray-500">{p.receiptNumber ?? ""}</td>
                   <td className="py-1 px-2 font-mono text-gray-500">{p.reference ?? ""}</td>
                   <td className="py-1 pl-2 text-right font-mono text-gray-900">{money(p.amount)}</td>
                 </tr>
@@ -306,6 +325,9 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
           {invoice.voidReason
             ? fmt(t("This invoice has been voided: {reason}."), { reason: invoice.voidReason })
             : t("This invoice has been voided.")}
+          {invoice.reissuedAs.length > 0
+            ? ` ${fmt(t("Re-issued as {number}."), { number: invoice.reissuedAs.map((r) => r.number).join(", ") })}`
+            : ""}
         </p>
       ) : null}
 

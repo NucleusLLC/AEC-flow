@@ -51,7 +51,11 @@ export function payUrl(base: string, token: string): string {
  * and CREDITED invoices owe nothing.
  */
 export function isOnlinePayable(invoice: { status: string; outstanding: number }): boolean {
-  return (invoice.status === "ISSUED" || invoice.status === "PART_PAID") && invoice.outstanding > 0;
+  // SENT (0.38.0) is ISSUED that has also been emailed: payable in exactly the same way.
+  return (
+    (invoice.status === "ISSUED" || invoice.status === "SENT" || invoice.status === "PART_PAID") &&
+    invoice.outstanding > 0
+  );
 }
 
 /**

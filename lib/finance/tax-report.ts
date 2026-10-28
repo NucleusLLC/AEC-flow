@@ -177,6 +177,11 @@ export type TaxInvoice = {
   clientName: string;
   issueDate: string | null;
   subtotal: number;
+  /**
+   * The discount before tax (0.38.0); absent or 0 means none. `taxableSubtotal`
+   * is already net of its share, so only the untaxed figure needs it.
+   */
+  discountTotal?: number | null;
   taxableSubtotal: number;
   taxTotal: number;
   total: number;
@@ -428,7 +433,8 @@ export function buildTaxReport(invoices: TaxInvoice[], range: DateRange): TaxRep
     // (both taxes). Either way it is the SAME base for each tax: neither is
     // charged on the other.
     const base = inv.taxMode === "INCLUSIVE" ? subtract(taxable, tax) : taxable;
-    const exempt = subtract(subtotal, taxable);
+    // Untaxed = what the lines came to after the discount, less the taxed base.
+    const exempt = subtract(subtract(subtotal, fromMajor(inv.discountTotal ?? 0, cur)), taxable);
     const noTax = carriesNoTax(parts);
 
     if (inv.status === "DRAFT") {

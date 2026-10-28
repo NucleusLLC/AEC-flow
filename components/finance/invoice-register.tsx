@@ -22,6 +22,7 @@ import { formatCurrency } from "@/lib/format";
 import {
   INVOICE_STATUSES,
   INVOICE_STATUS_LABEL,
+  isOpenStatus,
   type InvoiceStatus,
   type InvoiceSummaryDTO,
 } from "@/lib/finance/types";
@@ -66,7 +67,7 @@ export function InvoiceRegister({
     () =>
       inCurrency.filter((i) => {
         const late = daysOverdue({ dueDate: i.dueDate, outstanding: i.outstanding }, today);
-        if (status === "OPEN" && !(i.status === "ISSUED" || i.status === "PART_PAID")) return false;
+        if (status === "OPEN" && !isOpenStatus(i.status)) return false;
         if (status === "OVERDUE" && late === null) return false;
         if (status !== "ALL" && status !== "OPEN" && status !== "OVERDUE" && i.status !== status) {
           return false;

@@ -5,6 +5,7 @@ import {
   CREDIT_NOTE_STATUSES,
   CREDIT_NOTE_STATUS_LABEL,
   CREDIT_NOTE_STATUS_TONE,
+  DISCOUNT_TYPES,
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABEL,
   FINANCE_APPROVAL_LABEL,
@@ -47,6 +48,10 @@ describe("the enum unions match prisma/schema.prisma", () => {
     expect([...CREDIT_NOTE_STATUSES].sort()).toEqual(schemaEnum("CreditNoteStatus").sort());
     expect(Object.keys(CREDIT_NOTE_STATUS_LABEL).sort()).toEqual(schemaEnum("CreditNoteStatus").sort());
     expect(Object.keys(CREDIT_NOTE_STATUS_TONE).sort()).toEqual(schemaEnum("CreditNoteStatus").sort());
+  });
+
+  it("InvoiceDiscountType", () => {
+    expect([...DISCOUNT_TYPES].sort()).toEqual(schemaEnum("InvoiceDiscountType").sort());
   });
 
   it("InvoicePaymentMethod", () => {

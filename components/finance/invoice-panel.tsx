@@ -14,15 +14,22 @@
  * (`invoiceBalance`) — they are listed under the payments, and a credit note
  * is raised from here, against this invoice, while money is still owed.
  *
- * Void, Delete draft and the delete-payment bin are drawn only for an
- * administrator, a director or the founder (`canManage`). That is presentation:
- * the actions and lib/data/invoices.ts refuse everyone else whatever is drawn.
+ * PHASE B (0.38.0). "Email invoice" sends the server-generated PDF through the
+ * one email path; the invoice turns SENT only when the provider confirmed, and
+ * a failure keeps the composed message on screen with the reason. Every
+ * payment has a numbered receipt (print it, or email it). A payment is
+ * REVERSED with a reason — it stays here, struck through, and stops counting —
+ * never deleted. A VOID invoice can be RE-ISSUED as `<number>-2`.
+ *
+ * Void, Re-issue, Delete draft and Reverse are drawn only for an administrator,
+ * a director or the founder (`canManage`). That is presentation: the actions
+ * and lib/data/invoices.ts refuse everyone else whatever is drawn.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ban, FileMinus, Plus, Send, Trash2 } from "lucide-react";
+import { Ban, Check, FileDown, FileMinus, Mail, Plus, Printer, RotateCcw, Send, Trash2, Undo2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -34,13 +41,17 @@ import {
   MANUAL_PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
   type InvoiceDTO,
+  type InvoicePaymentDTO,
   type InvoicePaymentMethod,
 } from "@/lib/finance/types";
 import {
   deleteInvoiceAction,
-  deletePaymentAction,
+  emailInvoiceAction,
+  emailReceiptAction,
   issueInvoiceAction,
   recordPaymentAction,
+  reissueInvoiceAction,
+  reversePaymentAction,
   voidInvoiceAction,
 } from "@/app/(app)/finance/invoices/actions";
 
@@ -48,7 +59,13 @@ const BTN =
   "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-60";
 const input =
   "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
+const area =
+  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15";
 const label = "mb-1 block text-xs font-medium text-muted";
+const ICON_BTN = "text-faint transition-colors hover:text-fg disabled:opacity-60";
+
+/** What the compose card is sending: the invoice itself, or one payment's receipt. */
+type Compose = { kind: "invoice" } | { kind: "receipt"; payment: InvoicePaymentDTO };
 
 export function InvoicePanel({
   invoice,
@@ -57,20 +74,30 @@ export function InvoicePanel({
 }: {
   invoice: InvoiceDTO;
   today: string;
-  /** Draws Void, Delete draft and the delete-payment bin (Admin / Director / founder). */
+  /** Draws Void, Re-issue, Delete draft and Reverse payment (Admin / Director / founder). */
   canManage?: boolean;
 }) {
   const router = useRouter();
   const t = useT();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [asking, setAsking] = useState<null | "pay" | "void" | "delete">(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [asking, setAsking] = useState<null | "pay" | "void" | "delete" | "reissue">(null);
 
   const [paidAt, setPaidAt] = useState(today);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<InvoicePaymentMethod>("BANK_TRANSFER");
   const [reference, setReference] = useState("");
   const [voidReason, setVoidReason] = useState("");
+
+  const [reversing, setReversing] = useState<InvoicePaymentDTO | null>(null);
+  const [reverseReason, setReverseReason] = useState("");
+
+  const [compose, setCompose] = useState<Compose | null>(null);
+  const [mailTo, setMailTo] = useState("");
+  const [mailCc, setMailCc] = useState("");
+  const [mailSubject, setMailSubject] = useState("");
+  const [mailBody, setMailBody] = useState("");
 
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -82,10 +109,16 @@ export function InvoicePanel({
   });
   const late = daysOverdue({ dueDate: invoice.dueDate, outstanding }, today);
   const isDraft = invoice.status === "DRAFT";
-  const canTakePayment = !isDraft && invoice.status !== "VOID";
+  const isVoid = invoice.status === "VOID";
+  const canTakePayment = !isDraft && !isVoid;
   // Same people as everything else on this panel (any member — see
   // app/(app)/finance/credit-notes/actions.ts); only while money is owed.
   const canCredit = canTakePayment && outstanding > 0;
+  const liveReissue = invoice.reissuedAs.length > 0;
+  // Every payment, live and reversed, in the order it was received.
+  const allPayments = [...invoice.payments, ...invoice.reversedPayments].sort(
+    (a, b) => a.paidAt.localeCompare(b.paidAt) || a.createdAt.localeCompare(b.createdAt),
+  );
 
   /**
    * The actions return only an id, and the server page is the source of truth
@@ -99,9 +132,10 @@ export function InvoicePanel({
 
   function run(
     fn: () => Promise<{ ok: true; id: string } | { ok: false; error: string }>,
-    after?: () => void,
+    after?: (id: string) => void,
   ) {
     setError(null);
+    setNotice(null);
     setPending(true);
     void (async () => {
       const res = await fn();
@@ -111,8 +145,72 @@ export function InvoicePanel({
         return;
       }
       setAsking(null);
-      if (after) after();
+      setReversing(null);
+      if (after) after(res.id);
       else await reload();
+    })();
+  }
+
+  function openCompose(next: Compose) {
+    setError(null);
+    setNotice(null);
+    setAsking(null);
+    setReversing(null);
+    setMailTo(invoice.contactEmail ?? "");
+    setMailCc("");
+    if (next.kind === "invoice") {
+      setMailSubject(`${fmt(t("Invoice {number}"), { number: invoice.number })} — ${invoice.clientName}`);
+      setMailBody(
+        invoice.dueDate
+          ? fmt(t("Please find attached invoice {number} for {amount}, due {date}."), {
+              number: invoice.number,
+              amount: money(outstanding > 0 ? outstanding : invoice.total),
+              date: militaryDate(invoice.dueDate),
+            })
+          : fmt(t("Please find attached invoice {number} for {amount}."), {
+              number: invoice.number,
+              amount: money(outstanding > 0 ? outstanding : invoice.total),
+            }),
+      );
+    } else {
+      const number = next.payment.receiptNumber ?? "";
+      setMailSubject(`${fmt(t("Receipt {number}"), { number })} — ${invoice.clientName}`);
+      setMailBody(
+        fmt(t("Thank you for your payment of {amount} against invoice {invoice}. Please find attached receipt {number}."), {
+          amount: money(next.payment.amount),
+          invoice: invoice.number,
+          number,
+        }),
+      );
+    }
+    setCompose(next);
+  }
+
+  function send() {
+    if (!compose) return;
+    setError(null);
+    setNotice(null);
+    setPending(true);
+    const message = { to: mailTo, cc: mailCc || undefined, subject: mailSubject, body: mailBody };
+    void (async () => {
+      const res =
+        compose.kind === "invoice"
+          ? await emailInvoiceAction(invoice.id, message)
+          : await emailReceiptAction(invoice.id, compose.payment.id, message);
+      setPending(false);
+      if (!res.ok) {
+        // The composed message stays on screen; nothing was sent, nothing was stamped.
+        setError(res.error);
+        return;
+      }
+      setCompose(null);
+      setNotice(
+        fmt(t("Sent to {to}. The PDF was attached: {files}."), {
+          to: res.recipients.join(", "),
+          files: res.attachments.join(", "),
+        }),
+      );
+      await reload();
     })();
   }
 
@@ -150,7 +248,7 @@ export function InvoicePanel({
           })}
         </p>
       ) : null}
-      {invoice.status === "VOID" && invoice.voidReason ? (
+      {isVoid && invoice.voidReason ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-sm text-fg">
           {fmt(t("Voided {date}: {reason}"), {
             date: militaryDate(invoice.voidedAt),
@@ -158,11 +256,48 @@ export function InvoicePanel({
           })}
         </p>
       ) : null}
+      {invoice.reissuedAs.length > 0 ? (
+        <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg" data-testid="reissued-as">
+          {t("Re-issued as")}{" "}
+          {invoice.reissuedAs.map((r, i) => (
+            <span key={r.id}>
+              {i > 0 ? ", " : ""}
+              <Link href={`/finance/invoices/${r.id}`} className="font-mono font-semibold text-brand hover:underline">
+                {r.number}
+              </Link>
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {invoice.reissuedFromId && invoice.reissuedFromNumber ? (
+        <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-fg" data-testid="reissue-of">
+          {t("Re-issue of")}{" "}
+          <Link
+            href={`/finance/invoices/${invoice.reissuedFromId}`}
+            className="font-mono font-semibold text-brand hover:underline"
+          >
+            {invoice.reissuedFromNumber}
+          </Link>
+        </p>
+      ) : null}
+      {invoice.sentAt ? (
+        <p className="text-sm text-muted" data-testid="sent-stamp">
+          {fmt(t("Emailed {date} to {to} by {name}."), {
+            date: militaryDate(invoice.sentAt),
+            to: invoice.sentTo ?? "—",
+            name: invoice.sentByName ?? "—",
+          })}
+          {invoice.sentCount > 1 ? ` ${fmt(t("Sent {count} times."), { count: invoice.sentCount })}` : ""}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/print/finance/invoices/${invoice.id}`} className={BTN}>
           {t("Print / PDF")}
         </Link>
+        <a href={`/finance/invoices/${invoice.id}/pdf?download=1`} className={BTN}>
+          <FileDown className="h-4 w-4" /> {t("Download PDF")}
+        </a>
         {isDraft ? (
           <>
             <Link href={`/finance/invoices/${invoice.id}/edit`} className={BTN}>
@@ -191,6 +326,16 @@ export function InvoicePanel({
           </>
         ) : null}
         {canTakePayment ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => openCompose({ kind: "invoice" })}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
+          >
+            <Mail className="h-4 w-4" /> {invoice.sentAt ? t("Email again") : t("Email invoice")}
+          </button>
+        ) : null}
+        {canTakePayment ? (
           <button type="button" disabled={pending} onClick={() => setAsking("pay")} className={BTN}>
             <Plus className="h-4 w-4" /> {t("Record a payment")}
           </button>
@@ -203,12 +348,73 @@ export function InvoicePanel({
             <FileMinus className="h-4 w-4" /> {t("Raise credit note")}
           </Link>
         ) : null}
-        {canManage && !isDraft && invoice.status !== "VOID" ? (
+        {canManage && !isDraft && !isVoid ? (
           <button type="button" disabled={pending} onClick={() => setAsking("void")} className={`${BTN} text-red-600`}>
             <Ban className="h-4 w-4" /> {t("Void this invoice")}
           </button>
         ) : null}
+        {canManage && isVoid && !liveReissue ? (
+          <button type="button" disabled={pending} onClick={() => setAsking("reissue")} className={BTN}>
+            <RotateCcw className="h-4 w-4" /> {t("Re-issue")}
+          </button>
+        ) : null}
       </div>
+
+      {compose ? (
+        <Card>
+          <CardHeader
+            title={compose.kind === "invoice" ? t("Email invoice") : t("Email receipt")}
+            subtitle={
+              compose.kind === "invoice"
+                ? fmt(t("The invoice goes as a PDF attachment, {file}."), { file: `${invoice.number}.pdf` })
+                : fmt(t("The receipt goes as a PDF attachment, {file}."), {
+                    file: `${compose.payment.receiptNumber ?? t("Receipt")}.pdf`,
+                  })
+            }
+          />
+          <CardBody className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className={label}>{t("To")}</label>
+              <input
+                value={mailTo}
+                onChange={(e) => setMailTo(e.target.value)}
+                placeholder="name@example.com, other@example.com"
+                className={input}
+                data-testid="mail-to"
+              />
+            </div>
+            <div>
+              <label className={label}>{t("Cc")}</label>
+              <input value={mailCc} onChange={(e) => setMailCc(e.target.value)} className={input} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={label}>{t("Subject")}</label>
+              <input value={mailSubject} onChange={(e) => setMailSubject(e.target.value)} className={input} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={label}>{t("Message")}</label>
+              <textarea rows={4} value={mailBody} onChange={(e) => setMailBody(e.target.value)} className={area} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={send}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
+                data-testid="mail-send"
+              >
+                <Send className="h-4 w-4" /> {pending ? t("Sending…") : t("Send")}
+              </button>
+              <button type="button" onClick={() => setCompose(null)} className={BTN}>
+                {t("Cancel")}
+              </button>
+              <span className="text-xs text-faint">
+                {t("Separate several addresses with commas. The invoice is marked Sent only when the email is confirmed sent.")}
+              </span>
+            </div>
+          </CardBody>
+        </Card>
+      ) : null}
 
       {asking === "pay" ? (
         <Card>
@@ -227,6 +433,7 @@ export function InvoicePanel({
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder={String(outstanding)}
                 className={`${input} font-mono`}
+                data-testid="pay-amount"
               />
             </div>
             <div>
@@ -267,6 +474,7 @@ export function InvoicePanel({
                   )
                 }
                 className="inline-flex h-9 items-center rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
+                data-testid="pay-save"
               >
                 {pending ? t("Saving…") : t("Record it")}
               </button>
@@ -313,6 +521,38 @@ export function InvoicePanel({
         </Card>
       ) : null}
 
+      {canManage && asking === "reissue" ? (
+        <Card>
+          <CardBody className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-fg">
+              {t("Re-issue this invoice as a new draft with the same client, lines, taxes and discount?")}
+            </span>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                run(
+                  () => reissueInvoiceAction(invoice.id),
+                  (id) => router.push(`/finance/invoices/${id}`),
+                )
+              }
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg hover:bg-brand/90 disabled:opacity-60"
+              data-testid="reissue-confirm"
+            >
+              <RotateCcw className="h-4 w-4" /> {t("Re-issue")}
+            </button>
+            <button type="button" onClick={() => setAsking(null)} className={BTN}>
+              {t("Cancel")}
+            </button>
+            <p className="w-full text-[11px] text-faint">
+              {t(
+                "The new draft gets this number with -2 (then -3 …). It bills the same proposal milestones again, so it is refused if another invoice has billed one of them since. Time and expenses released by the void are not re-claimed.",
+              )}
+            </p>
+          </CardBody>
+        </Card>
+      ) : null}
+
       {canManage && asking === "delete" ? (
         <Card>
           <CardBody className="flex flex-wrap items-center gap-2">
@@ -332,7 +572,58 @@ export function InvoicePanel({
         </Card>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{t(error)}</p> : null}
+      {canManage && reversing ? (
+        <Card>
+          <CardHeader
+            title={t("Reverse payment")}
+            subtitle={fmt(t("{receipt} · {amount} received {date}"), {
+              receipt: reversing.receiptNumber ?? "—",
+              amount: money(reversing.amount),
+              date: militaryDate(reversing.paidAt),
+            })}
+          />
+          <CardBody className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[260px] flex-1">
+              <label className={label}>{t("Why is it being reversed?")}</label>
+              <input
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+                placeholder={t("The cheque bounced")}
+                className={input}
+                data-testid="reverse-reason"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={pending || !reverseReason.trim()}
+              onClick={() => run(() => reversePaymentAction(invoice.id, reversing.id, reverseReason))}
+              className="inline-flex h-9 items-center rounded-lg bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-600/90 disabled:opacity-60"
+              data-testid="reverse-confirm"
+            >
+              {t("Reverse it")}
+            </button>
+            <button type="button" onClick={() => setReversing(null)} className={BTN}>
+              {t("Cancel")}
+            </button>
+            <p className="w-full text-[11px] text-faint">
+              {t(
+                "The payment stays on the invoice, struck through, with your reason, and stops counting towards what has been paid. Its receipt then prints REVERSED.",
+              )}
+            </p>
+          </CardBody>
+        </Card>
+      ) : null}
+
+      {notice ? (
+        <p className="inline-flex items-center gap-1.5 text-sm text-emerald-700" data-testid="panel-notice">
+          <Check className="h-4 w-4" /> {notice}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-red-600" data-testid="panel-error">
+          {t(error)}
+        </p>
+      ) : null}
 
       <Card>
         <CardHeader
@@ -374,6 +665,17 @@ export function InvoicePanel({
                 <td className="pt-3 text-right font-mono tabular-nums text-fg">{money(invoice.subtotal)}</td>
                 <td />
               </tr>
+              {invoice.discountTotal > 0 ? (
+                <tr>
+                  <td className="text-right text-muted">
+                    {invoice.discountType === "PERCENT"
+                      ? fmt(t("Discount {percent}%"), { percent: invoice.discountValue })
+                      : t("Discount")}
+                  </td>
+                  <td className="text-right font-mono tabular-nums text-fg">−{money(invoice.discountTotal)}</td>
+                  <td />
+                </tr>
+              ) : null}
               {invoice.taxPercent > 0 ? (
                 <tr>
                   <td className="text-right text-muted">
@@ -413,13 +715,14 @@ export function InvoicePanel({
           subtitle={t("The status above follows these rows, not the other way round.")}
         />
         <CardBody>
-          {invoice.payments.length === 0 ? (
+          {allPayments.length === 0 ? (
             <p className="text-sm text-muted">{t("Nothing received yet.")}</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-faint">
                   <th className="pb-1.5 font-medium">{t("Received")}</th>
+                  <th className="pb-1.5 font-medium">{t("Receipt")}</th>
                   <th className="pb-1.5 font-medium">{t("How")}</th>
                   <th className="pb-1.5 font-medium">{t("Reference")}</th>
                   <th className="pb-1.5 text-right font-medium">{t("Amount")}</th>
@@ -427,27 +730,87 @@ export function InvoicePanel({
                 </tr>
               </thead>
               <tbody>
-                {invoice.payments.map((p) => (
-                  <tr key={p.id} className="zebra-row border-t border-border/60">
-                    <td className="py-2 font-mono text-xs tabular-nums">{militaryDate(p.paidAt)}</td>
-                    <td className="py-2 text-muted">{t(PAYMENT_METHOD_LABEL[p.method])}</td>
-                    <td className="py-2 font-mono text-xs text-muted">{p.reference ?? "—"}</td>
-                    <td className="py-2 text-right font-mono tabular-nums text-fg">{money(p.amount)}</td>
-                    <td className="py-2 text-right">
-                      {canManage ? (
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => run(() => deletePaymentAction(invoice.id, p.id))}
-                          aria-label={t("Delete payment")}
-                          className="text-faint transition-colors hover:text-red-600"
+                {allPayments.map((p) => {
+                  const reversed = Boolean(p.reversedAt);
+                  return (
+                    <tr
+                      key={p.id}
+                      className={`zebra-row border-t border-border/60 align-top ${reversed ? "text-faint" : ""}`}
+                      data-testid={reversed ? "payment-reversed" : "payment-live"}
+                    >
+                      <td className="py-2 font-mono text-xs tabular-nums">{militaryDate(p.paidAt)}</td>
+                      <td className="py-2 font-mono text-xs">
+                        <Link
+                          href={`/print/finance/receipts/${p.id}`}
+                          className="font-semibold text-brand hover:underline"
+                          data-testid="receipt-link"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                          {p.receiptNumber ?? t("Receipt")}
+                        </Link>
+                      </td>
+                      <td className={`py-2 ${reversed ? "" : "text-muted"}`}>{t(PAYMENT_METHOD_LABEL[p.method])}</td>
+                      <td className="py-2 font-mono text-xs text-muted">
+                        {p.reference ?? "—"}
+                        {reversed ? (
+                          <div className="font-sans text-[11px] text-red-600">
+                            {fmt(t("Reversed {date} by {name}: {reason}"), {
+                              date: militaryDate(p.reversedAt),
+                              name: p.reversedByName ?? "—",
+                              reason: p.reverseReason ?? "",
+                            })}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td
+                        className={`py-2 text-right font-mono tabular-nums ${reversed ? "line-through" : "text-fg"}`}
+                      >
+                        {money(p.amount)}
+                      </td>
+                      <td className="py-2 text-right">
+                        <span className="inline-flex items-center gap-2">
+                          <Link
+                            href={`/print/finance/receipts/${p.id}`}
+                            aria-label={t("Print receipt")}
+                            title={t("Print receipt")}
+                            className={ICON_BTN}
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Link>
+                          {!reversed ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => openCompose({ kind: "receipt", payment: p })}
+                              aria-label={t("Email receipt")}
+                              title={t("Email receipt")}
+                              className={ICON_BTN}
+                            >
+                              <Mail className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                          {canManage && !reversed ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => {
+                                setError(null);
+                                setCompose(null);
+                                setReverseReason("");
+                                setReversing(p);
+                              }}
+                              aria-label={t("Reverse payment")}
+                              title={t("Reverse payment")}
+                              className="text-faint transition-colors hover:text-red-600 disabled:opacity-60"
+                              data-testid="reverse-open"
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
