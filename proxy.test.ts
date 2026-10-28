@@ -47,7 +47,7 @@ describe("primary host root routing", () => {
 });
 
 describe("public API for connected apps", () => {
-  it.each(["/api/v1/me", "/api/v1/projects", "/api/v1/estimates/import"])(
+  it.each(["/api/v1/me", "/api/v1/projects", "/api/v1/estimates/import", "/api/v1/purchase-orders/import"])(
     "lets %s through with no session when auth is enforced (the Bearer token is the auth)",
     async (path) => {
       vi.stubEnv("AUTH_ENFORCE", "true");
