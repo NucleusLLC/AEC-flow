@@ -244,8 +244,17 @@
  *   its material take-off to POST /api/v1/estimates/import, which creates a DRAFT cost estimate
  *   (quantities only, every unit cost 0) in the token's practice, optionally filed under a project.
  *   Expired licence → 403. Needs prisma/sql/0036_api_tokens.sql applied FIRST.
+ * 0.38.0 (28 OCT 2026): feat — INVOICING PHASE B. "Email invoice" sends the invoice as a PDF built on
+ *   the server (pdf-lib, no browser) through the one email path, and marks it SENT — a new status,
+ *   open like Issued — only when the mail provider confirmed. A voided invoice can be RE-ISSUED as a
+ *   new draft numbered <number>-2 (-3 …), linked both ways, re-claiming its proposal milestones only
+ *   if nothing else bills them. Every payment gets a numbered receipt (RCT-YYYY-NNN) to print or
+ *   email. A payment is REVERSED with a reason instead of deleted: it stays visible, struck through,
+ *   and stops counting everywhere. An invoice may carry a DISCOUNT (percent or amount) taken off
+ *   before tax. Admin / Director / founder for void, re-issue and reverse.
+ *   Needs prisma/sql/0037_invoice_phase_b.sql applied FIRST.
  */
-export const APP_VERSION = "0.37.0";
+export const APP_VERSION = "0.38.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

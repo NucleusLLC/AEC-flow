@@ -3217,6 +3217,10 @@ model GeneralDocument {
 enum InvoiceStatus {
   DRAFT
   ISSUED
+  /// Issued AND emailed to the client from the app (0.38.0) — set only when the
+  /// mail provider confirmed the send. Open exactly like ISSUED: payments derive
+  /// PART_PAID / PAID from it the same way.
+  SENT
   PART_PAID
   PAID
   CREDITED
@@ -3239,6 +3243,13 @@ enum InvoicePaymentMethod {
   /// Card, paid online through the practice's Stripe account. Recorded only by the
   /// Stripe webhook (app/api/stripe/webhook), never chosen by hand.
   STRIPE
+}
+
+/// A discount on an invoice (0.38.0): a percentage of the subtotal, or a fixed
+/// amount. Applied BEFORE tax — lib/finance/calc.ts.
+enum InvoiceDiscountType {
+  PERCENT
+  AMOUNT
 }
 
 /// One invoice. The aggregate root: lines and payments hang off it.
@@ -3292,11 +3303,20 @@ model Invoice {
   tax2Name    String?
   tax2Percent Decimal @default(0)
 
+  /// An optional discount, applied to the subtotal BEFORE tax (0.38.0). The type
+  /// and the value typed are kept beside the amount it came to, so a printed
+  /// "10%" never has to be reverse-engineered from a figure. Null type = none.
+  discountType  InvoiceDiscountType?
+  discountValue Decimal              @default(0)
+  discountTotal Decimal              @default(0)
+
   /// Derived from the lines by lib/finance/calc.ts and stored so a sent
-  /// document cannot change under the client's feet.
+  /// document cannot change under the client's feet. `subtotal` is the lines
+  /// before any discount; `taxableSubtotal` is the base the tax was charged on,
+  /// AFTER the discount's share of it.
   subtotal        Decimal @default(0)
   taxableSubtotal Decimal @default(0)
-  /// The first tax only; the second is `tax2Total`. total = subtotal + both (EXCLUSIVE).
+  /// The first tax only; the second is `tax2Total`. total = subtotal − discount + both (EXCLUSIVE).
   taxTotal        Decimal @default(0)
   tax2Total       Decimal @default(0)
   total           Decimal @default(0)
@@ -3313,6 +3333,20 @@ model Invoice {
   /// record of what the practice asked a client to pay.
   voidReason    String?
   voidedAt      DateTime?
+
+  /// The last time this invoice was emailed from the app with its PDF attached,
+  /// to whom, and by whom — stamped only after the mail provider confirmed the
+  /// send (lib/server/document-email.ts). `sentCount` counts every confirmed
+  /// send; each attempt, failed ones included, is in the email log.
+  sentAt     DateTime?
+  sentTo     String?
+  sentByName String?
+  sentCount  Int       @default(0)
+
+  /// A re-issue of a VOID invoice (0.38.0): the void one it replaces. Numbered
+  /// `<root>-2`, `-3` … so the client can tell it from the withdrawn one.
+  reissuedFromId     String?
+  reissuedFromNumber String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -3335,6 +3369,7 @@ model Invoice {
   @@index([companyId, projectId])
   @@index([companyId, issueDate])
   @@index([companyId, serviceProposalId])
+  @@index([companyId, reissuedFromId])
   @@map("invoices")
 }
 
@@ -3389,11 +3424,26 @@ model InvoicePayment {
   /// webhook can never record the same money twice. Null for every manual payment.
   stripePaymentIntentId String? @unique
 
+  /// `RCT-{year}-{NNN}` (0.38.0), sequential within the practice and never
+  /// reused, allocated in the same transaction as the payment. Null only on a
+  /// payment recorded before 0.38.0 that 0037 did not reach; the app numbers
+  /// such a row the first time its receipt is opened.
+  receiptNumber String?
+
+  /// A payment is never deleted once recorded against an issued invoice: it is
+  /// REVERSED, with a reason. A reversed payment stays on the invoice (struck
+  /// through) and stops counting towards what has been paid.
+  reversedAt     DateTime?
+  reversedById   String?
+  reversedByName String?
+  reverseReason  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
+  @@unique([companyId, receiptNumber])
   @@index([companyId, invoiceId])
   @@index([companyId, paidAt])
   @@map("invoice_payments")

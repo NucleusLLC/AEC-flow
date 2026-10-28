@@ -13,15 +13,15 @@
  * billed twice — the "raise from proposal" screen reads it back.
  */
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import { currencyOptions, formatCurrency, getSystemCurrency } from "@/lib/format";
-import { dueDateFrom, invoiceTotals, lineAmount } from "@/lib/finance/calc";
-import type { InvoiceDTO, InvoiceInput, InvoiceLineInput, TaxMode } from "@/lib/finance/types";
+import { discountedTotals, discountProblem, dueDateFrom, lineAmount } from "@/lib/finance/calc";
+import type { InvoiceDiscountType, InvoiceDTO, InvoiceInput, InvoiceLineInput, TaxMode } from "@/lib/finance/types";
 import { createInvoiceAction, updateInvoiceAction } from "@/app/(app)/finance/invoices/actions";
 
 const field =
@@ -76,6 +76,9 @@ export function InvoiceForm({
   // Optional second tax (Aruba: BAVP beside BBO). Same mode, same base.
   const [tax2Name, setTax2Name] = useState(source?.tax2Name ?? "");
   const [tax2Percent, setTax2Percent] = useState(String(source?.tax2Percent ?? 0));
+  // Discount before tax (0.38.0): none, a percentage, or an amount.
+  const [discountType, setDiscountType] = useState<InvoiceDiscountType | "">(source?.discountType ?? "");
+  const [discountValue, setDiscountValue] = useState(String(source?.discountValue ?? 0));
   const [notes, setNotes] = useState(source?.notes ?? "");
   const [footer, setFooter] = useState(source?.footer ?? "");
   const [lines, setLines] = useState<EditableLine[]>(() => {
@@ -98,14 +101,15 @@ export function InvoiceForm({
   const client = clients.find((c) => c.id === clientId);
   const project = projects.find((p) => p.id === projectId);
 
-  const totals = useMemo(
-    () =>
-      invoiceTotals(
-        lines,
-        { percent: Number(taxPercent) || 0, mode: taxMode, percent2: Number(tax2Percent) || 0 },
-        currency,
-      ),
-    [lines, taxPercent, taxMode, tax2Percent, currency],
+  const discount = discountType ? { type: discountType, value: Number(discountValue) || 0 } : null;
+  // A discount the lines cannot carry is shown as a problem, not thrown: the
+  // totals then show the invoice without it, and saving is refused by the server.
+  const discountIssue = discount ? discountProblem(lines, discount, currency) : null;
+  const totals = discountedTotals(
+    lines,
+    { percent: Number(taxPercent) || 0, mode: taxMode, percent2: Number(tax2Percent) || 0 },
+    currency,
+    discountIssue ? null : discount,
   );
   const money = (n: number) =>
     formatCurrency(n, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -148,6 +152,8 @@ export function InvoiceForm({
       taxMode,
       tax2Name: Number(tax2Percent) > 0 ? tax2Name || null : null,
       tax2Percent: Number(tax2Percent) || 0,
+      discountType: discountType || null,
+      discountValue: discountType ? Number(discountValue) || 0 : 0,
       notes: notes || null,
       footer: footer || null,
       // The editor key is local bookkeeping, not part of the line.
@@ -466,6 +472,40 @@ export function InvoiceForm({
                 data-testid="invoice-tax2-percent"
               />
             </div>
+            <div className="sm:col-span-3">
+              <p className="text-xs font-medium text-fg">{t("Discount (optional)")}</p>
+              <p className="text-xs text-muted">
+                {t("Taken off the subtotal before tax, so the tax is charged on the discounted amount.")}
+              </p>
+            </div>
+            <div>
+              <label className={label}>{t("Discount")}</label>
+              <select
+                value={discountType}
+                onChange={(e) => setDiscountType(e.target.value as InvoiceDiscountType | "")}
+                className={input}
+                data-testid="invoice-discount-type"
+              >
+                <option value="">{t("None")}</option>
+                <option value="PERCENT">{t("Percentage")}</option>
+                <option value="AMOUNT">{t("Fixed amount")}</option>
+              </select>
+            </div>
+            {discountType ? (
+              <div>
+                <label className={label}>{discountType === "PERCENT" ? t("Percent") : t("Amount")}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(e.target.value)}
+                  className={input}
+                  data-testid="invoice-discount-value"
+                />
+              </div>
+            ) : null}
+            {discountIssue ? <p className="text-xs text-red-600 sm:col-span-3">{t(discountIssue)}</p> : null}
           </CardBody>
         </Card>
 
@@ -473,6 +513,12 @@ export function InvoiceForm({
           <CardHeader title={t("Totals")} subtitle={t("The same arithmetic the server stores.")} />
           <CardBody className="space-y-1 text-sm">
             <Row label={t("Subtotal")} value={money(totals.subtotal)} />
+            {totals.discountTotal > 0 ? (
+              <Row
+                label={discountType === "PERCENT" ? fmt(t("Discount {percent}%"), { percent: Number(discountValue) }) : t("Discount")}
+                value={`−${money(totals.discountTotal)}`}
+              />
+            ) : null}
             {Number(taxPercent) > 0 ? (
               <>
                 <Row label={t("Taxable")} value={money(totals.taxableSubtotal)} muted />

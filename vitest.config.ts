@@ -287,6 +287,15 @@ export default defineConfig({
       "lib/api-tokens/token.test.ts",
       "lib/server/api-token.test.ts",
       "lib/api/v1/estimate-import.test.ts",
+      // Invoicing Phase B (0.38.0): the discount before tax (rounding, 100%, over
+      // the subtotal, two taxes, inclusive), SENT as an open status, reversed
+      // payments counting for nothing, RCT- and re-issue numbering; the
+      // server-side PDFs read back out of the file (pages, "Page x of y", the
+      // number and totals, REVERSED); and the rule that an invoice is stamped
+      // SENT only on a provider-confirmed send. Pure / edges mocked.
+      "lib/finance/phase-b.test.ts",
+      "lib/finance/invoice-pdf.test.ts",
+      "lib/server/invoice-email.test.ts",
     ],
     environment: "node",
   },

@@ -53,6 +53,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             {invoice.title ? ` · ${invoice.title}` : ""}
           </p>
         </div>
+        {/* An issued invoice is emailed from the panel below, with its PDF attached and
+            the Sent stamp (0.38.0). The plain link email stays for drafts only. */}
+        {invoice.status === "DRAFT" ? (
         <EmailButton
           subject={`Invoice ${invoice.number} — ${invoice.clientName}`}
           attachment={`${invoice.number}`}
@@ -67,6 +70,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             ".",
           ].join("")}
         />
+        ) : null}
       </div>
 
       <InvoicePanel invoice={invoice} today={today} canManage={canManage} />
@@ -92,6 +96,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             { label: t("From proposal"), value: invoice.proposalNumber ?? "—", mono: true },
             { label: t("Raised by"), value: invoice.createdByName ?? "—" },
             { label: t("Issued by"), value: invoice.issuedByName ?? "—" },
+            { label: t("Last emailed"), value: invoice.sentAt ? militaryDate(invoice.sentAt) : "—", mono: true },
           ].map((f) => (
             <div
               key={f.label}

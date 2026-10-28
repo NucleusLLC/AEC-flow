@@ -228,6 +228,8 @@ function invoice(p: Partial<InvoiceDTO>): InvoiceDTO {
     taxPercent: 3, taxMode: "EXCLUSIVE", tax2Name: "BAVP", tax2Percent: 4, taxableSubtotal: 1000,
     notes: null, footer: null, createdByName: null, issuedByName: null, voidReason: null, voidedAt: null,
     createdAt: "", lines: [], payments: [], creditNotes: [],
+    discountType: null, discountValue: 0, discountTotal: 0, sentAt: null, sentTo: null, sentByName: null,
+    sentCount: 0, reissuedFromId: null, reissuedFromNumber: null, reissuedAs: [], reversedPayments: [],
     ...p,
   };
 }
@@ -263,7 +265,7 @@ describe("accounting export with two taxes", () => {
   });
 
   it("tax ledger: Net + Tax + Tax 2 = Gross on every row", () => {
-    const t = taxTable([invoice({ payments: [{ id: "p", invoiceId: "i", paidAt: "2026-09-12", amount: 100, method: "BANK_TRANSFER", reference: null, notes: null, recordedByName: null, createdAt: "" }] })], ALL);
+    const t = taxTable([invoice({ payments: [{ id: "p", invoiceId: "i", paidAt: "2026-09-12", amount: 100, method: "BANK_TRANSFER", reference: null, notes: null, recordedByName: null, createdAt: "", receiptNumber: null, reversedAt: null, reversedByName: null, reverseReason: null }] })], ALL);
     const col = (name: string) => t.columns.indexOf(name);
     const [invoiced, received] = t.rows;
     expect([invoiced[col("Net")], invoiced[col("Tax")], invoiced[col("Tax 2 name")], invoiced[col("Tax 2")], invoiced[col("Gross")]]).toEqual([

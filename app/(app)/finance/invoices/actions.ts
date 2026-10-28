@@ -13,10 +13,16 @@
  * sets a status to PAID: payments are recorded, and the status follows the
  * money (lib/finance/calc.ts).
  *
- * VOID, DELETE A PAYMENT and DELETE A DRAFT are for an administrator, a director
- * or the founder (lib/finance/invoice-permissions.ts) — checked here first, so
- * the refusal is a plain sentence, and again in lib/data/invoices.ts. Raising,
- * editing a draft, issuing and recording a payment stay open to every member.
+ * VOID, RE-ISSUE, REVERSE A PAYMENT and DELETE A DRAFT are for an
+ * administrator, a director or the founder (lib/finance/invoice-permissions.ts)
+ * — checked here first, so the refusal is a plain sentence, and again in
+ * lib/data/invoices.ts. Raising, editing a draft, issuing, emailing and
+ * recording a payment stay open to every member. There is no action that
+ * deletes a payment any more (0.38.0): a payment is reversed, with a reason.
+ *
+ * EMAIL returns the document-email result as it is: `ok: true` only when the
+ * provider confirmed, and the invoice is stamped SENT only then
+ * (lib/server/invoice-email.ts).
  */
 
 import { revalidatePath } from "next/cache";
@@ -26,16 +32,21 @@ import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/
 import {
   createInvoice,
   deleteInvoice,
-  deletePayment,
   issueInvoice,
   recordPayment,
+  reissueInvoice,
+  reversePayment,
   updateInvoice,
   voidInvoice,
+  DiscountError,
+  InvoiceActionError,
   InvoiceForbiddenError,
   InvoiceLockedError,
   InvoiceNotFoundError,
   InvoiceNumberInUseError,
 } from "@/lib/data/invoices";
+import { emailInvoice, emailReceipt, type InvoiceEmailInput } from "@/lib/server/invoice-email";
+import type { SendDocumentEmailResult } from "@/lib/server/document-email";
 import { raiseInvoiceFromWork, WorkBillingError } from "@/lib/data/work-billing";
 import {
   issuesToMessage,
@@ -64,7 +75,9 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
     e instanceof InvoiceForbiddenError ||
     e instanceof InvoiceNumberInUseError ||
     e instanceof InvoiceNotFoundError ||
-    e instanceof InvoiceLockedError
+    e instanceof InvoiceLockedError ||
+    e instanceof InvoiceActionError ||
+    e instanceof DiscountError
   ) {
     return { ok: false, error: e.message };
   }
@@ -161,19 +174,76 @@ export async function recordPaymentAction(
   }
 }
 
-export async function deletePaymentAction(
+/**
+ * Reverse a payment, with a reason. Administrator, director or founder. The
+ * payment stays on the invoice, struck through, and stops counting.
+ */
+export async function reversePaymentAction(
   invoiceId: string,
   id: string,
+  reason: string,
 ): Promise<InvoiceActionResult> {
-  const denied = await invoiceGate("deletePayment");
+  const denied = await invoiceGate("reversePayment");
   if (denied) return denied;
   try {
-    await deletePayment(id);
+    await reversePayment(id, reason);
     revalidateInvoice(invoiceId);
     return { ok: true, id };
   } catch (e) {
-    return failure(e, "Failed to delete the payment.");
+    return failure(e, "Failed to reverse the payment.");
   }
+}
+
+/**
+ * Re-issue a VOID invoice as a new draft numbered `<number>-2`. Administrator,
+ * director or founder. Returns the NEW invoice's id.
+ */
+export async function reissueInvoiceAction(id: string): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("reissue");
+  if (denied) return denied;
+  try {
+    const invoice = await reissueInvoice(id);
+    revalidateInvoice(id);
+    revalidateInvoice(invoice.id);
+    return { ok: true, id: invoice.id };
+  } catch (e) {
+    return failure(e, "Failed to re-issue the invoice.");
+  }
+}
+
+/** Email an issued invoice with its PDF attached; stamped SENT only on a confirmed send. */
+export async function emailInvoiceAction(
+  id: string,
+  input: InvoiceEmailInput,
+): Promise<SendDocumentEmailResult> {
+  const denied = await invoiceGate("send");
+  if (denied) return { ok: false, reason: "not_signed_in", error: denied.error, logId: null };
+  const res = await emailInvoice(id, {
+    to: input.to,
+    cc: input.cc,
+    subject: input.subject,
+    body: input.body,
+  });
+  if (res.ok) revalidateInvoice(id);
+  return res;
+}
+
+/** Email one payment's receipt with its PDF attached. */
+export async function emailReceiptAction(
+  invoiceId: string,
+  paymentId: string,
+  input: InvoiceEmailInput,
+): Promise<SendDocumentEmailResult> {
+  const denied = await invoiceGate("send");
+  if (denied) return { ok: false, reason: "not_signed_in", error: denied.error, logId: null };
+  const res = await emailReceipt(paymentId, {
+    to: input.to,
+    cc: input.cc,
+    subject: input.subject,
+    body: input.body,
+  });
+  if (res.ok) revalidateInvoice(invoiceId);
+  return res;
 }
 
 /**

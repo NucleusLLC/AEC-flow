@@ -19,6 +19,14 @@
  * being paid (payments are recorded against it) or by being voided with a
  * reason. Its stored totals are never recomputed from a tax rate or a proposal
  * that has moved on since.
+ *
+ * PHASE B (0.38.0). An issued invoice can be EMAILED with its PDF (SENT is
+ * stamped only after the provider confirmed — `markInvoiceSent`), a VOID one
+ * can be RE-ISSUED as a new draft numbered `<root>-2`, every payment carries a
+ * receipt number allocated in the same transaction that writes it, and a
+ * payment is REVERSED with a reason, never deleted. Reversed payments stay on
+ * the row and are kept OUT of `InvoiceDTO.payments`, so no reader of payments
+ * can count one by forgetting a filter.
  */
 import "server-only";
 import { getServerSession } from "next-auth";
@@ -30,10 +38,14 @@ import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/
 import { releaseWork } from "@/lib/data/work-billing";
 import { creditNoteSummaryDto } from "@/lib/data/credit-notes";
 import {
+  DiscountError,
+  dueDateFrom,
   invoiceBalance,
   invoiceStatus,
-  invoiceTotals,
+  discountedTotals,
   nextInvoiceNumber,
+  nextReceiptNumber,
+  reissueNumber,
 } from "@/lib/finance/calc";
 import { milestoneBasis } from "@/lib/finance/proposal-billing";
 import type {
@@ -71,7 +83,22 @@ export class InvoiceLockedError extends Error {
 }
 
 /**
- * Voiding an invoice, deleting a payment and deleting a draft are for an
+ * A Phase B refusal with a plain sentence for the user: re-issuing something
+ * that is not void, a milestone another live invoice already bills, reversing
+ * a payment twice, emailing a draft. The message is an English key the action
+ * translates.
+ */
+export class InvoiceActionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvoiceActionError";
+  }
+}
+
+export { DiscountError };
+
+/**
+ * Voiding and re-issuing an invoice, reversing a payment and deleting a draft are for an
  * administrator, a director or the founder (lib/finance/invoice-permissions.ts).
  * Checked here as well as in the actions in front of this file: an action is a
  * public endpoint, and the data layer is the last place the rule can live.
@@ -83,9 +110,10 @@ export class InvoiceForbiddenError extends Error {
   }
 }
 
-async function requireInvoiceAction(action: InvoiceAction): Promise<void> {
+async function requireInvoiceAction(action: InvoiceAction): Promise<Awaited<ReturnType<typeof requireActor>>> {
   const who = await requireActor();
   if (!canDoInvoiceAction(action, who.role, who.isFounder)) throw new InvoiceForbiddenError();
+  return who;
 }
 
 async function actor(): Promise<{ id: string | null; name: string | null }> {
@@ -164,6 +192,10 @@ type PaymentRow = {
   notes: string | null;
   recordedByName: string | null;
   createdAt: Date;
+  receiptNumber: string | null;
+  reversedAt: Date | null;
+  reversedByName: string | null;
+  reverseReason: string | null;
 };
 
 type InvoiceRow = {
@@ -201,6 +233,15 @@ type InvoiceRow = {
   issuedByName: string | null;
   voidReason: string | null;
   voidedAt: Date | null;
+  discountType: "PERCENT" | "AMOUNT" | null;
+  discountValue: DecimalLike;
+  discountTotal: DecimalLike;
+  sentAt: Date | null;
+  sentTo: string | null;
+  sentByName: string | null;
+  sentCount: number;
+  reissuedFromId: string | null;
+  reissuedFromNumber: string | null;
   createdAt: Date;
   updatedAt: Date;
   lines: LineRow[];
@@ -234,11 +275,20 @@ function paymentDto(r: PaymentRow): InvoicePaymentDTO {
     notes: r.notes,
     recordedByName: r.recordedByName,
     createdAt: r.createdAt.toISOString(),
+    receiptNumber: r.receiptNumber ?? null,
+    reversedAt: r.reversedAt ? r.reversedAt.toISOString() : null,
+    reversedByName: r.reversedByName ?? null,
+    reverseReason: r.reverseReason ?? null,
   };
 }
 
+/** The payments that count. A reversed payment is kept on the row and counted nowhere. */
+function liveRows(r: InvoiceRow): PaymentRow[] {
+  return r.payments.filter((p) => !p.reversedAt);
+}
+
 function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
-  const payments = r.payments.map((p) => ({ amount: num(p.amount) }));
+  const payments = liveRows(r).map((p) => ({ amount: num(p.amount) }));
   const credits = r.creditNotes.map((c) => ({
     amount: num(c.total as DecimalLike),
     status: c.status,
@@ -282,13 +332,20 @@ function summaryDto(r: InvoiceRow): InvoiceSummaryDTO {
     paid,
     credited,
     outstanding,
-    paymentCount: r.payments.length,
+    discountTotal: num(r.discountTotal),
+    sentAt: r.sentAt ? r.sentAt.toISOString() : null,
+    paymentCount: payments.length,
     lineCount: r.lines.length,
     updatedAt: r.updatedAt.toISOString(),
   };
 }
 
-function invoiceDto(r: InvoiceRow): InvoiceDTO {
+/**
+ * `reissuedAs` (the re-issues of a void invoice) is a second query, made only
+ * by `getInvoice` — the screen and the print that show "Re-issued as …". The
+ * bulk readers (export, receivables) do not need it and pass nothing.
+ */
+function invoiceDto(r: InvoiceRow, reissuedAs: { id: string; number: string }[] = []): InvoiceDTO {
   return {
     ...summaryDto(r),
     contactName: r.contactName,
@@ -310,8 +367,18 @@ function invoiceDto(r: InvoiceRow): InvoiceDTO {
     voidReason: r.voidReason,
     voidedAt: ymd(r.voidedAt),
     createdAt: r.createdAt.toISOString(),
+    discountType: r.discountType ?? null,
+    discountValue: num(r.discountValue),
+    sentTo: r.sentTo ?? null,
+    sentByName: r.sentByName ?? null,
+    sentCount: r.sentCount ?? 0,
+    reissuedFromId: r.reissuedFromId ?? null,
+    reissuedFromNumber: r.reissuedFromNumber ?? null,
+    reissuedAs,
     lines: r.lines.map(lineDto),
-    payments: r.payments.map(paymentDto),
+    // ONLY the payments that count — see the type. Reversed ones go below.
+    payments: liveRows(r).map(paymentDto),
+    reversedPayments: r.payments.filter((p) => p.reversedAt).map(paymentDto),
     creditNotes: r.creditNotes.map(creditNoteSummaryDto),
   };
 }
@@ -338,7 +405,14 @@ export async function getInvoice(idOrNumber: string): Promise<InvoiceDTO | null>
     where: { deletedAt: null, OR: [{ id: idOrNumber }, { number: idOrNumber }] },
     include: CHILDREN,
   });
-  return row ? invoiceDto(row as unknown as InvoiceRow) : null;
+  if (!row) return null;
+  // "Re-issued as …": the live re-issues of this invoice (a deleted draft is gone).
+  const reissues = await prisma.invoice.findMany({
+    where: { reissuedFromId: row.id, deletedAt: null },
+    select: { id: true, number: true },
+    orderBy: [{ createdAt: "asc" }],
+  });
+  return invoiceDto(row as unknown as InvoiceRow, reissues);
 }
 
 /**
@@ -353,7 +427,7 @@ export async function listInvoicesForExport(): Promise<InvoiceDTO[]> {
     include: CHILDREN,
     orderBy: [{ issueDate: "asc" }, { number: "asc" }],
   });
-  return (rows as unknown as InvoiceRow[]).map(invoiceDto);
+  return (rows as unknown as InvoiceRow[]).map((r) => invoiceDto(r));
 }
 
 /**
@@ -375,7 +449,7 @@ export async function listInvoicesOnBooks(
     include: CHILDREN,
     orderBy: [{ issueDate: "asc" }, { number: "asc" }],
   });
-  return (rows as unknown as InvoiceRow[]).map(invoiceDto);
+  return (rows as unknown as InvoiceRow[]).map((r) => invoiceDto(r));
 }
 
 /**
@@ -406,13 +480,15 @@ async function assertNumberFree(number: string, exceptId?: string): Promise<void
   if (clash) throw new InvoiceNumberInUseError(number);
 }
 
-async function requireInvoice(id: string): Promise<{ id: string; status: InvoiceStatus; currency: string }> {
+type RequiredInvoice = { id: string; status: InvoiceStatus; currency: string; companyId: string | null };
+
+async function requireInvoice(id: string): Promise<RequiredInvoice> {
   const row = await prisma.invoice.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, status: true, currency: true },
+    select: { id: true, status: true, currency: true, companyId: true },
   });
   if (!row) throw new InvoiceNotFoundError();
-  return row as { id: string; status: InvoiceStatus; currency: string };
+  return row as RequiredInvoice;
 }
 
 // ── Raising an invoice from a proposal ─────────────────────────────────────
@@ -570,7 +646,7 @@ async function currentCompany(): Promise<string | null> {
   return session?.user?.companyId ?? null;
 }
 
-function headerData(input: InvoiceInput, totals: ReturnType<typeof invoiceTotals>) {
+function headerData(input: InvoiceInput, totals: ReturnType<typeof discountedTotals>) {
   return {
     currency: input.currency ?? "AWG",
     clientId: input.clientId ?? null,
@@ -593,6 +669,10 @@ function headerData(input: InvoiceInput, totals: ReturnType<typeof invoiceTotals
     // No rate, no second tax: a name alone would be a label on nothing.
     tax2Name: (input.tax2Percent ?? 0) > 0 ? input.tax2Name?.trim() || null : null,
     tax2Percent: input.tax2Percent ?? 0,
+    // The discount as typed and what it came to; no type, no discount.
+    discountType: input.discountType ?? null,
+    discountValue: input.discountType ? (input.discountValue ?? 0) : 0,
+    discountTotal: totals.discountTotal,
     subtotal: totals.subtotal,
     taxableSubtotal: totals.taxableSubtotal,
     taxTotal: totals.taxTotal,
@@ -617,15 +697,33 @@ function lineRows(invoiceId: string, input: InvoiceInput) {
   }));
 }
 
-export async function createInvoice(input: InvoiceInput): Promise<InvoiceDTO> {
+/**
+ * The totals the row stores, discount included. A discount the lines cannot
+ * carry (over 100%, more than the subtotal) throws `DiscountError` — the zod
+ * gate refuses it first; this is the data layer's own refusal.
+ */
+function totalsFor(input: InvoiceInput, currency: string) {
+  return discountedTotals(
+    input.lines,
+    {
+      percent: input.taxPercent ?? 0,
+      mode: input.taxMode ?? "EXCLUSIVE",
+      percent2: input.tax2Percent ?? 0,
+    },
+    currency,
+    input.discountType ? { type: input.discountType, value: input.discountValue ?? 0 } : null,
+  );
+}
+
+export async function createInvoice(
+  input: InvoiceInput,
+  /** A re-issue: the void invoice it replaces. Set only by `reissueInvoice`. */
+  opts: { reissuedFrom?: { id: string; number: string } } = {},
+): Promise<InvoiceDTO> {
   const who = await actor();
   const companyId = await currentCompany();
   const currency = input.currency ?? "AWG";
-  const totals = invoiceTotals(input.lines, {
-    percent: input.taxPercent ?? 0,
-    mode: input.taxMode ?? "EXCLUSIVE",
-    percent2: input.tax2Percent ?? 0,
-  }, currency);
+  const totals = totalsFor(input, currency);
 
   const asked = input.number?.trim() || undefined;
   const number = asked ?? nextInvoiceNumber(await allNumbers(), new Date().getFullYear());
@@ -633,7 +731,15 @@ export async function createInvoice(input: InvoiceInput): Promise<InvoiceDTO> {
 
   try {
     const created = await prisma.invoice.create({
-      data: { ...headerData(input, totals), number, createdById: who.id, createdByName: who.name },
+      data: {
+        ...headerData(input, totals),
+        number,
+        createdById: who.id,
+        createdByName: who.name,
+        ...(opts.reissuedFrom
+          ? { reissuedFromId: opts.reissuedFrom.id, reissuedFromNumber: opts.reissuedFrom.number }
+          : {}),
+      },
     });
     // Top-level, and stamped: see the note at the top of this file.
     await prisma.invoiceLine.createMany({
@@ -653,11 +759,7 @@ export async function updateInvoice(id: string, input: InvoiceInput): Promise<In
   if (current.status !== "DRAFT") throw new InvoiceLockedError("edited");
   const companyId = await currentCompany();
   const currency = input.currency ?? current.currency;
-  const totals = invoiceTotals(input.lines, {
-    percent: input.taxPercent ?? 0,
-    mode: input.taxMode ?? "EXCLUSIVE",
-    percent2: input.tax2Percent ?? 0,
-  }, currency);
+  const totals = totalsFor(input, currency);
 
   const asked = input.number?.trim() || undefined;
   if (asked) await assertNumberFree(asked, id);
@@ -759,20 +861,55 @@ export async function recordPayment(
     throw new InvoiceLockedError("paid — it has been voided");
   }
   const who = opts.recordedBy ?? (await actor());
-  const row = await prisma.invoicePayment.create({
-    data: {
-      invoiceId,
-      paidAt: toDate(input.paidAt) ?? new Date(),
-      amount: input.amount,
-      method: input.method,
-      reference: input.reference ?? null,
-      notes: input.notes ?? null,
-      recordedById: who.id,
-      recordedByName: who.name,
-      ...(opts.stripePaymentIntentId ? { stripePaymentIntentId: opts.stripePaymentIntentId } : {}),
-    },
+  const paidAt = toDate(input.paidAt) ?? new Date();
+  // The receipt number is taken in the SAME transaction as the insert, under a
+  // per-practice lock, so two payments recorded at once (a person and the
+  // Stripe webhook) can never be handed the same number, and a payment can
+  // never exist without one.
+  const row = await prisma.$transaction(async (tx) => {
+    const receiptNumber = await allocateReceiptNumber(tx, current.companyId, paidAt);
+    return tx.invoicePayment.create({
+      data: {
+        invoiceId,
+        paidAt,
+        amount: input.amount,
+        method: input.method,
+        reference: input.reference ?? null,
+        notes: input.notes ?? null,
+        recordedById: who.id,
+        recordedByName: who.name,
+        receiptNumber,
+        ...(opts.stripePaymentIntentId ? { stripePaymentIntentId: opts.stripePaymentIntentId } : {}),
+      },
+    });
   });
   return paymentDto(row as unknown as PaymentRow);
+}
+
+/** The prisma client or a transaction on it — both carry the tenant extension. */
+type ReceiptDb = Pick<typeof prisma, "invoicePayment" | "$executeRaw">;
+
+/**
+ * The next `RCT-{year}-{NNN}` for the practice. MUST be called inside the
+ * transaction that writes it: the advisory lock below is held until that
+ * transaction ends, so the read of the highest number and the write of the next
+ * one are one step for every other caller in the same practice. The unique
+ * index on (companyId, receiptNumber) is the last line of defence behind it.
+ *
+ * Reversed payments keep their numbers, and the read is every payment the
+ * practice has (the tenant extension scopes it), so a number is never reused.
+ */
+async function allocateReceiptNumber(db: ReceiptDb, companyId: string | null, paidAt: Date): Promise<string> {
+  const key = `invoice-receipt:${companyId ?? "none"}`;
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+  const rows = await db.invoicePayment.findMany({
+    where: { receiptNumber: { not: null } },
+    select: { receiptNumber: true },
+  });
+  return nextReceiptNumber(
+    rows.map((r) => r.receiptNumber ?? ""),
+    paidAt.getUTCFullYear(),
+  );
 }
 
 /**
@@ -811,8 +948,226 @@ export async function recordStripePayment(
   }
 }
 
-export async function deletePayment(id: string): Promise<void> {
-  await requireInvoiceAction("deletePayment");
-  const affected = await prisma.invoicePayment.deleteMany({ where: { id } });
-  if (affected.count === 0) throw new InvoiceNotFoundError();
+/**
+ * Reverse a payment: the money did not arrive after all (a bounced cheque, a
+ * card refunded in Stripe, a payment recorded against the wrong invoice). It
+ * REPLACES deleting a payment — there is no delete any more. The row stays,
+ * stamped with who reversed it, when and why, keeps its receipt number (whose
+ * receipt now prints REVERSED), and stops counting towards what was paid: it
+ * leaves `InvoiceDTO.payments`, so the status re-derives (PAID → PART_PAID →
+ * SENT / ISSUED) and receivables, the statement, the tax report and the export
+ * all stop counting it, with nothing to remember.
+ *
+ * Administrator, director or founder only, checked here as well as in the
+ * action. A reason is required: a reversal nobody can explain is a hole in the
+ * books.
+ */
+export async function reversePayment(paymentId: string, reason: string): Promise<{ invoiceId: string }> {
+  const who = await requireInvoiceAction("reversePayment");
+  const why = (reason ?? "").trim();
+  if (!why) throw new InvoiceActionError("Give the reason for reversing this payment.");
+  const payment = await prisma.invoicePayment.findFirst({
+    where: { id: paymentId },
+    select: { id: true, invoiceId: true, reversedAt: true },
+  });
+  if (!payment) throw new InvoiceNotFoundError();
+  if (payment.reversedAt) throw new InvoiceActionError("This payment has already been reversed.");
+  // Only where it is still live, so two people reversing at once stamp it once.
+  const done = await prisma.invoicePayment.updateMany({
+    where: { id: paymentId, reversedAt: null },
+    data: {
+      reversedAt: new Date(),
+      reversedById: who.id,
+      reversedByName: who.name,
+      reverseReason: why.slice(0, 1000),
+    },
+  });
+  if (done.count === 0) throw new InvoiceActionError("This payment has already been reversed.");
+  return { invoiceId: payment.invoiceId };
+}
+
+// ── Receipts ───────────────────────────────────────────────────────────────
+
+/**
+ * The payment's receipt number, assigning one if it has none. Every payment
+ * recorded from 0.38.0 is numbered as it is written and prisma/sql/0037 numbers
+ * the ones before it; this is for a payment that slipped between the two (or a
+ * sample-data row), the first time its receipt is opened. Same lock, same
+ * series, and only where the column is still empty.
+ */
+async function ensureReceiptNumber(paymentId: string): Promise<void> {
+  const payment = await prisma.invoicePayment.findFirst({
+    where: { id: paymentId },
+    select: { id: true, receiptNumber: true, paidAt: true, invoiceId: true },
+  });
+  if (!payment || payment.receiptNumber) return;
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: payment.invoiceId },
+    select: { companyId: true },
+  });
+  await prisma.$transaction(async (tx) => {
+    const receiptNumber = await allocateReceiptNumber(tx, invoice?.companyId ?? null, payment.paidAt);
+    await tx.invoicePayment.updateMany({
+      where: { id: paymentId, receiptNumber: null },
+      data: { receiptNumber },
+    });
+  });
+}
+
+/**
+ * One payment and its invoice, for the printed and emailed receipt. Reversed
+ * payments come back too (their receipt says REVERSED); a payment whose invoice
+ * is gone does not.
+ */
+export async function getReceipt(
+  paymentId: string,
+): Promise<{ payment: InvoicePaymentDTO; invoice: InvoiceDTO } | null> {
+  await ensureReceiptNumber(paymentId);
+  const row = await prisma.invoicePayment.findFirst({ where: { id: paymentId } });
+  if (!row) return null;
+  const invoice = await getInvoice(row.invoiceId);
+  if (!invoice) return null;
+  return { payment: paymentDto(row as unknown as PaymentRow), invoice };
+}
+
+// ── Re-issue ───────────────────────────────────────────────────────────────
+
+/** The first invoice in a re-issue chain: a re-issue of a re-issue keeps the original's root. */
+async function reissueRoot(number: string, fromId: string | null): Promise<string> {
+  let root = number;
+  let next = fromId;
+  // Bounded: a chain is a handful of links; a loop in bad data must not spin.
+  for (let hops = 0; next && hops < 50; hops += 1) {
+    const r = await prisma.invoice.findFirst({
+      where: { id: next },
+      select: { number: true, reissuedFromId: true },
+    });
+    if (!r) break;
+    root = r.number;
+    next = r.reissuedFromId;
+  }
+  return root;
+}
+
+/**
+ * Re-issue a VOID invoice: a new DRAFT with the same client, lines, taxes and
+ * discount, numbered `<root>-2` (then `-3` …; lib/finance/calc.ts
+ * `reissueNumber`), linked both ways — `reissuedFromId` on the new one, and the
+ * void one finds its re-issues by that link.
+ *
+ * MILESTONES. Voiding freed the proposal milestones the invoice billed; the
+ * re-issue claims them again, so it is refused if, since the void, another
+ * live invoice (any status but VOID, drafts included) has started billing one
+ * of them — re-read here on the server, never taken from the screen.
+ *
+ * NOT RE-CLAIMED: time and expenses. Voiding released them to the unbilled
+ * list (lib/data/work-billing.ts) and the copied lines do not carry them; see
+ * docs/finance/SPEC.md §6c.
+ *
+ * Administrator, director or founder only — the same people who void.
+ */
+export async function reissueInvoice(id: string): Promise<InvoiceDTO> {
+  await requireInvoiceAction("reissue");
+  const source = await getInvoice(id);
+  if (!source) throw new InvoiceNotFoundError();
+  if (source.status !== "VOID") throw new InvoiceActionError("Only a voided invoice can be re-issued.");
+
+  const live = await prisma.invoice.findFirst({
+    where: { reissuedFromId: id, deletedAt: null, status: { not: "VOID" } },
+    select: { id: true },
+  });
+  if (live) throw new InvoiceActionError("This invoice has already been re-issued.");
+
+  const milestoneIds = [...new Set(source.lines.map((l) => l.milestoneId).filter((m): m is string => Boolean(m)))];
+  if (milestoneIds.length > 0) {
+    const clash = await prisma.invoiceLine.findFirst({
+      where: {
+        milestoneId: { in: milestoneIds },
+        invoice: { deletedAt: null, status: { not: "VOID" } },
+      },
+      select: { id: true },
+    });
+    if (clash) {
+      throw new InvoiceActionError(
+        "A proposal milestone on this invoice is already billed on another invoice, so it cannot be re-issued.",
+      );
+    }
+  }
+
+  const root = await reissueRoot(source.number, source.reissuedFromId);
+  const number = reissueNumber(root, await allNumbers());
+  const today = new Date().toISOString().slice(0, 10);
+  const input: InvoiceInput = {
+    number,
+    currency: source.currency,
+    clientId: source.clientId,
+    clientName: source.clientName,
+    contactName: source.contactName,
+    contactEmail: source.contactEmail,
+    billingAddress: source.billingAddress,
+    projectId: source.projectId,
+    projectName: source.projectName,
+    serviceProposalId: source.serviceProposalId,
+    proposalNumber: source.proposalNumber,
+    title: source.title,
+    intro: source.intro,
+    issueDate: today,
+    dueDate: dueDateFrom(today, source.termsDays),
+    termsDays: source.termsDays,
+    taxName: source.taxName,
+    taxPercent: source.taxPercent,
+    taxMode: source.taxMode,
+    tax2Name: source.tax2Name,
+    tax2Percent: source.tax2Percent,
+    discountType: source.discountType,
+    discountValue: source.discountValue,
+    notes: source.notes,
+    footer: source.footer,
+    lines: source.lines.map((l) => ({
+      description: l.description,
+      milestoneId: l.milestoneId,
+      milestoneName: l.milestoneName,
+      quantity: l.quantity,
+      unitRate: l.unitRate,
+      amount: l.amount,
+      taxable: l.taxable,
+    })),
+  };
+  return createInvoice(input, { reissuedFrom: { id: source.id, number: source.number } });
+}
+
+// ── Sent ───────────────────────────────────────────────────────────────────
+
+/**
+ * Stamp an invoice as emailed. Called ONLY after lib/server/document-email.ts
+ * returned `ok: true` — i.e. the mail provider handed back a message id — and
+ * never on a failed or unconfirmed send (lib/server/invoice-email.ts).
+ *
+ * ISSUED becomes SENT; an invoice already SENT stays SENT. The money still
+ * decides PART_PAID / PAID (lib/finance/calc.ts), so re-sending a part-paid
+ * invoice changes nothing but the stamp. A re-send overwrites the last
+ * sent-to / by / at and adds one to `sentCount`; every attempt, failed ones
+ * too, is in the email log against this invoice.
+ */
+export async function markInvoiceSent(id: string, sentTo: string): Promise<void> {
+  const who = await requireActor();
+  const current = await requireInvoice(id);
+  if (current.status === "DRAFT" || current.status === "VOID") return;
+  await prisma.invoice.update({
+    where: { id },
+    data: {
+      sentAt: new Date(),
+      sentTo: sentTo.slice(0, 500),
+      sentByName: who.name,
+      sentCount: { increment: 1 },
+      ...(current.status === "ISSUED" ? { status: "SENT" } : {}),
+    },
+  });
+}
+
+/** May this invoice be emailed? Only once issued, and never once voided. */
+export async function requireSendableInvoice(id: string): Promise<void> {
+  const current = await requireInvoice(id);
+  if (current.status === "DRAFT") throw new InvoiceActionError("Issue the invoice before emailing it.");
+  if (current.status === "VOID") throw new InvoiceActionError("A voided invoice cannot be emailed.");
 }

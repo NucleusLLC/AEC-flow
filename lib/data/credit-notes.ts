@@ -250,7 +250,8 @@ async function loadInvoice(db: Db, invoiceId: string, exceptCreditNoteId?: strin
     where: { id: invoiceId, deletedAt: null },
     include: {
       lines: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-      payments: true,
+      // Reversed payments (0.38.0) count towards nothing, so they leave no room to credit.
+      payments: { where: { reversedAt: null } },
       creditNotes: {
         where: {
           deletedAt: null,

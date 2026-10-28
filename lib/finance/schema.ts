@@ -17,7 +17,8 @@
  */
 import { z } from "zod";
 import { MAX_HOURS_PER_DAY } from "./timesheet";
-import { EXPENSE_CATEGORIES, MANUAL_PAYMENT_METHODS } from "./types";
+import { discountProblem } from "./calc";
+import { DISCOUNT_TYPES, EXPENSE_CATEGORIES, MANUAL_PAYMENT_METHODS } from "./types";
 
 const dateOnly = z
   .string()
@@ -128,6 +129,22 @@ export const invoiceInputSchema = z
         return Number.isFinite(n) ? n : 0;
       })
       .refine((n) => n >= 0 && n <= 100, "A tax percentage runs from 0 to 100"),
+    // A discount before tax (0.38.0): none, a percentage, or an amount. Its
+    // ceiling (never more than the subtotal) needs the lines — refined below.
+    discountType: z
+      .union([enumOf(DISCOUNT_TYPES, "discount type"), z.literal(""), z.null()])
+      .optional()
+      .transform((v) => (v === "" || v === undefined || v === null ? null : v)),
+    discountValue: z
+      .union([z.number(), z.string(), z.null()])
+      .optional()
+      .transform((v) => {
+        if (v === null || v === undefined || v === "") return 0;
+        const n = typeof v === "number" ? v : Number(String(v).replace(/[\s,]/g, ""));
+        return Number.isFinite(n) ? n : Number.NaN;
+      })
+      .refine((n) => Number.isFinite(n), "The discount has to be a number")
+      .refine((n) => n >= 0, "A discount cannot be negative"),
     notes: optionalText(4000, "The notes"),
     footer: optionalText(2000, "The footer"),
     lines: z.array(invoiceLineSchema).min(1, "An invoice needs at least one line"),
@@ -155,6 +172,16 @@ export const invoiceInputSchema = z
   .refine((v) => v.taxPercent + v.tax2Percent <= 100, {
     message: "The two taxes together cannot exceed 100%",
     path: ["tax2Percent"],
+  })
+  // Over 100%, or more than the lines add up to: refused, never clamped.
+  .superRefine((v, ctx) => {
+    if (!v.discountType || !Number.isFinite(v.discountValue)) return;
+    const problem = discountProblem(
+      v.lines,
+      { type: v.discountType, value: v.discountValue },
+      v.currency ?? "AWG",
+    );
+    if (problem) ctx.addIssue({ code: "custom", message: problem, path: ["discountValue"] });
   });
 
 export const invoicePaymentSchema = z.object({

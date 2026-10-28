@@ -11,9 +11,16 @@
  * DRAFT, ISSUED and VOID are chosen by a person; PART_PAID, PAID and CREDITED
  * are derived from the money (lib/finance/calc.ts) and never set by hand.
  * CREDITED is an invoice settled by credit notes with nothing received — the
- * practice took the whole bill back.
+ * practice took the whole bill back. SENT (0.38.0) is an ISSUED invoice the app
+ * has emailed with its PDF, set only once the mail provider confirmed the send;
+ * it is open exactly like ISSUED and the money derives the rest from it.
  */
-export type InvoiceStatus = "DRAFT" | "ISSUED" | "PART_PAID" | "PAID" | "CREDITED" | "VOID";
+export type InvoiceStatus = "DRAFT" | "ISSUED" | "SENT" | "PART_PAID" | "PAID" | "CREDITED" | "VOID";
+
+/** A discount before tax: a percentage of the subtotal, or a fixed amount. */
+export type InvoiceDiscountType = "PERCENT" | "AMOUNT";
+
+export const DISCOUNT_TYPES: InvoiceDiscountType[] = ["PERCENT", "AMOUNT"];
 
 /** A credit note is chosen into each of its states; none is derived. */
 export type CreditNoteStatus = "DRAFT" | "ISSUED" | "VOID";
@@ -26,6 +33,7 @@ export type TaxMode = "EXCLUSIVE" | "INCLUSIVE";
 export const INVOICE_STATUSES: InvoiceStatus[] = [
   "DRAFT",
   "ISSUED",
+  "SENT",
   "PART_PAID",
   "PAID",
   "CREDITED",
@@ -56,6 +64,7 @@ export const MANUAL_PAYMENT_METHODS: InvoicePaymentMethod[] = PAYMENT_METHODS.fi
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   DRAFT: "Draft",
   ISSUED: "Issued",
+  SENT: "Sent",
   PART_PAID: "Part paid",
   PAID: "Paid",
   CREDITED: "Credited",
@@ -88,6 +97,7 @@ export type BadgeTone = "neutral" | "blue" | "green" | "amber" | "red" | "violet
 export const INVOICE_STATUS_TONE: Record<InvoiceStatus, BadgeTone> = {
   DRAFT: "slate",
   ISSUED: "blue",
+  SENT: "blue",
   PART_PAID: "amber",
   PAID: "green",
   CREDITED: "violet",
@@ -100,8 +110,11 @@ export const CREDIT_NOTE_STATUS_TONE: Record<CreditNoteStatus, BadgeTone> = {
   VOID: "slate",
 };
 
-/** Statuses where money is still owed — what the receivables view is about. */
-export const OPEN_STATUSES: InvoiceStatus[] = ["ISSUED", "PART_PAID"];
+/**
+ * Statuses where money is still owed — what the receivables view is about.
+ * SENT is ISSUED that has also been emailed: open in exactly the same way.
+ */
+export const OPEN_STATUSES: InvoiceStatus[] = ["ISSUED", "SENT", "PART_PAID"];
 
 export function isOpenStatus(status: InvoiceStatus): boolean {
   return OPEN_STATUSES.includes(status);
@@ -136,6 +149,12 @@ export type InvoicePaymentDTO = {
   notes: string | null;
   recordedByName: string | null;
   createdAt: string;
+  /** `RCT-{year}-{NNN}`; null only on an old payment whose receipt was never opened. */
+  receiptNumber: string | null;
+  /** Set when the payment was reversed — it then counts towards nothing. */
+  reversedAt: string | null;
+  reversedByName: string | null;
+  reverseReason: string | null;
 };
 
 /** A row in the invoice register. Everything the list and its print need. */
@@ -164,6 +183,11 @@ export type InvoiceSummaryDTO = {
   credited: number;
   /** total − paid − credited, never below zero. */
   outstanding: number;
+  /** The discount before tax; 0 when there is none. */
+  discountTotal: number;
+  /** When it was last emailed from the app (ISO), or null. */
+  sentAt: string | null;
+  /** Payments that count — reversed ones are left out. */
   paymentCount: number;
   lineCount: number;
   updatedAt: string;
@@ -190,8 +214,29 @@ export type InvoiceDTO = InvoiceSummaryDTO & {
   voidReason: string | null;
   voidedAt: string | null;
   createdAt: string;
+  /** Discount before tax. Null type = no discount. */
+  discountType: InvoiceDiscountType | null;
+  /** What was typed: a percentage for PERCENT, an amount for AMOUNT. */
+  discountValue: number;
+  sentTo: string | null;
+  sentByName: string | null;
+  /** Every confirmed send; 0 when it was never emailed from the app. */
+  sentCount: number;
+  /** The VOID invoice this one re-issues, when it is a re-issue. */
+  reissuedFromId: string | null;
+  reissuedFromNumber: string | null;
+  /** The re-issues of this (void) invoice, oldest first. */
+  reissuedAs: { id: string; number: string }[];
   lines: InvoiceLineDTO[];
+  /**
+   * The payments that COUNT. Reversed payments are not in this list, on
+   * purpose: every reader of payments — balance, receivables, the statement,
+   * the tax report, the export — reads this one and so cannot count a
+   * reversed payment by forgetting a filter. They are in `reversedPayments`.
+   */
   payments: InvoicePaymentDTO[];
+  /** Reversed payments, shown struck through; they count towards nothing. */
+  reversedPayments: InvoicePaymentDTO[];
   /** Every credit note raised against it, drafts and voids included. */
   creditNotes: CreditNoteSummaryDTO[];
 };
@@ -337,6 +382,9 @@ export type InvoiceInput = {
   /** Optional second tax (e.g. BAVP beside BBO), in the same mode. */
   tax2Name?: string | null;
   tax2Percent?: number | null;
+  /** Discount before tax; null / absent = none. */
+  discountType?: InvoiceDiscountType | null;
+  discountValue?: number | null;
   notes?: string | null;
   footer?: string | null;
   lines: InvoiceLineInput[];

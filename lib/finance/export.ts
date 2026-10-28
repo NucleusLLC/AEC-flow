@@ -118,6 +118,10 @@ export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
       i.title ?? "",
       i.currency,
       money(i.subtotal),
+      // A discount before tax (0.38.0): Net − Discount + Tax + Tax 2 = Total (exclusive tax).
+      i.discountType ?? "",
+      i.discountType === "PERCENT" ? i.discountValue : "",
+      money(i.discountTotal ?? 0),
       i.taxName ?? "",
       i.taxPercent,
       i.taxMode,
@@ -134,7 +138,8 @@ export function invoicesTable(invoices: InvoiceDTO[], range: DateRange): Table {
   return {
     columns: [
       "Invoice number", "Status", "Issue date", "Due date", "Client", "Project", "Proposal",
-      "Title", "Currency", "Net", "Tax name", "Tax %", "Tax mode", "Tax", "Tax 2 name", "Tax 2 %",
+      "Title", "Currency", "Net", "Discount type", "Discount %", "Discount", "Tax name", "Tax %",
+      "Tax mode", "Tax", "Tax 2 name", "Tax 2 %",
       "Tax 2", "Total", "Paid",
       "Credited", "Outstanding", "Voided on",
     ],
@@ -172,7 +177,11 @@ export function invoiceLinesTable(invoices: InvoiceDTO[], range: DateRange): Tab
   };
 }
 
-/** Payments received in range, whatever date their invoice was issued. */
+/**
+ * Payments received in range, whatever date their invoice was issued, each with
+ * its receipt number. Reversed payments are not here: they are not in
+ * `InvoiceDTO.payments` (lib/data/invoices.ts), because the money never stayed.
+ */
 export function paymentsTable(invoices: InvoiceDTO[], range: DateRange): Table {
   const rows: Cell[][] = [];
   for (const i of invoices) {
@@ -189,6 +198,7 @@ export function paymentsTable(invoices: InvoiceDTO[], range: DateRange): Table {
         p.method,
         p.reference ?? "",
         p.recordedByName ?? "",
+        p.receiptNumber ?? "",
       ]);
     }
   }
@@ -196,7 +206,7 @@ export function paymentsTable(invoices: InvoiceDTO[], range: DateRange): Table {
   return {
     columns: [
       "Paid on", "Invoice number", "Client", "Project", "Amount", "Currency", "Method",
-      "Reference", "Recorded by",
+      "Reference", "Recorded by", "Receipt number",
     ],
     rows,
   };

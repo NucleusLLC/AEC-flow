@@ -34,8 +34,20 @@ export type CalcLine = {
   taxable?: boolean;
 };
 
-/** A payment as the arithmetic sees it. */
-export type CalcPayment = { amount: number | string | null | undefined };
+/**
+ * A payment as the arithmetic sees it. A REVERSED payment (`reversedAt` set)
+ * counts towards nothing — the data layer already keeps reversed payments out
+ * of `InvoiceDTO.payments`, and this is the second lock on the same door.
+ */
+export type CalcPayment = {
+  amount: number | string | null | undefined;
+  reversedAt?: string | Date | null;
+};
+
+/** The payments that count: every one that has not been reversed. */
+export function livePayments<P extends CalcPayment>(payments: readonly P[]): P[] {
+  return payments.filter((p) => !p.reversedAt);
+}
 
 /**
  * A credit note as the arithmetic sees it. The status rides along because only
@@ -50,14 +62,21 @@ export type CalcCredit = {
 };
 
 export type InvoiceTotals = {
+  /** The lines, before any discount. */
   subtotal: number;
-  /** The part of the subtotal the tax applies to. */
+  /** The base the tax is charged on: the taxable lines (less their share of any discount). */
   taxableSubtotal: number;
   /** The FIRST tax only (the `taxTotal` column). */
   taxTotal: number;
   /** The second tax (the `tax2Total` column). 0 when the invoice carries one tax. */
   tax2Total: number;
   total: number;
+};
+
+/** `InvoiceTotals` with the discount it was worked out with (0.38.0). */
+export type DiscountedTotals = InvoiceTotals & {
+  /** The discount before tax (0 when there is none). */
+  discountTotal: number;
 };
 
 export type TaxSnapshot = {
@@ -77,6 +96,66 @@ function cleanPercent(p: number | null | undefined): number {
 }
 
 /**
+ * A discount on the whole invoice, applied BEFORE tax: PERCENT of the subtotal,
+ * or a fixed AMOUNT. No type (null / undefined) means no discount.
+ */
+export type DiscountInput = {
+  type: "PERCENT" | "AMOUNT" | null | undefined;
+  value: number | string | null | undefined;
+};
+
+/** A discount that cannot be applied. The message is a user-facing English key. */
+export class DiscountError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DiscountError";
+  }
+}
+
+/**
+ * What a discount comes to on a subtotal, in exact minor units. A percentage is
+ * rounded half-up to the cent (`applyPercent`); an amount is taken as typed.
+ *
+ * REFUSED, never clamped: a negative discount (a surcharge in disguise), a
+ * percentage over 100, and an amount larger than the subtotal (an invoice that
+ * owes the client money). Clamping would print a figure nobody typed.
+ */
+export function discountAmount(subtotal: Money, discount: DiscountInput | null | undefined): Money {
+  const cur = subtotal.currency;
+  if (!discount || !discount.type) return zero(cur);
+  const raw = discount.value;
+  const value = raw === null || raw === undefined || raw === "" ? 0 : Number(raw);
+  if (!Number.isFinite(value)) throw new DiscountError("The discount has to be a number");
+  if (value < 0) throw new DiscountError("A discount cannot be negative");
+  if (discount.type === "PERCENT") {
+    if (value > 100) throw new DiscountError("A discount percentage runs from 0 to 100");
+    // Nothing to take a share of: a percentage of a zero or credit subtotal is nothing.
+    if (subtotal.minor <= 0) return zero(cur);
+    return applyPercent(subtotal, value);
+  }
+  const amount = fromMajor(value, cur);
+  if (amount.minor > Math.max(0, subtotal.minor)) {
+    throw new DiscountError("The discount cannot be more than the subtotal");
+  }
+  return amount;
+}
+
+/** Why a discount cannot be applied to these lines, or null when it can. For forms and the zod gate. */
+export function discountProblem(
+  lines: CalcLine[],
+  discount: DiscountInput | null | undefined,
+  currency: string,
+): string | null {
+  try {
+    discountAmount(sum(lines.map((l) => fromMajor(l.amount, currency)), currency), discount);
+    return null;
+  } catch (e) {
+    if (e instanceof DiscountError) return e.message;
+    throw e;
+  }
+}
+
+/**
  * Totals for a set of lines under one tax snapshot (one tax, or two).
  *
  * INCLUSIVE tax is backed OUT of the lines rather than added to them: the total
@@ -91,28 +170,49 @@ function cleanPercent(p: number | null | undefined): number {
  * remainder), so the two parts add back to the contained tax to the cent and the
  * total is still the sum of the lines. With no second tax the split hands all of
  * it to the first, which is the one-tax figure unchanged.
+ *
+ * DISCOUNT (0.38.0), BEFORE TAX. The discount comes off the subtotal, and its
+ * share of the TAXABLE part — split between taxable and untaxed lines in
+ * proportion to their amounts by `allocate`, so the two shares add back to the
+ * discount to the cent — comes off the base the tax is charged on. EXCLUSIVE:
+ * total = subtotal − discount + taxes on the discounted base. INCLUSIVE: the
+ * lines already contain the tax, so the discount is taken off those gross
+ * amounts and the tax is backed out of what is left; total = subtotal − discount.
+ * A 100% discount leaves no base, no tax and a total of zero. With no discount
+ * every figure is exactly the pre-0.38 one — `invoiceTotals` below IS this
+ * function with no discount.
  */
-export function invoiceTotals(
+export function discountedTotals(
   lines: CalcLine[],
   tax: TaxSnapshot,
   currency: string,
-): InvoiceTotals {
+  discount?: DiscountInput | null,
+): DiscountedTotals {
   const amounts = lines.map((l) => fromMajor(l.amount, currency));
   const subtotal = sum(amounts, currency);
-  const taxable = sum(
+  const taxableLines = sum(
     lines.map((l, i) => (l.taxable === false ? zero(currency) : amounts[i])),
     currency,
   );
+  const off = discountAmount(subtotal, discount);
+  const untaxedLines = subtract(subtotal, taxableLines);
+  const [offTaxable] = isZero(off)
+    ? [zero(currency)]
+    : allocate(off, [Math.max(0, taxableLines.minor), Math.max(0, untaxedLines.minor)]);
+  const taxable = subtract(taxableLines, offTaxable);
+  // What the lines come to after the discount (still tax-inclusive in INCLUSIVE mode).
+  const discounted = subtract(subtotal, off);
 
   const percent = cleanPercent(tax.percent);
   const percent2 = cleanPercent(tax.percent2);
   if (percent === 0 && percent2 === 0) {
     return {
       subtotal: toMajor(subtotal),
+      discountTotal: toMajor(off),
       taxableSubtotal: toMajor(taxable),
       taxTotal: 0,
       tax2Total: 0,
-      total: toMajor(subtotal),
+      total: toMajor(discounted),
     };
   }
 
@@ -123,10 +223,11 @@ export function invoiceTotals(
     const [first, second] = allocate(contained, [percent, percent2]);
     return {
       subtotal: toMajor(subtotal),
+      discountTotal: toMajor(off),
       taxableSubtotal: toMajor(taxable),
       taxTotal: toMajor(first),
       tax2Total: toMajor(second),
-      total: toMajor(subtotal),
+      total: toMajor(discounted),
     };
   }
 
@@ -134,10 +235,27 @@ export function invoiceTotals(
   const tax2Total = applyPercent(taxable, percent2);
   return {
     subtotal: toMajor(subtotal),
+    discountTotal: toMajor(off),
     taxableSubtotal: toMajor(taxable),
     taxTotal: toMajor(taxTotal),
     tax2Total: toMajor(tax2Total),
-    total: toMajor(add(add(subtotal, taxTotal), tax2Total)),
+    total: toMajor(add(add(discounted, taxTotal), tax2Total)),
+  };
+}
+
+/**
+ * Totals for a set of lines under one tax snapshot, with no discount — what a
+ * credit note, a proposal's milestones and billed time are priced with. The
+ * same arithmetic as `discountedTotals`, one implementation.
+ */
+export function invoiceTotals(lines: CalcLine[], tax: TaxSnapshot, currency: string): InvoiceTotals {
+  const t = discountedTotals(lines, tax, currency, null);
+  return {
+    subtotal: t.subtotal,
+    taxableSubtotal: t.taxableSubtotal,
+    taxTotal: t.taxTotal,
+    tax2Total: t.tax2Total,
+    total: t.total,
   };
 }
 
@@ -198,8 +316,9 @@ export function invoiceBalance(input: {
 }): InvoiceBalance {
   const { currency } = input;
   const due = fromMajor(input.total, currency);
+  // Reversed payments count towards nothing (see `CalcPayment`).
   const paid = sum(
-    input.payments.map((p) => fromMajor(p.amount, currency)),
+    livePayments(input.payments).map((p) => fromMajor(p.amount, currency)),
     currency,
   );
   const issued = (input.credits ?? []).filter((c) => c.status === "ISSUED");
@@ -321,6 +440,10 @@ export function creditableByLine(
  * nobody can mark an unpaid invoice paid and nobody has to remember to mark a
  * paid one. An invoice with no total cannot be PAID by having no payments —
  * that would report an empty draft as settled.
+ *
+ * SENT is ISSUED that has also been emailed: with nothing received it stays
+ * SENT, and money moves it to PART_PAID / PAID exactly as it would from ISSUED.
+ * A payment reversed later sends it back to SENT (or ISSUED) the same way.
  */
 export function invoiceStatus(invoice: {
   status: InvoiceStatus;
@@ -336,7 +459,7 @@ export function invoiceStatus(invoice: {
   // Settled with money received (and perhaps a credit for the rest): paid.
   if (settled) return paid === 0 && credited > 0 ? "CREDITED" : "PAID";
   if (paid > 0) return "PART_PAID";
-  return "ISSUED";
+  return invoice.status === "SENT" ? "SENT" : "ISSUED";
 }
 
 /** `{prefix}-{year}-{NNN}`, one past the highest number ever used in that series. */
@@ -361,6 +484,37 @@ export function nextInvoiceNumber(existing: string[], year: number): string {
  */
 export function nextCreditNoteNumber(existing: string[], year: number): string {
   return nextSeriesNumber("CN", existing, year);
+}
+
+/**
+ * `RCT-{year}-{NNN}` — a payment receipt, numbered exactly the way invoices are:
+ * one past the highest receipt number the practice has ever used (reversed
+ * payments included, so a number is never reused). `year` is the year the
+ * money was received. The same series prisma/sql/0037 backfills.
+ */
+export function nextReceiptNumber(existing: string[], year: number): string {
+  return nextSeriesNumber("RCT", existing, year);
+}
+
+/**
+ * The number for a re-issue of a void invoice: `<root>-2`, then `-3` … where
+ * `root` is the number of the FIRST invoice in the chain (a re-issue of
+ * `INV-2026-004-2` is `INV-2026-004-3`, not `INV-2026-004-2-2`). One past the
+ * highest suffix ever used on that root — soft-deleted drafts included in
+ * `existing` — so a number is never reused, even when a re-issue draft was
+ * deleted.
+ */
+export function reissueNumber(root: string, existing: string[]): string {
+  const base = root.trim();
+  const prefix = `${base}-`.toLowerCase();
+  let max = 1;
+  for (const raw of existing) {
+    const n = raw.trim().toLowerCase();
+    if (!n.startsWith(prefix)) continue;
+    const rest = n.slice(prefix.length);
+    if (/^\d+$/.test(rest)) max = Math.max(max, Number(rest));
+  }
+  return `${base}-${max + 1}`;
 }
 
 /** `YYYY-MM-DD`, `days` after the issue date. Null when there is no issue date. */

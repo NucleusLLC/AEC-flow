@@ -47,6 +47,7 @@ describe("when an invoice can be paid online", () => {
   it("only ISSUED or PART_PAID with money still owing", () => {
     expect(isOnlinePayable({ status: "ISSUED", outstanding: 10 })).toBe(true);
     expect(isOnlinePayable({ status: "PART_PAID", outstanding: 0.01 })).toBe(true);
+    expect(isOnlinePayable({ status: "SENT", outstanding: 10 })).toBe(true);
     for (const status of ["DRAFT", "PAID", "CREDITED", "VOID"]) {
       expect(isOnlinePayable({ status, outstanding: 10 })).toBe(false);
     }
