@@ -58,6 +58,14 @@ export type Drawing = {
   paperOrientation: string | null;
   /** Pages in the uploaded PDF; more than one means a bound set. */
   pageCount: number | null;
+  /** The consultants the title block names, as confirmed at intake. Null when
+   *  it named none — normal for an in-house sheet. */
+  architect: string | null;
+  engineer: string | null;
+  /** Which page of which uploaded set this sheet was, when it came out of a
+   *  split at intake. Null for a sheet uploaded on its own. */
+  setFilename: string | null;
+  setPage: number | null;
   /** Review comments still open on this sheet. The register's "needs work"
    *  signal — zero is printed as nothing, not as a zero. */
   openComments: number;

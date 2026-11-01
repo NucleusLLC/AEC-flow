@@ -141,7 +141,7 @@ export function extractDrawingMetadata(input: ExtractionInput): DrawingMetadataD
   if (input?.pdfHadTextLayer === false) {
     merged.warnings.unshift(
       "This PDF has no text layer — it is a scan or a plot with outlined text. " +
-        "Only the filename could be read; everything else needs OCR, which is not available.",
+        "The pattern reader has only the filename; what the AI reader can see on the page is the rest.",
     );
   }
   return merged;
@@ -175,3 +175,25 @@ export {
   type SheetTypeInput,
 } from "./sheet-type";
 export { type SheetFacts } from "./persistence";
+
+// AI title-block reading (pure half) and set splitting (pure half).
+export {
+  AI_MAX_CONFIDENCE,
+  AI_READ_SCHEMA,
+  AI_READ_VERSION,
+  aiReadToDraft,
+  aiSheetType,
+  buildAiReadPrompt,
+  mergeAiRead,
+  parseAiRead,
+  sameReading,
+  type AiReadInput,
+  type AiTitleBlockRead,
+} from "./ai-read";
+export {
+  MAX_SET_PAGES,
+  SPLIT_BATCH_PAGES,
+  pageBatches,
+  pageFilename,
+  shouldSplitSet,
+} from "./set-split";

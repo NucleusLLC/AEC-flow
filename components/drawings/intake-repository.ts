@@ -20,11 +20,13 @@ import {
   discardUploadAction,
   findSheetsAction,
   registerDrawingAction,
+  splitDrawingSetAction,
 } from "@/app/(app)/drawings/actions";
 import type {
   DrawingIntakeRepository,
   ExistingSheet,
   RegisterDrawingInput,
+  SplitSetResult,
   UploadAnalysis,
   UploadTicket,
 } from "@/lib/drawings/persistence";
@@ -40,9 +42,15 @@ export const serverIntakeRepository: DrawingIntakeRepository = {
   async analyseUpload(input): Promise<UploadAnalysis> {
     const result = await analyseDrawingAction(input);
     if (!result.ok) throw new Error(result.error);
-    const { draft, usedTitleBlockText, hasTextLayer, note, paper, pageCount, sheetType, sheetTypeSource } =
+    const { draft, usedTitleBlockText, hasTextLayer, note, paper, pageCount, sheetType, sheetTypeSource, aiRead, aiNote } =
       result.analysis;
-    return { proposed: draft, usedTitleBlockText, hasTextLayer, note, paper, pageCount, sheetType, sheetTypeSource };
+    return { proposed: draft, usedTitleBlockText, hasTextLayer, note, paper, pageCount, sheetType, sheetTypeSource, aiRead, aiNote };
+  },
+
+  async splitSet(input): Promise<SplitSetResult> {
+    const result = await splitDrawingSetAction(input);
+    if (!result.ok) throw new Error(result.error);
+    return result.result;
   },
 
   async discardUpload(projectId: string, storageKey: string): Promise<void> {
@@ -62,6 +70,7 @@ export const serverIntakeRepository: DrawingIntakeRepository = {
       sheetDiscipline: input.metadata.sheetDiscipline ?? null,
       supersedes: input.supersedes,
       sheet: input.sheet ?? null,
+      set: input.set ?? null,
     });
     if (!result.ok) throw new Error(result.error);
     return { id: result.id };

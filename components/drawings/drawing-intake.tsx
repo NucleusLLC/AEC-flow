@@ -38,7 +38,7 @@
  */
 
 import { useCallback, useId, useMemo, useRef, useState } from "react";
-import { FileStack, FileWarning, Info, Ruler, ScanSearch, Trash2, UploadCloud } from "lucide-react";
+import { CopyPlus, FileStack, FileWarning, Info, Layers, Ruler, ScanSearch, Sparkles, Trash2, UploadCloud } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -68,6 +68,8 @@ import {
   type DetectedPaper,
   type SheetFacts,
   type SheetType,
+  pageBatches,
+  shouldSplitSet,
 } from "@/lib/drawings";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
@@ -85,11 +87,24 @@ type EditableValues = ProposalValues;
  * "ready" means the object is staged and whatever could be read has been read,
  * not that anything was saved.
  */
-type StageState = "idle" | "uploading" | "reading" | "ready" | "failed";
+type StageState = "idle" | "uploading" | "splitting" | "reading" | "ready" | "failed";
+
+/**
+ * What the row knows about its file. A dropped file carries its bytes
+ * (`blob`) so a lost upload can be retried; a page split out of a set has no
+ * bytes in the browser — they were cut on the server and staged there — so
+ * `blob` is absent and a lost staged object means dropping the set again.
+ */
+export type IntakeFile = {
+  name: string;
+  size: number;
+  type: string;
+  blob?: File;
+};
 
 type IntakeItem = {
   id: string;
-  file: File;
+  file: IntakeFile;
   kind: DrawingFileKind;
   draft: DrawingMetadataDraft;
   values: EditableValues;
@@ -114,10 +129,18 @@ type IntakeItem = {
   paper: DetectedPaper | null;
   /** The proposal's evidence, so the type chip can say why it thinks so. */
   sheetTypeField: Field<SheetType> | null;
+  /** True when a model read the page and its answer is in `draft`. Audited. */
+  aiRead: boolean;
+  /** Why the model did not read it, when it did not. */
+  aiNote?: string | null;
+  /** Which page of which set this row came out of, when it was split. */
+  set?: { filename: string; page: number; pageCount: number };
+  /** Progress while a set row is being cut into pages. */
+  splitting?: { done: number; total: number };
 };
 
 export type DrawingIntakeResult = {
-  file: File;
+  file: IntakeFile;
   kind: DrawingFileKind;
   metadata: ConfirmedDrawingMetadata;
   projectNumber: string;
@@ -126,6 +149,8 @@ export type DrawingIntakeResult = {
   supersedes?: string;
   /** Plot size, page count and kind of drawing, as read and confirmed. */
   sheet?: SheetFacts | null;
+  /** Which page of which set this sheet was, when it came out of a split. */
+  set?: { filename: string; page: number } | null;
 };
 
 export type DrawingIntakeProps = {
@@ -153,7 +178,17 @@ function initialValues(draft: DrawingMetadataDraft): EditableValues {
     projectName: draft.projectName?.value ?? "",
     revision: draft.revision?.value ?? "",
     issueDate: draft.issueDate?.value ?? "",
+    architect: draft.architect?.value ?? "",
+    engineer: draft.engineer?.value ?? "",
   };
+}
+
+/** Fields that are usually the same across a set: offered an "apply to all". */
+const SET_WIDE_KEYS: readonly DraftFieldKey[] = ["projectNumber", "projectName", "revision", "issueDate", "architect", "engineer"];
+
+/** Did a model (and nothing else) propose this value? Drives the violet chip. */
+function isAiOnly(field: Field<string> | Field<SheetDiscipline> | null): boolean {
+  return Boolean(field && field.evidence.length > 0 && field.evidence.every((e) => e.source === "ai-read"));
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -174,6 +209,15 @@ function ConfidenceChip({
   const t = useT();
   if (edited) return <Badge tone="blue">{t("edited")}</Badge>;
   if (!field) return <Badge tone="slate">{t("not found")}</Badge>;
+  if (isAiOnly(field)) {
+    // A reading nobody but the model vouches for is marked as such: the band
+    // colour would say "high" and hide that it is an opinion to confirm.
+    return (
+      <Badge tone="violet">
+        {t("AI · confirm")} · {Math.round(field.confidence * 100)}%
+      </Badge>
+    );
+  }
   const tone = field.band === "high" ? "green" : field.band === "medium" ? "amber" : "slate";
   return (
     <Badge tone={tone}>
@@ -212,22 +256,42 @@ function SourceLine({ item }: { item: IntakeItem }) {
   const text =
     item.stage === "uploading"
       ? t("Uploading…")
-      : item.stage === "reading"
-        ? t("Reading the title block…")
-        : item.stageNote ?? "";
+      : item.stage === "splitting"
+        ? fmt(t("Splitting the set… page {done} of {total}"), {
+            done: item.splitting?.done ?? 0,
+            total: item.splitting?.total ?? 0,
+          })
+        : item.stage === "reading"
+          ? t("Reading the title block…")
+          : item.stageNote ?? "";
   if (!text) return null;
 
-  const working = item.stage === "uploading" || item.stage === "reading";
+  const working = item.stage === "uploading" || item.stage === "reading" || item.stage === "splitting";
+  const Icon = item.stage === "splitting" ? Layers : item.aiRead ? Sparkles : ScanSearch;
   return (
-    <p
-      className={cn(
-        "mt-0.5 flex items-center gap-1.5 text-[11px] leading-snug",
-        item.stage === "failed" ? "text-muted" : item.usedTitleBlockText ? "text-brand" : "text-faint",
-      )}
-    >
-      <ScanSearch className={cn("h-3 w-3 shrink-0", working && "animate-pulse")} aria-hidden="true" />
-      <span>{text}</span>
-    </p>
+    <>
+      <p
+        className={cn(
+          "mt-0.5 flex items-center gap-1.5 text-[11px] leading-snug",
+          item.stage === "failed" ? "text-muted" : item.usedTitleBlockText || item.aiRead ? "text-brand" : "text-faint",
+        )}
+      >
+        <Icon className={cn("h-3 w-3 shrink-0", working && "animate-pulse")} aria-hidden="true" />
+        <span>{text}</span>
+      </p>
+      {item.stage === "ready" && !item.aiRead && item.aiNote ? (
+        <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-snug text-faint">
+          <Sparkles className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <span>{fmt(t("AI did not read this sheet: {reason}"), { reason: item.aiNote })}</span>
+        </p>
+      ) : null}
+      {item.set ? (
+        <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-snug text-faint">
+          <Layers className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <span>{fmt(t("Page {page} of {total} from {set}"), { page: item.set.page, total: item.set.pageCount, set: item.set.filename })}</span>
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -281,18 +345,23 @@ const inputClass =
 
 function ProposalRow({
   item,
+  rowCount,
   onChange,
   onRemove,
   onLookup,
   onSupersedeChange,
   onSheetTypeChange,
+  onApplyToAll,
 }: {
   item: IntakeItem;
+  /** How many rows are on screen — the apply-to-all control needs more than one. */
+  rowCount: number;
   onChange: (id: string, key: DraftFieldKey, value: string) => void;
   onRemove: (id: string) => void;
   onLookup: (id: string, sheetNumber: string) => void;
   onSupersedeChange: (id: string, supersedes: string | undefined) => void;
   onSheetTypeChange: (id: string, type: SheetType | "") => void;
+  onApplyToAll: (key: DraftFieldKey, value: string) => void;
 }) {
   const t = useT();
   const uid = useId();
@@ -309,7 +378,20 @@ function ProposalRow({
         <label htmlFor={`${uid}-${key}`} className="text-[11px] font-medium uppercase tracking-wide text-faint">
           {t(label)}
         </label>
-        <ConfidenceChip field={item.draft[key]} edited={isEdited(key)} />
+        <span className="flex items-center gap-1">
+          {rowCount > 1 && SET_WIDE_KEYS.includes(key) && item.values[key].trim() ? (
+            <button
+              type="button"
+              onClick={() => onApplyToAll(key, item.values[key])}
+              title={t("Apply to all rows")}
+              aria-label={t("Apply to all rows")}
+              className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-surface text-muted transition-colors hover:text-fg focus:outline-none focus:ring-2 focus:ring-brand/15"
+            >
+              <CopyPlus className="h-3 w-3" aria-hidden="true" />
+            </button>
+          ) : null}
+          <ConfidenceChip field={item.draft[key]} edited={isEdited(key)} />
+        </span>
       </div>
       <input
         id={`${uid}-${key}`}
@@ -420,6 +502,8 @@ function ProposalRow({
         {textField("projectName", "Project name", "Marina Heights Tower")}
         {textField("revision", "Revision", "B")}
         {textField("issueDate", "Issue date", "", "date")}
+        {textField("architect", "Architect", "ZenArch Studio")}
+        {textField("engineer", "Engineer", "Rossi & Partners")}
       </div>
 
       {item.draft.warnings.length > 0 ? (
@@ -502,47 +586,16 @@ export function DrawingIntake({
    * proposal and says so. Neither removes the row, because the user can still
    * type the six values in and the register would rather have the drawing.
    */
-  const stageItem = useCallback(
-    async (item: IntakeItem) => {
+  /**
+   * Read a staged PDF and fold the server's proposal into the row.
+   *
+   * Shared by a dropped file and by every page cut out of a set — the page is
+   * staged by the server instead of the browser, but from here on it is a
+   * sheet like any other.
+   */
+  const analyseItem = useCallback(
+    async (item: IntakeItem, storageKey: string) => {
       if (!repository || !projectId) return;
-      const mimeType = item.file.type || "application/octet-stream";
-
-      let storageKey: string;
-      patchItem(item.id, { stage: "uploading", stageNote: undefined });
-      try {
-        const ticket = await repository.createUploadTicket({
-          projectId,
-          filename: item.file.name,
-          mimeType,
-          sizeBytes: item.file.size,
-        });
-        const response = await fetch(ticket.uploadUrl, {
-          method: "PUT",
-          headers: ticket.headers,
-          body: item.file,
-        });
-        if (!response.ok) throw new Error(`Storage refused the upload (${response.status}).`);
-        storageKey = ticket.storageKey;
-      } catch (err) {
-        // Not fatal: confirm retries the upload from scratch for any row with
-        // no staged object.
-        patchItem(item.id, {
-          stage: "failed",
-          stageNote: `${errorMessage(err, t("The upload did not finish."))} ${t("It will be retried when you confirm.")}`,
-        });
-        return;
-      }
-
-      if (item.kind !== "PDF") {
-        patchItem(item.id, {
-          upload: { storageKey, mimeType },
-          stage: "ready",
-          stageNote: t("Filename only — a CAD file's contents cannot be read here."),
-        });
-        return;
-      }
-
-      patchItem(item.id, { upload: { storageKey, mimeType }, stage: "reading" });
       try {
         const analysis = await repository.analyseUpload({
           projectId,
@@ -563,6 +616,8 @@ export function DrawingIntake({
               values: applied.values,
               edited: applied.edited,
               usedTitleBlockText: analysis.usedTitleBlockText,
+              aiRead: Boolean(analysis.aiRead),
+              aiNote: analysis.aiNote ?? null,
               paper,
               sheetTypeField: analysis.sheetType ?? null,
               // The measured sheet is recorded as measured. Only the TYPE is
@@ -594,6 +649,7 @@ export function DrawingIntake({
               : t("No sheet number found — type one before confirming."),
           ].join(" "),
         );
+        return analysis;
       } catch (err) {
         patchItem(item.id, {
           stage: "ready",
@@ -601,9 +657,140 @@ export function DrawingIntake({
             error: errorMessage(err, t("unknown error")),
           }),
         });
+        return null;
       }
     },
     [repository, projectId, patchItem, t],
+  );
+
+  /**
+   * Cut a staged set into pages, one row each, in place of the set's row.
+   *
+   * The server copies pages in batches (`pageBatches`) and stages each as an
+   * object of its own; the rows appear as the batches land, so a forty-page
+   * set fills the screen progressively rather than after a long silence. The
+   * set object is discarded once every page is out, and each page is then
+   * analysed sequentially like any other upload. If a batch fails the set is
+   * kept as the one row it was — nothing is lost, the warning says why.
+   */
+  const splitItem = useCallback(
+    async (item: IntakeItem, storageKey: string, pageCount: number) => {
+      if (!repository || !projectId) return;
+      const batches = pageBatches(pageCount);
+      const pages: IntakeItem[] = [];
+      patchItem(item.id, { stage: "splitting", splitting: { done: 0, total: pageCount } });
+      try {
+        for (const [from, to] of batches) {
+          const result = await repository.splitSet({ projectId, storageKey, filename: item.file.name, fromPage: from, toPage: to });
+          for (const page of result.pages) {
+            const draft = extractDrawingMetadata({ filename: page.filename });
+            pages.push({
+              id: `${item.id}-p${page.pageNumber}`,
+              file: { name: page.filename, size: page.sizeBytes, type: "application/pdf" },
+              kind: "PDF",
+              draft,
+              values: initialValues(draft),
+              edited: [],
+              existing: null,
+              stage: "reading",
+              upload: { storageKey: page.storageKey, mimeType: "application/pdf" },
+              usedTitleBlockText: false,
+              sheet: null,
+              paper: null,
+              sheetTypeField: null,
+              aiRead: false,
+              set: { filename: item.file.name, page: page.pageNumber, pageCount: result.pageCount },
+            });
+          }
+          patchItem(item.id, { splitting: { done: Math.min(pageCount, to), total: pageCount } });
+        }
+      } catch (err) {
+        // Pages already cut out are orphaned objects, not register rows; clean
+        // them up best-effort and keep the set as the single row it was.
+        for (const p of pages) {
+          if (p.upload) void repository.discardUpload(projectId, p.upload.storageKey).catch(() => {});
+        }
+        patchItem(item.id, {
+          stage: "ready",
+          splitting: undefined,
+          stageNote: fmt(t("Splitting failed ({error}). The set is kept as one drawing."), { error: errorMessage(err, t("unknown error")) }),
+        });
+        return;
+      }
+
+      // Swap the set row for its pages, in page order, where the set row was.
+      setItems((prev) => {
+        const at = prev.findIndex((i) => i.id === item.id);
+        if (at < 0) return prev;
+        return [...prev.slice(0, at), ...pages, ...prev.slice(at + 1)];
+      });
+      void repository.discardUpload(projectId, storageKey).catch(() => {});
+      setAnnouncement(fmt(t("{set} was split into {count} sheets. Each is being read."), { set: item.file.name, count: pages.length }));
+
+      for (const page of pages) {
+        if (page.upload) await analyseItem(page, page.upload.storageKey);
+      }
+    },
+    [repository, projectId, patchItem, analyseItem, t],
+  );
+
+  /**
+   * Put the bytes in storage, then ask the server what the sheet says.
+   *
+   * Failure is absorbed at every step. A file that will not upload is marked
+   * and retried at confirm; a PDF that will not parse keeps the filename
+   * proposal and says so. Neither removes the row, because the user can still
+   * type the values in and the register would rather have the drawing.
+   */
+  const stageItem = useCallback(
+    async (item: IntakeItem) => {
+      if (!repository || !projectId) return;
+      const mimeType = item.file.type || "application/octet-stream";
+
+      let storageKey: string;
+      patchItem(item.id, { stage: "uploading", stageNote: undefined });
+      try {
+        const ticket = await repository.createUploadTicket({
+          projectId,
+          filename: item.file.name,
+          mimeType,
+          sizeBytes: item.file.size,
+        });
+        const response = await fetch(ticket.uploadUrl, {
+          method: "PUT",
+          headers: ticket.headers,
+          body: item.file.blob,
+        });
+        if (!response.ok) throw new Error(`Storage refused the upload (${response.status}).`);
+        storageKey = ticket.storageKey;
+      } catch (err) {
+        // Not fatal: confirm retries the upload from scratch for any row with
+        // no staged object.
+        patchItem(item.id, {
+          stage: "failed",
+          stageNote: `${errorMessage(err, t("The upload did not finish."))} ${t("It will be retried when you confirm.")}`,
+        });
+        return;
+      }
+
+      if (item.kind !== "PDF") {
+        patchItem(item.id, {
+          upload: { storageKey, mimeType },
+          stage: "ready",
+          stageNote: t("Filename only — a CAD file's contents cannot be read here."),
+        });
+        return;
+      }
+
+      patchItem(item.id, { upload: { storageKey, mimeType }, stage: "reading" });
+      const analysis = await analyseItem(item, storageKey);
+      // A set: the analysis above read page 1 cheaply (no AI on a set) and
+      // told us the page count. Now cut it up and read each page properly.
+      if (analysis && shouldSplitSet(analysis.pageCount)) {
+        await splitItem(item, storageKey, analysis.pageCount ?? 0);
+      }
+    },
+    [repository, projectId, patchItem, analyseItem, splitItem, t],
   );
 
   const accept = useCallback((fileList: FileList | null) => {
@@ -636,7 +823,7 @@ export function DrawingIntake({
       const draft = extractDrawingMetadata({ filename: file.name });
       accepted.push({
         id: `${file.name}-${file.size}-${file.lastModified}-${i}`,
-        file,
+        file: { name: file.name, size: file.size, type: file.type, blob: file },
         kind: verdict.kind,
         draft,
         values: initialValues(draft),
@@ -647,6 +834,7 @@ export function DrawingIntake({
         sheet: null,
         paper: null,
         sheetTypeField: null,
+        aiRead: false,
       });
     });
 
@@ -752,6 +940,29 @@ export function DrawingIntake({
   }, []);
 
   /**
+   * Copy one row's value for a set-wide field onto every row.
+   *
+   * A set shares its project, its revision and its consultants; reading them
+   * off every page and getting a different spelling on page 7 is the usual
+   * way a register ends up with two architects. Each row's `edited` is
+   * recomputed against ITS OWN proposal, so a row the machine already agreed
+   * with is not marked as corrected.
+   */
+  const onApplyToAll = useCallback((key: DraftFieldKey, value: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        const proposed = item.draft[key]?.value ?? "";
+        const edited = value !== proposed;
+        return {
+          ...item,
+          values: { ...item.values, [key]: value },
+          edited: edited ? [...new Set([...item.edited, key])] : item.edited.filter((k) => k !== key),
+        };
+      }),
+    );
+  }, []);
+
+  /**
    * Ask the register what it already holds under this sheet number. Fired on
    * blur rather than on every keystroke: it is a network call, and a
    * half-typed sheet number has nothing useful to say.
@@ -785,6 +996,7 @@ export function DrawingIntake({
       itemId: item.id,
       staged: item.upload,
       sheet: item.sheet,
+      set: item.set ? { filename: item.set.filename, page: item.set.page } : null,
       file: item.file,
       kind: item.kind,
       supersedes: item.supersedes,
@@ -799,6 +1011,8 @@ export function DrawingIntake({
         sheetDiscipline: item.values.discipline || null,
         revision: item.values.revision.trim(),
         issueDate: item.values.issueDate,
+        architect: item.values.architect.trim(),
+        engineer: item.values.engineer.trim(),
         status: "DRAFT",
       },
       audit: {
@@ -806,8 +1020,8 @@ export function DrawingIntake({
         // Truthful, not aspirational: `true` only when the server really read
         // title-block text and fed it to the extractor. A scan, a CAD file and
         // a parse that failed all record `false`, which is what makes the
-        // stored audit worth measuring against later.
-        inputs: { filename: true, titleBlockText: item.usedTitleBlockText },
+        // stored audit worth measuring against later. Same for `aiRead`.
+        inputs: { filename: true, titleBlockText: item.usedTitleBlockText, aiRead: item.aiRead },
         proposed: item.draft,
         editedFields: item.edited,
       },
@@ -845,6 +1059,10 @@ export function DrawingIntake({
         if (!storageKey) {
           // No staged object: either storage was unreachable when the file was
           // dropped, or a previous confirm failed and threw its object away.
+          if (!r.file.blob) {
+            // A page cut out of a set has no bytes here to send again.
+            throw new Error(fmt(t("{name} is no longer staged — drop the set again to retry this page."), { name: r.file.name }));
+          }
           const ticket = await repository.createUploadTicket({
             projectId,
             filename: r.file.name,
@@ -855,7 +1073,7 @@ export function DrawingIntake({
           const upload = await fetch(ticket.uploadUrl, {
             method: "PUT",
             headers: ticket.headers,
-            body: r.file,
+            body: r.file.blob,
           });
           if (!upload.ok) {
             // Registering after a failed PUT would create a register entry
@@ -878,6 +1096,7 @@ export function DrawingIntake({
           audit: r.audit,
           supersedes: r.supersedes,
           sheet: r.sheet ?? null,
+          set: r.set ?? null,
         });
         saved.add(r.file.name);
       }
@@ -991,16 +1210,21 @@ export function DrawingIntake({
             title={items.length === 1 ? t("Confirm 1 drawing") : fmt(t("Confirm {count} drawings"), { count: items.length })}
             subtitle={t("Extraction proposes; you confirm. A wrong sheet number is worse than a blank one.")}
           />
+          <p className="px-5 pb-1 text-[11px] text-faint">
+            {t("A set is split into pages. Each page's title block is read by AI — sheet number, title, revision and date, architect and engineer — and shown here to confirm.")}
+          </p>
           <CardBody className="space-y-4">
             {items.map((item) => (
               <ProposalRow
                 key={item.id}
                 item={item}
+                rowCount={items.length}
                 onChange={onChange}
                 onRemove={removeItem}
                 onLookup={onLookup}
                 onSupersedeChange={onSupersedeChange}
                 onSheetTypeChange={onSheetTypeChange}
+                onApplyToAll={onApplyToAll}
               />
             ))}
 

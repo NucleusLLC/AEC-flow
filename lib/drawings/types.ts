@@ -37,7 +37,10 @@ export type EvidenceSource =
   /** Parsed from a `LABEL: value` pair found in PDF title-block text. */
   | "titleblock-label"
   /** Pattern-scanned out of PDF title-block text with no label to anchor it. */
-  | "titleblock-scan";
+  | "titleblock-scan"
+  /** Read off the sheet by a model looking at the page (and its text layer, when
+   *  there is one). The only source that works on a scan. See ./ai-read.ts. */
+  | "ai-read";
 
 /**
  * Why we believe a value. `pattern` is a stable identifier so the UI (and the
@@ -95,6 +98,11 @@ export type DrawingMetadataDraft = {
   revision: Field<string> | null;
   /** ISO `YYYY-MM-DD`. Always a real calendar date or absent. */
   issueDate: Field<string> | null;
+  /** The architect of record as the title block names them. Only a model
+   *  reading the sheet proposes this — no filename or regex rule does. */
+  architect: Field<string> | null;
+  /** The engineer (structural / MEP / civil) as the title block names them. */
+  engineer: Field<string> | null;
   /** Non-fatal problems worth surfacing, e.g. sources that disagreed. */
   warnings: string[];
 };
@@ -107,6 +115,8 @@ export const EMPTY_DRAFT: DrawingMetadataDraft = {
   projectName: null,
   revision: null,
   issueDate: null,
+  architect: null,
+  engineer: null,
   warnings: [],
 };
 
@@ -121,6 +131,8 @@ export const DRAFT_FIELD_KEYS: readonly DraftFieldKey[] = [
   "projectName",
   "revision",
   "issueDate",
+  "architect",
+  "engineer",
 ] as const;
 
 /**

@@ -37,6 +37,10 @@ type DrawingRow = {
   paperSize: string | null;
   paperOrientation: string | null;
   pageCount: number | null;
+  architect: string | null;
+  engineer: string | null;
+  setFilename: string | null;
+  setPage: number | null;
   project: { projectNumber: string; name: string } | null;
 };
 
@@ -58,6 +62,10 @@ const SELECT = {
   paperSize: true,
   paperOrientation: true,
   pageCount: true,
+  architect: true,
+  engineer: true,
+  setFilename: true,
+  setPage: true,
   project: { select: { projectNumber: true, name: true } },
 } as const;
 
@@ -99,6 +107,10 @@ function toDrawing(row: DrawingRow, openComments = 0): Drawing {
     paperSize: row.paperSize,
     paperOrientation: row.paperOrientation,
     pageCount: row.pageCount,
+    architect: row.architect,
+    engineer: row.engineer,
+    setFilename: row.setFilename,
+    setPage: row.setPage,
     openComments,
   };
 }

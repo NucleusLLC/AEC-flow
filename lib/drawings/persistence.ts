@@ -48,6 +48,9 @@ export type ConfirmedDrawingMetadata = {
    * not as something the register filters on — see ./mapping.ts.
    */
   sheetDiscipline?: string | null;
+  /** The consultants as the title block names them. "" for not stated. */
+  architect?: string;
+  engineer?: string;
 };
 
 /** An object that already exists in storage. */
@@ -75,8 +78,10 @@ export type UploadTicket = {
 export type DrawingExtractionAudit = {
   /** Bump when extraction rules change, so historical audits stay comparable. */
   engineVersion: string;
-  /** Which inputs were available: was there a text layer, or only a filename? */
-  inputs: { filename: true; titleBlockText: boolean };
+  /** Which inputs were available: was there a text layer, or only a filename?
+   *  `aiRead` is true only when a model actually answered — not when it was
+   *  asked — so the audit can separate "AI was wrong" from "AI was off". */
+  inputs: { filename: true; titleBlockText: boolean; aiRead?: boolean };
   proposed: DrawingMetadataDraft;
   /** Fields the user changed before saving. */
   editedFields: DraftFieldKey[];
@@ -92,6 +97,21 @@ export type RegisterDrawingInput = {
   /** What was read off the sheet — plot size, page count, kind of drawing —
    *  as the user confirmed it. Omitted when nothing could be read. */
   sheet?: SheetFacts | null;
+  /** Which page of which uploaded set this sheet was, when it came out of a split. */
+  set?: { filename: string; page: number } | null;
+};
+
+/** One page copied out of a set into a staged object of its own. */
+export type SplitPage = {
+  pageNumber: number;
+  storageKey: string;
+  filename: string;
+  sizeBytes: number;
+};
+
+export type SplitSetResult = {
+  pageCount: number;
+  pages: SplitPage[];
 };
 
 /**
@@ -141,6 +161,10 @@ export type UploadAnalysis = {
   /** What kind of drawing this is, with its evidence, and who said so. */
   sheetType?: Field<SheetType> | null;
   sheetTypeSource?: "rules" | "ai" | null;
+  /** True when a model read the sheet and its answer was merged into `proposed`. */
+  aiRead?: boolean;
+  /** Why the model did not read it, when it did not. Shown on the row. */
+  aiNote?: string | null;
 };
 
 /**
@@ -179,6 +203,20 @@ export interface DrawingIntakeRepository {
    *  Best-effort: a failure here leaks an object, it does not break anything. */
   discardUpload(projectId: string, storageKey: string): Promise<void>;
 
+  /**
+   * Copy pages `fromPage..toPage` of a staged multi-page PDF each into a staged
+   * object of its own, so every page can be analysed and registered as the
+   * sheet it is. Called in batches (`pageBatches` in ./set-split.ts); the set
+   * object itself is left for the caller to discard once every page is out.
+   */
+  splitSet(input: {
+    projectId: string;
+    storageKey: string;
+    filename: string;
+    fromPage: number;
+    toPage: number;
+  }): Promise<SplitSetResult>;
+
   /** Create the drawing row. Returns the new id. */
   registerDrawing(input: RegisterDrawingInput): Promise<{ id: string }>;
 
@@ -213,6 +251,9 @@ export const notConfiguredRepository: DrawingIntakeRepository = {
     throw new DrawingPersistenceNotConfiguredError();
   },
   async discardUpload() {
+    throw new DrawingPersistenceNotConfiguredError();
+  },
+  async splitSet() {
     throw new DrawingPersistenceNotConfiguredError();
   },
   async registerDrawing() {
