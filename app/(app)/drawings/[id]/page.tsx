@@ -47,6 +47,8 @@ export default async function DrawingStudioPage({
         paperOrientation: drawing.paperOrientation,
         sheetType: drawing.sheetType,
         pageCount: drawing.pageCount,
+        architect: drawing.architect,
+        engineer: drawing.engineer,
       }}
       initialMarkups={markups}
       initialComments={comments}

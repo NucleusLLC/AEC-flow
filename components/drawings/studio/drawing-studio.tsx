@@ -108,6 +108,8 @@ export type StudioDrawing = {
   paperOrientation: string | null;
   sheetType: string | null;
   pageCount: number | null;
+  architect?: string | null;
+  engineer?: string | null;
 };
 
 export function DrawingStudio({
@@ -406,6 +408,13 @@ export function DrawingStudio({
             {drawing.paperSize ? <Badge tone="slate">{drawing.paperSize}</Badge> : null}
             {openCount > 0 ? <Badge tone="amber">{fmt(t("{count} open"), { count: openCount })}</Badge> : null}
           </h2>
+          {drawing.architect || drawing.engineer ? (
+            <p className="mt-1 text-xs text-muted">
+              {drawing.architect ? `${t("Architect")}: ${drawing.architect}` : ""}
+              {drawing.architect && drawing.engineer ? " · " : ""}
+              {drawing.engineer ? `${t("Engineer")}: ${drawing.engineer}` : ""}
+            </p>
+          ) : null}
         </div>
       </div>
 

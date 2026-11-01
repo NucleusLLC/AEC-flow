@@ -7,6 +7,10 @@ import { getServerT } from "@/lib/i18n/server";
 
 export const metadata = { title: "Add drawings · AEC-flow" };
 
+// Reading a sheet with the AI reader takes 10–25 s and a set is split in
+// batches; the actions this page calls must outlive the platform default.
+export const maxDuration = 180;
+
 export default async function DrawingIntakePage({
   searchParams,
 }: {

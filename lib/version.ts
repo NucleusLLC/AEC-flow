@@ -253,8 +253,17 @@
  *   and stops counting everywhere. An invoice may carry a DISCOUNT (percent or amount) taken off
  *   before tax. Admin / Director / founder for void, re-issue and reverse.
  *   Needs prisma/sql/0037_invoice_phase_b.sql applied FIRST.
+ * 0.39.0 (1 NOV 2026): feat — DRAWING INTAKE READS THE SHEET. Drop a set and get sheets: a 2–80 page
+ *   PDF is split into one staged page per sheet, and every page's title block is read by AI (the
+ *   whole page plus the title-block strips, magnified) — sheet number, title and kind of drawing,
+ *   revision and its date, project, and the ARCHITECT and ENGINEER the block names. Works on scans.
+ *   The text-layer rules still run first and win a labelled disagreement; agreement raises
+ *   confidence, disagreement warns and keeps both. Every value is a proposal to confirm, as before.
+ *   New fields on the row and in the Studio header. Apply-to-all on the set-wide fields. Fails open
+ *   with the reason on the row when no AI key is configured. docs/drawings-intake/04-AI-READ.md.
+ *   Needs prisma/sql/0038_drawing_ai_intake.sql applied FIRST.
  */
-export const APP_VERSION = "0.38.0";
+export const APP_VERSION = "0.39.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
