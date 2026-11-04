@@ -307,82 +307,89 @@ body,
  * carries only tint, hairline and shadow. The full reasoning, and the list of
  * properties that would silently re-create the trap, is on that rule below.
  *
- * The corner radius stays on the app's own `--radius-card` (14px) rather than
- * the 16px of the reference this treatment came from — a card is a card.
+ * The corner radius is `--glass-radius` (20px) while the photo is on — the
+ * frosted sheet is rounder than the flat 14px card, and the ::before follows it
+ * through `border-radius: inherit`.
  */
 :root {
   /* ==== Glass knobs. Tune here; nothing else hard-codes these values. ====
    *
-   * Dark theme carries the values signed off against the real photo set; light
-   * theme is derived from them (light surface, dark hairline, shallower shadow,
-   * light wash instead of a dark one) and has NOT had the same live review.
+   * The treatment is visionOS frosted glass (Nov 2026 re-tune against a BRIGHT,
+   * warm photo set — the earlier dark set and its 16px blur are gone): a heavy
+   * blur so the photograph becomes soft colour rather than detail, a low tint so
+   * it still shows through, a white hairline that catches the light, a faint
+   * diagonal sheen, and a wide soft shadow that makes the sheet float. Light
+   * theme is white frosted glass with dark text; dark theme is smoky glass with
+   * light text over the SAME bright photo — the reference card, in effect.
    *
    * Three layers share the legibility work:
    *   1. --glass-photo-filter — scales the photo BEFORE anything is laid over
-   *      it. Only dark theme needs it, and only because of one image: a white
-   *      atrium behind a 50% dark card leaves grey text on a grey card
-   *      (3.01:1). Halving its brightness fixes that and costs the already-dark
-   *      photos nothing. Light theme needs none — its scrim does the work.
-   *   2. --glass-scrim-* — the wash between photo and page. Light theme leans
-   *      on it (69%→46%), dark theme barely does (34.5%→20.7%): dark text over
-   *      a dark photograph is the hard case, and washing toward white is what
-   *      buys it back WITHOUT pushing the card toward opaque. If a contrast
-   *      problem tempts you to raise --glass-surface, raise the scrim instead.
-   *   3. the card: a genuinely translucent surface + blur, so the photo behind
-   *      it stays identifiable.
+   *      it. The photos are bright by design now, so light theme only nudges
+   *      saturation; dark theme takes them down to 0.7 — the sky-white blocks in
+   *      the sunniest shots are what cap light-on-smoke contrast, and the
+   *      smoky card alone cannot carry them.
+   *   2. --glass-scrim-* — the wash between photo and page. Top-weighted, so the
+   *      greeting and page headings (the only text with no card under them) get
+   *      a calmer band; lower down the cards do the work and the photo opens up.
+   *      If a contrast problem tempts you to raise --glass-surface, raise the
+   *      scrim instead.
+   *   3. the card: a low-alpha tint over a 44px blur. The blur is what buys the
+   *      legibility — it pulls every block of the photo toward its local mean,
+   *      so the worst case under a card is far milder than the raw pixels.
    *
-   * Worst case over all twelve images (darkest and brightest block of each,
-   * body and secondary text): light 6.76:1 outside a card and 6.70:1 inside
-   * one, both on 01-blueprint-desk; dark 5.74:1 and 8.50:1, both on
-   * 05-atrium-light. Out-of-card text also gets --glass-text-shadow, which
-   * those figures do not credit.
+   * Worst case over all 64 images at these defaults (blurred-backdrop model,
+   * body / secondary / faint text under a card): light 5.10 / 4.21 / 2.96 on
+   * projects/01, dark 4.58 / 4.41 / 3.53 on architecture/01. Method and the
+   * ladder's figures are in lib/dashboard/glass.ts.
    */
-  --glass-photo-filter: none;
-  --glass-scrim-color: #ffffff;
-  --glass-scrim-top: 69%;
-  --glass-scrim-mid: 58%;
-  --glass-scrim-bottom: 46%;
+  --glass-photo-filter: saturate(1.05);
+  --glass-scrim-color: #fffaf3;
+  --glass-scrim-top: 44%;
+  --glass-scrim-mid: 28%;
+  --glass-scrim-bottom: 20%;
   --glass-surface-color: #ffffff;
   /* ---- The two ends of the transparency preference ----
-   * 42%, not the 50% of dark theme: white washes out faster than black, and at
-   * 50% the card reads as a milky slab with the photo gone from behind it. Both
-   * numbers live on :root (not one per theme block) because the backdrop
+   * Both numbers live on :root (not one per theme block) because the backdrop
    * wrapper overrides them TOGETHER from the user's preference — it is rendered
    * on the server and cannot know which theme the browser will be in, so it has
-   * to supply both and let the rules below pick. Defaults here = today's look.
-   * The ladder of allowed pairs, and the measurements behind its ends, are in
-   * lib/dashboard/glass.ts. */
+   * to supply both and let the rules below pick. Defaults here = the "Standard"
+   * step. The ladder of allowed pairs is in lib/dashboard/glass.ts. */
   --glass-surface-light: 42%;
-  --glass-surface-dark: 50%;
+  --glass-surface-dark: 38%;
   --glass-surface: var(--glass-surface-light);
-  --glass-blur: 16px;
-  --glass-saturate: 1.2;
-  /* Hairline that catches the light — a dark edge on a light UI, never white. */
-  --glass-edge: rgb(15 23 42 / 0.1);
-  /* Shallower than dark theme's: a 60px black shadow on a light ground reads
-   * as dirt rather than as height. */
-  --glass-shadow: 0 18px 40px -22px rgb(15 23 42 / 0.45);
+  --glass-blur: 44px;
+  --glass-saturate: 1.6;
+  /* Corners: the reference sheet is rounder than the app's 14px card. */
+  --glass-radius: 20px;
+  /* Hairline that catches the light — white on glass, in both themes. */
+  --glass-edge: rgb(255 255 255 / 0.55);
+  /* Inner highlight along the top edge + a faint diagonal sheen: what reads as
+   * "glass" rather than "translucent panel". Plain paint, no stacking context. */
+  --glass-inner: inset 0 1px 0 rgb(255 255 255 / 0.6), inset 0 -1px 0 rgb(255 255 255 / 0.15);
+  --glass-sheen: linear-gradient(135deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 45%);
+  /* Wide and soft, warm-tinted: a black shadow on a sunlit photo reads as dirt. */
+  --glass-shadow: 0 30px 70px -30px rgb(60 40 20 / 0.45), 0 2px 6px rgb(60 40 20 / 0.06);
   /* Halo for text that sits on the photo rather than on a card. */
-  --glass-text-shadow: 0 1px 5px rgb(255 255 255 / 0.85);
+  --glass-text-shadow: 0 1px 8px rgb(255 255 255 / 0.9);
   --c-muted-on-photo: #1f2937;
-  --c-faint-on-photo: #4b5563;
+  /* One step darker than the app's faint grey: it is the tier that bottoms out
+   * first on a dark patch of photo, and 3:1 is where it has to stay. */
+  --c-faint-on-photo: #374151;
 }
 
 .dark {
-  /* Blacks are already on-theme here; it is the bright photos that have to come
-   * down, so this is a straight brightness scale rather than a range squeeze. */
-  --glass-photo-filter: brightness(0.5);
-  --glass-scrim-color: #0f1013;
-  /* The mid stop is where a straight two-stop ramp would have been, so this
-   * theme's wash is the reviewed one; only light theme is top-weighted. */
-  --glass-scrim-top: 34.5%;
-  --glass-scrim-mid: 29.7%;
-  --glass-scrim-bottom: 20.7%;
-  --glass-surface-color: #15161c;
+  --glass-photo-filter: brightness(0.7) saturate(1.05);
+  --glass-scrim-color: #141216;
+  --glass-scrim-top: 42%;
+  --glass-scrim-mid: 28%;
+  --glass-scrim-bottom: 14%;
+  --glass-surface-color: #1a1a1f;
   --glass-surface: var(--glass-surface-dark);
-  --glass-edge: rgb(255 255 255 / 0.12);
-  --glass-shadow: 0 24px 60px -24px #000;
-  --glass-text-shadow: 0 1px 5px rgb(0 0 0 / 0.75);
+  --glass-edge: rgb(255 255 255 / 0.22);
+  --glass-inner: inset 0 1px 0 rgb(255 255 255 / 0.25), inset 0 -1px 0 rgb(255 255 255 / 0.06);
+  --glass-sheen: linear-gradient(135deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0) 45%);
+  --glass-shadow: 0 30px 70px -30px rgb(0 0 0 / 0.7), 0 2px 6px rgb(0 0 0 / 0.2);
+  --glass-text-shadow: 0 1px 8px rgb(0 0 0 / 0.8);
   --c-muted-on-photo: #e2e6ec;
   --c-faint-on-photo: #c9cfd8;
 }
@@ -529,9 +536,12 @@ body,
  */
 [data-dashboard-bg="on"] .card-surface {
   position: relative;
+  border-radius: var(--glass-radius);
   background-color: color-mix(in srgb, var(--glass-surface-color) var(--glass-surface), transparent);
+  /* The sheen is a background-image, not a pseudo: plain paint, no context. */
+  background-image: var(--glass-sheen);
   border-color: var(--glass-edge);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--glass-inner), var(--glass-shadow);
 }
 
 [data-dashboard-bg="on"] .card-surface::before {
@@ -575,7 +585,9 @@ body,
  * element. It still pulls the same knobs, so the two never drift apart. */
 .dashboard-bg-chip {
   background-color: color-mix(in srgb, var(--glass-surface-color) var(--glass-surface), transparent);
+  background-image: var(--glass-sheen);
   border-color: var(--glass-edge);
+  box-shadow: var(--glass-inner);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
@@ -609,7 +621,9 @@ body,
  * filter was still on it.
  */
 [data-dashboard-bg="on"] .card-surface .card-surface {
+  border-radius: var(--radius-card);
   background-color: color-mix(in srgb, var(--c-surface-2) 45%, transparent);
+  background-image: none;
   box-shadow: none;
 }
 
