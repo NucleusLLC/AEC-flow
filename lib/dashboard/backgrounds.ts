@@ -29,14 +29,14 @@ export const DASHBOARD_BACKGROUNDS: readonly DashboardBackground[] = [
   {
     id: "blueprint-desk",
     src: `${DIR}/01-blueprint-desk.jpg`,
-    label: "Drafting table at night",
-    description: "Drawings and instruments on a drafting table under a low desk lamp.",
+    label: "Drafting table, morning light",
+    description: "Drawings and instruments on a drafting table beside a sunny window.",
   },
   {
     id: "steel-frame",
     src: `${DIR}/02-steel-frame.jpg`,
-    label: "Steel frame in fog",
-    description: "Bare structural steel frame receding into morning fog.",
+    label: "Steel frame, morning haze",
+    description: "Bare structural steel frame rising into a bright, hazy morning sky.",
   },
   {
     id: "concrete-facade",
@@ -47,8 +47,8 @@ export const DASHBOARD_BACKGROUNDS: readonly DashboardBackground[] = [
   {
     id: "site-dusk",
     src: `${DIR}/04-site-dusk.jpg`,
-    label: "Site at dusk",
-    description: "Construction site silhouetted against a deep blue dusk sky.",
+    label: "Site at golden hour",
+    description: "Construction site in warm, low golden-hour sun.",
   },
   {
     id: "atrium-light",
@@ -77,8 +77,8 @@ export const DASHBOARD_BACKGROUNDS: readonly DashboardBackground[] = [
   {
     id: "glass-tower-dusk",
     src: `${DIR}/09-glass-tower-dusk.jpg`,
-    label: "Curtain wall at dusk",
-    description: "Unitised curtain wall reflecting a fading dusk sky.",
+    label: "Curtain wall at golden hour",
+    description: "Unitised curtain wall reflecting a warm golden-hour sky.",
   },
   {
     id: "tunnel-formwork",

@@ -16,28 +16,33 @@ describe("card opacity ladder", () => {
   });
 
   it("never lets light and dark collapse to the same number", () => {
-    // The 42/50 split is the whole point: white washes out faster than black,
-    // so an identical alpha reads as a milky slab in light theme.
+    // The split is the whole point: white frosted glass and smoky glass are
+    // different materials over the same bright photo, so one alpha for both
+    // would be wrong for at least one of them.
     for (const l of CARD_OPACITY_LEVELS) {
-      expect(l.light).toBeLessThan(l.dark);
+      expect(l.light).not.toBe(l.dark);
     }
   });
 
-  it("keeps light tracking dark at the shipped ratio (42/50)", () => {
+  it("keeps light a fixed four points above dark at every step", () => {
+    // Light holds dark text up with a little more white; smoky glass goes
+    // opaque-looking sooner, so dark sits below. The gap is constant so the
+    // control reads as one scale, not two.
     for (const l of CARD_OPACITY_LEVELS) {
-      expect(l.light).toBe(Math.round(l.dark * (42 / 50)));
+      expect(l.light).toBe(l.dark + 4);
     }
   });
 
   it("stays inside the measured bounds at both ends", () => {
-    // Floor: light 34% is where `text-faint` still measures 3.04:1 against the
-    // worst block of the worst photo. Ceiling: past ~60% white the photograph is
-    // no longer identifiable and the glass has become a plain panel.
+    // Floor: body text must clear 4.5:1 at Standard and stay above 3.8:1 on
+    // the most transparent step (measured, see glass.ts). Ceiling: past ~60%
+    // the photograph is no longer identifiable behind the blur and the glass
+    // has become a plain panel.
     for (const l of CARD_OPACITY_LEVELS) {
       expect(l.light).toBeGreaterThanOrEqual(34);
       expect(l.light).toBeLessThanOrEqual(60);
-      expect(l.dark).toBeGreaterThanOrEqual(40);
-      expect(l.dark).toBeLessThanOrEqual(70);
+      expect(l.dark).toBeGreaterThanOrEqual(30);
+      expect(l.dark).toBeLessThanOrEqual(56);
     }
   });
 
@@ -49,12 +54,20 @@ describe("card opacity ladder", () => {
   });
 });
 
-describe("the default is today's look", () => {
-  it("is the pair already hard-coded in globals.css", () => {
-    // If either of these changes, every existing user's dashboard changes with
-    // it — which the feature explicitly promises not to do.
-    expect(DEFAULT_CARD_OPACITY_PERCENT).toBe(50);
+describe("the default is the stylesheet's look", () => {
+  it("is the pair hard-coded in globals.css", () => {
+    // If either of these changes, globals.css must change with it — a user who
+    // never touched the control sees the stylesheet defaults.
+    expect(DEFAULT_CARD_OPACITY_PERCENT).toBe(38);
     expect(resolveCardOpacityLevel(DEFAULT_CARD_OPACITY_PERCENT).light).toBe(42);
+  });
+
+  it("is what a value from the retired dark-set ladder resolves to", () => {
+    // 40/45/50/58/68 were tuned for the old dark photos; they are not carried
+    // over, they fall back to the new Standard step.
+    for (const v of [40, 45, 50, 58, 68]) {
+      expect(coerceCardOpacityPercent(v)).toBe(DEFAULT_CARD_OPACITY_PERCENT);
+    }
   });
 
   it("is one of the published choices", () => {
@@ -79,9 +92,9 @@ describe("coerceCardOpacityPercent", () => {
     const bad = [
       0,
       -50,
-      41,
-      49,
-      51,
+      37,
+      39,
+      50,
       100,
       101,
       NaN,
@@ -109,7 +122,7 @@ describe("coerceCardOpacityPercent", () => {
     ];
     for (const v of hostile) {
       const vars = cardOpacityVars(v);
-      expect(vars["--glass-surface-dark"]).toBe("50%");
+      expect(vars["--glass-surface-dark"]).toBe("38%");
       expect(vars["--glass-surface-light"]).toBe("42%");
     }
   });
@@ -119,13 +132,13 @@ describe("cardOpacityVars", () => {
   it("emits both ends so the theme can be decided in the browser", () => {
     // One number would apply to both themes and flatten the split; the CSS picks
     // whichever of these two matches the active theme.
-    expect(cardOpacityVars(40)).toEqual({
+    expect(cardOpacityVars(30)).toEqual({
       "--glass-surface-light": "34%",
-      "--glass-surface-dark": "40%",
+      "--glass-surface-dark": "30%",
     });
-    expect(cardOpacityVars(68)).toEqual({
-      "--glass-surface-light": "57%",
-      "--glass-surface-dark": "68%",
+    expect(cardOpacityVars(56)).toEqual({
+      "--glass-surface-light": "60%",
+      "--glass-surface-dark": "56%",
     });
   });
 

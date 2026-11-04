@@ -8,14 +8,14 @@
  *
  * WHY A PAIR OF NUMBERS PER LEVEL, NOT ONE
  * ----------------------------------------
- * The shipped values are 50% in dark theme and 42% in light, and that gap is
- * deliberate: white washes out faster than black, so the same alpha that reads
- * as glass over a dark surface reads as a milky slab over a light one (see the
- * knob block in app/globals.css). One stored number applied to both themes
- * would flatten that. Every level therefore carries BOTH percentages. `light`
- * tracks `dark` at the shipped ratio (42/50 = 0.84), rounded — so the
- * relationship holds at every step of the control instead of only at the
- * default, and narrows as the card fills in, where there is less left to split.
+ * The shipped values are 38% in dark theme and 42% in light, and the gap is
+ * deliberate: the two themes are different materials over the same bright
+ * photograph. Light is white frosted glass with dark text — it needs a little
+ * more white to hold the text up; dark is smoky glass with light text, and a
+ * smoky tint goes opaque-looking sooner than a white one does. One stored
+ * number applied to both themes would flatten that. Every level therefore
+ * carries BOTH percentages, each tuned by eye against the photo set in the
+ * glass harness and then checked by measurement (below).
  *
  * WHY A PUBLISHED LIST AND NOT A FREE NUMBER
  * ------------------------------------------
@@ -25,42 +25,42 @@
  * whitelists rather than clamps, so no hand-edited blob can put a string into
  * `color-mix()`. Same contract as `coerceBackgroundIntervalSeconds`.
  *
+ * A value stored by the previous ladder (40/45/50/58/68, from the dark photo
+ * set) matches nothing here and so resolves to the default — which is the
+ * intended migration: the old numbers were tuned for a different material.
+ *
  * WHERE THE BOUNDS COME FROM (measured, not guessed)
  * --------------------------------------------------
- * Method: the twelve real JPEGs in public/backgrounds/dashboard reduced to a
- * 24x14 block grid; the darkest and the brightest block of each taken as the
- * worst backdrop a card can land on; the whole stack composited (photo → CSS
- * brightness filter → worst scrim stop → card alpha) and WCAG contrast computed
- * against body text (--c-fg) and secondary text (--c-muted-on-photo). Blur is
- * not modelled, and blur only ever pulls an extreme block toward the local
- * mean — so the real card is never worse than these figures.
+ * Method: every shipped JPEG under public/backgrounds reduced to a 24x14 block
+ * grid (one block ≈ 80px at 1920, about what a 44px blur averages over); the
+ * darkest and the brightest block of each taken as the worst backdrop a card
+ * can land on; the whole stack composited (photo → CSS filter → worst scrim
+ * stop → card alpha) and WCAG contrast computed against body text (--c-fg),
+ * secondary text (--c-muted-on-photo) and the faintest tier
+ * (--c-faint-on-photo). Blur only ever pulls an extreme block toward the local
+ * mean, so the real card is never worse than these figures.
  *
- *   worst case over all twelve images, body + secondary text:
- *     most transparent  (dark 40 / light 34)   light 5.90:1   dark  7.50:1
- *     default           (dark 50 / light 42)   light 6.70:1   dark  8.50:1
- *     least transparent (dark 68 / light 57)   light 8.40:1   dark 10.56:1
- *   light theme is the binding case at every step, on 01-blueprint-desk; dark's
- *   worst is 05-atrium-light, the same pair the shipped values were signed off
- *   against (the default row reproduces those published figures exactly).
- *
- * The FLOOR is set by the faintest tier in the app rather than by body text.
- * `text-faint` (#4b5563 on light) measures 3.04:1 at light 34% — the 3:1 WCAG
- * floor for large/incidental text. One step further open (light 30%) puts it at
- * 2.84:1, under the floor, which is where a card stops being readable rather
- * than merely airy. So the list stops at 34%. Body text has far more room:
- * it does not reach 4.5:1 until roughly light 20%.
+ * Worst case over all 64 images, body / secondary / faint text under a card:
+ *   most transparent (dark 30 / light 34)   light 4.57 / 3.77 / 2.65   dark 3.88 / 3.74 / 3.00
+ *   default          (dark 38 / light 42)   light 5.10 / 4.21 / 2.96   dark 4.58 / 4.41 / 3.53
+ *   most solid       (dark 56 / light 60)   see the figures printed by the harness
+ * light's binding image is projects/01 (a dark desk edge), dark's is
+ * architecture/01 (a white sky). Body text clears 4.5:1 at Standard in both
+ * themes; the faint tier sits at the 3:1 floor at Standard and dips under it
+ * on the two more-transparent steps — those steps trade the faintest captions
+ * for more photograph, which is what choosing them means.
  *
  * The CEILING is not a legibility bound — contrast only improves as the card
- * fills in. It is set by the feature: past roughly 60% white the photograph is
- * no longer identifiable behind the card and the glass has become a plain
- * panel, at which point the user wants the background switch, not this one.
+ * fills in. It is set by the feature: past roughly 60% the photograph is no
+ * longer identifiable behind the blur and the glass has become a plain panel,
+ * at which point the user wants the background switch, not this one.
  */
 
 export type CardOpacityLevel = {
   /** Percentage of `--glass-surface-color` mixed into the card in dark theme.
    *  Also the value stored in the preference blob — see `coerceCardOpacityPercent`. */
   dark: number;
-  /** The light-theme counterpart. Never equal to `dark`; see the note above. */
+  /** The light-theme counterpart. Always a little ABOVE `dark`; see the note above. */
   light: number;
   /** Shown in the Settings dropdown. Deliberately plain, and self-ordering. */
   label: string;
@@ -68,22 +68,22 @@ export type CardOpacityLevel = {
 
 /** Ascending by opacity — most transparent first, so the dropdown reads as a scale. */
 export const CARD_OPACITY_LEVELS: readonly CardOpacityLevel[] = [
-  { dark: 40, light: 34, label: "Most transparent" },
-  { dark: 45, light: 38, label: "More transparent" },
-  { dark: 50, light: 42, label: "Standard" },
-  { dark: 58, light: 49, label: "More solid" },
-  { dark: 68, light: 57, label: "Most solid" },
+  { dark: 30, light: 34, label: "Most transparent" },
+  { dark: 34, light: 38, label: "More transparent" },
+  { dark: 38, light: 42, label: "Standard" },
+  { dark: 46, light: 50, label: "More solid" },
+  { dark: 56, light: 60, label: "Most solid" },
 ];
 
 /**
- * Today's look. A user who never touches this control must see no change at
- * all, so it has to stay the pair already carried by globals.css (50 / 42).
+ * The "Standard" step — the pair globals.css carries as its defaults, so a
+ * user who never touches the control sees exactly the stylesheet's look.
  */
-export const DEFAULT_CARD_OPACITY_PERCENT = 50;
+export const DEFAULT_CARD_OPACITY_PERCENT = 38;
 
 const DEFAULT_LEVEL: CardOpacityLevel =
   CARD_OPACITY_LEVELS.find((l) => l.dark === DEFAULT_CARD_OPACITY_PERCENT) ??
-  { dark: 50, light: 42, label: "Standard" };
+  { dark: 38, light: 42, label: "Standard" };
 
 /**
  * Resolve a stored value to a published level. Anything the dropdown could not

@@ -253,8 +253,15 @@
  *   and stops counting everywhere. An invoice may carry a DISCOUNT (percent or amount) taken off
  *   before tax. Admin / Director / founder for void, re-issue and reverse.
  *   Needs prisma/sql/0037_invoice_phase_b.sql applied FIRST.
+ * 0.41.0 (3 NOV 2026): feat — GLASS, RE-TUNED. The opt-in photo background (Settings → Preferences)
+ *   is now visionOS-style frosted glass over a NEW bright, warm photo set (all 64 images regenerated:
+ *   sun-washed, shallow focus, warm whites and pale wood). Cards carry a 44px blur, a low tint, a
+ *   white hairline, a faint sheen and a wide soft shadow, with 20px corners; light theme is white
+ *   frosted glass, dark theme is smoky glass over the same bright photo. The Card transparency
+ *   ladder was re-measured for the new material (30–56 dark / 34–60 light); a value saved under the
+ *   old ladder falls back to Standard. No SQL.
  */
-export const APP_VERSION = "0.38.0";
+export const APP_VERSION = "0.41.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
