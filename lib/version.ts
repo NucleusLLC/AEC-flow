@@ -260,8 +260,12 @@
  *   frosted glass, dark theme is smoky glass over the same bright photo. The Card transparency
  *   ladder was re-measured for the new material (30–56 dark / 34–60 light); a value saved under the
  *   old ladder falls back to Standard. No SQL.
+ * 0.41.1 (14 NOV 2026): fix — RAISE INVOICE WITH SEVERAL MILESTONES CRASHED. Ticking two or more
+ *   payment milestones sent ?milestones=a&milestones=b, which Next passes as an array; the page
+ *   called .split on it and showed "Something went wrong". Now read through lib/search-params.ts
+ *   (array, single or comma-separated). No SQL.
  */
-export const APP_VERSION = "0.41.0";
+export const APP_VERSION = "0.41.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
