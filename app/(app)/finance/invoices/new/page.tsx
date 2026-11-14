@@ -15,6 +15,7 @@ import { getInvoiceSettings } from "@/lib/server/practice-config";
 import { dueDateFrom } from "@/lib/finance/calc";
 import { ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
+import { paramList } from "@/lib/search-params";
 import type { InvoiceLineInput } from "@/lib/finance/types";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ proposal?: string; milestones?: string; work?: string; project?: string }>;
+  searchParams: Promise<{ proposal?: string; milestones?: string | string[]; work?: string; project?: string }>;
 }) {
   const [
     { proposal: proposalId, milestones: picked, work: workProjectId, project: forProjectId },
@@ -55,7 +56,8 @@ export default async function NewInvoicePage({
   const today = ymd(new Date());
   const t = await getServerT();
   const billing = proposalId ? await getProposalBilling(proposalId) : null;
-  const chosen = new Set((picked ?? "").split(",").filter(Boolean));
+  // Several ticked milestones arrive as a repeated key, i.e. an array.
+  const chosen = new Set(paramList(picked));
 
   const clientOptions = clients.map((c) => ({ id: c.id, name: c.name }));
   const projectOptions = projects.map((p) => ({ id: p.id, name: p.name }));
