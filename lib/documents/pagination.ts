@@ -125,6 +125,8 @@ export function computeCuts(input: {
    */
   maxUnusedFraction?: number;
   maxPages?: number;
+  /** Tables whose header row the print engine repeats on a continuation page; see `repeatedHeaderPx`. */
+  repeatingHeaders?: readonly RepeatingHeader[];
 }): PageCut[] {
   const { contentHeight, pageHeight, blocks } = input;
   const maxPages = input.maxPages ?? MAX_PAGES;
@@ -141,7 +143,9 @@ export function computeCuts(input: {
   let pageStart = 0;
 
   while (cuts.length < maxPages) {
-    const naturalEnd = pageStart + pageHeight;
+    // A page that begins inside a table's body starts with that table's
+    // repeated header, which uses up part of it.
+    const naturalEnd = pageStart + pageHeight - repeatedHeaderPx(pageStart, input.repeatingHeaders ?? []);
     // The `- 1` absorbs sub-pixel rounding: content one pixel past the last page
     // boundary is the end of the document, not a new page.
     const moreContent = naturalEnd < contentHeight - 1;
@@ -323,6 +327,28 @@ export type HeadingBreakResult = {
  * the last self-consistent layout (its cuts are computed from its forced set)
  * rather than an abandoned half-applied one.
  */
+/** A table body's flow span and the height of the header row printed again above it on each continuation page. */
+export type RepeatingHeader = { bodyTop: number; bodyBottom: number; headerHeight: number };
+
+/**
+ * Height lost at the top of a page that begins at `pageStart`.
+ *
+ * WHY. `thead { display: table-header-group }` (components/print/page-rules.tsx)
+ * makes the print engine repeat a table's header on every page the table
+ * continues onto. The screen sheet shows the header once, so a paginator that
+ * fills each page with body rows alone overfills every continuation page by one
+ * header row, and every later break drifts by a row. Only a page starting
+ * strictly inside a body pays — a page starting at the table's first row prints
+ * the original header, not a copy.
+ */
+export function repeatedHeaderPx(pageStart: number, headers: readonly RepeatingHeader[]): number {
+  let px = 0;
+  for (const h of headers) {
+    if (pageStart > h.bodyTop + 1 && pageStart < h.bodyBottom - 1) px = Math.max(px, h.headerHeight);
+  }
+  return px;
+}
+
 export function resolveHeadingBreaks(input: {
   contentHeight: number;
   pageHeight: number;
@@ -338,6 +364,7 @@ export function resolveHeadingBreaks(input: {
   pinned?: readonly number[];
   maxPasses?: number;
   maxPages?: number;
+  repeatingHeaders?: readonly RepeatingHeader[];
 }): HeadingBreakResult {
   const { contentHeight, pageHeight, blocks, headings } = input;
   const maxPasses = input.maxPasses ?? 3;
@@ -352,6 +379,7 @@ export function resolveHeadingBreaks(input: {
       blocks,
       forcedTops: forced.map((i) => headings[i].top),
       maxPages: input.maxPages,
+      repeatingHeaders: input.repeatingHeaders,
     });
 
   let cuts = run();

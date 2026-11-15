@@ -25,9 +25,13 @@ import { getFirmIdentity } from "@/lib/server/firm";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
+import { ConvertToProject } from "@/components/service-proposals/convert-to-project";
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { VersionTag } from "@/components/service-proposals/version-tag";
 import { ProposalSchedulingCard } from "@/components/scheduling/proposal-scheduling-card";
+import { AcceptanceLinkCard } from "@/components/service-proposals/acceptance-link-card";
+import { listAcceptanceLinks } from "@/lib/data/proposal-acceptance";
+import { isClientAcceptable } from "@/lib/proposals/acceptance";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { getServerT } from "@/lib/i18n/server";
@@ -45,10 +49,11 @@ export default async function ServiceProposalDetailPage({
   const p = await getServiceProposal(id);
   if (!p) notFound();
 
-  const [versions, history, identification] = await Promise.all([
+  const [versions, history, identification, acceptanceLinks] = await Promise.all([
     listServiceProposalVersions(p.id),
     listStatusHistory(p.id),
     getServiceProposalIdentification(p),
+    listAcceptanceLinks(p.id),
   ]);
   const calc = computeProposal(p.input as ProposalCalcInput);
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
@@ -163,7 +168,9 @@ export default async function ServiceProposalDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {projectIsOn ? (
+          {/* Not linked yet and still ACCEPTED: "Create project" below is the way in, so the
+            * dashboard button would only open the projects list beside it. */}
+          {projectIsOn && (p.projectId || p.status === "CONVERTED") ? (
             /* Green and filled, not another outlined button: this is the one
              * thing to do on an accepted proposal, and it should read that way
              * from across the room. */
@@ -222,6 +229,23 @@ export default async function ServiceProposalDetailPage({
       ) : null}
 
       <ServiceProposalActions id={p.id} status={p.status} />
+      {p.status === "ACCEPTED" || p.status === "PARTIALLY_ACCEPTED" ? (
+        <ConvertToProject id={p.id} hasProject={Boolean(p.projectId)} hasClient={Boolean(p.clientId)} />
+      ) : null}
+
+      {/* Client acceptance by secure link (Release C). The email offered with a new link
+        * is this page's own proposal email, with the link added at the top. */}
+      <AcceptanceLinkCard
+        proposalId={p.id}
+        canShare={isClientAcceptable(p.status)}
+        links={acceptanceLinks}
+        email={{
+          subject: proposalEmailSubject(emailInput),
+          attachment: `${p.number} — Service Proposal`,
+          to: proposalRecipient({ contactEmail: p.contactEmail, approvedForIssue }),
+          body: proposalEmailBody(emailInput),
+        }}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">

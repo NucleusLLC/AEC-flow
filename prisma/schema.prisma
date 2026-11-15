@@ -2474,6 +2474,51 @@ model ServiceProposalVersion {
   @@map("service_proposal_versions")
 }
 
+/// A client acceptance link for an issued Service Proposal, and — once the client has
+/// answered through it — the record of that answer (Release C, 0.45.0).
+///
+/// ONLY THE HASH IS STORED. `tokenHash` is the sha256 (hex) of 32 random bytes in
+/// base64url; the token itself is shown to the practice once, at creation, and never
+/// written anywhere (lib/proposals/acceptance.ts). The public page /p/<token> finds the
+/// row by hash with a RAW query that returns only the id and companyId, then runs every
+/// other read inside that company — the /pay/<token> pattern (lib/data/proposal-acceptance.ts).
+///
+/// The link is bound to the proposal's revision and version label at creation: a revised,
+/// superseded or withdrawn proposal leaves the client-acceptable statuses and the link
+/// dies with it. `serviceProposalId` is a loose link (no FK), like api_tokens and
+/// appointments — proposals are only ever soft-deleted.
+model ServiceProposalAcceptanceLink {
+  companyId         String
+  id                String    @id @default(cuid())
+  serviceProposalId String
+  /// sha256 of the whole token, lowercase hex.
+  tokenHash         String    @unique
+  /// What the link offers for acceptance: the proposal's revision and version at creation.
+  revision          Int
+  versionLabel      String?
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime  @default(now())
+
+  /// "ACCEPTED" or "DECLINED" once the client has answered; null while open.
+  decision          String?
+  decidedAt         DateTime?
+  signerName        String?
+  signerTitle       String?
+  signerCompany     String?
+  /// The typed-name signature, exactly as typed.
+  signature         String?
+  declineReason     String?
+  decisionIp        String?
+  decisionUserAgent String?
+
+  @@index([serviceProposalId, createdAt])
+  @@index([companyId, createdAt])
+  @@map("service_proposal_acceptance_links")
+}
+
 /// Firm-configurable tax rates. NET-NEW infrastructure — the application previously had no
 /// tax model at all (docs/proposal-module/03-CRITICAL-REVIEW.md §C1). Release A uses
 /// single-rate exclusive tax; the model is shaped to grow.

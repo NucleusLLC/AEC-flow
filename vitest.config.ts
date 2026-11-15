@@ -37,6 +37,9 @@ export default defineConfig({
       // Emailing a service proposal: the message, and the guard that stops a
       // draft going to the client. Pure module, no Prisma, no React.
       "lib/proposals/proposal-email.test.ts",
+      // Client acceptance by secure link (0.45.0): token, expiry, which statuses, the
+      // form. Pure module, no Prisma, no React.
+      "lib/proposals/acceptance.test.ts",
       "lib/documents/**/*.test.ts",
       // Copying coded tasks between projects' estimates. Named file, same reason
       // as every entry above: the module is pure, and it decides which fields
@@ -157,6 +160,7 @@ export default defineConfig({
       // Who the minutes go to, and what the message says. Named file, same
       // reason as every entry above -- pure module, no Prisma, no React.
       "lib/meetings/recipients.test.ts",
+      "lib/meetings/paths.test.ts",
       "lib/building-permits/register.test.ts",
       "lib/building-permits/schema.test.ts",
       "lib/building-permits/enums.test.ts",
@@ -186,6 +190,9 @@ export default defineConfig({
       "lib/finance/calc.test.ts",
       // Query-string lists: a repeated key (several ticked boxes) is an array.
       "lib/search-params.test.ts",
+      // Service Proposal to project (Release D): blockers, discipline mapping,
+      // phase order, contract value before tax.
+      "lib/proposals/convert.test.ts",
       // The updater: when an open tab is told a newer release is deployed.
       "lib/update/check.test.ts",
       // Invoicing a proposal milestone: the tax is billed once, not twice.

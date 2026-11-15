@@ -284,3 +284,69 @@ was verified present in the live database, so no new migration was needed. As wi
 (Postgres NULLs are distinct); every live row is company-stamped, so this is noted, not "fixed".
 
 Duplicating is gated on `create`, so STAFF keeps it. Test count 267 → 294.
+
+---
+
+## 2026-11-14 — Release D: accepted proposal to project (0.44.0)
+
+`Create project` on an ACCEPTED / PARTIALLY_ACCEPTED proposal (components/service-proposals/convert-to-project.tsx,
+`convertServiceProposalAction`, `lib/data/service-proposal-convert.ts`, pure rules in `lib/proposals/convert.ts`).
+One transaction creates the Project (client record, proposal phases or the standard six, disciplines matched by
+keyword, contract value = grand total less tax, currency, converter as manager, typed or automatic number), links
+`projectId`/`projectName` on the proposal, sets CONVERTED + lockedAt and writes a status-history row. Already-linked
+proposals are only marked converted. Free-text client is refused. Gated on `convert` (MANAGER and up). No SQL.
+## 2026-11-14 — Release C: client acceptance by secure link (0.45.0, SQL 0039)
+
+**Not deployed.** Branch `feat/proposal-client-acceptance`. Needs
+`prisma/sql/0039_proposal_acceptance.sql` applied FIRST (the detail page reads the new table).
+
+**The flow.** On a proposal awaiting the client (`SENT` / `UNDER_CLIENT_REVIEW`), the detail page's
+**Client acceptance link** card creates a link. The URL is shown once — copy it, or **Email link**,
+which opens the existing Email dialog with the usual proposal email and the link added at the top.
+**Revoke link** kills it; creating a new link retires the previous unanswered one. The client opens
+`/p/<token>` with no account and sees the same client document the print route renders
+(`components/print/service-proposal-document.tsx`, moved out of the print page unchanged), in the
+proposal's language, then **Accept** (full name, optional position and company, a required "on behalf
+of the client" box, a typed-name signature that must match the name) or **Decline** (optional name
+and reason). Afterwards the link is read-only and shows who answered and when.
+
+**On an answer.** The proposal moves to `ACCEPTED` (locked) or `REJECTED` through `transitionStatus`
+— the same status machine, lock stamp and history row staff use. Claiming the link runs inside that
+transaction, and the status update is now guarded on the status just read, so a double submit, a
+revoke or a staff change in between leaves exactly one outcome. The link row records name, position,
+company, signature, decline reason, time, IP, user agent and the revision/version accepted; the detail
+page shows it. The owner (else the author) is emailed through the guarded sender — soft, never throws.
+
+**Security.** Token = 32 random bytes, base64url; only its sha256 is stored (the reset-token pattern).
+The public lookup is a raw query by hash returning only the link id and company; everything after runs
+inside that company (`companyOverride()` on the page, `runAsCompany()` in the action), so the new
+model is an ordinary `TENANT_MODELS` member — no exclusion added. Malformed, unknown, expired, revoked
+and superseded links all render one generic English "This link is no longer valid" page. A link dies
+when it expires (30 days, or the end of the validity date if sooner — no link can be made for a lapsed
+offer), is revoked, or the proposal leaves `SENT`/`UNDER_CLIENT_REVIEW` or changes revision/version.
+Accept/decline POSTs are limited to 10 per IP per 15 minutes (`auth_rate_limits`). `/p/*` is public in
+`proxy.ts`. The table has RLS on with no policies.
+
+**Side fixes in lib/server (found render-testing the public page).**
+- `getCurrentCompanyId` (tenant.ts) honours a company proved by a public link or the TV board
+  (`explicitCompanyId`) before falling back to the founder company — public pages previously
+  rendered the founder's letterhead and practice settings.
+- `currentCompanyId` memoises only the session lookup; the explicit company is read on every call.
+- The `runAsCompany` store lives on `globalThis`: Next bundles request-company.ts once per layer,
+  and in development one Prisma client is shared across them, so a server action's company was
+  invisible to the tenant extension.
+- The public page loads everything inside `runAsCompany` and hands it to the document
+  (`preloaded` / `DocumentContext` on the print shells): a per-request `companyOverride()` set by
+  the page was not reliably seen by queries in a dev RSC re-render.
+
+**Verified.** Render-tested in headless Chromium against a throwaway local Postgres (never the
+production DB): Dutch proposal shown in Dutch with the practice's own name, no internal notes;
+a mismatched signature refused with the Dutch message; accept → `ACCEPTED` + locked + history row
+(`byName` "<name> (client)") + link record with IP/UA; decline on an English proposal → `REJECTED`
+with the reason; unknown and malformed tokens give the one generic page; `/p/*` passes with
+`AUTH_ENFORCE=true`. The staff card on the detail page was type-checked but not rendered (it needs
+a signed-in session). The SQL was applied twice to a database pushed from HEAD's schema; `prisma
+migrate diff` to the new schema is empty afterwards.
+
+Pure rules + tests: `lib/proposals/acceptance.ts`, `lib/proposals/acceptance-email.ts`
+(`lib/proposals/acceptance.test.ts`, 33 tests); proxy tests +5.

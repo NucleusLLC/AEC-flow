@@ -11,7 +11,6 @@ import {
   FileSignature,
   UserPlus,
   CalendarDays,
-  NotebookPen,
   ReceiptText,
 } from "lucide-react";
 import { useT } from "@/components/i18n/language-provider";
@@ -23,7 +22,6 @@ const ACTIONS = [
   { label: "New order", href: "/orders/new", icon: ClipboardList },
   { label: "New invoice", href: "/finance/invoices/new", icon: ReceiptText },
   { label: "New project", href: "/projects/new", icon: FolderKanban },
-  { label: "New meeting minutes", href: "/meetings/new", icon: NotebookPen },
   { label: "New change order", href: "/construction-admin/change-orders/new", icon: FileSignature },
   { label: "Add team member", href: "/team/new", icon: UserPlus },
   { label: "Request leave", href: "/leave/new", icon: CalendarDays },

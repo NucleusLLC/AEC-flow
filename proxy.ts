@@ -105,6 +105,16 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // CLIENT ACCEPTANCE of a Service Proposal (0.45.0). Like /pay: the client has no
+  // account, and /p/<token> (the page and its accept / decline server action, which
+  // POSTs to the same path) must never meet a login page. The token — 32 random
+  // bytes, stored only as a hash — is the only key; the page shows the client
+  // document and nothing else (app/p/[token]/page.tsx). Exactly /p/<something>:
+  // "/p" itself and look-alikes such as "/projects" stay gated.
+  if (pathname.startsWith("/p/")) {
+    return NextResponse.next();
+  }
+
   // Stripe's webhook has no session; its signature is its authentication,
   // verified by the route itself (app/api/stripe/webhook/route.ts).
   // Stripe's billing webhook (AEC-flow subscriptions, decision D-5). Stripe has no

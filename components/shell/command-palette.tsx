@@ -28,7 +28,6 @@ const CREATE_ROUTES: Array<{ label: string; href: string }> = [
   { label: "New proposal", href: "/proposals/new" },
   { label: "New order", href: "/orders/new" },
   { label: "New project", href: "/projects/new" },
-  { label: "New meeting minutes", href: "/meetings/new" },
   { label: "Add team member", href: "/team/new" },
   { label: "Request leave", href: "/leave/new" },
 ];

@@ -44,6 +44,10 @@ export const RATE_LIMITS = {
   // Starting a card checkout from a public /pay link. Each attempt is one call to
   // Stripe on the practice's account; a person paying needs a handful at most.
   payCheckoutIp: { prefix: "pay-checkout:ip", limit: 20, windowSeconds: 15 * 60 },
+  // Accepting or declining a Service Proposal from a public /p link. A real
+  // client answers once, perhaps after a typo or two; this bounds scripted
+  // submissions (and token guessing, already hopeless at 256 bits).
+  proposalDecisionIp: { prefix: "proposal-decision:ip", limit: 10, windowSeconds: 15 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Longest subject kept in a key — a hostile "email" can be arbitrarily long. */
