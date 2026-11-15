@@ -95,7 +95,9 @@ export function mergeDrafts(
 
   const warnings = [...filenameDraft.warnings, ...contentDraft.warnings];
 
-  const stringKeys = ["sheetNumber", "title", "projectNumber", "projectName", "revision", "issueDate"] as const;
+  const stringKeys = [
+    "sheetNumber", "title", "projectNumber", "projectName", "revision", "issueDate", "architect", "engineer",
+  ] as const;
   for (const k of stringKeys) {
     const a = filenameDraft[k];
     const b = contentDraft[k];
@@ -117,6 +119,8 @@ export function mergeDrafts(
     projectName: mergeField(filenameDraft.projectName, contentDraft.projectName),
     revision: mergeField(filenameDraft.revision, contentDraft.revision),
     issueDate: mergeField(filenameDraft.issueDate, contentDraft.issueDate),
+    architect: mergeField(filenameDraft.architect, contentDraft.architect),
+    engineer: mergeField(filenameDraft.engineer, contentDraft.engineer),
     warnings: [...new Set(warnings)],
   };
 }

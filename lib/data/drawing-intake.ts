@@ -35,12 +35,17 @@ import { extractDrawingMetadata } from "@/lib/drawings";
 import type { DrawingMetadataDraft, Field } from "@/lib/drawings/types";
 import { detectPaperSize, undersizeWarning, type DetectedPaper } from "@/lib/drawings/paper";
 import { classifySheetType, type SheetType } from "@/lib/drawings/sheet-type";
+import { mergeAiRead } from "@/lib/drawings/ai-read";
+import { MAX_SET_PAGES, pageFilename, shouldSplitSet } from "@/lib/drawings/set-split";
 import { classifySheetTypeWithAi, shouldAskModel } from "@/lib/server/sheet-type-ai";
 import { PDF_PARSE_MAX_BYTES, readTitleBlock } from "@/lib/server/pdf-title-block";
+import { readTitleBlockWithAi } from "@/lib/server/titleblock-ai";
+import { countPages, extractPages, titleBlockViews } from "@/lib/server/pdf-pages";
 import type {
   ConfirmedDrawingMetadata,
   DrawingExtractionAudit,
   ExistingSheet,
+  SplitSetResult,
   UploadTicket,
 } from "@/lib/drawings/persistence";
 import type { Discipline, DrawingStatus, FileType } from "@/lib/data/drawings.types";
@@ -52,6 +57,7 @@ import {
   isStorageConfigured,
   maxUploadBytes,
   statObject,
+  uploadObject,
 } from "@/lib/server/storage";
 import type { Prisma } from "@prisma/client";
 
@@ -208,6 +214,10 @@ export type DrawingAnalysis = {
    *  here — it is what the register records once a human has corrected it. */
   sheetType: Field<SheetType> | null;
   sheetTypeSource: "rules" | "ai" | null;
+  /** True when a model read the sheet and its answer is merged into `draft`. */
+  aiRead: boolean;
+  /** Why the model did not read it, when it did not. */
+  aiNote: string | null;
   /** One line for the user, explaining where the values came from. */
   note: string;
 };
@@ -258,6 +268,8 @@ export async function analyseUploadedDrawing(input: {
       pageCount: null,
       sheetType,
       sheetTypeSource: sheetType ? "rules" : null,
+      aiRead: false,
+      aiNote: null,
       note,
     };
   };
@@ -294,10 +306,36 @@ export async function analyseUploadedDrawing(input: {
   if (undersize) draft.warnings.push(undersize);
   if (read.pageCount > 1) {
     draft.warnings.push(
-      `This PDF has ${read.pageCount} pages. It was read as one sheet — page 1 — so the rest ` +
-        `are stored but not indexed as their own sheets.`,
+      shouldSplitSet(read.pageCount)
+        ? `This PDF has ${read.pageCount} pages — a set. Each page becomes a sheet of its own below.`
+        : `This PDF has ${read.pageCount} pages, more than the ${MAX_SET_PAGES} a set is split into. ` +
+            `It was read as one sheet — page 1 — so the rest are stored but not indexed as their own sheets.`,
     );
   }
+
+  // A set is about to be split into pages, each of which comes back through
+  // here on its own. Reading the set's page 1 with a model now would pay for
+  // a reading that is thrown away a second later.
+  const isSetToSplit = shouldSplitSet(read.pageCount);
+
+  /**
+   * THE MODEL READS THE PAGE. In parallel with the rules' classification: the
+   * two do not depend on each other, and a page read takes ten to twenty
+   * seconds that the user is already waiting through. Fails open — a scan on
+   * a deployment with no key gets the filename proposal and says why.
+   */
+  const aiReading = isSetToSplit
+    ? Promise.resolve({ ok: false as const, reason: "A set is split first; each page is read on its own." })
+    : (async () => {
+        const views = await titleBlockViews(bytes);
+        if (!views) return { ok: false as const, reason: "The page could not be prepared for the AI reader." };
+        return readTitleBlockWithAi(views, {
+          filename,
+          titleBlockText: titleBlockText || null,
+          rulesSheetNumber: draft.sheetNumber?.value ?? null,
+          rulesTitle: draft.title?.value ?? null,
+        });
+      })();
 
   /** Rules first, a model only where the rules could not read the wording. */
   const classify = async (): Promise<{ f: Field<SheetType> | null; source: "rules" | "ai" | null }> => {
@@ -329,48 +367,139 @@ export async function analyseUploadedDrawing(input: {
     return { f: byAi, source: "ai" };
   };
 
-  const { f: sheetType, source: sheetTypeSource } = await classify();
+  const [{ f: rulesSheetType, source: rulesSheetTypeSource }, ai] = await Promise.all([classify(), aiReading]);
+
+  /**
+   * MERGE. The model's draft is folded into the rules' draft field by field
+   * (`mergeAiRead`): agreement raises confidence, disagreement keeps both and
+   * warns. The sheet type follows the same idea — the rules' answer stands when
+   * it is confident or when the model agrees; otherwise the model's is offered
+   * as the AI reading it is.
+   */
+  let finalDraft = draft;
+  let sheetType = rulesSheetType;
+  let sheetTypeSource = rulesSheetTypeSource;
+  let aiRead = false;
+  let aiNote: string | null = null;
+  if (ai.ok) {
+    aiRead = true;
+    finalDraft = mergeAiRead(draft, ai.draft);
+    if (ai.sheetType) {
+      if (!rulesSheetType) {
+        sheetType = ai.sheetType;
+        sheetTypeSource = "ai";
+      } else if (rulesSheetType.value !== ai.sheetType.value && rulesSheetType.confidence < 0.8) {
+        sheetType = ai.sheetType;
+        sheetTypeSource = "ai";
+        finalDraft.warnings.push(
+          `Drawing type: the pattern reader said ${rulesSheetType.value}, the AI read ${ai.sheetType.value} — confirm before saving.`,
+        );
+      }
+    }
+  } else {
+    aiNote = ai.reason;
+  }
+
+  const aiTail = aiRead ? " Read by AI from the page." : "";
 
   if (!read.hasTextLayer) {
-    // Not an error. `extractDrawingMetadata` has already put the OCR warning at
+    // Not an error. `extractDrawingMetadata` has already put the scan warning at
     // the top of `draft.warnings`; this line is the short version next to the file.
     return {
-      draft,
+      draft: finalDraft,
       usedTitleBlockText: false,
       hasTextLayer: false,
       paper,
       pageCount: read.pageCount,
       sheetType,
       sheetTypeSource,
-      note: `No text layer — this is a scan. ${paper.note} Everything else came from the filename.`,
+      aiRead,
+      aiNote,
+      note: aiRead
+        ? `No text layer — this is a scan, read by AI from the page. ${paper.note}`
+        : `No text layer — this is a scan. ${paper.note} Everything else came from the filename.`,
     };
   }
 
   if (!titleBlockText) {
     return {
-      draft,
+      draft: finalDraft,
       usedTitleBlockText: false,
       hasTextLayer: true,
       paper,
       pageCount: read.pageCount,
       sheetType,
       sheetTypeSource,
-      note: `The PDF has text, but nothing was found in the title-block region. ${paper.note}`,
+      aiRead,
+      aiNote,
+      note: `The PDF has text, but nothing was found in the title-block region.${aiTail} ${paper.note}`,
     };
   }
 
   return {
-    draft,
+    draft: finalDraft,
     usedTitleBlockText: true,
     hasTextLayer: true,
     paper,
     pageCount: read.pageCount,
     sheetType,
     sheetTypeSource,
+    aiRead,
+    aiNote,
     note: read.usedWholePage
-      ? `Read from the whole page — no title block was found in the usual corners. ${paper.note}`
-      : `Read from the title block on page 1. ${paper.note}`,
+      ? `Read from the whole page — no title block was found in the usual corners.${aiTail} ${paper.note}`
+      : `Read from the title block on page 1.${aiTail} ${paper.note}`,
   };
+}
+
+/**
+ * Copy pages `fromPage..toPage` of a staged set each into a staged object of
+ * their own. Each page then goes through `analyseUploadedDrawing` and
+ * `registerDrawing` exactly as a single-sheet upload does — the split is the
+ * only new step, and it happens BEFORE anything is proposed or saved.
+ *
+ * Batched because the set is downloaded again on every call (a function keeps
+ * nothing between invocations) and a forty-page set is forty copies; four
+ * pages a call keeps each call well inside its time budget.
+ *
+ * The set object is NOT deleted here: the browser discards it once every
+ * batch is out, so a failed batch can be retried against the same bytes.
+ */
+export async function splitDrawingSet(input: {
+  projectId: string;
+  storageKey: string;
+  filename: string;
+  fromPage: number;
+  toPage: number;
+}): Promise<SplitSetResult> {
+  requireStorage();
+  const project = await requireProject(input.projectId);
+
+  const storageKey = String(input.storageKey ?? "").trim();
+  if (!isKeyForProject(storageKey, project.id)) {
+    throw new DrawingIntakeError("That file reference is not valid for this project.");
+  }
+  const from = Math.max(1, Math.floor(Number(input.fromPage) || 1));
+  const to = Math.min(MAX_SET_PAGES, Math.max(from, Math.floor(Number(input.toPage) || from)));
+
+  const bytes = await downloadObject(storageKey, maxUploadBytes());
+  if (!bytes) throw new DrawingIntakeError("The set could not be read back from storage.");
+
+  const pageCount = (await countPages(bytes)) ?? 0;
+  if (!shouldSplitSet(pageCount)) {
+    throw new DrawingIntakeError(`A set is split only between 2 and ${MAX_SET_PAGES} pages.`);
+  }
+  const pages = await extractPages(bytes, from, to);
+  if (!pages) throw new DrawingIntakeError("The set could not be opened as a PDF.");
+
+  const out: SplitSetResult = { pageCount, pages: [] };
+  for (const page of pages) {
+    const filename = pageFilename(input.filename, page.pageNumber, pageCount);
+    const key = buildStorageKey(project.id, filename, randomUUID());
+    await uploadObject(key, page.bytes, "application/pdf");
+    out.pages.push({ pageNumber: page.pageNumber, storageKey: key, filename, sizeBytes: page.bytes.byteLength });
+  }
+  return out;
 }
 
 /**
@@ -422,6 +551,8 @@ export type RegisterDrawingArgs = {
     paperHeightMm?: number | null;
     pageCount?: number | null;
   } | null;
+  /** Which page of which uploaded set this sheet was, when it came out of a split. */
+  set?: { filename: string; page: number } | null;
 };
 
 export async function registerDrawing(args: RegisterDrawingArgs): Promise<{ id: string }> {
@@ -472,6 +603,10 @@ export async function registerDrawing(args: RegisterDrawingArgs): Promise<{ id: 
           paperWidthMm: args.sheet?.paperWidthMm ?? null,
           paperHeightMm: args.sheet?.paperHeightMm ?? null,
           pageCount: args.sheet?.pageCount ?? null,
+          architect: String(args.metadata?.architect ?? "").trim().slice(0, 200) || null,
+          engineer: String(args.metadata?.engineer ?? "").trim().slice(0, 200) || null,
+          setFilename: args.set?.filename ? String(args.set.filename).slice(0, 255) : null,
+          setPage: args.set?.page && Number.isInteger(args.set.page) && args.set.page > 0 ? args.set.page : null,
           extractionAudit: (args.audit ?? null) as unknown as Prisma.InputJsonValue,
           uploadedById: session?.user?.id ?? null,
           uploadedByName: session?.user?.name ?? session?.user?.email ?? null,

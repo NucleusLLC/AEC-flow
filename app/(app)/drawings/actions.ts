@@ -22,13 +22,15 @@ import {
   findSheets,
   getDrawingFileUrl,
   registerDrawing,
+  splitDrawingSet,
   type DrawingAnalysis,
   type RegisterDrawingArgs,
 } from "@/lib/data/drawing-intake";
-import type { ExistingSheet, UploadTicket } from "@/lib/drawings/persistence";
+import type { ExistingSheet, SplitSetResult, UploadTicket } from "@/lib/drawings/persistence";
 import type { FileType } from "@/lib/data/drawings.types";
 
 export type TicketResult = { ok: true; ticket: UploadTicket } | { ok: false; error: string };
+export type SplitResult = { ok: true; result: SplitSetResult } | { ok: false; error: string };
 export type RegisterResult = { ok: true; id: string } | { ok: false; error: string };
 export type SheetsResult = { ok: true; sheets: ExistingSheet[] } | { ok: false; error: string };
 export type FileUrlResult = { ok: true; url: string } | { ok: false; error: string };
@@ -83,6 +85,25 @@ export async function analyseDrawingAction(input: {
     return { ok: true, analysis: await analyseUploadedDrawing(input) };
   } catch (e) {
     return { ok: false, error: message(e, "Could not read the drawing.") };
+  }
+}
+
+/**
+ * Copy a batch of pages out of a staged set, each into a staged object of its
+ * own. Nothing is registered; every page still goes through analysis and the
+ * user's confirmation like any other upload.
+ */
+export async function splitDrawingSetAction(input: {
+  projectId: string;
+  storageKey: string;
+  filename: string;
+  fromPage: number;
+  toPage: number;
+}): Promise<SplitResult> {
+  try {
+    return { ok: true, result: await splitDrawingSet(input) };
+  } catch (e) {
+    return { ok: false, error: message(e, "Could not split the set.") };
   }
 }
 

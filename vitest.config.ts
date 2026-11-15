@@ -80,6 +80,11 @@ export default defineConfig({
       // The review register: citable references, ages against a supplied
       // moment, and who each open item sits with. Pure — rows in, register out.
       "lib/drawings/review-register.test.ts",
+      // AI title-block reading (answer → draft → merge with the rules) and
+      // set splitting (which pages, what names). Pure halves of the two
+      // server features in lib/server/titleblock-ai.ts and pdf-pages.ts.
+      "lib/drawings/ai-read.test.ts",
+      "lib/drawings/set-split.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
       // Section-aware backgrounds — the route→section resolver and the
