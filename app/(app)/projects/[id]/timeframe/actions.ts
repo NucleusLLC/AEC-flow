@@ -15,7 +15,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
-import { getPhaseScreen, PhaseSaveError, savePhases, type PhaseScreen } from "@/lib/data/project-phases";
+import { adjustPhase, getPhaseScreen, PhaseSaveError, savePhases, type PhaseScreen } from "@/lib/data/project-phases";
 import type { PhaseDraft } from "@/lib/projects/phases";
 
 export type PhaseActionResult = { ok: true; screen: PhaseScreen } | { ok: false; error: string };
@@ -34,6 +34,8 @@ async function explain(e: unknown): Promise<string> {
         hours: p.hours ?? 0,
         name: p.name ?? "",
       });
+    case "BAD_HOURS":
+      return fmt(t("Planned hours are a number from 0 to {max}."), { max: "99,999" });
     case "INVALID": {
       const why =
         p.issue === "NAME_REQUIRED"
@@ -46,6 +48,8 @@ async function explain(e: unknown): Promise<string> {
                 ? t("The end date is before the start date.")
                 : p.issue === "BAD_DATE"
                   ? t("That is not a valid date.")
+                  : p.issue === "BAD_HOURS"
+                    ? fmt(t("Planned hours are a number from 0 to {max}."), { max: "99,999" })
                   : p.issue === "TOO_MANY"
                     ? t("A project has 40 phases at most.")
                     : t("That phase cannot be saved.");
@@ -74,6 +78,29 @@ export async function phaseScreenAction(projectId: string): Promise<PhaseActionR
 export async function savePhasesAction(projectId: string, drafts: PhaseDraft[]): Promise<PhaseActionResult> {
   try {
     const screen = await savePhases(projectId, Array.isArray(drafts) ? drafts : []);
+    revalidate(projectId);
+    return { ok: true, screen };
+  } catch (e) {
+    return { ok: false, error: await explain(e) };
+  }
+}
+
+/**
+ * The quick − / + on one phase's percent or planned hours. The client sends the
+ * new value, not the step, so a double click cannot count twice against a
+ * stale screen. Returns the saved screen.
+ */
+export async function adjustPhaseAction(
+  projectId: string,
+  phaseId: string,
+  change: { progressPct?: number | string | null; plannedHours?: number | string | null },
+): Promise<PhaseActionResult> {
+  try {
+    const safe = change && typeof change === "object" ? change : {};
+    const screen = await adjustPhase(projectId, phaseId, {
+      ...("progressPct" in safe ? { progressPct: safe.progressPct } : {}),
+      ...("plannedHours" in safe ? { plannedHours: safe.plannedHours } : {}),
+    });
     revalidate(projectId);
     return { ok: true, screen };
   } catch (e) {

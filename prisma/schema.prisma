@@ -567,6 +567,7 @@ model ProjectPhase {
   startDate    DateTime?
   endDate      DateTime?
   progressPct  Int         @default(0)
+  plannedHours Decimal?    @db.Decimal(10, 2)
   sortOrder    Int         @default(0)
   notes        String?
   deliverables String?

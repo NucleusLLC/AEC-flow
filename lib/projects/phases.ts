@@ -99,6 +99,8 @@ export type PhaseDraft = {
   discipline?: PhaseDiscipline | null;
   status?: PhaseStatusValue;
   progressPct?: number | string | null;
+  /** Hours planned for the phase; blank = not planned. */
+  plannedHours?: number | string | null;
   startDate?: string | null;
   endDate?: string | null;
 };
@@ -110,6 +112,7 @@ export type CleanPhase = {
   discipline: PhaseDiscipline | null;
   status: PhaseStatusValue;
   progressPct: number;
+  plannedHours: number | null;
   startDate: string | null;
   endDate: string | null;
   sortOrder: number;
@@ -128,6 +131,7 @@ export type PhaseIssue = {
     | "END_BEFORE_START"
     | "BAD_STATUS"
     | "BAD_DISCIPLINE"
+    | "BAD_HOURS"
     | "TOO_MANY";
   index: number;
   name: string;
@@ -154,6 +158,53 @@ export function cleanPct(raw: number | string | null | undefined): number {
   const n = typeof raw === "string" ? Number(raw.replace(",", ".").trim()) : raw;
   if (n === null || n === undefined || !Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+/** The most hours a single phase can plan — a typo guard, not a business rule. */
+export const MAX_PLANNED_HOURS = 99999;
+/** What one press of the quick − / + buttons moves. */
+export const PCT_STEP = 5;
+export const HOURS_STEP = 1;
+
+/**
+ * Planned hours: blank is "not planned" (null); otherwise 0 to 99,999, to the
+ * hundredth. A comma is read as the decimal point. Anything else is "BAD" so
+ * the save can say so rather than quietly storing 0.
+ */
+export function cleanPlannedHours(raw: number | string | null | undefined): number | null | "BAD" {
+  if (raw === null || raw === undefined) return null;
+  const s = typeof raw === "string" ? raw.trim().replace(",", ".") : String(raw);
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > MAX_PLANNED_HOURS) return "BAD";
+  return Math.round(n * 100) / 100;
+}
+
+/** One quick press on percent: a step of 5, kept within 0–100. */
+export function stepPct(current: number, delta: number): number {
+  return cleanPct(current + delta);
+}
+
+/**
+ * One quick press on planned hours. From "not planned" a + starts at one step
+ * and a − stays at 0; never below 0, never above the ceiling.
+ */
+export function stepPlannedHours(current: number | null, delta: number): number {
+  const next = Math.round(((current ?? 0) + delta) * 100) / 100;
+  return Math.max(0, Math.min(MAX_PLANNED_HOURS, next));
+}
+
+/**
+ * The status a phase takes when its percent is set from the quick buttons, so
+ * the two never contradict each other: a completed phase taken below 100% is
+ * back in progress, and a phase not yet started that gets any percent has
+ * started. Reaching 100% does NOT complete it — completion is a decision, made
+ * in EDIT PHASES. Other statuses (on hold, cancelled) are left alone.
+ */
+export function statusForQuickPct(status: PhaseStatusValue, pct: number): PhaseStatusValue {
+  if (status === "COMPLETED" && pct < 100) return "IN_PROGRESS";
+  if (status === "NOT_STARTED" && pct > 0) return "IN_PROGRESS";
+  return status;
 }
 
 /**
@@ -190,6 +241,8 @@ export function validatePhases(drafts: PhaseDraft[]): PhaseValidation {
     const endDate = cleanDate(d.endDate);
     if (startDate === "BAD" || endDate === "BAD") return fail("BAD_DATE");
     if (startDate && endDate && endDate < startDate) return fail("END_BEFORE_START");
+    const plannedHours = cleanPlannedHours(d.plannedHours);
+    if (plannedHours === "BAD") return fail("BAD_HOURS");
 
     out.push({
       id: d.id ? String(d.id) : null,
@@ -197,6 +250,7 @@ export function validatePhases(drafts: PhaseDraft[]): PhaseValidation {
       discipline,
       status,
       progressPct: status === "COMPLETED" ? 100 : cleanPct(d.progressPct),
+      plannedHours,
       startDate,
       endDate,
       sortOrder: i,
