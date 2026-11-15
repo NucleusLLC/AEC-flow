@@ -112,6 +112,12 @@ export async function getMeetingsForProject(projectId: string): Promise<MeetingL
   return rows.map(toListItem);
 }
 
+/** The project a set of minutes is filed under, or null when there is no such minutes. */
+export async function getMeetingProjectId(id: string): Promise<string | null> {
+  const row = await prisma.meetingMinute.findFirst({ where: { id }, select: { projectId: true } });
+  return row?.projectId ?? null;
+}
+
 /** Open action items assigned to a user, with meeting context — for "my tasks". */
 export async function getActionItemsForUser(userId: string): Promise<UserActionItem[]> {
   const rows = await prisma.actionItem.findMany({

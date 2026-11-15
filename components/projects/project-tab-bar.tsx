@@ -13,6 +13,7 @@ import {
   Calculator,
   HardHat,
   Wallet,
+  NotebookPen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/components/i18n/language-provider";
@@ -27,6 +28,7 @@ export function ProjectTabBar({ projectId }: { projectId: string }) {
     { label: "Overview", href: `${base}/overview`, icon: ClipboardCheck },
     { label: "Timeframe & Phases", href: `${base}/timeframe`, icon: CalendarClock },
     { label: "Punch List", href: `${base}/punch-list`, icon: ListChecks },
+    { label: "Meeting Minutes", href: `${base}/meetings`, icon: NotebookPen },
     { label: "Scheduling", href: `${base}/scheduling`, icon: CalendarCheck },
     { label: "Documents", href: `${base}/documents`, icon: FolderOpen },
     { label: "Drawings", href: `${base}/drawings`, icon: FileStack },

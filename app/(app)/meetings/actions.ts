@@ -5,6 +5,7 @@ import { createMeeting, updateMeeting } from "@/lib/data/meetings";
 import { logActivity, getActivityActorId } from "@/lib/data/activity";
 import { getServerT } from "@/lib/i18n/server";
 import type { MeetingWriteInput } from "@/lib/data/meetings.types";
+import { meetingHref, projectMeetingsHref } from "@/lib/meetings/paths";
 
 export type SaveMeetingResult =
   | { ok: true; id: string }
@@ -21,8 +22,11 @@ export async function saveMeeting(
 ): Promise<SaveMeetingResult> {
   try {
     const id = mode === "new" ? await createMeeting(input) : await updateMeeting(input);
-    revalidatePath("/meetings");
-    revalidatePath(`/meetings/${id}`);
+    if (input.projectId) {
+      revalidatePath(`/projects/${input.projectId}`);
+      revalidatePath(projectMeetingsHref(input.projectId));
+      revalidatePath(meetingHref(input.projectId, id));
+    }
     const userId = await getActivityActorId();
     if (userId) {
       await logActivity({

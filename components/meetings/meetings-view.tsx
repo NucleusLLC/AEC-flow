@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useDateLocale, useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
+import { meetingHref } from "@/lib/meetings/paths";
 
 const TYPE_FILTERS: Array<{ key: "ALL" | MeetingType; label: string }> = [
   { key: "ALL", label: "All" },
@@ -35,7 +36,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
     const filtered = meetings.filter((m) => {
       if (type !== "ALL" && m.type !== type) return false;
       if (!q) return true;
-      const haystack = [m.title, m.projectName, m.author]
+      const haystack = [m.title, m.location, m.author]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -87,12 +88,11 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
       {/* Table */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-2/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted">
                 <th className="px-5 py-2.5">{t("Date")}</th>
                 <th className="px-3 py-2.5">{t("Title")}</th>
-                <th className="px-3 py-2.5">{t("Project")}</th>
                 <th className="px-3 py-2.5">{t("Type")}</th>
                 <th className="px-3 py-2.5">{t("Author")}</th>
                 <th className="px-5 py-2.5 text-right">{t("Actions")}</th>
@@ -108,7 +108,7 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
                     {formatDate(m.meetingDate, locale)}
                   </td>
                   <td className="px-3 py-2.5">
-                    <Link href={`/meetings/${m.id}`} className="block">
+                    <Link href={meetingHref(m.projectId, m.id)} className="block">
                       <span className="block max-w-xs truncate font-semibold text-fg group-hover:text-brand">
                         {m.title}
                       </span>
@@ -117,7 +117,6 @@ export function MeetingsView({ meetings }: { meetings: MeetingListItem[] }) {
                       ) : null}
                     </Link>
                   </td>
-                  <td className="px-3 py-2.5 text-muted">{m.projectName}</td>
                   <td className="px-3 py-2.5">
                     <MeetingTypeBadge type={m.type} />
                   </td>
