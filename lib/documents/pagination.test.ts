@@ -6,6 +6,7 @@ import {
   selectHeadingsToPush,
   PAGE_START_EPSILON_PX,
   type PaginationBlock,
+  repeatedHeaderPx,
   type HeadingMetric,
 } from "@/lib/documents/pagination";
 import { UNUSED_AREA_WARN } from "@/lib/documents/tokens";
@@ -597,5 +598,43 @@ describe("regression — SP-2026-001", () => {
       const used = tops[i] - tops[i - 1];
       expect(PAGE_H - used).toBeLessThanOrEqual(PAGE_H * UNUSED_AREA_WARN);
     }
+  });
+});
+
+describe("repeated table headers on continuation pages", () => {
+  // A table whose body runs from 100 to 2600 with a 40px header: print repeats
+  // the header on top of every page the body continues onto.
+  const table = { bodyTop: 100, bodyBottom: 2600, headerHeight: 40 };
+
+  it("charges a page that starts inside a table body the header height", () => {
+    expect(repeatedHeaderPx(1000, [table])).toBe(40);
+  });
+
+  it("charges nothing at the table's first row or outside the table", () => {
+    expect(repeatedHeaderPx(100, [table])).toBe(0);
+    expect(repeatedHeaderPx(0, [table])).toBe(0);
+    expect(repeatedHeaderPx(2600, [table])).toBe(0);
+    expect(repeatedHeaderPx(3000, [table])).toBe(0);
+  });
+
+  it("shortens every continuation page by one header, so later breaks do not drift", () => {
+    const cuts = computeCuts({ contentHeight: 2700, pageHeight: PAGE, blocks: [], repeatingHeaders: [table] });
+    expect(cuts.map((c) => c.at)).toEqual([1000, 1960]);
+  });
+
+  it("is unchanged when no table repeats a header", () => {
+    const cuts = computeCuts({ contentHeight: 2700, pageHeight: PAGE, blocks: [] });
+    expect(cuts.map((c) => c.at)).toEqual([1000, 2000]);
+  });
+
+  it("carries through resolveHeadingBreaks", () => {
+    const { cuts } = resolveHeadingBreaks({
+      contentHeight: 2700,
+      pageHeight: PAGE,
+      blocks: [],
+      headings: [],
+      repeatingHeaders: [table],
+    });
+    expect(cuts.map((c) => c.at)).toEqual([1000, 1960]);
   });
 });

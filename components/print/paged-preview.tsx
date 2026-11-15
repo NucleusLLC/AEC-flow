@@ -9,6 +9,7 @@ import {
   resolveHeadingBreaks,
   PAGE_START_EPSILON_PX,
   type PageCut,
+  type RepeatingHeader,
 } from "@/lib/documents/pagination";
 import { gutterZones, SHEET_GAP_MM } from "@/lib/documents/preview-geometry";
 import { gutterMode, pageEndAt, spanOf, type GutterMode } from "@/lib/documents/gutter";
@@ -564,7 +565,28 @@ export function PagedPreview({
       }
 
       const atoms = collectAtoms(el, hostTop);
-      const contentHeight = el.getBoundingClientRect().height;
+      // The document's own extent, NOT the host's: the host also holds this
+      // component's end-of-document label, and counting that as content invented
+      // a phantom page whenever a document ended within a label's height of a
+      // page foot.
+      const contentHeight = Array.from(el.children)
+        .filter((c) => (c as HTMLElement).dataset.pagedPreviewChrome !== "true")
+        .reduce((max, c) => Math.max(max, c.getBoundingClientRect().bottom + window.scrollY - hostTop), 0);
+      // Tables whose header the print engine repeats on continuation pages
+      // (thead is a table-header-group in print).
+      const repeatingHeaders: RepeatingHeader[] = Array.from(el.querySelectorAll<HTMLTableElement>("table"))
+        .map((table) => {
+          const head = table.tHead;
+          const body = table.tBodies[0];
+          if (!head || !body) return null;
+          const b = body.getBoundingClientRect();
+          return {
+            bodyTop: b.top + window.scrollY - hostTop,
+            bodyBottom: b.bottom + window.scrollY - hostTop,
+            headerHeight: head.getBoundingClientRect().height,
+          };
+        })
+        .filter((x): x is RepeatingHeader => x !== null);
 
       // MINIMUM SPACE AT THE FOOT. Binding only helps a section short enough to
       // move whole; a long one still opens with its heading wherever the page
@@ -598,6 +620,7 @@ export function PagedPreview({
         blocks: atoms,
         headings: metrics,
         pinned,
+        repeatingHeaders,
       });
 
       // A block this pass made unbreakable, which the layout then decided to run
