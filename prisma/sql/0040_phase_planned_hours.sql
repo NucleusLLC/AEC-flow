@@ -1,0 +1,22 @@
+-- 0040_phase_planned_hours.sql
+--
+-- Planned hours on a project phase, set from the quick − / + buttons (or typed)
+-- on Projects › <project> › Timeframe & Phases, and in EDIT PHASES. One
+-- nullable column on "ProjectPhase"; NULL means "not planned". Booked hours are
+-- unchanged: they still come from the timesheet.
+--
+-- APPLY BEFORE MERGING the PR that adds it — every phase read selects the new
+-- column, so deploying the code first breaks the Timeframe tab.
+--
+-- Numbered 0040, after 0039_proposal_acceptance.sql. Independent of it.
+--
+-- Purely additive: nothing that already exists is changed or dropped, so it is
+-- safe to run against a live database and before the code reaches production.
+-- Safe to run twice (IF NOT EXISTS).
+--
+-- Generated with:
+--   npx prisma migrate diff --from-schema <HEAD>.prisma --to-schema prisma/schema.prisma --script
+-- and reviewed by hand.
+
+-- AlterTable
+ALTER TABLE "ProjectPhase" ADD COLUMN IF NOT EXISTS "plannedHours" DECIMAL(10,2);

@@ -309,8 +309,15 @@
  *   Old /meetings/<id> links (sent emails, activity log, action items) forward to the minutes under
  *   their project; /meetings itself goes to the project list. No data change: minutes already
  *   carried their project.
+ * 0.47.0 (15 NOV 2026): feat — QUICK ADJUST ON PROJECT PHASES. On Projects › <project> › Timeframe &
+ *   Phases every phase row has − / + for percent complete (5% a press) and for a new PLANNED HOURS
+ *   figure (1 h a press); click the figure to type it. Each change saves that phase at once and
+ *   recomputes project progress. A percent change keeps the status honest (completed below 100% goes
+ *   back in progress; not started with any percent is in progress). Booked hours stay the
+ *   timesheet total, shown red when over plan. Planned hours are also in EDIT PHASES.
+ *   Needs prisma/sql/0040_phase_planned_hours.sql applied FIRST.
  */
-export const APP_VERSION = "0.46.0";
+export const APP_VERSION = "0.47.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

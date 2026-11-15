@@ -15,11 +15,19 @@
  *
  * Project progress is derived by the server (lib/projects/phases.ts,
  * equal-weighted average) and shown here as it comes back.
+ *
+ * QUICK ADJUST: outside EDIT PHASES, each row's percent and planned hours have
+ * a − / + pair (5% and 1 h a press) and the figure itself can be clicked and
+ * typed. Each change saves that one phase at once (adjustPhaseAction) and the
+ * table redraws from what the server returns. The client sends the new value,
+ * never the step, and every button is disabled while a save is in flight, so a
+ * fast double click cannot count twice. Booked hours stay read-only: they are
+ * the timesheet's.
  */
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, RefreshCw, Save, X, AlertTriangle } from "lucide-react";
+import { ArrowDown, ArrowUp, Loader2, Minus, Pencil, Plus, RefreshCw, Save, X, AlertTriangle } from "lucide-react";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 import { formatCurrency } from "@/lib/format";
@@ -32,12 +40,16 @@ import {
   PHASE_STATUSES,
   PHASE_STATUS_OPTION,
   standardPhaseDrafts,
+  HOURS_STEP,
+  PCT_STEP,
+  stepPct,
+  stepPlannedHours,
   type PhaseDiscipline,
   type PhaseDraft,
   type PhaseStatusValue,
 } from "@/lib/projects/phases";
 import type { PhaseScreen } from "@/lib/data/project-phases";
-import { phaseScreenAction, savePhasesAction } from "@/app/(app)/projects/[id]/timeframe/actions";
+import { adjustPhaseAction, phaseScreenAction, savePhasesAction } from "@/app/(app)/projects/[id]/timeframe/actions";
 
 const OLIVE_BTN =
   "inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#5c6633] bg-[#4b5320] px-3 text-sm font-semibold uppercase tracking-wide text-[#e4e8dc] shadow-sm hover:bg-[#3f4a1c] disabled:cursor-not-allowed disabled:opacity-50";
@@ -54,6 +66,7 @@ type EditRow = {
   discipline: PhaseDiscipline | "";
   status: PhaseStatusValue;
   progressPct: string;
+  plannedHours: string;
   startDate: string;
   endDate: string;
 };
@@ -69,6 +82,7 @@ function toEdit(screen: PhaseScreen): EditRow[] {
     discipline: p.discipline ?? "",
     status: p.status,
     progressPct: String(p.progressPct),
+    plannedHours: p.plannedHours === null ? "" : String(p.plannedHours),
     startDate: p.startDate ?? "",
     endDate: p.endDate ?? "",
   }));
@@ -81,6 +95,7 @@ function toDrafts(rows: EditRow[]): PhaseDraft[] {
     discipline: r.discipline || null,
     status: r.status,
     progressPct: r.progressPct,
+    plannedHours: r.plannedHours,
     startDate: r.startDate || null,
     endDate: r.endDate || null,
   }));
@@ -94,6 +109,107 @@ const STATUS_TONE: Record<PhaseStatusValue, string> = {
   CANCELLED: "border-slate-300 bg-slate-50 text-slate-500",
 };
 
+const STEP_BTN =
+  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-[#5c6633]/50 bg-[#e4e8dc] text-[#4b5320] hover:bg-[#c5d18a] disabled:cursor-not-allowed disabled:opacity-40";
+
+/**
+ * − value +, where the value is also a button that turns into a box to type in.
+ * Enter or leaving the box saves; Escape puts it back. `onCommit` gets the new
+ * value (a number from the buttons, the typed text from the box).
+ */
+function QuickStepper({
+  display,
+  draftValue,
+  onMinus,
+  onPlus,
+  onCommit,
+  disabled,
+  minusDisabled,
+  plusDisabled,
+  label,
+  suffix,
+  testId,
+}: {
+  display: string;
+  draftValue: string;
+  onMinus: () => void;
+  onPlus: () => void;
+  onCommit: (typed: string) => void;
+  disabled: boolean;
+  minusDisabled?: boolean;
+  plusDisabled?: boolean;
+  label: string;
+  suffix?: string;
+  testId: string;
+}) {
+  const t = useT();
+  const [typing, setTyping] = useState<string | null>(null);
+  const cancelled = useRef(false);
+  return (
+    <div className="inline-flex items-center gap-1" data-testid={testId}>
+      <button
+        type="button"
+        onClick={onMinus}
+        disabled={disabled || minusDisabled}
+        aria-label={fmt(t("Less {what}"), { what: label })}
+        className={STEP_BTN}
+      >
+        <Minus className="h-3 w-3" />
+      </button>
+      {typing === null ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            cancelled.current = false;
+            setTyping(draftValue);
+          }}
+          aria-label={fmt(t("Type {what}"), { what: label })}
+          title={t("Click to type a value")}
+          className="min-w-[3.25rem] rounded px-1 py-0.5 text-right font-mono text-xs tabular-nums text-fg underline decoration-dotted decoration-faint underline-offset-2 hover:bg-surface-2 disabled:no-underline"
+        >
+          {display}
+          {suffix}
+        </button>
+      ) : (
+        <input
+          autoFocus
+          inputMode="decimal"
+          value={typing}
+          onChange={(e) => setTyping(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.target as HTMLInputElement).blur();
+            } else if (e.key === "Escape") {
+              cancelled.current = true;
+              setTyping(null);
+            }
+          }}
+          onBlur={() => {
+            const v = typing;
+            setTyping(null);
+            if (!cancelled.current && v !== draftValue) onCommit(v);
+          }}
+          aria-label={label}
+          className="h-6 w-16 rounded border border-[#5c6633] bg-surface px-1 text-right font-mono text-xs tabular-nums text-fg outline-none focus:ring-2 focus:ring-[#8a9a5b]/30"
+        />
+      )}
+      <button
+        type="button"
+        onClick={onPlus}
+        disabled={disabled || plusDisabled}
+        aria-label={fmt(t("More {what}"), { what: label })}
+        className={STEP_BTN}
+      >
+        <Plus className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+const fmtHours = (h: number) => (Number.isInteger(h) ? String(h) : h.toFixed(2));
+
 export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
   const t = useT();
   const router = useRouter();
@@ -102,6 +218,7 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
   const [custom, setCustom] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [busy, setBusy] = useState<string | null>(null);
 
   const editing = rows !== null;
   const hoursByPhase = useMemo(() => new Map(screen.hours.rows.map((r) => [r.phaseId ?? "", r])), [screen]);
@@ -132,6 +249,22 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
     });
   }
 
+  /** Save one phase's percent or planned hours straight away. */
+  function adjust(phaseId: string, change: { progressPct?: number | string; plannedHours?: number | string | null }) {
+    setError(null);
+    setBusy(phaseId);
+    startTransition(async () => {
+      const res = await adjustPhaseAction(screen.projectId, phaseId, change);
+      setBusy(null);
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setScreen(res.screen);
+      router.refresh();
+    });
+  }
+
   function patch(key: string, change: Partial<EditRow>) {
     setRows((rs) =>
       (rs ?? []).map((r) => {
@@ -149,7 +282,7 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
     if (!n) return;
     setRows((rs) => [
       ...(rs ?? []),
-      { key: newKey(), id: null, name: n, discipline: "", status: "NOT_STARTED", progressPct: "0", startDate: "", endDate: "" },
+      { key: newKey(), id: null, name: n, discipline: "", status: "NOT_STARTED", progressPct: "0", plannedHours: "", startDate: "", endDate: "" },
     ]);
   }
 
@@ -247,7 +380,7 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
                 {t("LOAD STANDARD PHASES adds Concept Design through Handover in one click.")}
               </p>
             ) : (
-              <table className="w-full min-w-[760px] text-sm" data-testid="phase-table">
+              <table className="w-full min-w-[900px] text-sm" data-testid="phase-table">
                 <thead>
                   <tr>
                     <th className={TH}>#</th>
@@ -257,7 +390,8 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
                     <th className={TH}>{t("END")}</th>
                     <th className={TH}>{t("STATUS")}</th>
                     <th className={`${TH} text-right`}>%</th>
-                    <th className={`${TH} text-right`}>{t("HOURS")}</th>
+                    <th className={`${TH} text-right`}>{t("PLANNED H")}</th>
+                    <th className={`${TH} text-right`}>{t("BOOKED H")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -279,14 +413,48 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
                         </td>
                         <td className="px-2 py-2 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <div className="h-1.5 w-16 overflow-hidden rounded bg-surface-2">
+                            <div className="h-1.5 w-12 overflow-hidden rounded bg-surface-2">
                               <div className="h-full bg-[#5c6633]" style={{ width: `${p.progressPct}%` }} />
                             </div>
-                            <span className="w-9 font-mono text-xs tabular-nums text-fg">{p.progressPct}%</span>
+                            <QuickStepper
+                              testId="quick-pct"
+                              label={fmt(t("percent complete of {name}"), { name: p.name })}
+                              display={String(p.progressPct)}
+                              suffix="%"
+                              draftValue={String(p.progressPct)}
+                              disabled={pending}
+                              minusDisabled={p.progressPct <= 0}
+                              plusDisabled={p.progressPct >= 100}
+                              onMinus={() => adjust(p.id, { progressPct: stepPct(p.progressPct, -PCT_STEP) })}
+                              onPlus={() => adjust(p.id, { progressPct: stepPct(p.progressPct, PCT_STEP) })}
+                              onCommit={(v) => adjust(p.id, { progressPct: v })}
+                            />
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-right font-mono text-xs tabular-nums text-fg">
-                          {h ? h.hours.toFixed(2) : "—"}
+                        <td className="px-2 py-2 text-right">
+                          <QuickStepper
+                            testId="quick-hours"
+                            label={fmt(t("planned hours of {name}"), { name: p.name })}
+                            display={p.plannedHours === null ? "—" : fmtHours(p.plannedHours)}
+                            draftValue={p.plannedHours === null ? "" : String(p.plannedHours)}
+                            disabled={pending}
+                            minusDisabled={!p.plannedHours}
+                            onMinus={() => adjust(p.id, { plannedHours: stepPlannedHours(p.plannedHours, -HOURS_STEP) })}
+                            onPlus={() => adjust(p.id, { plannedHours: stepPlannedHours(p.plannedHours, HOURS_STEP) })}
+                            onCommit={(v) => adjust(p.id, { plannedHours: v })}
+                          />
+                        </td>
+                        <td
+                          className={`px-2 py-2 text-right font-mono text-xs tabular-nums ${
+                            h && p.plannedHours !== null && h.hours > p.plannedHours ? "font-semibold text-rose-600" : "text-fg"
+                          }`}
+                          title={
+                            h && p.plannedHours !== null && h.hours > p.plannedHours
+                              ? fmt(t("{hours} h over plan"), { hours: (h.hours - p.plannedHours).toFixed(2) })
+                              : undefined
+                          }
+                        >
+                          {busy === p.id ? <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-faint" /> : h ? h.hours.toFixed(2) : "—"}
                         </td>
                       </tr>
                     );
@@ -296,7 +464,7 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
             )
           ) : (
             <div className="space-y-3">
-              <table className="w-full min-w-[960px] text-sm" data-testid="phase-edit-table">
+              <table className="w-full min-w-[1060px] text-sm" data-testid="phase-edit-table">
                 <thead>
                   <tr>
                     <th className={TH} />
@@ -306,6 +474,7 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
                     <th className={TH}>{t("END")}</th>
                     <th className={TH}>{t("STATUS")}</th>
                     <th className={TH}>%</th>
+                    <th className={TH}>{t("PLANNED H")}</th>
                     <th className={TH} />
                   </tr>
                 </thead>
@@ -398,6 +567,19 @@ export function PhaseEditor({ initial }: { initial: PhaseScreen }) {
                           value={r.progressPct}
                           onChange={(e) => patch(r.key, { progressPct: e.target.value })}
                           aria-label={t("Percent complete")}
+                          className={`${FIELD} text-right font-mono`}
+                        />
+                      </td>
+                      <td className="w-24 px-1 py-1.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={99999}
+                          step={1}
+                          value={r.plannedHours}
+                          onChange={(e) => patch(r.key, { plannedHours: e.target.value })}
+                          aria-label={t("Planned hours")}
+                          placeholder="—"
                           className={`${FIELD} text-right font-mono`}
                         />
                       </td>

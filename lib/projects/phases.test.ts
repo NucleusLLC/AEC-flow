@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   bookedHoursByPhase,
+  cleanPlannedHours,
+  HOURS_STEP,
+  PCT_STEP,
+  statusForQuickPct,
+  stepPct,
+  stepPlannedHours,
   deriveProjectProgress,
   missingPresets,
   movePhase,
@@ -200,5 +206,47 @@ describe("phaseHours", () => {
 
   it("totals hours booked per phase for the delete guard", () => {
     expect(Object.fromEntries(bookedHoursByPhase(entries))).toEqual({ sd: 6.75, cd: 4, gone: 0.5 });
+  });
+});
+
+describe("quick adjust", () => {
+  it("steps percent by 5 within 0–100", () => {
+    expect(stepPct(40, PCT_STEP)).toBe(45);
+    expect(stepPct(98, PCT_STEP)).toBe(100);
+    expect(stepPct(3, -PCT_STEP)).toBe(0);
+  });
+
+  it("steps planned hours from 'not planned', never below 0", () => {
+    expect(stepPlannedHours(null, HOURS_STEP)).toBe(1);
+    expect(stepPlannedHours(null, -HOURS_STEP)).toBe(0);
+    expect(stepPlannedHours(12.5, HOURS_STEP)).toBe(13.5);
+    expect(stepPlannedHours(0.4, -HOURS_STEP)).toBe(0);
+  });
+
+  it("reads typed planned hours, blank as not planned", () => {
+    expect(cleanPlannedHours("")).toBeNull();
+    expect(cleanPlannedHours("  ")).toBeNull();
+    expect(cleanPlannedHours(null)).toBeNull();
+    expect(cleanPlannedHours("12,345")).toBe(12.35);
+    expect(cleanPlannedHours(40)).toBe(40);
+    expect(cleanPlannedHours("-1")).toBe("BAD");
+    expect(cleanPlannedHours("abc")).toBe("BAD");
+    expect(cleanPlannedHours("100000")).toBe("BAD");
+  });
+
+  it("keeps the status honest when the percent moves", () => {
+    expect(statusForQuickPct("COMPLETED", 95)).toBe("IN_PROGRESS");
+    expect(statusForQuickPct("COMPLETED", 100)).toBe("COMPLETED");
+    expect(statusForQuickPct("NOT_STARTED", 5)).toBe("IN_PROGRESS");
+    expect(statusForQuickPct("NOT_STARTED", 0)).toBe("NOT_STARTED");
+    expect(statusForQuickPct("IN_PROGRESS", 100)).toBe("IN_PROGRESS");
+    expect(statusForQuickPct("ON_HOLD", 50)).toBe("ON_HOLD");
+  });
+
+  it("carries planned hours through the full save and refuses a bad one", () => {
+    const r = validatePhases([{ name: "A", plannedHours: "24" }, { name: "B", plannedHours: "" }]);
+    expect(r.ok && r.value.map((p) => p.plannedHours)).toEqual([24, null]);
+    const bad = validatePhases([{ name: "A" }, { name: "B", plannedHours: "lots" }]);
+    expect(bad).toEqual({ ok: false, issue: { code: "BAD_HOURS", index: 1, name: "B" } });
   });
 });

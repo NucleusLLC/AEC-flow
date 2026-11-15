@@ -35,6 +35,8 @@ import { requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import {
   bookedHoursByPhase,
+  cleanPct,
+  cleanPlannedHours,
   deriveProjectProgress,
   phaseChanges,
   phaseHours,
@@ -44,6 +46,7 @@ import {
   type PhaseHoursReport,
   type PhaseIssue,
   type PhaseStatusValue,
+  statusForQuickPct,
 } from "@/lib/projects/phases";
 
 export type PhaseRow = {
@@ -52,6 +55,7 @@ export type PhaseRow = {
   discipline: PhaseDiscipline | null;
   status: PhaseStatusValue;
   progressPct: number;
+  plannedHours: number | null;
   startDate: string | null;
   endDate: string | null;
   sortOrder: number;
@@ -70,7 +74,7 @@ export type PhaseScreen = {
 /** Why a save was refused, as a code the action translates. */
 export class PhaseSaveError extends Error {
   constructor(
-    readonly code: "NOT_FOUND" | "FOREIGN_PHASE" | "HOURS_BOOKED" | "INVALID",
+    readonly code: "NOT_FOUND" | "FOREIGN_PHASE" | "HOURS_BOOKED" | "INVALID" | "BAD_HOURS",
     readonly params: { name?: string; hours?: number; row?: number; issue?: PhaseIssue["code"] } = {},
   ) {
     super(code);
@@ -107,6 +111,7 @@ async function readPhases(projectId: string): Promise<PhaseRow[]> {
       discipline: true,
       status: true,
       progressPct: true,
+      plannedHours: true,
       startDate: true,
       endDate: true,
       sortOrder: true,
@@ -118,6 +123,7 @@ async function readPhases(projectId: string): Promise<PhaseRow[]> {
     discipline: (r.discipline as PhaseDiscipline | null) ?? null,
     status: r.status as PhaseStatusValue,
     progressPct: r.progressPct,
+    plannedHours: num(r.plannedHours as DecimalLike),
     startDate: ymd(r.startDate),
     endDate: ymd(r.endDate),
     sortOrder: r.sortOrder,
@@ -233,6 +239,7 @@ export async function savePhases(projectId: string, drafts: PhaseDraft[]): Promi
         discipline: p.discipline,
         status: p.status,
         progressPct: p.progressPct,
+        plannedHours: p.plannedHours,
         startDate: toDate(p.startDate),
         endDate: toDate(p.endDate),
         sortOrder: p.sortOrder,
@@ -247,6 +254,57 @@ export async function savePhases(projectId: string, drafts: PhaseDraft[]): Promi
     }
     if (progress !== null) {
       await tx.project.update({ where: { id: project.id }, data: { progressPct: progress } });
+    }
+  });
+
+  return getPhaseScreen(project.id);
+}
+
+/**
+ * The quick − / + (or typed) change to ONE phase's percent or planned hours,
+ * saved at once from the phase table without opening EDIT PHASES. Same
+ * tenancy rule as savePhases: the project is read through the tenant-scoped
+ * client and the phase must belong to it. A percent change keeps the status
+ * honest (statusForQuickPct) and the project's progress is recomputed in the
+ * same transaction. Returns the fresh screen.
+ */
+export async function adjustPhase(
+  projectId: string,
+  phaseId: string,
+  change: { progressPct?: number | string | null; plannedHours?: number | string | null },
+): Promise<PhaseScreen> {
+  await requireActor();
+  const project = await loadProject(projectId);
+  const phase = await prisma.projectPhase.findFirst({
+    where: { id: String(phaseId), projectId: project.id },
+    select: { id: true, status: true },
+  });
+  if (!phase) throw new PhaseSaveError("FOREIGN_PHASE");
+
+  const data: { progressPct?: number; status?: PhaseStatusValue; plannedHours?: number | null } = {};
+  if (change.progressPct !== undefined) {
+    const pct = cleanPct(change.progressPct);
+    data.progressPct = pct;
+    data.status = statusForQuickPct(phase.status as PhaseStatusValue, pct);
+  }
+  if (change.plannedHours !== undefined) {
+    const h = cleanPlannedHours(change.plannedHours);
+    if (h === "BAD") throw new PhaseSaveError("BAD_HOURS");
+    data.plannedHours = h;
+  }
+  if (Object.keys(data).length === 0) return getPhaseScreen(project.id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.projectPhase.updateMany({ where: { id: phase.id, projectId: project.id }, data });
+    if (data.progressPct !== undefined) {
+      const all = await tx.projectPhase.findMany({
+        where: { projectId: project.id },
+        select: { status: true, progressPct: true },
+      });
+      const progress = deriveProjectProgress(all);
+      if (progress !== null) {
+        await tx.project.update({ where: { id: project.id }, data: { progressPct: progress } });
+      }
     }
   });
 
