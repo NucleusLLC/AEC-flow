@@ -494,4 +494,8 @@ export const proposals: Dict = {
   "Add email": "添加邮箱",
   "No email on file": "未登记邮箱",
   "No service proposals yet.": "暂无服务建议书。",
+  "Mark converted": "标记为已转换",
+  "A new project is created for this client with the proposal’s phases, disciplines and fee (before tax). The proposal is then marked converted and locked.": "将为该客户创建一个新项目，包含建议书的阶段、专业和费用（税前）。随后建议书将被标记为已转换并锁定。",
+  "Leave blank for the next number": "留空则使用下一个编号",
+  "This proposal names its client in text only. Choose the client from the client list on the proposal first, then create the project.": "此建议书仅以文字填写客户。请先在建议书中从客户列表选择客户，然后再创建项目。",
 };

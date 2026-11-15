@@ -284,3 +284,14 @@ was verified present in the live database, so no new migration was needed. As wi
 (Postgres NULLs are distinct); every live row is company-stamped, so this is noted, not "fixed".
 
 Duplicating is gated on `create`, so STAFF keeps it. Test count 267 → 294.
+
+---
+
+## 2026-11-14 — Release D: accepted proposal to project (0.44.0)
+
+`Create project` on an ACCEPTED / PARTIALLY_ACCEPTED proposal (components/service-proposals/convert-to-project.tsx,
+`convertServiceProposalAction`, `lib/data/service-proposal-convert.ts`, pure rules in `lib/proposals/convert.ts`).
+One transaction creates the Project (client record, proposal phases or the standard six, disciplines matched by
+keyword, contract value = grand total less tax, currency, converter as manager, typed or automatic number), links
+`projectId`/`projectName` on the proposal, sets CONVERTED + lockedAt and writes a status-history row. Already-linked
+proposals are only marked converted. Free-text client is refused. Gated on `convert` (MANAGER and up). No SQL.

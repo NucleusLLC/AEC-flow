@@ -284,8 +284,15 @@
  *   foot. It also ignored that print repeats a table header on every continuation page, so long
  *   tables drifted one row per page against the PDF. Both modelled now (repeatedHeaderPx in
  *   lib/documents/pagination.ts). Printed output was already right; only the preview lied. No SQL.
+ * 0.44.0 (14 NOV 2026): feat — PROPOSAL TO PROJECT. An accepted Service Proposal has a green CREATE
+ *   PROJECT button: one step makes the project for the proposal’s client (its own phases in order, or
+ *   the standard six; disciplines matched from the proposal; contract value = fee before tax;
+ *   currency; the person converting is the manager; project number typed or automatic), links the
+ *   proposal to it and marks the proposal CONVERTED with a history row — all in one transaction. A
+ *   proposal already linked to a project is only marked converted (no second project). A client named
+ *   in text only is refused with what to fix. Manager / Director / Admin ("convert"). No SQL.
  */
-export const APP_VERSION = "0.43.1";
+export const APP_VERSION = "0.44.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

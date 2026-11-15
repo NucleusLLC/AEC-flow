@@ -14,6 +14,7 @@ import {
   getServiceProposal,
   ProposalNumberInUseError,
 } from "@/lib/data/service-proposals";
+import { convertServiceProposalToProject } from "@/lib/data/service-proposal-convert";
 import { parseServiceProposalInput } from "@/lib/proposals/schema/proposal";
 import { assertCan, type ProposalActor } from "@/lib/proposals/permissions";
 import { NUMBER_IN_USE_MESSAGE } from "@/lib/proposals/duplicate";
@@ -168,5 +169,27 @@ export async function duplicateServiceProposalAction(id: string): Promise<SaveRe
     return { ok: true, id: p.id, number: p.number };
   } catch (e) {
     return saveFailure(e, "Failed to duplicate proposal.");
+  }
+}
+
+/**
+ * Turn an accepted proposal into a project (or, when it already has one, mark it
+ * converted). Gated on "convert" — MANAGER and up, as the status machine's own
+ * CONVERTED transition already was.
+ */
+export async function convertServiceProposalAction(
+  id: string,
+  projectNumber?: string | null,
+): Promise<{ ok: true; projectId: string; projectNumber: string; created: boolean } | { ok: false; error: string }> {
+  const actor = await currentActor();
+  try {
+    assertCan(actor, "convert");
+    const r = await convertServiceProposalToProject(id, { projectNumber });
+    revalidatePath("/design/service-proposals");
+    revalidatePath(`/design/service-proposals/${id}`);
+    revalidatePath("/projects");
+    return { ok: true, ...r };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not create the project." };
   }
 }
