@@ -16,6 +16,7 @@ import {
   type MeetingWriteInput,
 } from "@/lib/data/meetings.types";
 import { saveMeeting } from "@/app/(app)/meetings/actions";
+import { meetingHref } from "@/lib/meetings/paths";
 import { useT } from "@/components/i18n/language-provider";
 import { fmt } from "@/lib/i18n/format";
 
@@ -80,6 +81,7 @@ export function MeetingForm({
   users: userProp,
   initial,
   meetingId,
+  fixedProjectId,
   backHref,
 }: {
   mode: "new" | "edit";
@@ -87,6 +89,8 @@ export function MeetingForm({
   users: { name: string }[];
   initial?: MeetingFormValues;
   meetingId?: string;
+  /** Minutes started from a project are filed under it: the project is shown, not chosen. */
+  fixedProjectId?: string;
   backHref: string;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -98,13 +102,14 @@ export function MeetingForm({
   // same roster — a member added on one row is immediately pickable on the next.
   const [projects, setProjects] = useState(projectProp);
   const [users, setUsers] = useState(userProp);
+  const fixedProject = fixedProjectId ? projects.find((p) => p.id === fixedProjectId) : undefined;
   const {
     register,
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<MeetingFormValues>({
-    defaultValues: initial ?? defaults(userProp[0]?.name ?? ""),
+    defaultValues: initial ?? { ...defaults(userProp[0]?.name ?? ""), projectId: fixedProjectId ?? "" },
   });
 
   const actionItems = useFieldArray({ control, name: "actionItems" });
@@ -137,7 +142,7 @@ export function MeetingForm({
     startTransition(async () => {
       const res = await saveMeeting(mode, payload);
       if (res.ok) {
-        router.push(`/meetings/${res.id}`);
+        router.push(meetingHref(values.projectId, res.id));
         router.refresh();
       } else {
         setError(res.error);
@@ -192,22 +197,31 @@ export function MeetingForm({
                     control={control}
                     name="projectId"
                     rules={{ required: t("Select a project, or add one") }}
-                    render={({ field }) => (
-                      <ProjectSelect
-                        label={t("Project")}
-                        projects={projects}
-                        value={field.value}
-                        onChange={field.onChange}
-                        submitLabel={t("Create project & minute it")}
-                        onCreated={(p) =>
-                          setProjects((prev) => [
-                            ...prev,
-                            { id: p.id, projectNumber: p.projectNumber, name: p.projectName },
-                          ])
-                        }
-                        labelClassName={labelCls}
-                      />
-                    )}
+                    render={({ field }) =>
+                      fixedProject ? (
+                        <div>
+                          <span className={labelCls}>{t("Project")}</span>
+                          <div className="flex h-9 items-center truncate rounded-lg border border-border bg-surface-2 px-3 text-sm text-fg">
+                            {[fixedProject.projectNumber, fixedProject.name].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                      ) : (
+                        <ProjectSelect
+                          label={t("Project")}
+                          projects={projects}
+                          value={field.value}
+                          onChange={field.onChange}
+                          submitLabel={t("Create project & minute it")}
+                          onCreated={(p) =>
+                            setProjects((prev) => [
+                              ...prev,
+                              { id: p.id, projectNumber: p.projectNumber, name: p.projectName },
+                            ])
+                          }
+                          labelClassName={labelCls}
+                        />
+                      )
+                    }
                   />
                   {errors.projectId ? <p className={errCls}>{errors.projectId.message}</p> : null}
                 </div>

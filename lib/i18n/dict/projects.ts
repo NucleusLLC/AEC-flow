@@ -677,6 +677,8 @@ export const projects: AreaDict = {
     "Choose the type of architecture project.": "Elija el tipo de proyecto de arquitectura.",
     "Type the kind of architecture project.": "Escriba el tipo de proyecto de arquitectura.",
     "The type of architecture project is 80 characters at most.": "El tipo de proyecto de arquitectura tiene como máximo 80 caracteres.",
+    "on this project": "en este proyecto",
+    "Meetings, decisions and follow-up actions for this project.": "Reuniones, decisiones y acciones de seguimiento de este proyecto.",
   },
   nl: {
     "Move action item up": "Actiepunt omhoog",
@@ -1348,5 +1350,7 @@ export const projects: AreaDict = {
     "Choose the type of architecture project.": "Kies het type architectuurproject.",
     "Type the kind of architecture project.": "Typ het soort architectuurproject.",
     "The type of architecture project is 80 characters at most.": "Het type architectuurproject is maximaal 80 tekens.",
+    "on this project": "in dit project",
+    "Meetings, decisions and follow-up actions for this project.": "Vergaderingen, besluiten en vervolgacties voor dit project.",
   },
 };

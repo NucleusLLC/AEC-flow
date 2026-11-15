@@ -302,8 +302,15 @@
  *   shows on the detail page. A revised, superseded, withdrawn or answered proposal kills the link;
  *   every dead link shows one generic page. Rate-limited per IP.
  *   Needs prisma/sql/0039_proposal_acceptance.sql applied FIRST.
+ * 0.46.0 (15 NOV 2026): feat — MEETING MINUTES FILED UNDER THEIR PROJECT. Minutes are no longer a
+ *   section of their own: every project has a "Meeting Minutes" tab (Projects › <project> › Meeting
+ *   Minutes) listing only that project's minutes, and new minutes are started there with the project
+ *   fixed. The sidebar entry and "New meeting minutes" in the New menu and command palette are gone.
+ *   Old /meetings/<id> links (sent emails, activity log, action items) forward to the minutes under
+ *   their project; /meetings itself goes to the project list. No data change: minutes already
+ *   carried their project.
  */
-export const APP_VERSION = "0.45.0";
+export const APP_VERSION = "0.46.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -6,6 +6,7 @@ import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { PrintSurface } from "@/components/print/print-surface";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
+import { meetingHref } from "@/lib/meetings/paths";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -33,7 +34,7 @@ export default async function MeetingPrintPage({ params }: PageProps) {
     // configured document typeface was never applied, and there was no paged
     // preview at all: minutes running to four sheets showed on screen as one
     // continuous page with no boundaries and no page numbers.
-    <PrintSurface backHref={`/meetings/${meeting.id}`} backLabel={t("Back to meeting")}>
+    <PrintSurface backHref={meetingHref(meeting.projectId, meeting.id)} backLabel={t("Back to meeting")}>
       <MeetingDocument
         locale={locale}
         meeting={meeting}
