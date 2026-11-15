@@ -164,7 +164,9 @@ export default async function ServiceProposalDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {projectIsOn ? (
+          {/* Not linked yet and still ACCEPTED: "Create project" below is the way in, so the
+            * dashboard button would only open the projects list beside it. */}
+          {projectIsOn && (p.projectId || p.status === "CONVERTED") ? (
             /* Green and filled, not another outlined button: this is the one
              * thing to do on an accepted proposal, and it should read that way
              * from across the room. */
