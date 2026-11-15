@@ -186,6 +186,9 @@ export default defineConfig({
       "lib/finance/calc.test.ts",
       // Query-string lists: a repeated key (several ticked boxes) is an array.
       "lib/search-params.test.ts",
+      // Service Proposal to project (Release D): blockers, discipline mapping,
+      // phase order, contract value before tax.
+      "lib/proposals/convert.test.ts",
       // The updater: when an open tab is told a newer release is deployed.
       "lib/update/check.test.ts",
       // Invoicing a proposal milestone: the tax is billed once, not twice.

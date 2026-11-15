@@ -25,6 +25,7 @@ import { getFirmIdentity } from "@/lib/server/firm";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
 import { ServiceProposalActions } from "@/components/service-proposals/proposal-actions";
+import { ConvertToProject } from "@/components/service-proposals/convert-to-project";
 import { ProposalIdentificationDetail } from "@/components/service-proposals/proposal-identification";
 import { VersionTag } from "@/components/service-proposals/version-tag";
 import { ProposalSchedulingCard } from "@/components/scheduling/proposal-scheduling-card";
@@ -222,6 +223,9 @@ export default async function ServiceProposalDetailPage({
       ) : null}
 
       <ServiceProposalActions id={p.id} status={p.status} />
+      {p.status === "ACCEPTED" || p.status === "PARTIALLY_ACCEPTED" ? (
+        <ConvertToProject id={p.id} hasProject={Boolean(p.projectId)} hasClient={Boolean(p.clientId)} />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">

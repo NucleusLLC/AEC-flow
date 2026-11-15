@@ -499,6 +499,10 @@ export const proposals: AreaDict = {
     "CELL NUMBER is required.": "CELULAR es obligatorio.",
     "CELL NUMBER: digits, spaces, dashes, brackets and a leading + only.": "CELULAR: solo dígitos, espacios, guiones, paréntesis y un + inicial.",
     "CELL NUMBER needs at least 7 digits.": "CELULAR necesita al menos 7 dígitos.",
+    "Mark converted": "Marcar como convertida",
+    "A new project is created for this client with the proposal’s phases, disciplines and fee (before tax). The proposal is then marked converted and locked.": "Se crea un proyecto nuevo para este cliente con las fases, disciplinas y honorarios (antes de impuestos) de la propuesta. Después, la propuesta se marca como convertida y queda bloqueada.",
+    "Leave blank for the next number": "Déjelo en blanco para el siguiente número",
+    "This proposal names its client in text only. Choose the client from the client list on the proposal first, then create the project.": "Esta propuesta solo indica el cliente como texto. Primero elija el cliente de la lista de clientes en la propuesta y luego cree el proyecto.",
   },
   nl: {
     "Reference \"{ref}\" is already in use. Change the reference number and try again.": "Referentie \"{ref}\" is al in gebruik. Wijzig het referentienummer en probeer het opnieuw.",
@@ -994,5 +998,9 @@ export const proposals: AreaDict = {
     "CELL NUMBER is required.": "MOBIEL NUMMER is verplicht.",
     "CELL NUMBER: digits, spaces, dashes, brackets and a leading + only.": "MOBIEL NUMMER: alleen cijfers, spaties, streepjes, haakjes en een + vooraan.",
     "CELL NUMBER needs at least 7 digits.": "MOBIEL NUMMER moet minstens 7 cijfers hebben.",
+    "Mark converted": "Markeren als omgezet",
+    "A new project is created for this client with the proposal’s phases, disciplines and fee (before tax). The proposal is then marked converted and locked.": "Er wordt een nieuw project voor deze klant aangemaakt met de fasen, disciplines en het honorarium (exclusief belasting) van de offerte. Daarna wordt de offerte als omgezet gemarkeerd en vergrendeld.",
+    "Leave blank for the next number": "Leeg laten voor het volgende nummer",
+    "This proposal names its client in text only. Choose the client from the client list on the proposal first, then create the project.": "Deze offerte noemt de klant alleen als tekst. Kies eerst de klant uit de klantenlijst in de offerte en maak dan het project aan.",
   },
 };

@@ -494,4 +494,8 @@ export const proposals: Dict = {
   "Add email": "E-Mail hinzufügen",
   "No email on file": "Keine E-Mail hinterlegt",
   "No service proposals yet.": "Noch keine Leistungsangebote.",
+  "Mark converted": "Als umgewandelt markieren",
+  "A new project is created for this client with the proposal’s phases, disciplines and fee (before tax). The proposal is then marked converted and locked.": "Für diesen Kunden wird ein neues Projekt mit den Phasen, Disziplinen und dem Honorar (vor Steuern) des Angebots angelegt. Danach wird das Angebot als umgewandelt markiert und gesperrt.",
+  "Leave blank for the next number": "Leer lassen für die nächste Nummer",
+  "This proposal names its client in text only. Choose the client from the client list on the proposal first, then create the project.": "Dieses Angebot nennt den Kunden nur als Text. Wählen Sie zuerst den Kunden aus der Kundenliste im Angebot und legen Sie dann das Projekt an.",
 };

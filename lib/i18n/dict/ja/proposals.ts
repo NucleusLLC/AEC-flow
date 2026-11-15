@@ -494,4 +494,8 @@ export const proposals: Dict = {
   "Add email": "メールを追加",
   "No email on file": "メール未登録",
   "No service proposals yet.": "業務提案書はまだありません。",
+  "Mark converted": "変換済みにする",
+  "A new project is created for this client with the proposal’s phases, disciplines and fee (before tax). The proposal is then marked converted and locked.": "提案書のフェーズ、分野、報酬（税抜）を使って、この顧客の新しいプロジェクトを作成します。その後、提案書は変換済みとしてロックされます。",
+  "Leave blank for the next number": "空欄の場合は次の番号を使用します",
+  "This proposal names its client in text only. Choose the client from the client list on the proposal first, then create the project.": "この提案書では顧客がテキストでのみ入力されています。先に提案書で顧客リストから顧客を選択してから、プロジェクトを作成してください。",
 };

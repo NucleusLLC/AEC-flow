@@ -233,7 +233,7 @@ function duplicateNumber(e: unknown, n: string): never {
 }
 
 /** Next sequential project number, pattern ZA-YYYY-NNN (global max + 1, padded 3). */
-async function nextProjectNumber(year = 2026): Promise<string> {
+export async function nextProjectNumber(year = 2026): Promise<string> {
   const rows = await prisma.project.findMany({ select: { projectNumber: true } });
   let max = 0;
   for (const { projectNumber } of rows) {
