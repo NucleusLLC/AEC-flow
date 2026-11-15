@@ -279,8 +279,13 @@
  *   New fields on the row and in the Studio header. Apply-to-all on the set-wide fields. Fails open
  *   with the reason on the row when no AI key is configured. docs/drawings-intake/04-AI-READ.md.
  *   Needs prisma/sql/0038_drawing_ai_intake.sql applied FIRST.
+ * 0.43.1 (14 NOV 2026): fix — PRINT PREVIEW PAGE BREAKS. The on-screen paged preview counted its own
+ *   "end of document" label as content, inventing an extra page when a document ended near a page
+ *   foot. It also ignored that print repeats a table header on every continuation page, so long
+ *   tables drifted one row per page against the PDF. Both modelled now (repeatedHeaderPx in
+ *   lib/documents/pagination.ts). Printed output was already right; only the preview lied. No SQL.
  */
-export const APP_VERSION = "0.43.0";
+export const APP_VERSION = "0.43.1";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
