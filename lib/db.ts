@@ -73,6 +73,12 @@ const TENANT_MODELS = new Set<string>([
   // would be a takeover. The pre-company lookup by hash is raw SQL on purpose
   // (lib/server/api-token.ts) and never goes through this extension.
   "ApiToken",
+  // Client acceptance links for Service Proposals (0.45.0). A row names the
+  // client who accepted, their signature and IP address. The public /p/<token>
+  // page finds its row by token hash with a RAW query that returns only the id
+  // and companyId (lib/data/proposal-acceptance.ts), then runs inside that
+  // company - so it is scoped here like every other tenant table.
+  "ServiceProposalAcceptanceLink",
 ]);
 
 type WhereObj = Record<string, unknown> | undefined;

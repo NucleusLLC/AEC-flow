@@ -1,79 +1,10 @@
-import Link from "next/link";
-import { getServerT } from "@/lib/i18n/server";
-import { Plus, NotebookPen, CalendarRange, ListChecks } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { MeetingsView } from "@/components/meetings/meetings-view";
-import { getMeetings, summarizeMeetings } from "@/lib/data/meetings";
+import { redirect } from "next/navigation";
 
-export async function generateMetadata() {
-  const t = await getServerT();
-  return { title: `${t("Meeting Minutes")} · AEC-flow` };
-}
-
-export default async function MeetingsPage() {
-  const tr = await getServerT();
-  const meetings = await getMeetings();
-  const summary = summarizeMeetings(meetings);
-
-  const tiles = [
-    {
-      label: tr("Total Minutes"),
-      value: String(summary.total),
-      hint: tr("recorded meetings"),
-      icon: NotebookPen,
-      accent: "text-brand",
-    },
-    {
-      label: tr("This Month"),
-      value: String(summary.thisMonth),
-      hint: tr("meetings logged"),
-      icon: CalendarRange,
-      accent: "text-blue-600",
-    },
-    {
-      label: tr("Open Actions"),
-      value: String(summary.openActions),
-      hint: tr("across all minutes"),
-      icon: ListChecks,
-      accent: "text-amber-600",
-    },
-  ];
-
-  return (
-    <div className="w-full space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-fg">{tr("Meeting Minutes")}</h2>
-          <p className="mt-1 text-sm text-muted">
-            {tr("Record meetings, decisions, and follow-up actions across every project.")}
-          </p>
-        </div>
-        <Link
-          href="/meetings/new"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <Plus className="h-4 w-4" />
-          {tr("New minutes")}
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {tiles.map((t) => {
-          const Icon = t.icon;
-          return (
-            <Card key={t.label} className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted">{t.label}</div>
-                <Icon className={`h-4 w-4 ${t.accent}`} />
-              </div>
-              <div className="mt-2 text-2xl font-bold tracking-tight text-fg">{t.value}</div>
-              <div className="mt-1 text-xs text-faint">{t.hint}</div>
-            </Card>
-          );
-        })}
-      </div>
-
-      <MeetingsView meetings={meetings} />
-    </div>
-  );
+/**
+ * Meeting Minutes are not a section of their own: each set is filed under its
+ * project (Projects › <project> › Meeting Minutes). This address is kept only so
+ * old bookmarks land somewhere useful — the project list.
+ */
+export default function MeetingsIndexRedirect() {
+  redirect("/projects");
 }

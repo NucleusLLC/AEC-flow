@@ -9,10 +9,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isFounderEmail } from "@/lib/server/founder";
+import { explicitCompanyId } from "@/lib/server/request-company";
 
 /** The signed-in user's companyId; falls back to the founder company so legacy /
- * unauthenticated server contexts still resolve to a real tenant. */
+ * unauthenticated server contexts still resolve to a real tenant.
+ *
+ * A session-less caller that has proved which practice it acts for (a public
+ * /p or /pay link, the office TV board — see `explicitCompanyId`) gets THAT
+ * practice first: without it, the practice settings and letterhead on such a
+ * page silently came from the founder company. */
 export async function getCurrentCompanyId(): Promise<string | null> {
+  const explicit = explicitCompanyId();
+  if (explicit) return explicit;
   const session = await getServerSession(authOptions);
   if (session?.user?.companyId) return session.user.companyId;
   const founder = await prisma.company.findFirst({

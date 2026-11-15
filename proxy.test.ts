@@ -72,3 +72,32 @@ describe("public API for connected apps", () => {
     expect(response.status).toBe(307);
   });
 });
+
+describe("public client acceptance page", () => {
+  it.each([
+    ["aec-flow.com", "/p/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcd"],
+    ["beta.aec-flow.com", "/p/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcd"],
+    ["aec-flow.com", "/p/not-a-token"],
+  ])("lets %s%s through with no session when auth is enforced", async (host, path) => {
+    vi.stubEnv("AUTH_ENFORCE", "true");
+    vi.resetModules();
+    vi.mocked(getToken).mockResolvedValue(null);
+    const { proxy } = await import("./proxy");
+    const req = new NextRequest(`https://${host}${path}`, { headers: { host } });
+    const response = await proxy(req);
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(getToken).not.toHaveBeenCalled();
+  });
+
+  it.each(["/projects", "/p", "/pricing"])("still gates %s", async (path) => {
+    vi.stubEnv("AUTH_ENFORCE", "true");
+    vi.resetModules();
+    vi.mocked(getToken).mockResolvedValue(null);
+    const { proxy } = await import("./proxy");
+    const req = new NextRequest(`https://aec-flow.com${path}`, { headers: { host: "aec-flow.com" } });
+    const response = await proxy(req);
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/login");
+  });
+});

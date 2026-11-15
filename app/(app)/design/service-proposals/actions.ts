@@ -15,6 +15,11 @@ import {
   ProposalNumberInUseError,
 } from "@/lib/data/service-proposals";
 import { convertServiceProposalToProject } from "@/lib/data/service-proposal-convert";
+import {
+  AcceptanceLinkError,
+  createAcceptanceLink,
+  revokeAcceptanceLink,
+} from "@/lib/data/proposal-acceptance";
 import { parseServiceProposalInput } from "@/lib/proposals/schema/proposal";
 import { assertCan, type ProposalActor } from "@/lib/proposals/permissions";
 import { NUMBER_IN_USE_MESSAGE } from "@/lib/proposals/duplicate";
@@ -191,5 +196,41 @@ export async function convertServiceProposalAction(
     return { ok: true, ...r };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not create the project." };
+  }
+}
+
+/**
+ * Create the client acceptance link for an issued proposal (Release C). Gated on "issue":
+ * handing the client a link to accept is part of sending the proposal, and a STAFF member
+ * who may issue it may share it. The URL comes back ONCE — only its hash is stored.
+ */
+export async function createAcceptanceLinkAction(
+  id: string,
+): Promise<{ ok: true; url: string; expiresAt: string } | { ok: false; error: string }> {
+  const actor = await currentActor();
+  try {
+    assertCan(actor, "issue");
+    const link = await createAcceptanceLink(id);
+    revalidatePath(`/design/service-proposals/${id}`);
+    return { ok: true, url: link.url, expiresAt: link.expiresAt };
+  } catch (e) {
+    if (e instanceof AcceptanceLinkError) return { ok: false, error: e.message };
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to create the link." };
+  }
+}
+
+/** Revoke an unanswered acceptance link. The page it opened then says the link is no longer valid. */
+export async function revokeAcceptanceLinkAction(
+  id: string,
+  linkId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const actor = await currentActor();
+  try {
+    assertCan(actor, "issue");
+    const changed = await revokeAcceptanceLink(id, linkId);
+    revalidatePath(`/design/service-proposals/${id}`);
+    return changed ? { ok: true } : { ok: false, error: "That link was already answered, revoked or expired." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to revoke the link." };
   }
 }

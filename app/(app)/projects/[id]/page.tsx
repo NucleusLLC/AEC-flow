@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MeetingTypeBadge } from "@/components/meetings/badges";
 import { getProject } from "@/lib/data/projects";
 import { getMeetingsForProject } from "@/lib/data/meetings";
+import { meetingHref, newMeetingHref } from "@/lib/meetings/paths";
 import { getActivityForProject } from "@/lib/data/activity";
 import { formatDate } from "@/lib/format";
 import type { ProjectSummary } from "@/lib/dashboard";
@@ -78,7 +79,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
             <span className="text-xs font-normal text-faint">({meetings.length})</span>
           </h3>
           <Link
-            href="/meetings/new"
+            href={newMeetingHref(project.id)}
             className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2"
           >
             <Plus className="h-3.5 w-3.5" /> {t("New minutes")}
@@ -93,7 +94,7 @@ export default async function ProjectDashboardPage({ params }: PageProps) {
             {meetings.map((m) => (
               <li key={m.id}>
                 <Link
-                  href={`/meetings/${m.id}`}
+                  href={meetingHref(project.id, m.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors zebra-hover"
                 >
                   <span className="w-24 shrink-0 text-xs tabular-nums text-faint">{formatDate(m.meetingDate, locale)}</span>

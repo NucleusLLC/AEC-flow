@@ -7,8 +7,16 @@ import { cache } from "react";
  * only inside a React render; a route handler is not one, so there
  * `companyOverride()` hands back a fresh object on every call and a value set on
  * it is never seen again. AsyncLocalStorage follows the awaited call instead.
+ *
+ * ONE store per process, on globalThis. Next bundles this module more than once
+ * (the server-action layer and the RSC layer each get a copy), while lib/db.ts
+ * reuses one Prisma client across them in development. With a store per copy, a
+ * server action's runAsCompany wrote to one store and the Prisma extension read
+ * another — found render-testing the public /p accept action (0.45.0), where
+ * every scoped query in the action ran as "no company".
  */
-const companyScope = new AsyncLocalStorage<string>();
+const globalScope = globalThis as unknown as { __aecCompanyScope?: AsyncLocalStorage<string> };
+const companyScope = (globalScope.__aecCompanyScope ??= new AsyncLocalStorage<string>());
 
 /**
  * Run `fn` with every tenant-scoped query limited to `companyId`. Use it only
@@ -32,15 +40,14 @@ export function runAsCompany<T>(companyId: string, fn: () => Promise<T>): Promis
  *
  * Dynamic imports keep this off the static import graph of lib/db (which would
  * otherwise cycle: db → this → auth → db).
+ *
+ * ONLY THE SESSION LOOKUP IS MEMOISED. The explicit company (runAsCompany /
+ * companyOverride) is read on every call: memoising the whole answer meant that
+ * one scoped query running before a public page set its override — a parallel
+ * segment, an RSC payload render — fixed the request to "no company" and every
+ * later query failed (found render-testing the /p acceptance page, 0.45.0).
  */
-export const currentCompanyId = cache(async (): Promise<string | null | undefined> => {
-  // A route handler acting for one practice with no session (runAsCompany above).
-  const scoped = companyScope.getStore();
-  if (scoped) return scoped;
-  // The office TV board opened with its secret key has no session; it names its
-  // company for that one request (app/officedash/page.tsx). Nothing else sets it.
-  const override = companyOverride().companyId;
-  if (override) return override;
+const sessionCompanyId = cache(async (): Promise<string | null | undefined> => {
   try {
     const [{ getServerSession }, { authOptions }] = await Promise.all([
       import("next-auth"),
@@ -54,9 +61,30 @@ export const currentCompanyId = cache(async (): Promise<string | null | undefine
   }
 });
 
+export async function currentCompanyId(): Promise<string | null | undefined> {
+  // A route handler or server action acting for one practice with no session
+  // (runAsCompany above), or a public page that named its company
+  // (companyOverride below: the office TV board, /pay, /p).
+  const explicit = explicitCompanyId();
+  if (explicit) return explicit;
+  return sessionCompanyId();
+}
+
 /**
  * Per-request company for a screen with no session — only the office TV board
  * after its secret key checks out (lib/officedash/access.ts). Set it BEFORE the
  * request's first scoped query: `currentCompanyId` is memoised per request.
  */
 export const companyOverride = cache((): { companyId: string | null } => ({ companyId: null }));
+
+/**
+ * The company a session-less caller has PROVED it acts for — `runAsCompany` in a
+ * route handler or server action, or `companyOverride()` on a page — else null.
+ * Never reads the session. `getCurrentCompanyId` in lib/server/tenant.ts checks it
+ * first, so the practice settings and letterhead a public page renders (the /p
+ * acceptance page, /pay, the office TV board) are that practice's, not the
+ * founder company's it would otherwise fall back to.
+ */
+export function explicitCompanyId(): string | null {
+  return companyScope.getStore() || companyOverride().companyId || null;
+}

@@ -670,4 +670,6 @@ export const projects: Dict = {
   "Choose the type of architecture project.": "Wählen Sie die Art des Architekturprojekts.",
   "Type the kind of architecture project.": "Geben Sie die Art des Architekturprojekts ein.",
   "The type of architecture project is 80 characters at most.": "Die Art des Architekturprojekts hat höchstens 80 Zeichen.",
+  "on this project": "in diesem Projekt",
+  "Meetings, decisions and follow-up actions for this project.": "Besprechungen, Entscheidungen und Folgemaßnahmen für dieses Projekt.",
 };

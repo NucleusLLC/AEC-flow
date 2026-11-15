@@ -670,4 +670,6 @@ export const projects: Dict = {
   "Choose the type of architecture project.": "请选择建筑项目类型。",
   "Type the kind of architecture project.": "请填写建筑项目类型。",
   "The type of architecture project is 80 characters at most.": "建筑项目类型最多 80 个字符。",
+  "on this project": "本项目",
+  "Meetings, decisions and follow-up actions for this project.": "本项目的会议、决定和后续行动。",
 };

@@ -40,6 +40,7 @@ import {
   isLocked,
   isIssued,
   assertTransition,
+  InvalidTransitionError,
   type ServiceProposalStatus,
 } from "@/lib/proposals/engine/status";
 import type { ServiceProposalInput } from "@/lib/proposals/schema/proposal";
@@ -599,13 +600,38 @@ export async function deleteServiceProposal(id: string): Promise<void> {
   await prisma.serviceProposal.updateMany({ where: { id }, data: { deletedAt: new Date() } });
 }
 
-/** Record a status change, writing a history row. Illegal transitions are rejected. */
+/** The interactive-transaction client of the tenant-scoped Prisma client. */
+export type ProposalTx = Omit<typeof prisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">;
+
+export type TransitionOptions = {
+  /**
+   * Who made the change when it was not the signed-in user — a client answering through
+   * an acceptance link (lib/data/proposal-acceptance.ts). Defaults to the session.
+   */
+  by?: { id: string | null; name: string | null };
+  /**
+   * Writes that must commit or roll back WITH the status change, run first inside the
+   * same transaction (claiming an acceptance link). Throw to abort the transition.
+   */
+  alsoInTransaction?: (tx: ProposalTx) => Promise<void>;
+};
+
+/**
+ * Record a status change, writing a history row. Illegal transitions are rejected.
+ *
+ * The ONE path every status change takes — staff in the app and a client through an
+ * acceptance link alike — so the status machine, the lock stamp and the history row are
+ * applied the same way whoever moved the proposal. The update is guarded on the status
+ * just read: two concurrent transitions (a client accepting while staff withdraw) cannot
+ * both apply; the loser gets InvalidTransitionError and nothing is written.
+ */
 export async function transitionStatus(
   id: string,
   to: ServiceProposalStatus,
   reason?: string,
+  opts: TransitionOptions = {},
 ): Promise<ServiceProposalDTO> {
-  const who = await actor();
+  const who = opts.by ?? (await actor());
   const current = await prisma.serviceProposal.findFirstOrThrow({
     where: { id, deletedAt: null },
     select: { status: true },
@@ -613,12 +639,14 @@ export async function transitionStatus(
   assertTransition(current.status, to);
 
   const lockedNow = isLocked(to) ? new Date() : undefined;
-  await prisma.$transaction([
-    prisma.serviceProposal.update({
-      where: { id },
+  await prisma.$transaction(async (tx) => {
+    if (opts.alsoInTransaction) await opts.alsoInTransaction(tx);
+    const moved = await tx.serviceProposal.updateMany({
+      where: { id, status: current.status, deletedAt: null },
       data: { status: to, ...(lockedNow ? { lockedAt: lockedNow } : {}) },
-    }),
-    prisma.serviceProposalStatusHistory.create({
+    });
+    if (moved.count !== 1) throw new InvalidTransitionError(current.status, to);
+    await tx.serviceProposalStatusHistory.create({
       data: {
         serviceProposalId: id,
         fromStatus: current.status,
@@ -627,8 +655,8 @@ export async function transitionStatus(
         byId: who.id,
         byName: who.name,
       },
-    }),
-  ]);
+    });
+  });
   const dto = await getServiceProposal(id);
   if (!dto) throw new Error("Proposal vanished after transition");
   return dto;

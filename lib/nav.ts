@@ -14,7 +14,6 @@ import {
   HardHat,
   UsersRound,
   MessageSquare,
-  NotebookPen,
   BarChart3,
   Activity,
   Download,
@@ -215,7 +214,8 @@ export const SCHEDULING_ITEM: NavItem = {
 export const DRAWINGS_AND_DOCUMENTS = "Drawings & Documents";
 
 /**
- * BETA launch scope (AEC Flow). Active modules: Clients, Meeting Minutes,
+ * BETA launch scope (AEC Flow). Active modules: Clients, Meeting Minutes
+ * (inside each project),
  * Estimates, Schedule, Proposals, Construction Administration, Drawings —
  * plus Dashboard and Settings. Everything else is `disabled` (grayed out)
  * until it is production-ready.
@@ -235,7 +235,6 @@ export const navSections: NavSection[] = [
     title: "Business Development",
     items: [
       { label: "Clients", href: "/clients", icon: Users },
-      { label: "Meeting Minutes", href: "/meetings", icon: NotebookPen },
       { label: "Estimates", href: "/estimates", icon: Calculator },
       { label: "Cost Database", href: "/cost-database", icon: Database, disabled: true },
       { label: "Orders", href: "/orders", icon: ClipboardList, disabled: true },

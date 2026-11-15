@@ -670,4 +670,6 @@ export const projects: Dict = {
   "Choose the type of architecture project.": "建築プロジェクトの種類を選択してください。",
   "Type the kind of architecture project.": "建築プロジェクトの種類を入力してください。",
   "The type of architecture project is 80 characters at most.": "建築プロジェクトの種類は 80 文字以内です。",
+  "on this project": "このプロジェクト",
+  "Meetings, decisions and follow-up actions for this project.": "このプロジェクトの会議、決定事項、フォローアップ。",
 };

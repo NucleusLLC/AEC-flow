@@ -291,8 +291,26 @@
  *   proposal to it and marks the proposal CONVERTED with a history row — all in one transaction. A
  *   proposal already linked to a project is only marked converted (no second project). A client named
  *   in text only is refused with what to fix. Manager / Director / Admin ("convert"). No SQL.
+ * 0.45.0 (14 NOV 2026): feat — SERVICE PROPOSAL CLIENT ACCEPTANCE BY SECURE LINK (Release C). On a
+ *   sent proposal, "Client acceptance link" creates a private link (32 random bytes, only its sha256
+ *   stored, shown once, 30 days or the validity date, whichever is sooner) to copy or send with the
+ *   existing proposal email. The client opens /p/<token> with no account, reads the same client
+ *   document the print route renders (in the proposal's language) and accepts it — full name,
+ *   position, company, "on behalf of the client" box, typed-name signature — or declines with an
+ *   optional reason. The answer moves the proposal to ACCEPTED or REJECTED through the same status
+ *   machine and history as staff, records who, when, IP and browser, emails the owner (soft), and
+ *   shows on the detail page. A revised, superseded, withdrawn or answered proposal kills the link;
+ *   every dead link shows one generic page. Rate-limited per IP.
+ *   Needs prisma/sql/0039_proposal_acceptance.sql applied FIRST.
+ * 0.46.0 (15 NOV 2026): feat — MEETING MINUTES FILED UNDER THEIR PROJECT. Minutes are no longer a
+ *   section of their own: every project has a "Meeting Minutes" tab (Projects › <project> › Meeting
+ *   Minutes) listing only that project's minutes, and new minutes are started there with the project
+ *   fixed. The sidebar entry and "New meeting minutes" in the New menu and command palette are gone.
+ *   Old /meetings/<id> links (sent emails, activity log, action items) forward to the minutes under
+ *   their project; /meetings itself goes to the project list. No data change: minutes already
+ *   carried their project.
  */
-export const APP_VERSION = "0.44.0";
+export const APP_VERSION = "0.46.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
