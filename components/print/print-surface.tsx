@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PrintButton } from "@/components/print/print-button";
-import { getPracticeSettings } from "@/lib/server/practice-config";
+import { getPracticeSettings, type PracticeSettings } from "@/lib/server/practice-config";
 import { DOCUMENT_SHEET_CLASS, PageRules } from "@/components/print/page-rules";
 import { DocumentFont } from "@/components/print/document-font";
 import { PagedPreview } from "@/components/print/paged-preview";
@@ -38,8 +38,21 @@ import { getServerT } from "@/lib/i18n/server";
  * route gets the configured typeface and footer strapline without threading
  * props — and, more to the point, cannot forget to.
  */
+/**
+ * Everything a document's chrome reads about the practice, loaded up front by a page that
+ * has no session (the public proposal acceptance page). With it, the shells read nothing
+ * themselves: their own reads depend on a per-request company and language that only a
+ * signed-in render can be relied on to carry all the way down the tree.
+ */
+export type DocumentContext = {
+  settings: PracticeSettings;
+  firmName: string;
+  t: (text: string) => string;
+};
+
 export async function PrintSurface({
   backHref,
+  context,
   backLabel = "Back",
   paper,
   orientation,
@@ -47,15 +60,20 @@ export async function PrintSurface({
   density,
   children,
 }: SheetRequest & {
-  backHref: string;
+  /** Where the toolbar's Back link goes. Omitted on a page read outside the app (the
+   *  public proposal acceptance page), which has nowhere to go back to: the toolbar
+   *  then carries only the Print button. */
+  backHref?: string;
   /** Toolbar wording; the toolbar itself never prints. */
   backLabel?: string;
   /** Row and list rhythm. Registers and schedules want "compact". */
   density?: Density;
+  /** Preloaded practice settings and translator (see DocumentContext). */
+  context?: DocumentContext;
   children: React.ReactNode;
 }) {
-  const { documentFontId, footer } = await getPracticeSettings();
-  const t = await getServerT();
+  const { documentFontId, footer } = context?.settings ?? (await getPracticeSettings());
+  const t = context?.t ?? (await getServerT());
   const geo = sheetGeometry({ paper, orientation, margins });
 
   return (
@@ -70,13 +88,17 @@ export async function PrintSurface({
       />
 
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 print:hidden">
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t(backLabel)}
-        </Link>
+        {backHref ? (
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {t(backLabel)}
+          </Link>
+        ) : (
+          <span />
+        )}
         <PrintButton />
       </div>
 

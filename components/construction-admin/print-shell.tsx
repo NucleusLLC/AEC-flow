@@ -1,7 +1,7 @@
 import { DocumentLetterhead } from "@/components/print/document-letterhead";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { getFirmIdentity } from "@/lib/server/firm";
-import { PrintSurface } from "@/components/print/print-surface";
+import { PrintSurface, type DocumentContext } from "@/components/print/print-surface";
 import { VersionTag } from "@/components/service-proposals/version-tag";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
@@ -32,8 +32,12 @@ export async function CaPrintShell({
   meta,
   children,
   signatures,
+  context,
 }: {
-  backHref: string;
+  /** Preloaded practice settings, firm name and translator (public pages; see PrintSurface). */
+  context?: DocumentContext;
+  /** Omit on a public page with nowhere to go back to (see PrintSurface). */
+  backHref?: string;
   docTitle: string;
   refNumber: string;
   statusLabel: string;
@@ -45,12 +49,11 @@ export async function CaPrintShell({
   children: React.ReactNode;
   signatures: { role: string; name: string }[];
 }) {
-  const { logoDataUrl, logo } = await getPracticeSettings();
-  const firm = await getFirmIdentity();
-  const companyName = firm.name;
-  const t = await getServerT();
+  const { logoDataUrl, logo } = context?.settings ?? (await getPracticeSettings());
+  const companyName = context?.firmName ?? (await getFirmIdentity()).name;
+  const t = context?.t ?? (await getServerT());
   return (
-    <PrintSurface backHref={backHref}>
+    <PrintSurface backHref={backHref} context={context}>
       {/* Letterhead */}
       <DocumentLetterhead
         logo={{ dataUrl: logoDataUrl, position: logo.position, size: logo.size }}

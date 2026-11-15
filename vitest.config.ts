@@ -37,6 +37,9 @@ export default defineConfig({
       // Emailing a service proposal: the message, and the guard that stops a
       // draft going to the client. Pure module, no Prisma, no React.
       "lib/proposals/proposal-email.test.ts",
+      // Client acceptance by secure link (0.45.0): token, expiry, which statuses, the
+      // form. Pure module, no Prisma, no React.
+      "lib/proposals/acceptance.test.ts",
       "lib/documents/**/*.test.ts",
       // Copying coded tasks between projects' estimates. Named file, same reason
       // as every entry above: the module is pure, and it decides which fields
