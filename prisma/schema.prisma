@@ -2612,6 +2612,20 @@ model Drawing {
   /// set. See the feasibility doc §7.
   extractionAudit Json?
 
+  /// WHO DREW IT, as the title block names them (prisma/sql/0038_drawing_ai_intake.sql).
+  /// Free text, confirmed by the user: "ZenArch Studio", "Rossi & Partners
+  /// Engineering". Null means the title block did not say, which is normal for
+  /// an in-house sheet. Not a relation — the consultant on a drawing is a name
+  /// on paper, not a row in the contacts list.
+  architect String?
+  engineer  String?
+
+  /// WHERE THE PAGE CAME FROM when a bound set was split at intake: the set's
+  /// filename and the 1-based page this sheet was. Null for a sheet uploaded
+  /// on its own. Evidence, not a relation — the set itself is not kept.
+  setFilename String?
+  setPage     Int?
+
   /// Set on the OLD row when a newer revision replaces it; the old row's status
   /// becomes SUPERSEDED in the same transaction.
   supersededById String?

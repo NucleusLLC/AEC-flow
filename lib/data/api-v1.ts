@@ -9,6 +9,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { EstimateImportPlan, ImportProject } from "@/lib/api/v1/estimate-import";
+import type { PoImportPlan } from "@/lib/api/v1/po-import";
+import { nextPoNumber } from "@/lib/procurement/calc";
 
 export type ApiProject = { id: string; number: string; name: string; client: string | null };
 
@@ -102,5 +104,51 @@ export async function createImportedEstimate(plan: EstimateImportPlan): Promise<
       return writePlan(plan, undefined);
     }
     throw e;
+  }
+}
+
+/** How many times an import re-picks its PO number after losing a race for it. */
+export const PO_NUMBER_ATTEMPTS = 5;
+
+function isUniqueViolation(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+}
+
+/**
+ * Write one imported purchase order and return its id and number.
+ *
+ * The number comes from the app's own generator (nextPoNumber, the one
+ * lib/data/procurement.ts createPurchaseOrder uses): the practice's highest
+ * existing number + 1 in the PO-{year}-{NNN} series. Reading the numbers and
+ * creating the row happen in one transaction; if a concurrent create took the
+ * same number first, the (companyId, poNumber) unique index refuses ours
+ * (P2002) and the whole read-pick-create is retried with a fresh read, a few
+ * times, before giving up as a 500.
+ */
+export async function createImportedPurchaseOrder(
+  plan: PoImportPlan,
+  year: number = new Date().getFullYear(),
+): Promise<{ id: string; poNumber: string }> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const existing = await tx.purchaseOrder.findMany({ select: { poNumber: true } });
+        const poNumber = nextPoNumber(
+          existing.map((p) => p.poNumber),
+          year,
+        );
+        return tx.purchaseOrder.create({
+          data: {
+            ...plan,
+            poNumber,
+            lineItems: plan.lineItems as unknown as Prisma.InputJsonValue,
+          },
+          select: { id: true, poNumber: true },
+        });
+      });
+    } catch (e) {
+      if (attempt < PO_NUMBER_ATTEMPTS && isUniqueViolation(e)) continue;
+      throw e;
+    }
   }
 }

@@ -80,6 +80,11 @@ export default defineConfig({
       // The review register: citable references, ages against a supplied
       // moment, and who each open item sits with. Pure — rows in, register out.
       "lib/drawings/review-register.test.ts",
+      // AI title-block reading (answer → draft → merge with the rules) and
+      // set splitting (which pages, what names). Pure halves of the two
+      // server features in lib/server/titleblock-ai.ts and pdf-pages.ts.
+      "lib/drawings/ai-read.test.ts",
+      "lib/drawings/set-split.test.ts",
       // Dashboard background manifest: named file, same reason as those above.
       "lib/dashboard/backgrounds.test.ts",
       // Section-aware backgrounds — the route→section resolver and the
@@ -298,6 +303,11 @@ export default defineConfig({
       "lib/finance/phase-b.test.ts",
       "lib/finance/invoice-pdf.test.ts",
       "lib/server/invoice-email.test.ts",
+      // The sibling import into Procurement: the take-off -> one draft PO row
+      // (descriptions, order, zero prices, provenance), and the PO number with its
+      // lost-race retry against a faked Prisma. Named files, no database.
+      "lib/api/v1/po-import.test.ts",
+      "lib/data/api-v1-po-import.test.ts",
     ],
     environment: "node",
   },

@@ -21,6 +21,8 @@ const EMPTY_VALUES: ProposalValues = {
   projectName: "",
   revision: "",
   issueDate: "",
+  architect: "",
+  engineer: "",
 };
 
 function draft(over: Partial<DrawingMetadataDraft>): DrawingMetadataDraft {

@@ -71,3 +71,13 @@ export function receiptProgress(lines: PurchaseOrderLine[]): ReceiptProgress {
     anyReceived,
   };
 }
+
+/** Next PO number in the PO-{year}-{NNN} series, sequential within the company. */
+export function nextPoNumber(existing: string[], year: number): string {
+  let max = 0;
+  for (const p of existing) {
+    const m = /(\d+)\s*$/.exec(p);
+    if (m && Number(m[1]) > max) max = Number(m[1]);
+  }
+  return `PO-${year}-${String(max + 1).padStart(3, "0")}`;
+}

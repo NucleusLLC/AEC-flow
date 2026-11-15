@@ -10,7 +10,7 @@ import "server-only";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
-import { poTotals, receiptProgress } from "@/lib/procurement/calc";
+import { nextPoNumber, poTotals, receiptProgress } from "@/lib/procurement/calc";
 import type {
   PurchaseOrderDTO,
   PurchaseOrderInput,
@@ -102,15 +102,9 @@ export async function getPurchaseOrder(id: string): Promise<PurchaseOrderDTO | n
   return row ? toDto(row) : null;
 }
 
-/** Next PO number in the PO-{year}-{NNN} series, sequential within the company. */
-export function nextPoNumber(existing: string[], year: number): string {
-  let max = 0;
-  for (const p of existing) {
-    const m = /(\d+)\s*$/.exec(p);
-    if (m && Number(m[1]) > max) max = Number(m[1]);
-  }
-  return `PO-${year}-${String(max + 1).padStart(3, "0")}`;
-}
+// The PO-{year}-{NNN} generator lives in the pure lib/procurement/calc.ts so the
+// public API's import (lib/data/api-v1.ts) numbers orders with the very same rule.
+export { nextPoNumber };
 
 function toDate(s: string | null | undefined): Date | null {
   if (!s) return null;
