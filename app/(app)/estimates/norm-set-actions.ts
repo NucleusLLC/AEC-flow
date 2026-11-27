@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireActor } from "@/lib/server/actor";
+import { requireWriter } from "@/lib/server/actor";
 import { addNormSetTask } from "@/lib/data/norm-set-add";
 import { checkNormTaskDraft, type NormTaskDraft, type NormTaskField } from "@/lib/estimates/norm-task-draft";
 import type { NormSetTask } from "@/lib/data/estimate-presets";
@@ -20,7 +20,7 @@ export type AddNormTaskResult =
  */
 export async function addNormSetTaskAction(draft: NormTaskDraft): Promise<AddNormTaskResult> {
   try {
-    await requireActor();
+    await requireWriter(); // a VIEWER is read-only (security audit D-6)
     const check = checkNormTaskDraft(draft);
     if (!check.ok) return { ok: false, errors: check.errors };
     const task = await addNormSetTask(check.task);

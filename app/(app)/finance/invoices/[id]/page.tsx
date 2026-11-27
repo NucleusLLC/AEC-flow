@@ -14,6 +14,7 @@ import { militaryDate, ymd } from "@/lib/building-permits/register";
 import { formatCurrency } from "@/lib/format";
 import { requireActor } from "@/lib/server/actor";
 import { canManageInvoices } from "@/lib/finance/invoice-permissions";
+import { canWrite } from "@/lib/permissions/role-gates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -28,9 +29,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   // Null unless Stripe is configured, the practice is connected and money is owed.
   const payLink = await payLinkFor(invoice);
   const t = await getServerT();
-  // Draws Void / Delete draft / delete payment; the actions enforce it again.
+  // Draws Issue / Email / Record payment / Void / Delete draft / Reverse, and Edit;
+  // the actions enforce it again (security audit D-6).
   const actor = await requireActor().catch(() => null);
   const canManage = actor ? canManageInvoices(actor.role, actor.isFounder) : false;
+  const canEdit = actor ? canWrite(actor) : false;
   const money = (n: number) =>
     formatCurrency(n, invoice.currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -73,7 +76,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         ) : null}
       </div>
 
-      <InvoicePanel invoice={invoice} today={today} canManage={canManage} />
+      <InvoicePanel invoice={invoice} today={today} canManage={canManage} canEdit={canEdit} />
 
       {payLink ? <PayOnlineLink url={payLink} /> : null}
 

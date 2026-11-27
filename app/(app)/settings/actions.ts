@@ -35,7 +35,7 @@ import {
 } from "@/lib/data/proposal-templates";
 import { setMemberRole, setMemberStatus, createTeamMember } from "@/lib/data/team";
 import { setMemberPassword } from "@/lib/server/password";
-import { requireActor, requireMemberAdmin, type Actor } from "@/lib/server/actor";
+import { permissionDenied, requireActor, requireMemberAdmin, type Actor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import { getMemberAccessSnapshot } from "@/lib/server/member-access";
 import { checkMemberWrite } from "@/lib/team/member-write-policy";
@@ -232,8 +232,17 @@ export async function saveInvoiceSettingsAction(
 /* Proposal templates                                                 */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Security audit D-6: changing or deleting a template and choosing the default
+ * are for an administrator, a director or the founder. Creating and duplicating
+ * one add to the library without touching what is there, and stay open to every
+ * member except a VIEWER.
+ */
+
 export async function createTemplateAction(input: TemplateInput): Promise<ActionResult<ProposalTemplate>> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const data = await createTemplate(input);
     revalidatePath("/settings");
@@ -245,6 +254,8 @@ export async function createTemplateAction(input: TemplateInput): Promise<Action
 
 export async function updateTemplateAction(id: string, input: TemplateInput): Promise<ActionResult<ProposalTemplate>> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("proposalTemplate.manage");
+  if (denied) return { ok: false, error: denied };
   try {
     const data = await updateTemplate(id, input);
     revalidatePath("/settings");
@@ -256,6 +267,8 @@ export async function updateTemplateAction(id: string, input: TemplateInput): Pr
 
 export async function duplicateTemplateAction(id: string): Promise<ActionResult<ProposalTemplate>> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const data = await duplicateTemplate(id);
     revalidatePath("/settings");
@@ -267,6 +280,8 @@ export async function duplicateTemplateAction(id: string): Promise<ActionResult<
 
 export async function deleteTemplateAction(id: string): Promise<ActionResult> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("proposalTemplate.manage");
+  if (denied) return { ok: false, error: denied };
   try {
     await deleteTemplate(id);
     revalidatePath("/settings");
@@ -278,6 +293,8 @@ export async function deleteTemplateAction(id: string): Promise<ActionResult> {
 
 export async function setDefaultTemplateAction(id: string): Promise<ActionResult> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("proposalTemplate.manage");
+  if (denied) return { ok: false, error: denied };
   try {
     await setDefaultTemplate(id);
     revalidatePath("/settings");

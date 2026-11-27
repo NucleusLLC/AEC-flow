@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { currentCompanyId } from "@/lib/server/request-company";
+import { assertTenantWriteAllowed } from "@/lib/server/read-only-guard";
 
 // Prisma 7 requires a driver adapter for the connection. The connection URL
 // lives in the env (also referenced by prisma.config.ts for Migrate).
@@ -14,6 +15,10 @@ const connectionString = process.env.DATABASE_URL;
  *
  * `currentCompanyId()` returns `undefined` outside a request (scripts, seeds,
  * build) → we DON'T scope then, so admin tooling keeps full access.
+ *
+ * READ-ONLY BACKSTOP (security audit D-6). Every write to a company-owned model
+ * first asks `assertTenantWriteAllowed` (lib/server/read-only-guard.ts), which
+ * refuses a signed-in VIEWER writing from a server action.
  */
 const TENANT_MODELS = new Set<string>([
   "Client", "Proposal", "ProposalTemplate", "Order", "Project", "MeetingMinute",
@@ -125,10 +130,12 @@ const createPrismaClient = () =>
           return query(args);
         },
         async updateMany({ model, args, query }) {
+          if (TENANT_MODELS.has(model)) await assertTenantWriteAllowed(model);
           if (TENANT_MODELS.has(model)) args.where = await scopedWhere(args.where as WhereObj);
           return query(args);
         },
         async deleteMany({ model, args, query }) {
+          if (TENANT_MODELS.has(model)) await assertTenantWriteAllowed(model);
           if (TENANT_MODELS.has(model)) args.where = await scopedWhere(args.where as WhereObj);
           return query(args);
         },
@@ -143,6 +150,7 @@ const createPrismaClient = () =>
         },
         async create({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
+            await assertTenantWriteAllowed(model);
             const cid = await currentCompanyId();
             const data = args.data as Record<string, unknown> | undefined;
             if (cid && data && data.companyId === undefined) data.companyId = cid;
@@ -151,6 +159,7 @@ const createPrismaClient = () =>
         },
         async createMany({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
+            await assertTenantWriteAllowed(model);
             const cid = await currentCompanyId();
             if (cid && args.data) {
               const rows = (Array.isArray(args.data) ? args.data : [args.data]) as Record<string, unknown>[];
@@ -164,6 +173,7 @@ const createPrismaClient = () =>
         // "record not found" instead of mutating it.
         async update({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
+            await assertTenantWriteAllowed(model);
             const cid = await currentCompanyId();
             if (cid !== undefined && args.where) (args.where as Record<string, unknown>).companyId = cid;
           }
@@ -171,6 +181,7 @@ const createPrismaClient = () =>
         },
         async delete({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
+            await assertTenantWriteAllowed(model);
             const cid = await currentCompanyId();
             if (cid !== undefined && args.where) (args.where as Record<string, unknown>).companyId = cid;
           }
@@ -178,6 +189,7 @@ const createPrismaClient = () =>
         },
         async upsert({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
+            await assertTenantWriteAllowed(model);
             const cid = await currentCompanyId();
             if (cid !== undefined && args.where) (args.where as Record<string, unknown>).companyId = cid;
             if (cid) {

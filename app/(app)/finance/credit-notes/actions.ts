@@ -20,7 +20,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getServerT } from "@/lib/i18n/server";
-import { requireActor } from "@/lib/server/actor";
+import { permissionDenied, requireActor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import {
   createCreditNote,
@@ -57,14 +57,10 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
   return { ok: false, error: e instanceof Error ? e.message : fallback };
 }
 
-/** Sign-in first: a refused actor gets the reason, not a digest. */
+/** Signed in and allowed to write (a VIEWER is read-only, D-6): a refused actor gets the reason, not a digest. */
 async function gate(): Promise<{ ok: false; error: string } | null> {
-  try {
-    await requireActor();
-    return null;
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
-  }
+  const denied = await permissionDenied("write");
+  return denied ? { ok: false, error: denied } : null;
 }
 
 const CREDIT_NOTE_NOT_ALLOWED = "Only an administrator or director can issue or void a credit note.";

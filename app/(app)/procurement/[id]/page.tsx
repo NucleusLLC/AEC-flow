@@ -11,6 +11,8 @@ import { PoDeleteButton } from "@/components/procurement/po-delete-button";
 import { PoReceivePanel } from "@/components/procurement/po-receive-panel";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
+import { requireActor } from "@/lib/server/actor";
+import { canDo, canWrite } from "@/lib/permissions/role-gates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -29,7 +31,15 @@ export default async function PurchaseOrderDetailPage({
 
   const money = (n: number) => formatCurrency(n, po.currency, { maximumFractionDigits: 2 });
   const progress = receiptProgress(po.lineItems);
-  const canReceive = po.status !== "CANCELLED" && po.status !== "CLOSED" && po.lineItems.length > 0;
+  // Security audit D-6: Delete and Receive are drawn for an administrator, a
+  // director or the founder; Edit for anyone but a VIEWER. The actions refuse
+  // everyone else whatever is drawn.
+  const actor = await requireActor().catch(() => null);
+  const mayEdit = actor ? canWrite(actor) : false;
+  const mayDelete = actor ? canDo("purchaseOrder.delete", actor) : false;
+  const mayReceive = actor ? canDo("purchaseOrder.receive", actor) : false;
+  const canReceive =
+    mayReceive && po.status !== "CANCELLED" && po.status !== "CLOSED" && po.lineItems.length > 0;
 
   return (
     <div className="w-full max-w-4xl space-y-6">
@@ -61,13 +71,15 @@ export default async function PurchaseOrderDetailPage({
           >
             <Printer className="h-4 w-4" /> {t("Print")}
           </Link>
-          <Link
-            href={`/procurement/${po.id}/edit`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-          >
-            <Pencil className="h-4 w-4" /> {t("Edit")}
-          </Link>
-          <PoDeleteButton id={po.id} poNumber={po.poNumber} />
+          {mayEdit ? (
+            <Link
+              href={`/procurement/${po.id}/edit`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+            >
+              <Pencil className="h-4 w-4" /> {t("Edit")}
+            </Link>
+          ) : null}
+          {mayDelete ? <PoDeleteButton id={po.id} poNumber={po.poNumber} /> : null}
         </div>
       </div>
 

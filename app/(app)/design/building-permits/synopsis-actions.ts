@@ -12,14 +12,14 @@ import { ymd } from "@/lib/building-permits/register";
 import type { PermitSynopsis } from "@/lib/building-permits/synopsis";
 import { getServerLang } from "@/lib/i18n/server";
 import { PermitAiError, writePermitSynopsis } from "@/lib/server/permit-ai";
-import { requireActor } from "@/lib/server/actor";
+import { requireWriter } from "@/lib/server/actor";
 
 export type PermitSynopsisResult = { ok: true; synopsis: PermitSynopsis } | { ok: false; error: string };
 
 export async function permitSynopsisAction(permitId: string): Promise<PermitSynopsisResult> {
   try {
-    // A billed AI call: only for a signed-in, active member.
-    await requireActor();
+    // A billed AI call: only for a signed-in, active member who may write (not a VIEWER, D-6).
+    await requireWriter();
     const permit = await getBuildingPermit(permitId);
     if (!permit) return { ok: false, error: "That permit file no longer exists." };
     const synopsis = await writePermitSynopsis(permit, await getServerLang(), ymd(new Date()));

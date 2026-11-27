@@ -102,6 +102,8 @@ export type ProjectRecord = {
   activity: ProjectActivity[];
   /** ISO timestamp when archived, else null. See lib/projects/lifecycle.ts. */
   archivedAt: string | null;
+  /** Storage key of the cover image (Import from MEPflow); null = none. Shown via /api/projects/<id>/cover. */
+  coverImageKey?: string | null;
 };
 
 /** Lean row — what the list page consumes. */

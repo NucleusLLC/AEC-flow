@@ -28,6 +28,7 @@ import {
 } from "@/lib/data/drawing-intake";
 import type { ExistingSheet, SplitSetResult, UploadTicket } from "@/lib/drawings/persistence";
 import type { FileType } from "@/lib/data/drawings.types";
+import { permissionDenied } from "@/lib/server/actor";
 
 export type TicketResult = { ok: true; ticket: UploadTicket } | { ok: false; error: string };
 export type SplitResult = { ok: true; result: SplitSetResult } | { ok: false; error: string };
@@ -47,6 +48,8 @@ export async function createUploadTicketAction(input: {
   mimeType: string;
   sizeBytes: number;
 }): Promise<TicketResult> {
+  const denied = await permissionDenied("write"); // a VIEWER is read-only (D-6)
+  if (denied) return { ok: false, error: denied };
   try {
     return { ok: true, ticket: await createUploadTicket(input) };
   } catch (e) {
@@ -81,6 +84,8 @@ export async function analyseDrawingAction(input: {
   filename: string;
   fileType: FileType;
 }): Promise<AnalysisResult> {
+  const denied = await permissionDenied("write"); // a VIEWER is read-only (D-6)
+  if (denied) return { ok: false, error: denied };
   try {
     return { ok: true, analysis: await analyseUploadedDrawing(input) };
   } catch (e) {
@@ -100,6 +105,8 @@ export async function splitDrawingSetAction(input: {
   fromPage: number;
   toPage: number;
 }): Promise<SplitResult> {
+  const denied = await permissionDenied("write"); // a VIEWER is read-only (D-6)
+  if (denied) return { ok: false, error: denied };
   try {
     return { ok: true, result: await splitDrawingSet(input) };
   } catch (e) {

@@ -21,6 +21,7 @@
  */
 import { NextResponse } from "next/server";
 import { requireActor } from "@/lib/server/actor";
+import { routeDenied } from "@/lib/server/route-gate";
 import { getPracticeSettings } from "@/lib/server/practice-config";
 import { parseContractFacts, issuesToMessage } from "@/lib/contracts/schema";
 import { readTemplateBytes, saveGenerated } from "@/lib/data/contracts";
@@ -47,12 +48,21 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "You must be signed in." }, { status: 401 });
   }
+  // A VIEWER is read-only (security audit D-6): no generated contract, no billed AI call.
+  const denied = await routeDenied("write");
+  if (denied) return denied;
 
   let payload: { facts?: unknown; templateId?: unknown; supersedesId?: unknown };
   try {
     payload = (await request.json()) as typeof payload;
   } catch {
     return NextResponse.json({ error: "That request could not be read." }, { status: 400 });
+  }
+  // A revision marks the contract it replaces SUPERSEDED — withdrawing an agreement
+  // is the same privilege as voiding one (security audit D-6).
+  if (typeof payload.supersedesId === "string" && payload.supersedesId) {
+    const refused = await routeDenied("contract.void");
+    if (refused) return refused;
   }
 
   const parsed = parseContractFacts(payload.facts);

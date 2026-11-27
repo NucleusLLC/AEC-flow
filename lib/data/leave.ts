@@ -5,6 +5,8 @@
 
 import { prisma } from "@/lib/db";
 import { getCurrentCompanyId } from "@/lib/server/tenant";
+import { ActorError, requireActor, type Actor } from "@/lib/server/actor";
+import { checkLeaveWrite, type LeaveSnapshot } from "@/lib/permissions/role-gates";
 import { TODAY, isOut } from "./leave.types";
 import type {
   LeaveRequest,
@@ -131,6 +133,15 @@ export async function createLeave(input: LeaveInput): Promise<{ id: string }> {
   const endDate = new Date(input.endDate);
   const days =
     input.days != null && input.days > 0 ? input.days : inclusiveDays(startDate, endDate);
+  const status = input.status ?? "PENDING";
+  const who = await guardLeaveWrite(null, {
+    userId: user.id,
+    status,
+    type: input.type,
+    startDate: ymd(startDate),
+    endDate: ymd(endDate),
+    days,
+  });
 
   const r = await prisma.leaveRequest.create({
     data: {
@@ -140,10 +151,50 @@ export async function createLeave(input: LeaveInput): Promise<{ id: string }> {
       endDate,
       days,
       reason: input.reason ?? null,
-      status: input.status ?? "PENDING",
+      status,
+      ...decisionStamp(null, status, who),
     },
   });
   return { id: r.id };
+}
+
+/* ------------------------------------------------------------------ */
+/* Who may write leave (security audit D-6)                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Enforce `checkLeaveWrite` (lib/permissions/role-gates.ts): a VIEWER writes no
+ * leave; approving or rejecting is Director / Admin / founder only; and nobody
+ * decides their OWN request, not even a Director. The actor comes from their own
+ * database row, never from the browser. Returns the actor for the stamp below.
+ */
+async function guardLeaveWrite(before: LeaveSnapshot | null, after: LeaveSnapshot): Promise<Actor> {
+  const who = await requireActor();
+  const decision = checkLeaveWrite(who, before, after);
+  if (!decision.ok) throw new ActorError(decision.error);
+  return who;
+}
+
+/** Who decided, and when — set when a request moves into APPROVED or REJECTED. */
+function decisionStamp(
+  previousStatus: string | null,
+  status: string,
+  who: Actor,
+): { approvedBy?: string; approvedAt?: Date } {
+  if (status === previousStatus) return {};
+  if (status !== "APPROVED" && status !== "REJECTED") return {};
+  return { approvedBy: who.name, approvedAt: new Date() };
+}
+
+function snapshotOf(input: LeaveWriteInput, userId: string): LeaveSnapshot {
+  return {
+    userId,
+    status: input.status,
+    type: input.type,
+    startDate: ymd(new Date(input.startDate)),
+    endDate: ymd(new Date(input.endDate)),
+    days: input.days,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,7 +234,10 @@ function leaveScalarData(input: LeaveWriteInput, userId: string) {
 /** Create a leave request from the form payload. Returns the new id. */
 export async function createLeaveRequest(input: LeaveWriteInput): Promise<string> {
   const userId = await resolveLeaveUserId(input.userName);
-  const r = await prisma.leaveRequest.create({ data: leaveScalarData(input, userId) });
+  const who = await guardLeaveWrite(null, snapshotOf(input, userId));
+  const r = await prisma.leaveRequest.create({
+    data: { ...leaveScalarData(input, userId), ...decisionStamp(null, input.status, who) },
+  });
   return r.id;
 }
 
@@ -191,9 +245,22 @@ export async function createLeaveRequest(input: LeaveWriteInput): Promise<string
 export async function updateLeaveRequest(input: LeaveWriteInput): Promise<string> {
   if (!input.id) throw new Error("Leave request id is required for update.");
   const userId = await resolveLeaveUserId(input.userName);
+  const current = await getLeaveRequest(input.id);
+  if (!current) throw new Error("That leave request could not be found.");
+  const who = await guardLeaveWrite(
+    {
+      userId: current.userId,
+      status: current.status,
+      type: current.type,
+      startDate: current.startDate,
+      endDate: current.endDate,
+      days: current.days,
+    },
+    snapshotOf(input, userId),
+  );
   await prisma.leaveRequest.update({
     where: { id: input.id },
-    data: leaveScalarData(input, userId),
+    data: { ...leaveScalarData(input, userId), ...decisionStamp(current.status, input.status, who) },
   });
   return input.id;
 }
