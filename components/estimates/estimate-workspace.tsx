@@ -169,6 +169,11 @@ export function EstimateWorkspace({
   const [coverImage, setCoverImage] = useState<string | null>(() => estimate.budget?.cover?.image ?? null);
   // How the image sits in its frame: original proportions, or a fixed ratio with a chosen crop.
   const [coverFit, setCoverFit] = useState<CoverFit>(() => normalizeCoverFit(estimate.budget?.cover?.fit));
+  // Floor plan from an "Import from MEPflow" file, printed under the rendering on the cover.
+  // Read once and carried on every save; nothing in the sheet edits it.
+  const [coverPlan] = useState<string | null>(() => estimate.budget?.cover?.plan ?? null);
+  // Import provenance (lib/api/v1/estimate-import.ts): carried, or the first save deleted it.
+  const [importInfo] = useState(() => estimate.budget?.import);
   const seq = useRef(100);
   const newId = (p: string) => `${p}-${seq.current++}`;
 
@@ -190,11 +195,12 @@ export function EstimateWorkspace({
       fx: { usd: usdSecondary, rate: usdRate },
       gcActive,
       rebar,
-      cover: { on: coverOn, image: coverImage, fit: coverFit },
+      cover: { on: coverOn, image: coverImage, fit: coverFit, plan: coverPlan },
+      ...(importInfo ? { import: importInfo } : {}),
     }),
     [
       schedule, payment, takeoff, drawingTakeoff, takeoffSection, usdSecondary, usdRate,
-      gcActive, rebar, coverOn, coverImage, coverFit,
+      gcActive, rebar, coverOn, coverImage, coverFit, coverPlan, importInfo,
     ],
   );
 

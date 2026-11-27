@@ -2175,6 +2175,7 @@ ${!preview ? `@media print {
                 coverPage={coverOn}
                 coverImage={coverImage}
                 coverFit={coverFit}
+                coverPlan={budget?.cover?.plan ?? null}
                 coverTotalDisplay={dualMoney(grandTotal)}
                 usdSecondary={usdSecondary}
                 usdRate={usdRate}
