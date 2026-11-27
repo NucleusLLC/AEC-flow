@@ -54,6 +54,18 @@ import type {
   ServiceProposalSummary,
 } from "@/lib/proposals/dto";
 import type { Prisma } from "@prisma/client";
+import {
+  APPROVER_ONLY_REFUSAL,
+  checkApproval,
+  describeTripped,
+  figuresChanged,
+  isAwaitingApproval,
+  sendRefusal,
+  type ApprovalFigures,
+  type ApprovalThresholds,
+} from "@/lib/proposals/approval";
+import { getProposalApprovalThresholds } from "@/lib/server/practice-config";
+import { formatCurrency } from "@/lib/format";
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
@@ -67,6 +79,26 @@ function numOrNull(v: Prisma.Decimal | number | null | undefined): number | null
 function ymd(d: Date | null): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
 }
+
+/** The stored engine totals the approval rules read (lib/proposals/approval.ts). */
+function approvalFigures(p: {
+  currency: string;
+  subtotal: Prisma.Decimal | number;
+  discountTotal: Prisma.Decimal | number;
+  grandTotal: Prisma.Decimal | number;
+}): ApprovalFigures {
+  return {
+    currency: p.currency,
+    subtotal: num(p.subtotal),
+    discountTotal: num(p.discountTotal),
+    grandTotal: num(p.grandTotal),
+  };
+}
+
+const moneyText = (n: number, currency: string) => formatCurrency(n, currency, { maximumFractionDigits: 2 });
+
+/** The history-row reason an approval writes; also how the approval is found again. */
+const APPROVAL_REASON_PREFIX = "Director approval";
 
 async function actor(): Promise<{ id: string | null; name: string | null }> {
   const session = await getServerSession(authOptions);
@@ -230,6 +262,7 @@ function toDto(p: FullProposal): ServiceProposalDTO {
     validUntil: ymd(p.validUntil),
     lockedAt: p.lockedAt ? p.lockedAt.toISOString() : null,
     createdByName: p.createdByName,
+    approvedById: p.approvedById,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
     input: toInput(p),
@@ -253,7 +286,9 @@ export async function listServiceProposals(opts?: {
     include: { taxes: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
+  const thresholds = await getProposalApprovalThresholds();
   return rows.map((p) => {
+    const approval = checkApproval(approvalFigures(p), thresholds);
     const bbo = resolveBbo({
       currency: p.currency,
       grandTotal: num(p.grandTotal),
@@ -276,6 +311,7 @@ export async function listServiceProposals(opts?: {
       bboPercent: bbo.percent,
       bboIncluded: bbo.included,
       feeBasisLabel: p.costBasisType ? COST_BASIS_LABEL[p.costBasisType] : null,
+      awaitingApproval: isAwaitingApproval(p.status, approval, p.approvedById),
       createdAt: p.createdAt.toISOString(),
       validUntil: ymd(p.validUntil),
     };
@@ -403,6 +439,30 @@ export async function listStatusHistory(
   }));
 }
 
+/** Who approved a proposal for sending, and when — from the history row the approval wrote. */
+export interface ProposalApprovalRecord {
+  byName: string | null;
+  at: string;
+  reason: string | null;
+}
+
+export async function getProposalApprovalRecord(
+  serviceProposalId: string,
+  approvedById: string | null,
+): Promise<ProposalApprovalRecord | null> {
+  if (!approvedById) return null;
+  const row = await prisma.serviceProposalStatusHistory.findFirst({
+    where: {
+      serviceProposalId,
+      byId: approvedById,
+      toStatus: "APPROVED_FOR_ISSUE",
+      reason: { startsWith: APPROVAL_REASON_PREFIX },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return row ? { byName: row.byName, at: row.createdAt.toISOString(), reason: row.reason } : null;
+}
+
 // ── Write helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -422,6 +482,35 @@ export class ProposalLockedError extends Error {
   constructor(number: string) {
     super(`Proposal ${number} has been accepted or issued and can no longer be edited.`);
     this.name = "ProposalLockedError";
+  }
+}
+
+/**
+ * Sending (or marking ready to send) refused by the approval thresholds
+ * (lib/proposals/approval.ts). Its message is a plain sentence safe to show.
+ */
+export class ProposalApprovalRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProposalApprovalRequiredError";
+  }
+}
+
+/** Refuse to send a proposal that is over a limit and not approved. Role-independent. */
+async function assertSendable(
+  p: {
+    currency: string;
+    subtotal: Prisma.Decimal | number;
+    discountTotal: Prisma.Decimal | number;
+    grandTotal: Prisma.Decimal | number;
+    approvedById: string | null;
+  },
+  thresholds?: ApprovalThresholds,
+): Promise<void> {
+  const check = checkApproval(approvalFigures(p), thresholds ?? (await getProposalApprovalThresholds()));
+  const refusal = sendRefusal(check, p.approvedById);
+  if (refusal) {
+    throw new ProposalApprovalRequiredError(`${refusal} (${describeTripped(check.tripped, moneyText)})`);
   }
 }
 
@@ -530,7 +619,17 @@ export async function updateServiceProposal(
 ): Promise<ServiceProposalDTO> {
   const current = await prisma.serviceProposal.findFirstOrThrow({
     where: { id, deletedAt: null },
-    select: { status: true, number: true, companyId: true, versionLabel: true },
+    select: {
+      status: true,
+      number: true,
+      companyId: true,
+      versionLabel: true,
+      approvedById: true,
+      currency: true,
+      subtotal: true,
+      discountTotal: true,
+      grandTotal: true,
+    },
   });
   if (isLocked(current.status)) throw new ProposalLockedError(current.number);
 
@@ -542,6 +641,15 @@ export async function updateServiceProposal(
   const renumber = asked && asked !== current.number ? asked : null;
   if (renumber) await assertNumberFree(renumber, id);
   const { header, children } = buildWriteData(input);
+
+  // A Director approved THESE numbers. An edit that moves the fee or the discount clears the
+  // approval (lib/proposals/approval.ts), and a proposal still over a limit stops being
+  // "approved for issue" — it goes back to DRAFT until someone approves it again.
+  const approvalCleared =
+    current.approvedById !== null && figuresChanged(approvalFigures(current), approvalFigures(header));
+  const stillOver =
+    approvalCleared && checkApproval(approvalFigures(header), await getProposalApprovalThresholds()).required;
+  const backToDraft = stillOver && current.status === "APPROVED_FOR_ISSUE";
 
   // Replace children wholesale inside one transaction. The delete is a raw, unscoped delete by
   // parent id (deleteAllChildren) so it removes EVERY existing child — including legacy rows
@@ -561,12 +669,25 @@ export async function updateServiceProposal(
       tx.$executeRaw`DELETE FROM service_proposal_taxes WHERE "serviceProposalId" = ${id}`,
       tx.$executeRaw`DELETE FROM service_proposal_development_cost_items WHERE "serviceProposalId" = ${id}`,
     ]);
+    if (backToDraft) {
+      await tx.serviceProposalStatusHistory.create({
+        data: {
+          serviceProposalId: id,
+          fromStatus: current.status,
+          toStatus: "DRAFT",
+          reason: "Approval cleared: the fee or discount changed after approval.",
+          byId: who.id,
+          byName: who.name,
+        },
+      });
+    }
     return tx.serviceProposal.update({
       where: { id },
       data: {
         ...header,
         ...(renumber ? { number: renumber } : {}),
-        status: input.status ?? undefined,
+        status: backToDraft ? "DRAFT" : (input.status ?? undefined),
+        ...(approvalCleared ? { approvedById: null } : {}),
         // Every saved edit moves the minor, which is what makes the version track the work.
         // A legacy null joins the scheme here at 0.1 rather than staying blank forever.
         versionLabel: bumpDraftVersion(current.versionLabel),
@@ -634,9 +755,21 @@ export async function transitionStatus(
   const who = opts.by ?? (await actor());
   const current = await prisma.serviceProposal.findFirstOrThrow({
     where: { id, deletedAt: null },
-    select: { status: true },
+    select: { status: true, currency: true, subtotal: true, discountTotal: true, grandTotal: true, approvedById: true },
   });
   assertTransition(current.status, to);
+  // The approval thresholds hold on EVERY path to the client, not only the Issue button.
+  if (to === "SENT") await assertSendable(current);
+  if (to === "APPROVED_FOR_ISSUE") {
+    const check = checkApproval(approvalFigures(current), await getProposalApprovalThresholds());
+    if (check.required && !current.approvedById) {
+      // Over a limit, "approved for issue" IS the Director's approval: that path is
+      // approveServiceProposalForSending, which checks the role and records who.
+      throw new ProposalApprovalRequiredError(
+        `${APPROVER_ONLY_REFUSAL} (${describeTripped(check.tripped, moneyText)})`,
+      );
+    }
+  }
 
   const lockedNow = isLocked(to) ? new Date() : undefined;
   await prisma.$transaction(async (tx) => {
@@ -674,6 +807,7 @@ export async function issueServiceProposal(id: string, reason?: string): Promise
     include: FULL_INCLUDE,
   });
   assertTransition(p.status, "SENT");
+  await assertSendable(p);
 
   const input = toInput(p);
   const calc = computeProposal(input as Parameters<typeof computeProposal>[0]);
@@ -709,6 +843,68 @@ export async function issueServiceProposal(id: string, reason?: string): Promise
   ]);
   const dto = await getServiceProposal(id);
   if (!dto) throw new Error("Proposal vanished after issue");
+  return dto;
+}
+
+/**
+ * A Director's approval for sending (lib/proposals/approval.ts).
+ *
+ * `by.mayApprove` is the caller's verdict from the actor's DATABASE role (requireActor), so
+ * this layer stays free of the session. Records who on `approvedById` and when on a history
+ * row whose reason starts "Director approval" (getProposalApprovalRecord reads it back).
+ *
+ *   - Over a limit: only an approver may; the proposal moves to APPROVED_FOR_ISSUE (or stays
+ *     there, when an edit pushed an "approved for issue" proposal over a limit in place).
+ *   - Under both limits: nothing to approve, so this is the ordinary "Approve for issue"
+ *     transition, open to whoever may issue.
+ */
+export async function approveServiceProposalForSending(
+  id: string,
+  by: { id: string; name: string | null; mayApprove: boolean },
+): Promise<ServiceProposalDTO> {
+  const p = await prisma.serviceProposal.findFirstOrThrow({
+    where: { id, deletedAt: null },
+    select: { status: true, currency: true, subtotal: true, discountTotal: true, grandTotal: true },
+  });
+  const check = checkApproval(approvalFigures(p), await getProposalApprovalThresholds());
+  if (!check.required) return transitionStatus(id, "APPROVED_FOR_ISSUE", undefined, { by });
+  if (!by.mayApprove) {
+    throw new ProposalApprovalRequiredError(`${APPROVER_ONLY_REFUSAL} (${describeTripped(check.tripped, moneyText)})`);
+  }
+  if (p.status !== "APPROVED_FOR_ISSUE") assertTransition(p.status, "APPROVED_FOR_ISSUE");
+
+  const reason = `${APPROVAL_REASON_PREFIX}: ${describeTripped(check.tripped, moneyText)}`;
+  await prisma.$transaction(async (tx) => {
+    // Guarded on the status and the figures just read: an edit landing between the read
+    // and this write must not inherit an approval given to the numbers before it.
+    const moved = await tx.serviceProposal.updateMany({
+      where: {
+        id,
+        status: p.status,
+        deletedAt: null,
+        currency: p.currency,
+        subtotal: p.subtotal,
+        discountTotal: p.discountTotal,
+        grandTotal: p.grandTotal,
+      },
+      data: { status: "APPROVED_FOR_ISSUE", approvedById: by.id },
+    });
+    if (moved.count !== 1) {
+      throw new ProposalApprovalRequiredError("The proposal changed while you were approving it. Reload and try again.");
+    }
+    await tx.serviceProposalStatusHistory.create({
+      data: {
+        serviceProposalId: id,
+        fromStatus: p.status,
+        toStatus: "APPROVED_FOR_ISSUE",
+        reason,
+        byId: by.id,
+        byName: by.name,
+      },
+    });
+  });
+  const dto = await getServiceProposal(id);
+  if (!dto) throw new Error("Proposal vanished after approval");
   return dto;
 }
 

@@ -21,10 +21,12 @@ import {
   saveLogoSettings,
   saveDocumentFontId,
   saveInvoiceSettings,
+  saveProposalApprovalThresholds,
   type FooterSettings,
   type LogoSettings,
 } from "@/lib/server/practice-config";
 import type { InvoiceSettings } from "@/lib/finance/invoice-settings";
+import { MAX_FEE_LIMIT, type ApprovalThresholds } from "@/lib/proposals/approval";
 import {
   createTemplate,
   updateTemplate,
@@ -225,6 +227,40 @@ export async function saveInvoiceSettingsAction(
     return { ok: true, data: saved };
   } catch (e) {
     return fail(e, "Failed to save the invoice settings.");
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Proposal approval limits                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The discount % and total fee above which a Service Proposal needs a Director's approval
+ * before it is sent (lib/proposals/approval.ts). They decide what Staff may send on their
+ * own, so they take the letterhead's gate: Admin / Director / founder. A value that is not
+ * a number is refused rather than silently defaulted; in-range clamping is the parser's.
+ */
+export async function saveProposalApprovalAction(input: {
+  maxDiscountPercent: unknown;
+  maxFee: unknown;
+}): Promise<ActionResult<ApprovalThresholds>> {
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
+  const pct = Number(input?.maxDiscountPercent);
+  const fee = Number(input?.maxFee);
+  if (String(input?.maxDiscountPercent ?? "").trim() === "" || !Number.isFinite(pct) || pct < 0 || pct > 100) {
+    return { ok: false, error: "Enter a discount limit between 0 and 100%." };
+  }
+  if (String(input?.maxFee ?? "").trim() === "" || !Number.isFinite(fee) || fee < 0 || fee > MAX_FEE_LIMIT) {
+    return { ok: false, error: "Enter a fee limit of 0 or more." };
+  }
+  try {
+    const saved = await saveProposalApprovalThresholds({ maxDiscountPercent: pct, maxFee: fee });
+    revalidatePath("/settings");
+    revalidatePath("/design/service-proposals", "layout");
+    return { ok: true, data: saved };
+  } catch (e) {
+    return fail(e, "Failed to save the approval limits.");
   }
 }
 

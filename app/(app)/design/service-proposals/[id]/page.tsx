@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer, ReceiptText } from "lucide-react";
+import { AlertTriangle, ArrowLeft, LayoutDashboard, Pencil, Printer, ReceiptText, ShieldAlert, ShieldCheck } from "lucide-react";
 import {
+  getProposalApprovalRecord,
   getServiceProposal,
   getServiceProposalIdentification,
   listServiceProposalVersions,
@@ -36,6 +37,9 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { bboNote, bboPerMilestone, resolveBbo } from "@/lib/proposals/bbo";
 import { getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
+import { canApproveProposals, checkApproval, isAwaitingApproval, isBeforeSending } from "@/lib/proposals/approval";
+import { getProposalApprovalThresholds } from "@/lib/server/practice-config";
+import { requireActor } from "@/lib/server/actor";
 
 export const metadata: Metadata = { title: "Service Proposal · AEC-flow" };
 
@@ -49,12 +53,28 @@ export default async function ServiceProposalDetailPage({
   const p = await getServiceProposal(id);
   if (!p) notFound();
 
-  const [versions, history, identification, acceptanceLinks] = await Promise.all([
+  const [versions, history, identification, acceptanceLinks, thresholds, approvalRecord, viewer] = await Promise.all([
     listServiceProposalVersions(p.id),
     listStatusHistory(p.id),
     getServiceProposalIdentification(p),
     listAcceptanceLinks(p.id),
+    getProposalApprovalThresholds(),
+    getProposalApprovalRecord(p.id, p.approvedById),
+    requireActor().catch(() => null),
   ]);
+
+  /**
+   * APPROVAL THRESHOLDS (owner's ruling 27 Nov 2026, lib/proposals/approval.ts): over the
+   * discount or the fee limit, a Director approves before the proposal can be sent. Read
+   * from the STORED totals, the same figures the server enforces on.
+   */
+  const approval = checkApproval(
+    { currency: p.currency, subtotal: p.subtotal, discountTotal: p.discountTotal, grandTotal: p.grandTotal },
+    thresholds,
+  );
+  const awaitingApproval = isAwaitingApproval(p.status, approval, p.approvedById);
+  const viewerCanApprove = viewer ? canApproveProposals(viewer.role, viewer.isFounder) : false;
+  const showApproved = Boolean(p.approvedById) && approval.required && isBeforeSending(p.status);
   const calc = computeProposal(p.input as ProposalCalcInput);
   const money = (n: number) => formatCurrency(n, p.currency, { maximumFractionDigits: 2 });
   const locked = isLocked(p.status);
@@ -87,7 +107,7 @@ export default async function ServiceProposalDetailPage({
    * and passed through. lib/proposals/proposal-email does no formatting of its own:
    * a second opinion about what the client owes is exactly the bug worth avoiding.
    */
-  const approvedForIssue = p.status === "APPROVED_FOR_ISSUE" || isIssued(p.status);
+  const approvedForIssue = (p.status === "APPROVED_FOR_ISSUE" && !awaitingApproval) || isIssued(p.status);
   const taxLabel = taxLineLabel(calc.totals);
   const firm = await getFirmIdentity();
   const feeLines = [
@@ -228,7 +248,67 @@ export default async function ServiceProposalDetailPage({
         </div>
       ) : null}
 
-      <ServiceProposalActions id={p.id} status={p.status} />
+      {awaitingApproval ? (
+        <div
+          data-testid="approval-banner"
+          className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900"
+        >
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="font-semibold">{t("Needs Director approval")}</p>
+            {approval.tripped.map((r) =>
+              r.rule === "discount" ? (
+                <p key="discount">
+                  {fmt(t("Discount {pct}% is above the {limit}% limit."), { pct: r.percent, limit: r.limit })}
+                </p>
+              ) : (
+                <p key="fee">
+                  {fmt(t("Fee {amount} is above the {limit} limit."), {
+                    amount: money(r.amount),
+                    limit: formatCurrency(r.limit, r.limitCurrency, { maximumFractionDigits: 2 }),
+                  })}
+                </p>
+              ),
+            )}
+            {!approval.feeCompared ? (
+              <p className="text-xs">
+                {fmt(t("The fee limit is set in {limitCurrency} and there is no exchange rate to {currency}, so only the discount rule applies."), {
+                  limitCurrency: thresholds.currency,
+                  currency: p.currency,
+                })}
+              </p>
+            ) : null}
+            <p className="text-xs">
+              {viewerCanApprove
+                ? t("Approve it for sending below once you have checked the figures.")
+                : t("A Director or an administrator must approve it before it can be sent to the client.")}
+            </p>
+          </div>
+        </div>
+      ) : null}
+      {showApproved ? (
+        <div
+          data-testid="approval-granted"
+          className="flex items-start gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-900"
+        >
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {approvalRecord
+              ? fmt(t("Approved for sending by {name} on {date}. Changing the fee or the discount clears this approval."), {
+                  name: approvalRecord.byName ?? t("a Director"),
+                  date: formatDate(approvalRecord.at),
+                })
+              : t("Approved for sending. Changing the fee or the discount clears this approval.")}
+          </span>
+        </div>
+      ) : null}
+
+      <ServiceProposalActions
+        id={p.id}
+        status={p.status}
+        awaitingApproval={awaitingApproval}
+        canApprove={viewerCanApprove}
+      />
       {p.status === "ACCEPTED" || p.status === "PARTIALLY_ACCEPTED" ? (
         <ConvertToProject id={p.id} hasProject={Boolean(p.projectId)} hasClient={Boolean(p.clientId)} />
       ) : null}

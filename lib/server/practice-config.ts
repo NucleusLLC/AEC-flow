@@ -13,6 +13,7 @@
 import { PRACTICE, type PracticeProfile } from "@/lib/data/settings";
 import { DEFAULT_FONT_ID, selectableFonts } from "@/lib/documents/fonts";
 import { parseInvoiceSettings, type InvoiceSettings } from "@/lib/finance/invoice-settings";
+import { parseApprovalThresholds, type ApprovalThresholds } from "@/lib/proposals/approval";
 import { readAppConfig, writeAppConfig } from "./app-config-store";
 
 type AppConfig = {
@@ -38,6 +39,12 @@ type AppConfig = {
   documentFontId?: string;
   /** Logo placement on exported documents (position + height in px). */
   logo?: { position?: LogoPosition; size?: number };
+  /**
+   * Service Proposal approval limits: a discount above `maxDiscountPercent` or a fee
+   * above `maxFee` (in `currency`) needs a Director before sending. Read through
+   * `parseApprovalThresholds` (lib/proposals/approval.ts).
+   */
+  proposalApproval?: Partial<ApprovalThresholds>;
 };
 
 /**
@@ -165,6 +172,32 @@ export async function saveInvoiceSettings(input: unknown): Promise<InvoiceSettin
   const next = parseInvoiceSettings(input);
   const cfg = await readConfig();
   cfg.invoice = next;
+  await writeConfig(cfg);
+  return next;
+}
+
+/**
+ * The practice's proposal approval limits (lib/proposals/approval.ts). Unset means the
+ * defaults — 10% discount, 50,000 — in the practice's system currency.
+ */
+export async function getProposalApprovalThresholds(): Promise<ApprovalThresholds> {
+  const cfg = await readConfig();
+  return parseApprovalThresholds(cfg.proposalApproval, await getSystemCurrency());
+}
+
+/**
+ * Persists the approval limits, clamped by the same parser the reads use. The fee limit
+ * is stored WITH the system currency it was typed in, so a later change of the system
+ * currency cannot silently turn 50,000 AWG into 50,000 USD.
+ */
+export async function saveProposalApprovalThresholds(input: {
+  maxDiscountPercent: unknown;
+  maxFee: unknown;
+}): Promise<ApprovalThresholds> {
+  const currency = await getSystemCurrency();
+  const next = parseApprovalThresholds({ ...input, currency }, currency);
+  const cfg = await readConfig();
+  cfg.proposalApproval = next;
   await writeConfig(cfg);
   return next;
 }

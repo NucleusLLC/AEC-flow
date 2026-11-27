@@ -332,8 +332,16 @@
  *   price book / Norm Set / templates, delete or receive purchase orders, add members or edit a
  *   colleague's record, and send platform email. Nobody decides their own leave. VIEWER is
  *   read-only everywhere (server actions refuse company writes by a VIEWER). No SQL.
+ * 0.50.0 (27 NOV 2026): feat — Service Proposal APPROVAL THRESHOLDS ("discount OR fee"). A
+ *   proposal whose discount is above 10% of the subtotal, or whose total fee is above 50,000 AWG,
+ *   needs a Director's (or Admin's / the founder's) approval before it can be sent; both limits
+ *   are set per practice in Settings > Proposal Templates > Proposal approval. The proposal page
+ *   shows an amber "Needs Director approval" banner naming the rule; Issue is refused server-side
+ *   until a Director presses "Approve for sending" (who and when are recorded). Changing the fee
+ *   or the discount after approval clears it. The register gains an "Awaiting approval" badge and
+ *   filter. Below both limits nothing changes. No SQL.
  */
-export const APP_VERSION = "0.49.0";
+export const APP_VERSION = "0.50.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

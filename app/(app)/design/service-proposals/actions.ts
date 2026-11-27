@@ -12,8 +12,11 @@ import {
   reviseServiceProposal,
   duplicateServiceProposal,
   getServiceProposal,
+  approveServiceProposalForSending,
   ProposalNumberInUseError,
 } from "@/lib/data/service-proposals";
+import { requireActor } from "@/lib/server/actor";
+import { canApproveProposals } from "@/lib/proposals/approval";
 import { convertServiceProposalToProject } from "@/lib/data/service-proposal-convert";
 import {
   AcceptanceLinkError,
@@ -135,6 +138,8 @@ export async function transitionServiceProposalAction(
   const actor = await currentActor();
   // Accepting and converting are separately gated; everything else needs at least edit rights.
   const action = to === "ACCEPTED" || to === "PARTIALLY_ACCEPTED" ? "accept" : to === "CONVERTED" ? "convert" : "issue";
+  // "Approved for issue" over an approval limit is a Director's approval: one path, below.
+  if (to === "APPROVED_FOR_ISSUE") return approveServiceProposalForSendingAction(id);
   try {
     assertCan(actor, action);
     const p = await transitionStatus(id, to, reason);
@@ -143,6 +148,31 @@ export async function transitionServiceProposalAction(
     return { ok: true, id: p.id, number: p.number };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed to update status." };
+  }
+}
+
+/**
+ * Approve a proposal for sending (owner's ruling 27 Nov 2026, lib/proposals/approval.ts).
+ *
+ * Over a limit only ADMIN / DIRECTOR / the founder may, and the role is read from the
+ * actor's DATABASE row (requireActor), not the JWT, so a demoted Director cannot approve on
+ * a stale token. Under both limits this is the ordinary "Approve for issue" step, gated on
+ * "issue" as before. The data layer refuses either way when the rules say no.
+ */
+export async function approveServiceProposalForSendingAction(id: string): Promise<SaveResult> {
+  try {
+    const who = await requireActor();
+    assertCan({ role: who.role as ProposalActor["role"], userId: who.id }, "issue");
+    const p = await approveServiceProposalForSending(id, {
+      id: who.id,
+      name: who.name,
+      mayApprove: canApproveProposals(who.role, who.isFounder),
+    });
+    revalidatePath("/design/service-proposals");
+    revalidatePath(`/design/service-proposals/${id}`);
+    return { ok: true, id: p.id, number: p.number };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed to approve the proposal." };
   }
 }
 
