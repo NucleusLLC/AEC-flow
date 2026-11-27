@@ -9,6 +9,7 @@ import {
   recordReceipt,
 } from "@/lib/data/procurement";
 import type { PurchaseOrderInput } from "@/lib/procurement/types";
+import { permissionDenied, requirePermission } from "@/lib/server/actor";
 
 export type SaveResult =
   | { ok: true; id: string; poNumber: string }
@@ -24,6 +25,8 @@ function validate(input: PurchaseOrderInput): string | null {
 }
 
 export async function createPurchaseOrderAction(input: PurchaseOrderInput): Promise<SaveResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const err = validate(input);
   if (err) return { ok: false, error: err };
   try {
@@ -39,6 +42,8 @@ export async function updatePurchaseOrderAction(
   id: string,
   input: PurchaseOrderInput,
 ): Promise<SaveResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const err = validate(input);
   if (err) return { ok: false, error: err };
   try {
@@ -51,7 +56,13 @@ export async function updatePurchaseOrderAction(
   }
 }
 
+/**
+ * Deleting a purchase order and recording a receipt are for an administrator, a
+ * director or the founder (security audit D-6); this one throws the refusal,
+ * like any other failure here, because its callers expect `{ ok: true }` or a throw.
+ */
 export async function deletePurchaseOrderAction(id: string): Promise<{ ok: true }> {
+  await requirePermission("purchaseOrder.delete");
   await deletePurchaseOrder(id);
   revalidatePath("/procurement");
   return { ok: true };
@@ -61,6 +72,8 @@ export async function receivePurchaseOrderAction(
   id: string,
   receivedQtys: number[],
 ): Promise<SaveResult> {
+  const denied = await permissionDenied("purchaseOrder.receive");
+  if (denied) return { ok: false, error: denied };
   try {
     const po = await recordReceipt(id, receivedQtys);
     revalidatePath("/procurement");
@@ -77,6 +90,8 @@ export async function createPoFromSelectionsAction(input: {
   vendorContact?: string | null;
   vendorEmail?: string | null;
 }): Promise<SaveResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   if (!input.vendorName || !input.vendorName.trim()) {
     return { ok: false, error: "Enter a supplier / vendor name." };
   }

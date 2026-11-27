@@ -12,8 +12,26 @@ import type { MemberAccessSnapshot } from "@/lib/team/member-write-policy";
 export async function getMemberAccessSnapshot(companyId: string, id: string): Promise<MemberAccessSnapshot | null> {
   const row = await prisma.user.findFirst({
     where: { id, companyId },
-    select: { id: true, role: true, status: true, email: true },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+      email: true,
+      capacity: true,
+      annualLeaveTotal: true,
+      annualLeaveTaken: true,
+    },
   });
   if (!row) return null;
-  return { id: row.id, role: row.role, status: row.status, email: row.email, isFounder: isFounderEmail(row.email) };
+  return {
+    id: row.id,
+    role: row.role,
+    status: row.status,
+    email: row.email,
+    isFounder: isFounderEmail(row.email),
+    // Allowances: only an administrator may change them, even on their own record (D-6).
+    capacity: row.capacity,
+    annualLeaveTotal: row.annualLeaveTotal,
+    annualLeaveTaken: row.annualLeaveTaken,
+  };
 }

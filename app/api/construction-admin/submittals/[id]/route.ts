@@ -1,5 +1,6 @@
 import { getSubmittal, updateSubmittal } from "@/lib/data/ca/submittals";
 import { ok, notFound, badRequest, fail } from "@/lib/ca/api";
+import { routeDenied } from "@/lib/server/route-gate";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -14,6 +15,8 @@ export async function GET(_req: Request, { params }: Ctx) {
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
+  const denied = await routeDenied("write");
+  if (denied) return denied;
   const { id } = await params;
   let body: Record<string, unknown>;
   try {

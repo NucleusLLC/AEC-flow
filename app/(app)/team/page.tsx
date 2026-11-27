@@ -48,13 +48,16 @@ export default async function TeamPage() {
             {t("Staff across disciplines and departments — roles, capacity, and current allocation.")}
           </p>
         </div>
-        <Link
-          href="/team/new"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <UserPlus className="h-4 w-4" />
-          {t("Add Member")}
-        </Link>
+        {/* Adding a member is member administration (security audit D-6). */}
+        {canInvite ? (
+          <Link
+            href="/team/new"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <UserPlus className="h-4 w-4" />
+            {t("Add Member")}
+          </Link>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

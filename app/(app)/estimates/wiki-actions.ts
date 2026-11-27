@@ -1,7 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { requireActor } from "@/lib/server/actor";
+import { requireWriter } from "@/lib/server/actor";
 import { getAnthropicApiKey } from "@/lib/server/ai-config";
 
 /** Structured article the AI returns — mirrors the editable fields of WikiArticle. */
@@ -82,9 +82,9 @@ const SYSTEM = [
  * Never throws to the client — returns a tagged result.
  */
 export async function aiFetchWikiArticle(topic: string): Promise<AiWikiResult> {
-  // A billed call: only for a signed-in, active member.
+  // A billed call: only for a signed-in, active member who may write (not a VIEWER, D-6).
   try {
-    await requireActor();
+    await requireWriter();
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
   }

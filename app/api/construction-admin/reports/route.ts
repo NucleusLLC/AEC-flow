@@ -1,6 +1,7 @@
 import { listReports, createReport } from "@/lib/data/ca/reports";
 import { ok, created, badRequest, fail } from "@/lib/ca/api";
 import type { ManpowerRow } from "@/lib/ca/types";
+import { routeDenied } from "@/lib/server/route-gate";
 
 export async function GET(req: Request) {
   const projectId = new URL(req.url).searchParams.get("projectId") ?? undefined;
@@ -12,6 +13,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const denied = await routeDenied("write");
+  if (denied) return denied;
   let body: Record<string, unknown>;
   try {
     body = await req.json();

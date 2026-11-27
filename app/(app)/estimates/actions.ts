@@ -15,6 +15,7 @@ import { saveGeneralConditions } from "@/lib/data/general-conditions-db";
 import { saveTemplates } from "@/lib/data/estimate-templates";
 import { saveWikiArticles } from "@/lib/data/estimating-wiki-db";
 import { estimateTotals } from "@/lib/estimates/calc";
+import { permissionDenied } from "@/lib/server/actor";
 import type { CostEstimate, CopyDestination } from "@/lib/data/estimates.types";
 import type { PriceItem } from "@/lib/data/price-lists.types";
 import type { NormSetTask, EstimateTemplate } from "@/lib/data/estimate-presets";
@@ -22,6 +23,14 @@ import type { GeneralConditionItem } from "@/lib/data/general-conditions";
 import type { WikiArticle } from "@/lib/data/estimating-wiki";
 
 type SaveResult = { ok: true; id: string } | { ok: false; error: string };
+
+/*
+ * Security audit D-6 (owner's ruling, 27 Nov 2026). Saving, duplicating and
+ * copying an estimate is open to every member except a VIEWER (read-only).
+ * Locking / unlocking a version and replacing a firm-wide library — price book,
+ * Norm Set, General Conditions, templates, wiki; each save deletes the whole set
+ * and recreates it — are for an administrator, a director or the founder.
+ */
 
 /**
  * Load a single estimate's FULL sheet (header + its own categories/items) by id.
@@ -39,6 +48,8 @@ export async function loadEstimateAction(id: string): Promise<CostEstimate | nul
  * match the editor's default-off markup base.
  */
 export async function saveEstimateAction(estimate: CostEstimate): Promise<SaveResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const amount = Math.round(estimateTotals(estimate).grandTotal);
     const { id } = await saveEstimate(estimate, amount);
@@ -56,6 +67,8 @@ export async function saveEstimateAction(estimate: CostEstimate): Promise<SaveRe
  * because duplicating is also how you branch a scenario you intend to keep editing.
  */
 export async function duplicateEstimateAction(id: string, version: string): Promise<SaveResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const label = version.trim();
     if (!label) return { ok: false, error: "A version name is required." };
@@ -107,6 +120,8 @@ export async function copyTasksToProjectAction(input: {
     }
   | { ok: false; error: string }
 > {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const res = await copyTasksToProject(input);
     // The estimates list changes too: the destination gains an estimate, or a
@@ -120,6 +135,8 @@ export async function copyTasksToProjectAction(input: {
 
 /** Freeze / unfreeze a version. Locked rows are refused by every server write path. */
 export async function setEstimateLockAction(id: string, locked: boolean): Promise<SaveResult> {
+  const denied = await permissionDenied("estimate.lock");
+  if (denied) return { ok: false, error: denied };
   try {
     if (!id) return { ok: false, error: "Save the estimate before locking it." };
     await setEstimateLock(id, locked);
@@ -134,6 +151,8 @@ type SimpleResult = { ok: true } | { ok: false; error: string };
 
 /** Persist the firm-wide price book (materials + equipment). */
 export async function savePriceBookAction(materials: PriceItem[], equipment: PriceItem[]): Promise<SimpleResult> {
+  const denied = await permissionDenied("priceBook.replace");
+  if (denied) return { ok: false, error: denied };
   try {
     await savePriceBook(materials, equipment);
     revalidatePath("/estimates");
@@ -145,6 +164,8 @@ export async function savePriceBookAction(materials: PriceItem[], equipment: Pri
 
 /** Persist the firm-wide Norm Set (standard task library). */
 export async function saveNormSetAction(tasks: NormSetTask[]): Promise<SimpleResult> {
+  const denied = await permissionDenied("normSet.replace");
+  if (denied) return { ok: false, error: denied };
   try {
     await saveNormSet(tasks);
     revalidatePath("/estimates");
@@ -156,6 +177,8 @@ export async function saveNormSetAction(tasks: NormSetTask[]): Promise<SimpleRes
 
 /** Persist the firm-wide General Conditions template (preliminaries). */
 export async function saveGeneralConditionsAction(items: GeneralConditionItem[]): Promise<SimpleResult> {
+  const denied = await permissionDenied("generalConditions.replace");
+  if (denied) return { ok: false, error: denied };
   try {
     await saveGeneralConditions(items);
     revalidatePath("/estimates");
@@ -167,6 +190,8 @@ export async function saveGeneralConditionsAction(items: GeneralConditionItem[])
 
 /** Persist the firm estimate-template library. */
 export async function saveTemplatesAction(templates: EstimateTemplate[]): Promise<SimpleResult> {
+  const denied = await permissionDenied("estimateTemplates.replace");
+  if (denied) return { ok: false, error: denied };
   try {
     await saveTemplates(templates);
     revalidatePath("/estimates");
@@ -178,6 +203,8 @@ export async function saveTemplatesAction(templates: EstimateTemplate[]): Promis
 
 /** Persist the estimating Wiki knowledge base. */
 export async function saveWikiAction(articles: WikiArticle[]): Promise<SimpleResult> {
+  const denied = await permissionDenied("wiki.replace");
+  if (denied) return { ok: false, error: denied };
   try {
     await saveWikiArticles(articles);
     revalidatePath("/estimates");

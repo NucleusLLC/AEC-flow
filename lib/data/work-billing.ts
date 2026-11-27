@@ -24,6 +24,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { requireActor } from "@/lib/server/actor";
+import { invoiceRefusal } from "@/lib/finance/invoice-permissions";
 import {
   chosenTotal,
   workToLines,
@@ -240,6 +241,9 @@ export async function raiseInvoiceFromWork(
   input: RaiseFromWorkInput,
 ): Promise<{ id: string; number: string; stampedTime: number; stampedExpenses: number }> {
   const actor = await requireActor();
+  // D-6: a VIEWER is read-only; raising a draft is otherwise open to members.
+  const refused = invoiceRefusal("create", actor.role, actor.isFounder);
+  if (refused) throw new WorkBillingError(refused);
   const work = await unbilledWork({
     projectId: input.projectId,
     currency: input.currency,

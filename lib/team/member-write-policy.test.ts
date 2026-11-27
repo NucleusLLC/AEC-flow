@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { READ_ONLY_REFUSAL } from "@/lib/permissions/role-gates";
 import {
+  ADD_MEMBER_ADMIN_ONLY,
+  ALLOWANCE_ADMIN_ONLY,
+  EDIT_COLLEAGUE_ADMIN_ONLY,
   canChangeMemberAccess,
   changedAccessFields,
   checkMemberWrite,
@@ -8,6 +12,8 @@ import {
 } from "./member-write-policy";
 
 const staff: MemberWriteActor = { id: "u-staff", role: "STAFF", isFounder: false };
+const manager: MemberWriteActor = { id: "u-mgr", role: "MANAGER", isFounder: false };
+const viewer: MemberWriteActor = { id: "u-viewer", role: "VIEWER", isFounder: false };
 const admin: MemberWriteActor = { id: "u-admin", role: "ADMIN", isFounder: false };
 const director: MemberWriteActor = { id: "u-dir", role: "DIRECTOR", isFounder: false };
 const founder: MemberWriteActor = { id: "u-founder", role: "DIRECTOR", isFounder: true };
@@ -38,8 +44,30 @@ describe("changedAccessFields", () => {
 });
 
 describe("checkMemberWrite — edits", () => {
-  it("lets anyone edit ordinary fields (no access field changes)", () => {
-    expect(checkMemberWrite(staff, colleague, { role: "STAFF", status: "ACTIVE", email: "col@firm.com" })).toEqual({ ok: true });
+  it("lets a non-admin edit the ordinary fields of their OWN record", () => {
+    expect(checkMemberWrite(staff, selfRow, { role: "STAFF", status: "ACTIVE", email: "me@firm.com" })).toEqual({ ok: true });
+  });
+
+  it("stops a non-admin editing a colleague's record at all (D-6)", () => {
+    for (const actor of [staff, manager]) {
+      const d = checkMemberWrite(actor, colleague, { role: "STAFF", status: "ACTIVE", email: "col@firm.com" });
+      expect(d).toEqual({ ok: false, error: EDIT_COLLEAGUE_ADMIN_ONLY });
+    }
+  });
+
+  it("stops a non-admin changing their own leave balance or capacity (D-6)", () => {
+    const me = { ...selfRow, capacity: 100, annualLeaveTotal: 22, annualLeaveTaken: 3 };
+    expect(checkMemberWrite(staff, me, { annualLeaveTotal: 40 })).toEqual({ ok: false, error: ALLOWANCE_ADMIN_ONLY });
+    expect(checkMemberWrite(staff, me, { annualLeaveTaken: 0 })).toEqual({ ok: false, error: ALLOWANCE_ADMIN_ONLY });
+    expect(checkMemberWrite(staff, me, { capacity: 50 })).toEqual({ ok: false, error: ALLOWANCE_ADMIN_ONLY });
+    expect(checkMemberWrite(staff, me, { capacity: 100, annualLeaveTotal: 22, annualLeaveTaken: 3 })).toEqual({ ok: true });
+    expect(checkMemberWrite(admin, { ...colleague, annualLeaveTotal: 22 }, { annualLeaveTotal: 25 })).toEqual({ ok: true });
+  });
+
+  it("refuses a VIEWER every edit, their own record included (D-6)", () => {
+    const viewerRow = { ...selfRow, id: "u-viewer", role: "VIEWER" };
+    expect(checkMemberWrite(viewer, viewerRow, {})).toEqual({ ok: false, error: READ_ONLY_REFUSAL });
+    expect(checkMemberWrite(viewer, colleague, {})).toEqual({ ok: false, error: READ_ONLY_REFUSAL });
   });
 
   it("stops a non-admin promoting themselves", () => {
@@ -66,16 +94,24 @@ describe("checkMemberWrite — edits", () => {
     expect(checkMemberWrite(founder, colleague, { role: "ADMIN" })).toEqual({ ok: true });
   });
 
-  it("still lets anyone edit the founder's ordinary fields", () => {
-    expect(checkMemberWrite(staff, founderRow, { role: "DIRECTOR", status: "ACTIVE", email: "GREG@zenarch.net" })).toEqual({ ok: true });
+  it("lets an admin and the founder edit the founder's ordinary fields, but not a non-admin (D-6)", () => {
+    const ordinary = { role: "DIRECTOR", status: "ACTIVE", email: "GREG@zenarch.net" };
+    expect(checkMemberWrite(admin, founderRow, ordinary)).toEqual({ ok: true });
+    expect(checkMemberWrite(founder, founderRow, ordinary)).toEqual({ ok: true });
+    expect(denied(checkMemberWrite(staff, founderRow, ordinary))).toBe(true);
   });
 });
 
 describe("checkMemberWrite — new members", () => {
-  it("lets anyone add a directory entry at a non-administrative role", () => {
+  it("reserves adding any member for administrators (D-6: it takes a seat)", () => {
     for (const role of ["STAFF", "MANAGER", "VIEWER"]) {
-      expect(checkMemberWrite(staff, null, { role, status: "ACTIVE" }), role).toEqual({ ok: true });
+      expect(checkMemberWrite(staff, null, { role, status: "ACTIVE" }), role).toEqual({ ok: false, error: ADD_MEMBER_ADMIN_ONLY });
+      expect(checkMemberWrite(manager, null, { role, status: "ACTIVE" }), role).toEqual({ ok: false, error: ADD_MEMBER_ADMIN_ONLY });
+      expect(checkMemberWrite(admin, null, { role, status: "ACTIVE" }), role).toEqual({ ok: true });
+      expect(checkMemberWrite(director, null, { role, status: "ACTIVE" }), role).toEqual({ ok: true });
+      expect(checkMemberWrite(founder, null, { role, status: "ACTIVE" }), role).toEqual({ ok: true });
     }
+    expect(checkMemberWrite(viewer, null, { role: "STAFF" })).toEqual({ ok: false, error: READ_ONLY_REFUSAL });
   });
 
   it("reserves adding Admins and Directors for administrators", () => {

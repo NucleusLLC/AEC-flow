@@ -1,5 +1,7 @@
 import { listChangeOrders, createChangeOrder } from "@/lib/data/ca/change-orders";
 import { ok, created, badRequest, fail, n } from "@/lib/ca/api";
+import { routeDenied } from "@/lib/server/route-gate";
+import { changeOrderWriteIsDecision } from "@/lib/permissions/role-gates";
 
 export async function GET(req: Request) {
   const projectId = new URL(req.url).searchParams.get("projectId") ?? undefined;
@@ -11,6 +13,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const denied = await routeDenied("write");
+  if (denied) return denied;
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -18,6 +22,11 @@ export async function POST(req: Request) {
     return badRequest("Invalid JSON body");
   }
   if (!body.projectId || !body.title) return badRequest("projectId and title are required");
+  // Creating one already approved, rejected or void is a decision (security audit D-6).
+  if (changeOrderWriteIsDecision(null, body.status as string | undefined)) {
+    const refused = await routeDenied("changeOrder.decide");
+    if (refused) return refused;
+  }
 
   try {
     const co = await createChangeOrder({

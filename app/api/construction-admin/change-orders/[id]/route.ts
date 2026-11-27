@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { getChangeOrder, updateChangeOrder } from "@/lib/data/ca/change-orders";
 import { ok, notFound, badRequest, fail, n } from "@/lib/ca/api";
+import { routeDenied } from "@/lib/server/route-gate";
+import { changeOrderWriteIsDecision } from "@/lib/permissions/role-gates";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -15,6 +17,8 @@ export async function GET(_req: Request, { params }: Ctx) {
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
+  const denied = await routeDenied("write");
+  if (denied) return denied;
   const { id } = await params;
   let body: Record<string, unknown>;
   try {
@@ -23,6 +27,14 @@ export async function PATCH(req: Request, { params }: Ctx) {
     return badRequest("Invalid JSON body");
   }
   try {
+    // Approving, rejecting or voiding a change order — or editing one that is —
+    // is for an administrator, a director or the founder (security audit D-6).
+    const current = await getChangeOrder(id);
+    if (!current) return notFound("Change order not found");
+    if (changeOrderWriteIsDecision(current.status, body.status as string | undefined)) {
+      const refused = await routeDenied("changeOrder.decide");
+      if (refused) return refused;
+    }
     const co = await updateChangeOrder(id, {
       projectId: String(body.projectId ?? ""),
       projectName: (body.projectName as string) ?? null,
@@ -57,6 +69,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
+  const denied = await routeDenied("changeOrder.delete");
+  if (denied) return denied;
   const { id } = await params;
   try {
     await prisma.changeOrder.delete({ where: { id } });

@@ -30,6 +30,7 @@
  * at all.
  */
 import { requireActor } from "@/lib/server/actor";
+import { deniedFor, DIRECTOR_ADMIN_ONLY } from "@/lib/permissions/role-gates";
 import { getFirmIdentity } from "@/lib/server/firm";
 import { sendEmail } from "@/lib/server/email";
 import { recordEmailAttempt } from "@/lib/data/email-log";
@@ -40,6 +41,8 @@ import { renderDocumentEmail } from "@/lib/email/compose";
 export type EmailFailureReason =
   /** No usable session — nothing was sent and nothing could be logged. */
   | "not_signed_in"
+  /** Signed in, but the role may not send (security audit D-6: Director / Admin only). Nothing was sent. */
+  | "not_allowed"
   /** The recipient or a cc address is not a valid address. Nothing was sent. */
   | "invalid_recipient"
   /** A chosen file is the wrong type, empty, or too big. Nothing was sent. */
@@ -114,6 +117,12 @@ export async function sendDocumentEmail(
       logId: null,
     };
   }
+
+  // 1b. May they send at all? Email goes to any address the sender types, under
+  //     the practice's name — security audit D-6 keeps it for an administrator, a
+  //     director or the founder. Refused before anything is parsed or logged.
+  const refused = deniedFor("email.send", actor);
+  if (refused) return { ok: false, reason: "not_allowed", error: refused, logId: null };
 
   const subject = (input.subject ?? "").trim();
   const body = (input.body ?? "").trim();
@@ -311,6 +320,8 @@ export function humanise(reason: EmailFailureReason, providerError: string): str
       return providerError;
     case "not_signed_in":
       return "You must be signed in to send email.";
+    case "not_allowed":
+      return DIRECTOR_ADMIN_ONLY;
     case "unconfirmed":
       return providerError;
     default:

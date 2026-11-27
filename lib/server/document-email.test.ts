@@ -290,6 +290,30 @@ describe("identity is resolved server-side, never taken from the caller", () => 
     expect(mocks.recordEmailAttempt).not.toHaveBeenCalled();
   });
 
+  it("refuses a member who is not an administrator or director, and sends and logs nothing (D-6)", async () => {
+    for (const role of ["MANAGER", "STAFF", "VIEWER"]) {
+      vi.clearAllMocks();
+      mocks.requireActor.mockResolvedValue({ ...ACTOR, role, isFounder: false });
+      const res = await sendDocumentEmail(INPUT);
+      expect(res.ok, role).toBe(false);
+      if (!res.ok) expect(res.reason, role).toBe("not_allowed");
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.recordEmailAttempt).not.toHaveBeenCalled();
+    }
+  });
+
+  it("lets an Admin and a Director send (D-6)", async () => {
+    for (const role of ["ADMIN", "DIRECTOR"]) {
+      vi.clearAllMocks();
+      mocks.requireActor.mockResolvedValue({ ...ACTOR, role, isFounder: false });
+      mocks.getFirmIdentity.mockResolvedValue({ name: "ZenArch Consultants", location: "", logo: null });
+      mocks.recordEmailAttempt.mockResolvedValue("log_1");
+      mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_1" });
+      const res = await sendDocumentEmail(INPUT);
+      expect(res.ok, role).toBe(true);
+    }
+  });
+
   it("sends anyway if the practice profile cannot be read — that is cosmetic", async () => {
     mocks.getFirmIdentity.mockRejectedValue(new Error("db down"));
     mocks.sendEmail.mockResolvedValue({ ok: true, id: "re_1" });

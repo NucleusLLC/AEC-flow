@@ -16,6 +16,9 @@ import { formatDate } from "@/lib/format";
 import { initials, cn } from "@/lib/utils";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
+import { requireActor } from "@/lib/server/actor";
+import { canChangeMemberAccess } from "@/lib/team/member-write-policy";
+import { canWrite } from "@/lib/permissions/role-gates";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -38,6 +41,10 @@ export default async function TeamMemberPage({ params }: PageProps) {
   const { id } = await params;
   const member = await getTeamMember(id);
   if (!member) notFound();
+  // An administrator edits anyone; anyone else only their own record, and a
+  // VIEWER nothing (security audit D-6). saveTeamMember enforces it again.
+  const actor = await requireActor().catch(() => null);
+  const mayEdit = actor ? canChangeMemberAccess(actor) || (canWrite(actor) && actor.id === member.id) : false;
   const actionItems = await getActionItemsForUser(member.id);
   const t = await getServerT();
   const locale = await getServerLocale();
@@ -71,13 +78,15 @@ export default async function TeamMemberPage({ params }: PageProps) {
             </span>
           </div>
         </div>
-        <Link
-          href={`/team/${member.id}/edit`}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
-        >
-          <Pencil className="h-4 w-4" />
-          {t("Edit")}
-        </Link>
+        {mayEdit ? (
+          <Link
+            href={`/team/${member.id}/edit`}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <Pencil className="h-4 w-4" />
+            {t("Edit")}
+          </Link>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

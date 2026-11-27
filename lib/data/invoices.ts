@@ -34,7 +34,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { requireActor } from "@/lib/server/actor";
-import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/lib/finance/invoice-permissions";
+import { INVOICE_MANAGER_ONLY, invoiceRefusal, type InvoiceAction } from "@/lib/finance/invoice-permissions";
 import { releaseWork } from "@/lib/data/work-billing";
 import { creditNoteSummaryDto } from "@/lib/data/credit-notes";
 import {
@@ -98,21 +98,23 @@ export class InvoiceActionError extends Error {
 export { DiscountError };
 
 /**
- * Voiding and re-issuing an invoice, reversing a payment and deleting a draft are for an
- * administrator, a director or the founder (lib/finance/invoice-permissions.ts).
+ * Issuing, voiding and re-issuing an invoice, recording or reversing a payment and
+ * deleting a draft are for an administrator, a director or the founder; raising and
+ * editing a draft for anyone but a VIEWER (lib/finance/invoice-permissions.ts, D-6).
  * Checked here as well as in the actions in front of this file: an action is a
  * public endpoint, and the data layer is the last place the rule can live.
  */
 export class InvoiceForbiddenError extends Error {
-  constructor() {
-    super(INVOICE_MANAGER_ONLY);
+  constructor(message: string = INVOICE_MANAGER_ONLY) {
+    super(message);
     this.name = "InvoiceForbiddenError";
   }
 }
 
 async function requireInvoiceAction(action: InvoiceAction): Promise<Awaited<ReturnType<typeof requireActor>>> {
   const who = await requireActor();
-  if (!canDoInvoiceAction(action, who.role, who.isFounder)) throw new InvoiceForbiddenError();
+  const refused = invoiceRefusal(action, who.role, who.isFounder);
+  if (refused) throw new InvoiceForbiddenError(refused);
   return who;
 }
 
@@ -720,6 +722,7 @@ export async function createInvoice(
   /** A re-issue: the void invoice it replaces. Set only by `reissueInvoice`. */
   opts: { reissuedFrom?: { id: string; number: string } } = {},
 ): Promise<InvoiceDTO> {
+  await requireInvoiceAction("create");
   const who = await actor();
   const companyId = await currentCompany();
   const currency = input.currency ?? "AWG";
@@ -755,6 +758,7 @@ export async function createInvoice(
 }
 
 export async function updateInvoice(id: string, input: InvoiceInput): Promise<InvoiceDTO> {
+  await requireInvoiceAction("edit");
   const current = await requireInvoice(id);
   if (current.status !== "DRAFT") throw new InvoiceLockedError("edited");
   const companyId = await currentCompany();
@@ -787,6 +791,7 @@ export async function issueInvoice(
   id: string,
   dates: { issueDate?: string | null; dueDate?: string | null } = {},
 ): Promise<InvoiceDTO> {
+  await requireInvoiceAction("issue");
   const current = await requireInvoice(id);
   if (current.status !== "DRAFT") throw new InvoiceLockedError("issued again");
   const who = await actor();
@@ -853,6 +858,9 @@ export async function recordPayment(
    */
   opts: { recordedBy?: { id: string | null; name: string }; stripePaymentIntentId?: string } = {},
 ): Promise<InvoicePaymentDTO> {
+  // A person recording a payment must be allowed to (D-6). The Stripe webhook
+  // passes `recordedBy` and has no session: its proof is the verified signature.
+  if (!opts.recordedBy) await requireInvoiceAction("recordPayment");
   const current = await requireInvoice(invoiceId);
   if (current.status === "DRAFT") {
     throw new InvoiceLockedError("paid before it is issued");
