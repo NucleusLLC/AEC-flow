@@ -661,7 +661,11 @@ ${!preview ? `@media print {
     const next = [...templates.filter((x) => x.id !== tpl.id), tpl];
     setTemplates(next);
     setActiveTemplate(name);
-    void saveTemplatesAction(next); // persist the firm template library
+    // Persist the firm template library. Only a Director/Admin may replace it
+    // (D-6); anyone else keeps the template on screen and is told it was not saved.
+    void saveTemplatesAction(next).then((r) => {
+      if (!r.ok) setSaveError(r.error);
+    });
   };
 
   // Totals
