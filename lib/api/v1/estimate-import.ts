@@ -103,16 +103,22 @@ export type ImportProject = {
   clientName: string | null;
 };
 
+/**
+ * One estimate line to write. The API import always sends code null and every
+ * cost 0 (an add-in never invents a price); the in-app BOQ import
+ * (lib/imports/cadgen-boq.ts) fills code and a unit cost from the practice's
+ * own price book where a code matches.
+ */
 export type EstimateItemRow = {
   task: string;
   qty: number;
   unit: string;
-  code: null;
-  laborNorm: 0;
-  materialUnitCost: 0;
-  equipmentUnitCost: 0;
-  subcontractUnitCost: 0;
-  poc: 0;
+  code: string | null;
+  laborNorm: number;
+  materialUnitCost: number;
+  equipmentUnitCost: number;
+  subcontractUnitCost: number;
+  poc: number;
   sortOrder: number;
 };
 
@@ -129,7 +135,10 @@ export type EstimateImportPlan = {
     locked: false;
     amount: 0;
     date: Date;
-    budget: { import: { source: string; sourceVersion: string | null; title: string; importedAt: string } };
+    budget: {
+      import: { source: string; sourceVersion: string | null; title: string; importedAt: string };
+      cover?: { on: boolean; image: string | null; plan?: string | null };
+    };
   };
   categories: { name: string; sortOrder: number; items: EstimateItemRow[] }[];
 };

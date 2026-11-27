@@ -30,16 +30,26 @@ export default async function ProjectWorkspaceLayout({ children, params }: Layou
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-faint">{project.projectNumber}</span>
-            <StatusBadge status={project.status} />
-            <PriorityBadge priority={project.priority} />
+        <div className="flex min-w-0 items-start gap-4">
+          {project.coverImageKey ? (
+            // eslint-disable-next-line @next/next/no-img-element -- private, session-gated route
+            <img
+              src={`/api/projects/${project.id}/cover?v=${encodeURIComponent(project.coverImageKey.slice(-12))}`}
+              alt={t("Project cover")}
+              className="h-20 w-32 shrink-0 rounded-lg border border-border bg-surface-2 object-cover"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs text-faint">{project.projectNumber}</span>
+              <StatusBadge status={project.status} />
+              <PriorityBadge priority={project.priority} />
+            </div>
+            <h2 className="mt-1 text-xl font-semibold text-fg">{project.name}</h2>
+            <Link href={`/clients/${project.clientId}`} className="text-sm text-muted hover:text-brand hover:underline">
+              {project.clientName}
+            </Link>
           </div>
-          <h2 className="mt-1 text-xl font-semibold text-fg">{project.name}</h2>
-          <Link href={`/clients/${project.clientId}`} className="text-sm text-muted hover:text-brand hover:underline">
-            {project.clientName}
-          </Link>
         </div>
         <div className="flex flex-wrap items-start justify-end gap-2">
           {/* Always offered, not only when unbilled work exists: the wizard opens

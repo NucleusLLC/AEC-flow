@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, ShoppingCart, PackageCheck, CircleDollarSign, ClipboardList, PackagePlus } from "lucide-react";
+import { Plus, ShoppingCart, PackageCheck, CircleDollarSign, ClipboardList, PackagePlus, FileJson } from "lucide-react";
 import { listPurchaseOrders, procurementSummary } from "@/lib/data/procurement";
 import { PurchaseOrderList } from "@/components/procurement/purchase-order-list";
 import { ProjectFilterBanner } from "@/components/projects/project-filter-banner";
@@ -39,6 +39,13 @@ export default async function ProcurementPage({
           >
             <PackagePlus className="h-4 w-4" />
             {t("From selections")}
+          </Link>
+          <Link
+            href="/estimates/import"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+          >
+            <FileJson className="h-4 w-4" />
+            {t("Import from MEPflow")}
           </Link>
           <Link
             href="/procurement/new"

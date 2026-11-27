@@ -510,6 +510,9 @@ model Project {
   archivedAt    DateTime?
   /// Who archived it — a user id, kept loose so removing the user never blocks.
   archivedById  String?
+  /// Storage key of the project cover image (a JPEG/PNG in the private drawings bucket, served by
+  /// GET /api/projects/<id>/cover). Set by "Import from MEPflow". See prisma/sql/0041_project_cover_image.sql.
+  coverImageKey String?
   /// DEVELOPMENT tick box on the project form: null = not a development.
   developmentType      ProjectDevelopmentType?
   /// The typed development type when developmentType is OTHER (80 characters at most).

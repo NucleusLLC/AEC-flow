@@ -245,6 +245,8 @@ export interface EstimatePrintDocProps {
   coverImage?: string | null;
   /** How the cover image sits in its frame (original proportions, or a ratio + crop). */
   coverFit?: CoverFit;
+  /** Floor plan printed under the rendering (from an "Import from MEPflow" file). */
+  coverPlan?: string | null;
   /** Pre-formatted grand total for the cover (carries the dual-currency string when on). */
   coverTotalDisplay?: string;
   /**
@@ -851,6 +853,7 @@ export function EstimatePrintDoc(props: EstimatePrintDocProps) {
           est={est}
           image={props.coverImage ?? null}
           fit={normalizeCoverFit(props.coverFit)}
+          plan={props.coverPlan ?? null}
           logoDataUrl={props.logoDataUrl}
           totalDisplay={props.coverTotalDisplay ?? `${est.currency} ${props.nf0(0)}`}
           footerText={props.footerText}
@@ -1036,6 +1039,7 @@ function CoverPage({
   est,
   image,
   fit,
+  plan,
   logoDataUrl,
   totalDisplay,
   footerText,
@@ -1049,6 +1053,7 @@ function CoverPage({
   est: CostEstimate;
   image: string | null;
   fit: CoverFit;
+  plan?: string | null;
   logoDataUrl?: string | null;
   totalDisplay: string;
   footerText?: string;
@@ -1105,6 +1110,17 @@ function CoverPage({
           </div>
         )}
       </div>
+
+      {/* Floor plan (Import from MEPflow): under the rendering, whole drawing, never cropped. */}
+      {plan ? (
+        <div style={{ flex: "0 0 32%", minHeight: 0, marginBottom: 18, border: "1px solid #e2e8f0", borderRadius: 6, padding: 8, background: "#fff", display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b", marginBottom: 4 }}>
+            {t("Floor plan")}
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- data URL, print context */}
+          <img src={plan} alt={t("Floor plan")} style={{ flex: "1 1 auto", minHeight: 0, width: "100%", objectFit: "contain", display: "block" }} />
+        </div>
+      ) : null}
 
       {/* Project name. */}
       <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, color: "#0f172a" }}>

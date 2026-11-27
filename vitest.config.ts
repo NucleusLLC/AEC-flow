@@ -314,6 +314,7 @@ export default defineConfig({
       // (descriptions, order, zero prices, provenance), and the PO number with its
       // lost-race retry against a faked Prisma. Named files, no database.
       "lib/api/v1/po-import.test.ts",
+      "lib/imports/cadgen-boq.test.ts",
       "lib/data/api-v1-po-import.test.ts",
     ],
     environment: "node",
