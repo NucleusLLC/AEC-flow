@@ -48,6 +48,11 @@ export interface ServiceProposalDTO {
   lockedAt: string | null;
 
   createdByName: string | null;
+  /**
+   * The Director / Admin who approved this proposal for sending over the approval limits
+   * (lib/proposals/approval.ts). Cleared by any edit to the fee or the discount.
+   */
+  approvedById: string | null;
   createdAt: string;
   updatedAt: string;
 
@@ -76,6 +81,8 @@ export interface ServiceProposalListItem {
   bboPercent: number;
   bboIncluded: boolean;
   feeBasisLabel: string | null;
+  /** Over an approval limit, not approved, and not yet sent (lib/proposals/approval.ts). */
+  awaitingApproval: boolean;
   createdAt: string;
   validUntil: string | null;
 }

@@ -28,6 +28,8 @@ import type { OnlinePaymentsStatus } from "@/lib/data/pay-now";
 import { GuideNarrationCard } from "@/components/settings/guide-narration-card";
 import { SampleFilesCard } from "@/components/settings/sample-files-card";
 import { InvoiceSettingsCard } from "@/components/settings/invoice-settings-card";
+import { ProposalApprovalCard } from "@/components/settings/proposal-approval-card";
+import { DEFAULT_APPROVAL_THRESHOLDS, type ApprovalThresholds } from "@/lib/proposals/approval";
 import { DEFAULT_INVOICE_SETTINGS, type InvoiceSettings } from "@/lib/finance/invoice-settings";
 import type { SampleSetStatus } from "@/lib/samples/install";
 import {
@@ -68,6 +70,7 @@ export function SettingsView({
   logoSettings,
   documentFontId,
   invoiceSettings = DEFAULT_INVOICE_SETTINGS,
+  approvalThresholds = DEFAULT_APPROVAL_THRESHOLDS,
   templates,
   members,
   roles,
@@ -92,6 +95,8 @@ export function SettingsView({
   documentFontId: string;
   /** Settings > Invoicing: default terms, bank details, T&C (per company). */
   invoiceSettings?: InvoiceSettings;
+  /** Settings > Proposal Templates > Proposal approval: discount % and fee limits (per company). */
+  approvalThresholds?: ApprovalThresholds;
   templates: ProposalTemplate[];
   members: Member[];
   roles: RoleInfo[];
@@ -164,6 +169,11 @@ export function SettingsView({
 
       {tab === "templates" ? (
         <TemplatesManager templates={templates} canSave={canSave} />
+      ) : null}
+
+      {/* What Staff may send without a Director: the letterhead gate, like Invoicing. */}
+      {tab === "templates" ? (
+        <ProposalApprovalCard initial={approvalThresholds} canSave={canSave && canManagePasswords} />
       ) : null}
 
       {tab === "members" ? (

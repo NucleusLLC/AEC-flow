@@ -13,12 +13,13 @@
  * sets a status to PAID: payments are recorded, and the status follows the
  * money (lib/finance/calc.ts).
  *
- * VOID, RE-ISSUE, REVERSE A PAYMENT and DELETE A DRAFT are for an
- * administrator, a director or the founder (lib/finance/invoice-permissions.ts)
- * — checked here first, so the refusal is a plain sentence, and again in
- * lib/data/invoices.ts. Raising, editing a draft, issuing, emailing and
- * recording a payment stay open to every member. There is no action that
- * deletes a payment any more (0.38.0): a payment is reversed, with a reason.
+ * ISSUE, EMAIL, RECORD A PAYMENT, VOID, RE-ISSUE, REVERSE A PAYMENT and DELETE
+ * A DRAFT are for an administrator, a director or the founder (security audit
+ * D-6, lib/finance/invoice-permissions.ts) — checked here first, so the refusal
+ * is a plain sentence, and again in lib/data/invoices.ts. Raising and editing a
+ * draft stay open to every member except a VIEWER, who is read-only. There is
+ * no action that deletes a payment any more (0.38.0): a payment is reversed,
+ * with a reason.
  *
  * EMAIL returns the document-email result as it is: `ok: true` only when the
  * provider confirmed, and the invoice is stamped SENT only then
@@ -28,7 +29,7 @@
 import { revalidatePath } from "next/cache";
 import { getServerT } from "@/lib/i18n/server";
 import { requireActor } from "@/lib/server/actor";
-import { canDoInvoiceAction, INVOICE_MANAGER_ONLY, type InvoiceAction } from "@/lib/finance/invoice-permissions";
+import { invoiceRefusal, type InvoiceAction } from "@/lib/finance/invoice-permissions";
 import {
   createInvoice,
   deleteInvoice,
@@ -88,14 +89,16 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
 async function invoiceGate(action: InvoiceAction): Promise<{ ok: false; error: string } | null> {
   try {
     const actor = await requireActor();
-    if (!canDoInvoiceAction(action, actor.role, actor.isFounder)) return { ok: false, error: INVOICE_MANAGER_ONLY };
-    return null;
+    const refused = invoiceRefusal(action, actor.role, actor.isFounder);
+    return refused ? { ok: false, error: refused } : null;
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "You must be signed in." };
   }
 }
 
 export async function createInvoiceAction(input: InvoiceInput): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("create");
+  if (denied) return denied;
   const parsed = parseInvoiceInput(input);
   if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
@@ -111,6 +114,8 @@ export async function updateInvoiceAction(
   id: string,
   input: InvoiceInput,
 ): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("edit");
+  if (denied) return denied;
   const parsed = parseInvoiceInput(input);
   if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
@@ -126,6 +131,8 @@ export async function issueInvoiceAction(
   id: string,
   dates: { issueDate?: string | null; dueDate?: string | null } = {},
 ): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("issue");
+  if (denied) return denied;
   try {
     const invoice = await issueInvoice(id, dates);
     revalidateInvoice(invoice.id);
@@ -163,6 +170,8 @@ export async function recordPaymentAction(
   invoiceId: string,
   input: InvoicePaymentInput,
 ): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("recordPayment");
+  if (denied) return denied;
   const parsed = parseInvoicePaymentInput(input);
   if (!parsed.ok) return { ok: false, error: await issuesError(parsed.issues) };
   try {
@@ -217,7 +226,7 @@ export async function emailInvoiceAction(
   input: InvoiceEmailInput,
 ): Promise<SendDocumentEmailResult> {
   const denied = await invoiceGate("send");
-  if (denied) return { ok: false, reason: "not_signed_in", error: denied.error, logId: null };
+  if (denied) return { ok: false, reason: "not_allowed", error: denied.error, logId: null };
   const res = await emailInvoice(id, {
     to: input.to,
     cc: input.cc,
@@ -235,7 +244,7 @@ export async function emailReceiptAction(
   input: InvoiceEmailInput,
 ): Promise<SendDocumentEmailResult> {
   const denied = await invoiceGate("send");
-  if (denied) return { ok: false, reason: "not_signed_in", error: denied.error, logId: null };
+  if (denied) return { ok: false, reason: "not_allowed", error: denied.error, logId: null };
   const res = await emailReceipt(paymentId, {
     to: input.to,
     cc: input.cc,
@@ -255,6 +264,8 @@ export async function emailReceiptAction(
  * `raiseInvoiceFromWork`; this only translates the payload and the errors.
  */
 export async function raiseFromWorkAction(form: FormData): Promise<InvoiceActionResult> {
+  const denied = await invoiceGate("create");
+  if (denied) return denied;
   const projectId = String(form.get("projectId") ?? "").trim();
   const lineKeys = form.getAll("line").map(String).filter(Boolean);
   const summarise = form.get("summarise") === "on";

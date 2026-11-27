@@ -153,6 +153,9 @@ export default defineConfig({
       // Who may change role, status and email on a member record. Named file, same
       // reason as every entry above — pure module, no Prisma, no session.
       "lib/team/member-write-policy.test.ts",
+      // Security audit D-6: who may take the dangerous actions (Director / Admin
+      // only), VIEWER read-only, no self-approved leave. Pure module, no Prisma.
+      "lib/permissions/role-gates.test.ts",
       // Building Permit module. Three named files, same reason as every entry
       // above: the register arithmetic and the zod gate are pure, and the enum
       // tripwire reads prisma/schema.prisma off disk as text rather than
@@ -314,6 +317,7 @@ export default defineConfig({
       // (descriptions, order, zero prices, provenance), and the PO number with its
       // lost-race retry against a faked Prisma. Named files, no database.
       "lib/api/v1/po-import.test.ts",
+      "lib/imports/cadgen-boq.test.ts",
       "lib/data/api-v1-po-import.test.ts",
     ],
     environment: "node",

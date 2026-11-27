@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, FileSignature } from "lucide-react";
+import { Search, FileSignature, ShieldAlert } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { add, fromMajor, toMajor } from "@/lib/proposals/engine/money";
 import { ServiceProposalStatusBadge } from "@/components/service-proposals/status-badge";
@@ -17,12 +17,15 @@ const STATUSES = Object.keys(STATUS_LABEL) as ServiceProposalStatus[];
 export function ServiceProposalList({ proposals }: { proposals: ServiceProposalListItem[] }) {
   const t = useT();
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<ServiceProposalStatus | "ALL">("ALL");
+  // "AWAITING" is not a status: it is the approval-threshold queue (lib/proposals/approval.ts).
+  const [status, setStatus] = useState<ServiceProposalStatus | "ALL" | "AWAITING">("ALL");
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return proposals.filter((p) => {
-      if (status !== "ALL" && p.status !== status) return false;
+      if (status === "AWAITING") {
+        if (!p.awaitingApproval) return false;
+      } else if (status !== "ALL" && p.status !== status) return false;
       if (!needle) return true;
       return (
         p.number.toLowerCase().includes(needle) ||
@@ -59,10 +62,12 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value as ServiceProposalStatus | "ALL")}
+          data-testid="proposal-status-filter"
+          onChange={(e) => setStatus(e.target.value as ServiceProposalStatus | "ALL" | "AWAITING")}
           className="h-9 rounded-lg border border-border bg-surface px-3 text-sm text-fg focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
         >
           <option value="ALL">{t("All statuses")}</option>
+          <option value="AWAITING">{t("Awaiting approval")}</option>
           {STATUSES.map((s) => <option key={s} value={s}>{t(STATUS_LABEL[s])}</option>)}
         </select>
       </div>
@@ -97,7 +102,18 @@ export function ServiceProposalList({ proposals }: { proposals: ServiceProposalL
                 <td className="px-4 py-2.5 text-fg">{p.title}</td>
                 <td className="px-4 py-2.5 text-muted">{p.clientName ?? "—"}</td>
                 <td className="px-4 py-2.5 text-muted">{t(p.feeBasisLabel ?? "Fixed fee")}</td>
-                <td className="px-4 py-2.5"><ServiceProposalStatusBadge status={p.status} /></td>
+                <td className="px-4 py-2.5">
+                  <ServiceProposalStatusBadge status={p.status} />
+                  {p.awaitingApproval ? (
+                    <span
+                      data-testid="awaiting-approval-badge"
+                      className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800"
+                    >
+                      <ShieldAlert className="h-3 w-3" aria-hidden="true" />
+                      {t("Awaiting approval")}
+                    </span>
+                  ) : null}
+                </td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-fg">
                   {formatCurrency(p.grandTotal, p.currency, { maximumFractionDigits: 2 })}
                 </td>

@@ -135,7 +135,13 @@ export type EstimateBudget = {
    * `budget` because it's per-estimate content, not a firm-wide print preference — a
    * rendering belongs to this project.
    */
-  cover?: { on?: boolean; image?: string | null; fit?: CoverFit };
+  cover?: {
+    on?: boolean;
+    image?: string | null;
+    fit?: CoverFit;
+    /** Second cover image: the floor plan an "Import from MEPflow" file carried (data URL). */
+    plan?: string | null;
+  };
   /**
    * Where a sheet came from when a connected app sent it in (POST /api/v1/estimates/import,
    * lib/api/v1/estimate-import.ts): the add-in, its version and the take-off title.

@@ -28,6 +28,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isFounderEmail } from "@/lib/server/founder";
 import { canManagePasswords } from "@/lib/password-policy";
+import { deniedFor, type GatedAction } from "@/lib/permissions/role-gates";
 
 export type Actor = {
   id: string;
@@ -100,4 +101,40 @@ export async function requireMemberAdmin(): Promise<Actor> {
     throw new Error("Only an administrator or director can manage members.");
   }
   return actor;
+}
+
+/**
+ * Assert the caller may write at all — every role except VIEWER (security
+ * audit D-6: "VIEWER becomes read-only everywhere"). Throws `ActorError`, whose
+ * message is safe to show as it is.
+ */
+export async function requireWriter(): Promise<Actor> {
+  const actor = await requireActor();
+  const denied = deniedFor("write", actor);
+  if (denied) throw new ActorError(denied);
+  return actor;
+}
+
+/**
+ * Assert the caller may take one of the D-6 dangerous actions — ADMIN, DIRECTOR
+ * or the founder (lib/permissions/role-gates.ts). Throws `ActorError`.
+ */
+export async function requirePermission(action: GatedAction): Promise<Actor> {
+  const actor = await requireActor();
+  const denied = deniedFor(action, actor);
+  if (denied) throw new ActorError(denied);
+  return actor;
+}
+
+/**
+ * The result-style form for server actions that return `{ ok: false, error }`
+ * instead of throwing: the refusal sentence, or null when the caller may proceed.
+ */
+export async function permissionDenied(action: GatedAction | "write"): Promise<string | null> {
+  try {
+    const actor = await requireActor();
+    return deniedFor(action, actor);
+  } catch (e) {
+    return e instanceof Error && e.message ? e.message : "You must be signed in.";
+  }
 }

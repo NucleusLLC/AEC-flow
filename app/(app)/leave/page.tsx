@@ -14,6 +14,8 @@ import { formatDate } from "@/lib/format";
 import { initials } from "@/lib/utils";
 import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/format";
+import { requireActor } from "@/lib/server/actor";
+import { canWrite } from "@/lib/permissions/role-gates";
 
 export const metadata = { title: "Leave · AEC-flow" };
 
@@ -24,6 +26,10 @@ export default async function LeavePage() {
     getUpcomingHolidays(),
   ]);
   const summary = summarizeLeave(requests, holidays);
+  // A VIEWER is read-only (security audit D-6): no request or edit buttons. The
+  // data layer refuses the write whatever is drawn.
+  const actor = await requireActor().catch(() => null);
+  const mayWrite = actor ? canWrite(actor) : false;
   const t = await getServerT();
   const locale = await getServerLocale();
 
@@ -51,13 +57,15 @@ export default async function LeavePage() {
             {t("Requests and approvals, who’s out, and upcoming public holidays.")}
           </p>
         </div>
-        <Link
-          href="/leave/new"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
-        >
-          <Plus className="h-4 w-4" />
-          {t("Request Leave")}
-        </Link>
+        {mayWrite ? (
+          <Link
+            href="/leave/new"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90"
+          >
+            <Plus className="h-4 w-4" />
+            {t("Request Leave")}
+          </Link>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -72,7 +80,7 @@ export default async function LeavePage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <LeaveView requests={requests} />
+          <LeaveView requests={requests} canEdit={mayWrite} />
         </div>
 
         <div className="space-y-6">

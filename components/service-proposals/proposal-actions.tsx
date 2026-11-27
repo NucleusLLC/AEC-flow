@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Send, CopyPlus, Copy, Check, X, ClipboardCheck, ThumbsUp } from "lucide-react";
+import { Trash2, Send, CopyPlus, Copy, Check, X, ClipboardCheck, ThumbsUp, ShieldCheck } from "lucide-react";
 import {
+  approveServiceProposalForSendingAction,
   deleteServiceProposalAction,
   duplicateServiceProposalAction,
   issueServiceProposalAction,
@@ -19,9 +20,15 @@ const btn =
 export function ServiceProposalActions({
   id,
   status,
+  awaitingApproval = false,
+  canApprove = false,
 }: {
   id: string;
   status: ServiceProposalStatus;
+  /** Over an approval limit and not yet approved (lib/proposals/approval.ts). */
+  awaitingApproval?: boolean;
+  /** The viewer is a Director / Admin / founder. Presentation only; the server re-checks. */
+  canApprove?: boolean;
 }) {
   const t = useT();
   const router = useRouter();
@@ -80,7 +87,11 @@ export function ServiceProposalActions({
   }
 
   const canReview = canTransition(status, "INTERNAL_REVIEW");
-  const canApprove = canTransition(status, "APPROVED_FOR_ISSUE");
+  // Over a limit, "Approve for issue" becomes the Director's "Approve for sending" — which
+  // also applies to a proposal already marked approved for issue that an edit pushed over.
+  const canMarkReady = !awaitingApproval && canTransition(status, "APPROVED_FOR_ISSUE");
+  const showDirectorApprove =
+    awaitingApproval && canApprove && (status === "APPROVED_FOR_ISSUE" || canTransition(status, "APPROVED_FOR_ISSUE") || canTransition(status, "SENT"));
   const canIssue = canTransition(status, "SENT");
   const canAccept = canTransition(status, "ACCEPTED");
   const canReject = canTransition(status, "REJECTED");
@@ -92,13 +103,31 @@ export function ServiceProposalActions({
           <ClipboardCheck className="h-4 w-4" /> {t("Submit for review")}
         </button>
       ) : null}
-      {canApprove ? (
+      {canMarkReady ? (
         <button type="button" disabled={pending} className={btn} onClick={() => run(() => transitionServiceProposalAction(id, "APPROVED_FOR_ISSUE"))}>
           <ThumbsUp className="h-4 w-4" /> {t("Approve for issue")}
         </button>
       ) : null}
+      {showDirectorApprove ? (
+        <button
+          type="button"
+          data-testid="approve-for-sending"
+          disabled={pending}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+          onClick={() => run(() => approveServiceProposalForSendingAction(id))}
+        >
+          <ShieldCheck className="h-4 w-4" /> {t("Approve for sending")}
+        </button>
+      ) : null}
       {canIssue ? (
-        <button type="button" disabled={pending} className={btn} onClick={() => run(() => issueServiceProposalAction(id))}>
+        <button
+          type="button"
+          data-testid="issue-to-client"
+          disabled={pending || awaitingApproval}
+          title={awaitingApproval ? t("A Director must approve this proposal before it can be sent.") : undefined}
+          className={btn}
+          onClick={() => run(() => issueServiceProposalAction(id))}
+        >
           <Send className="h-4 w-4" /> {t("Issue to client")}
         </button>
       ) : null}

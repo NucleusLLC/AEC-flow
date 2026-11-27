@@ -316,8 +316,32 @@
  *   back in progress; not started with any percent is in progress). Booked hours stay the
  *   timesheet total, shown red when over plan. Planned hours are also in EDIT PHASES.
  *   Needs prisma/sql/0040_phase_planned_hours.sql applied FIRST.
+ * 0.48.0 (25 NOV 2026): feat — IMPORT FROM MEPFLOW. Estimates (and Procurement) get an "Import from
+ *   MEPflow" button: pick the cadgen.boq/1 JSON a MEPflow generator saves (Pool & Jacuzzi: AEC-flow
+ *   cost estimate / purchase order), choose an existing project or create one from the project facts
+ *   in the file, preview every line with its price, then create a DRAFT cost estimate with one section
+ *   per category, or a DRAFT purchase order (vendor "To be assigned"). Unit costs come only from the
+ *   practice price book where a line code matches a price-book code in the estimate currency (material
+ *   or equipment column); the rest stay 0 to price. The file rendering becomes the project cover image
+ *   (shown in the project header) and, with the floor plan, goes on the estimate cover page. Estimate
+ *   saves now also keep the import provenance (budget.import), which the first save used to drop.
+ *   Needs prisma/sql/0041_project_cover_image.sql applied FIRST.
+ * 0.49.0 (27 NOV 2026): security — ROLE GATES (audit D-6). Only a Director or Admin (or the
+ *   founder) may issue, void or email invoices, record payments, issue/void contracts and
+ *   general documents, approve change orders and certifications, decide leave, replace the
+ *   price book / Norm Set / templates, delete or receive purchase orders, add members or edit a
+ *   colleague's record, and send platform email. Nobody decides their own leave. VIEWER is
+ *   read-only everywhere (server actions refuse company writes by a VIEWER). No SQL.
+ * 0.50.0 (27 NOV 2026): feat — Service Proposal APPROVAL THRESHOLDS ("discount OR fee"). A
+ *   proposal whose discount is above 10% of the subtotal, or whose total fee is above 50,000 AWG,
+ *   needs a Director's (or Admin's / the founder's) approval before it can be sent; both limits
+ *   are set per practice in Settings > Proposal Templates > Proposal approval. The proposal page
+ *   shows an amber "Needs Director approval" banner naming the rule; Issue is refused server-side
+ *   until a Director presses "Approve for sending" (who and when are recorded). Changing the fee
+ *   or the discount after approval clears it. The register gains an "Awaiting approval" badge and
+ *   filter. Below both limits nothing changes. No SQL.
  */
-export const APP_VERSION = "0.47.0";
+export const APP_VERSION = "0.50.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.

@@ -13,6 +13,10 @@
  * goes out may not. `issueDocumentAction` refuses when the catalogue's required
  * fields are empty and names them, so the refusal is something the user can act
  * on rather than a silent failure.
+ *
+ * Security audit D-6 (owner's ruling, 27 Nov 2026): issuing, voiding,
+ * superseding and deleting a document are for an administrator, a director or
+ * the founder; every other write is open to members except a VIEWER.
  */
 
 import { revalidatePath } from "next/cache";
@@ -37,7 +41,7 @@ import {
   parseGeneralDocumentInput,
 } from "@/lib/general-documents/schema";
 import type { GeneralDocumentInput } from "@/lib/general-documents/types";
-import { requireActor } from "@/lib/server/actor";
+import { permissionDenied } from "@/lib/server/actor";
 import { draftDocument } from "@/lib/server/document-ai";
 import {
   draftValues,
@@ -68,6 +72,8 @@ function failure(e: unknown, fallback: string): { ok: false; error: string } {
 export async function createDocumentAction(
   input: GeneralDocumentInput,
 ): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const parsed = parseGeneralDocumentInput(input);
   if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
   try {
@@ -83,6 +89,8 @@ export async function updateDocumentAction(
   id: string,
   input: GeneralDocumentInput,
 ): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const parsed = parseGeneralDocumentInput(input);
   if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
   try {
@@ -98,6 +106,8 @@ export async function issueDocumentAction(
   id: string,
   issueDate?: string | null,
 ): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("generalDocument.issue");
+  if (denied) return { ok: false, error: denied };
   try {
     const existing = await getGeneralDocument(id);
     if (!existing) return { ok: false, error: "That document could not be found." };
@@ -120,6 +130,8 @@ export async function markSignedAction(
   id: string,
   signedAt: string,
 ): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const doc = await markGeneralDocumentSigned(id, signedAt);
     revalidateDocument(doc.id);
@@ -133,6 +145,8 @@ export async function voidDocumentAction(
   id: string,
   reason: string,
 ): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("generalDocument.void");
+  if (denied) return { ok: false, error: denied };
   try {
     const doc = await voidGeneralDocument(id, reason);
     revalidateDocument(doc.id);
@@ -151,11 +165,9 @@ export async function linkDocumentProjectAction(
   id: string,
   projectId: string | null,
 ): Promise<DocumentActionResult> {
-  try {
-    await requireActor();
-  } catch {
-    return { ok: false, error: "You must be signed in." };
-  }
+  // Signed in and not a VIEWER (security audit D-6).
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   if (typeof id !== "string" || !id) return { ok: false, error: "That document could not be found." };
   const target = typeof projectId === "string" && projectId ? projectId : null;
   try {
@@ -173,6 +185,8 @@ export async function linkDocumentProjectAction(
 
 /** The way an issued document is "edited": a new draft, the old one superseded. */
 export async function supersedeDocumentAction(id: string): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("generalDocument.supersede");
+  if (denied) return { ok: false, error: denied };
   try {
     const doc = await supersedeGeneralDocument(id);
     revalidateDocument(doc.id);
@@ -184,6 +198,8 @@ export async function supersedeDocumentAction(id: string): Promise<DocumentActio
 }
 
 export async function deleteDocumentAction(id: string): Promise<DocumentActionResult> {
+  const denied = await permissionDenied("generalDocument.delete");
+  if (denied) return { ok: false, error: denied };
   try {
     await deleteGeneralDocument(id);
     revalidateDocument(id);
@@ -203,11 +219,9 @@ export type DraftWithAiResult =
  * through the same gate as every other document.
  */
 export async function draftWithAiAction(input: unknown): Promise<DraftWithAiResult> {
-  try {
-    await requireActor();
-  } catch {
-    return { ok: false, error: "You must be signed in." };
-  }
+  // Signed in and not a VIEWER (security audit D-6).
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const parsed = parseAiDraftRequest(input);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 

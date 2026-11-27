@@ -21,9 +21,11 @@
  * REVERSED with a reason — it stays here, struck through, and stops counting —
  * never deleted. A VOID invoice can be RE-ISSUED as `<number>-2`.
  *
- * Void, Re-issue, Delete draft and Reverse are drawn only for an administrator,
- * a director or the founder (`canManage`). That is presentation: the actions
- * and lib/data/invoices.ts refuse everyone else whatever is drawn.
+ * Issue, Email, Record a payment, Void, Re-issue, Delete draft and Reverse are
+ * drawn only for an administrator, a director or the founder (`canManage`,
+ * security audit D-6); Edit only for someone who may write (`canEdit` — not a
+ * VIEWER). That is presentation: the actions and lib/data/invoices.ts refuse
+ * everyone else whatever is drawn.
  */
 
 import { useState } from "react";
@@ -71,11 +73,14 @@ export function InvoicePanel({
   invoice,
   today,
   canManage = false,
+  canEdit = false,
 }: {
   invoice: InvoiceDTO;
   today: string;
-  /** Draws Void, Re-issue, Delete draft and Reverse payment (Admin / Director / founder). */
+  /** Draws Issue, Email, Record a payment, Void, Re-issue, Delete draft and Reverse payment (Admin / Director / founder). */
   canManage?: boolean;
+  /** Draws Edit on a draft (anyone but a VIEWER). */
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const t = useT();
@@ -300,24 +305,28 @@ export function InvoicePanel({
         </a>
         {isDraft ? (
           <>
-            <Link href={`/finance/invoices/${invoice.id}/edit`} className={BTN}>
-              {t("Edit")}
-            </Link>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                run(() =>
-                  issueInvoiceAction(invoice.id, {
-                    issueDate: invoice.issueDate ?? today,
-                    dueDate: invoice.dueDate,
-                  }),
-                )
-              }
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
-            >
-              <Send className="h-4 w-4" /> {t("Issue")}
-            </button>
+            {canEdit ? (
+              <Link href={`/finance/invoices/${invoice.id}/edit`} className={BTN}>
+                {t("Edit")}
+              </Link>
+            ) : null}
+            {canManage ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  run(() =>
+                    issueInvoiceAction(invoice.id, {
+                      issueDate: invoice.issueDate ?? today,
+                      dueDate: invoice.dueDate,
+                    }),
+                  )
+                }
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-medium text-brand-fg transition-colors hover:bg-brand/90 disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" /> {t("Issue")}
+              </button>
+            ) : null}
             {canManage ? (
               <button type="button" disabled={pending} onClick={() => setAsking("delete")} className={`${BTN} text-red-600`}>
                 <Trash2 className="h-4 w-4" /> <span>{t("Delete draft")}</span>
@@ -325,7 +334,7 @@ export function InvoicePanel({
             ) : null}
           </>
         ) : null}
-        {canTakePayment ? (
+        {canTakePayment && canManage ? (
           <button
             type="button"
             disabled={pending}
@@ -335,7 +344,7 @@ export function InvoicePanel({
             <Mail className="h-4 w-4" /> {invoice.sentAt ? t("Email again") : t("Email invoice")}
           </button>
         ) : null}
-        {canTakePayment ? (
+        {canTakePayment && canManage ? (
           <button type="button" disabled={pending} onClick={() => setAsking("pay")} className={BTN}>
             <Plus className="h-4 w-4" /> {t("Record a payment")}
           </button>
@@ -776,7 +785,7 @@ export function InvoicePanel({
                           >
                             <Printer className="h-4 w-4" />
                           </Link>
-                          {!reversed ? (
+                          {canManage && !reversed ? (
                             <button
                               type="button"
                               disabled={pending}

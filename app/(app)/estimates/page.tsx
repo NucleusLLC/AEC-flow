@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { FileJson } from "lucide-react";
 import { EstimatesApp } from "@/components/estimates/estimates-app";
 import { getEstimate, getEstimateProjects } from "@/lib/data/estimates";
 import type { EstimateProject } from "@/lib/data/estimates";
@@ -52,13 +54,23 @@ export default async function EstimatesPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="w-full space-y-6">
-      <div className="no-print">
+      <div className="no-print flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
         <h2 className="text-xl font-semibold text-fg">{tr("Cost Estimation")}</h2>
         <p className="text-sm text-muted">
           {tr(
             "Select a project to open its bill-of-quantities estimate — labor norms, materials, equipment and subcontractor costs roll up by section, with profit and overhead applied to the total.",
           )}
         </p>
+        </div>
+        <Link
+          href="/estimates/import"
+          data-testid="import-from-mepflow"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+        >
+          <FileJson className="h-4 w-4" aria-hidden="true" />
+          {tr("Import from MEPflow")}
+        </Link>
       </div>
 
       <EstimatesApp

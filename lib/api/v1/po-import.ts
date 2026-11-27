@@ -32,7 +32,7 @@ export type PoImportLine = {
   description: string;
   quantity: number;
   unit: string;
-  unitPrice: 0;
+  unitPrice: number;
 };
 
 export type PoImportPlan = {
@@ -42,10 +42,10 @@ export type PoImportPlan = {
   status: "DRAFT";
   currency: string;
   lineItems: PoImportLine[];
-  subtotal: 0;
-  taxPercentage: 0;
-  shipping: 0;
-  total: 0;
+  subtotal: number;
+  taxPercentage: number;
+  shipping: number;
+  total: number;
   notes: string;
   createdByName: string | null;
 };

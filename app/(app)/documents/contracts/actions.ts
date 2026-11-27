@@ -7,6 +7,11 @@
  * it, and returns a discriminated result rather than throwing — the contract
  * the rest of this app keeps. Generation itself is NOT here: it streams, so it
  * lives in `app/api/contracts/generate/route.ts`.
+ *
+ * Security audit D-6 (owner's ruling, 27 Nov 2026): issuing, voiding and
+ * deleting a contract and archiving a template are for an administrator, a
+ * director or the founder; every other write is open to members except a
+ * VIEWER, who is read-only.
  */
 
 import { revalidatePath } from "next/cache";
@@ -27,6 +32,7 @@ import {
 } from "@/lib/data/contracts";
 import { issuesToMessage, parseContractBody, parseTemplateInput } from "@/lib/contracts/schema";
 import type { ContractBody } from "@/lib/contracts/types";
+import { permissionDenied } from "@/lib/server/actor";
 
 export type ContractResult = { ok: true; id?: string } | { ok: false; error: string };
 export type TicketResult =
@@ -55,6 +61,8 @@ export async function templateUploadTicketAction(input: {
   mimeType: string;
   sizeBytes: number;
 }): Promise<TicketResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const ticket = await createTemplateUpload(input);
     return {
@@ -74,6 +82,8 @@ export async function registerTemplateAction(input: {
   storageKey: string;
   filename: string;
 }): Promise<TemplateResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const parsed = parseTemplateInput(input);
   if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
   try {
@@ -86,6 +96,8 @@ export async function registerTemplateAction(input: {
 }
 
 export async function archiveTemplateAction(id: string, archived: boolean): Promise<ContractResult> {
+  const denied = await permissionDenied("contractTemplate.archive");
+  if (denied) return { ok: false, error: denied };
   try {
     await archiveTemplate(id, archived);
     revalidatePath(REGISTER);
@@ -106,6 +118,8 @@ export async function templateUrlAction(id: string): Promise<UrlResult> {
 /* ---------------- the contract ---------------- */
 
 export async function saveContractBodyAction(id: string, body: ContractBody): Promise<ContractResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   const parsed = parseContractBody(body);
   if (!parsed.ok) return { ok: false, error: issuesToMessage(parsed.issues) };
   try {
@@ -118,6 +132,8 @@ export async function saveContractBodyAction(id: string, body: ContractBody): Pr
 }
 
 export async function issueContractAction(id: string): Promise<ContractResult> {
+  const denied = await permissionDenied("contract.issue");
+  if (denied) return { ok: false, error: denied };
   try {
     await issueContract(id);
     revalidatePath(REGISTER);
@@ -129,6 +145,8 @@ export async function issueContractAction(id: string): Promise<ContractResult> {
 }
 
 export async function markSignedAction(id: string, signedOn: string | null): Promise<ContractResult> {
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     await markSigned(id, signedOn);
     revalidatePath(REGISTER);
@@ -140,6 +158,8 @@ export async function markSignedAction(id: string, signedOn: string | null): Pro
 }
 
 export async function voidContractAction(id: string, reason: string): Promise<ContractResult> {
+  const denied = await permissionDenied("contract.void");
+  if (denied) return { ok: false, error: denied };
   try {
     await voidContract(id, reason);
     revalidatePath(REGISTER);
@@ -151,6 +171,8 @@ export async function voidContractAction(id: string, reason: string): Promise<Co
 }
 
 export async function deleteContractAction(id: string): Promise<ContractResult> {
+  const denied = await permissionDenied("contract.delete");
+  if (denied) return { ok: false, error: denied };
   try {
     await deleteContract(id);
     revalidatePath(REGISTER);

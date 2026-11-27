@@ -18,7 +18,7 @@ const STATUS_FILTERS: Array<{ key: "ALL" | LeaveStatus; label: string }> = [
   { key: "REJECTED", label: "Rejected" },
 ];
 
-export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
+export function LeaveView({ requests, canEdit = true }: { requests: LeaveRequest[]; canEdit?: boolean }) {
   const t = useT();
   const locale = useDateLocale();
   const [query, setQuery] = useState("");
@@ -112,13 +112,15 @@ export function LeaveView({ requests }: { requests: LeaveRequest[] }) {
                   </td>
                   <td className="px-5 py-3 text-muted">{r.approvedBy ?? "—"}</td>
                   <td className="px-3 py-3 text-right">
-                    <Link
-                      href={`/leave/${r.id}/edit`}
-                      aria-label={fmt(t("Edit {name}’s leave request"), { name: r.userName })}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-fg"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Link>
+                    {canEdit ? (
+                      <Link
+                        href={`/leave/${r.id}/edit`}
+                        aria-label={fmt(t("Edit {name}’s leave request"), { name: r.userName })}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    ) : null}
                   </td>
                 </tr>
               ))}

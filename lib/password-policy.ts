@@ -81,3 +81,24 @@ export function canManagePasswords(role: string | null | undefined, isFounder: b
   if (isFounder) return true;
   return (PASSWORD_ADMIN_ROLES as readonly string[]).includes(role ?? "");
 }
+
+/**
+ * May this actor take the practice's DANGEROUS actions — issue or void money
+ * and contracts, replace firm-wide libraries, approve leave and change orders,
+ * send email, manage members? Security audit D-6, owner's ruling 27 Nov 2026:
+ * "Director/Admin only". Deliberately the very same set as `canManagePasswords`
+ * (ADMIN, DIRECTOR, founder) — a thin alias with a clearer name, so the two
+ * gates can never drift. The full list of actions is lib/permissions/role-gates.ts.
+ */
+export function canManagePractice(role: string | null | undefined, isFounder: boolean): boolean {
+  return canManagePasswords(role, isFounder);
+}
+
+/** Roles that may read but never write (D-6: "VIEWER becomes read-only everywhere"). */
+export const READ_ONLY_ROLES = ["VIEWER"] as const;
+
+/** True for a role that may only read. The founder is never read-only. */
+export function isReadOnlyRole(role: string | null | undefined, isFounder = false): boolean {
+  if (isFounder) return false;
+  return (READ_ONLY_ROLES as readonly string[]).includes(role ?? "");
+}

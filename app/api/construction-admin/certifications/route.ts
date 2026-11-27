@@ -1,5 +1,7 @@
 import { listCertifications, createCertification } from "@/lib/data/ca/certifications";
 import { ok, created, badRequest, fail, n } from "@/lib/ca/api";
+import { routeDenied } from "@/lib/server/route-gate";
+import { certificationWriteIsDecision } from "@/lib/permissions/role-gates";
 
 export async function GET(req: Request) {
   const projectId = new URL(req.url).searchParams.get("projectId") ?? undefined;
@@ -11,6 +13,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const denied = await routeDenied("write");
+  if (denied) return denied;
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -18,6 +22,11 @@ export async function POST(req: Request) {
     return badRequest("Invalid JSON body");
   }
   if (!body.projectId) return badRequest("projectId is required");
+  // Creating one already issued or approved certifies money (security audit D-6).
+  if (certificationWriteIsDecision(null, body.status as string | undefined)) {
+    const refused = await routeDenied("certification.decide");
+    if (refused) return refused;
+  }
   try {
     const cert = await createCertification({
       projectId: String(body.projectId),

@@ -21,10 +21,12 @@ import {
   saveLogoSettings,
   saveDocumentFontId,
   saveInvoiceSettings,
+  saveProposalApprovalThresholds,
   type FooterSettings,
   type LogoSettings,
 } from "@/lib/server/practice-config";
 import type { InvoiceSettings } from "@/lib/finance/invoice-settings";
+import { MAX_FEE_LIMIT, type ApprovalThresholds } from "@/lib/proposals/approval";
 import {
   createTemplate,
   updateTemplate,
@@ -35,7 +37,7 @@ import {
 } from "@/lib/data/proposal-templates";
 import { setMemberRole, setMemberStatus, createTeamMember } from "@/lib/data/team";
 import { setMemberPassword } from "@/lib/server/password";
-import { requireActor, requireMemberAdmin, type Actor } from "@/lib/server/actor";
+import { permissionDenied, requireActor, requireMemberAdmin, type Actor } from "@/lib/server/actor";
 import { canManagePasswords } from "@/lib/password-policy";
 import { getMemberAccessSnapshot } from "@/lib/server/member-access";
 import { checkMemberWrite } from "@/lib/team/member-write-policy";
@@ -229,11 +231,54 @@ export async function saveInvoiceSettingsAction(
 }
 
 /* ------------------------------------------------------------------ */
+/* Proposal approval limits                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The discount % and total fee above which a Service Proposal needs a Director's approval
+ * before it is sent (lib/proposals/approval.ts). They decide what Staff may send on their
+ * own, so they take the letterhead's gate: Admin / Director / founder. A value that is not
+ * a number is refused rather than silently defaulted; in-range clamping is the parser's.
+ */
+export async function saveProposalApprovalAction(input: {
+  maxDiscountPercent: unknown;
+  maxFee: unknown;
+}): Promise<ActionResult<ApprovalThresholds>> {
+  const denied = await firmSettingsDenied();
+  if (denied) return { ok: false, error: denied };
+  const pct = Number(input?.maxDiscountPercent);
+  const fee = Number(input?.maxFee);
+  if (String(input?.maxDiscountPercent ?? "").trim() === "" || !Number.isFinite(pct) || pct < 0 || pct > 100) {
+    return { ok: false, error: "Enter a discount limit between 0 and 100%." };
+  }
+  if (String(input?.maxFee ?? "").trim() === "" || !Number.isFinite(fee) || fee < 0 || fee > MAX_FEE_LIMIT) {
+    return { ok: false, error: "Enter a fee limit of 0 or more." };
+  }
+  try {
+    const saved = await saveProposalApprovalThresholds({ maxDiscountPercent: pct, maxFee: fee });
+    revalidatePath("/settings");
+    revalidatePath("/design/service-proposals", "layout");
+    return { ok: true, data: saved };
+  } catch (e) {
+    return fail(e, "Failed to save the approval limits.");
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Proposal templates                                                 */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Security audit D-6: changing or deleting a template and choosing the default
+ * are for an administrator, a director or the founder. Creating and duplicating
+ * one add to the library without touching what is there, and stay open to every
+ * member except a VIEWER.
+ */
+
 export async function createTemplateAction(input: TemplateInput): Promise<ActionResult<ProposalTemplate>> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const data = await createTemplate(input);
     revalidatePath("/settings");
@@ -245,6 +290,8 @@ export async function createTemplateAction(input: TemplateInput): Promise<Action
 
 export async function updateTemplateAction(id: string, input: TemplateInput): Promise<ActionResult<ProposalTemplate>> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("proposalTemplate.manage");
+  if (denied) return { ok: false, error: denied };
   try {
     const data = await updateTemplate(id, input);
     revalidatePath("/settings");
@@ -256,6 +303,8 @@ export async function updateTemplateAction(id: string, input: TemplateInput): Pr
 
 export async function duplicateTemplateAction(id: string): Promise<ActionResult<ProposalTemplate>> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("write");
+  if (denied) return { ok: false, error: denied };
   try {
     const data = await duplicateTemplate(id);
     revalidatePath("/settings");
@@ -267,6 +316,8 @@ export async function duplicateTemplateAction(id: string): Promise<ActionResult<
 
 export async function deleteTemplateAction(id: string): Promise<ActionResult> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("proposalTemplate.manage");
+  if (denied) return { ok: false, error: denied };
   try {
     await deleteTemplate(id);
     revalidatePath("/settings");
@@ -278,6 +329,8 @@ export async function deleteTemplateAction(id: string): Promise<ActionResult> {
 
 export async function setDefaultTemplateAction(id: string): Promise<ActionResult> {
   if (!(await requireUser())) return { ok: false, error: "Sign in to manage templates." };
+  const denied = await permissionDenied("proposalTemplate.manage");
+  if (denied) return { ok: false, error: denied };
   try {
     await setDefaultTemplate(id);
     revalidatePath("/settings");
