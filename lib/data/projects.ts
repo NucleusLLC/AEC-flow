@@ -154,6 +154,7 @@ export async function getProject(id: string): Promise<ProjectRecord | null> {
     team,
     activity: [],
     archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
+    coverImageKey: p.coverImageKey ?? null,
   };
 }
 

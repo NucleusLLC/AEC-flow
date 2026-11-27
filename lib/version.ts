@@ -316,8 +316,18 @@
  *   back in progress; not started with any percent is in progress). Booked hours stay the
  *   timesheet total, shown red when over plan. Planned hours are also in EDIT PHASES.
  *   Needs prisma/sql/0040_phase_planned_hours.sql applied FIRST.
+ * 0.48.0 (25 NOV 2026): feat — IMPORT FROM MEPFLOW. Estimates (and Procurement) get an "Import from
+ *   MEPflow" button: pick the cadgen.boq/1 JSON a MEPflow generator saves (Pool & Jacuzzi: AEC-flow
+ *   cost estimate / purchase order), choose an existing project or create one from the project facts
+ *   in the file, preview every line with its price, then create a DRAFT cost estimate with one section
+ *   per category, or a DRAFT purchase order (vendor "To be assigned"). Unit costs come only from the
+ *   practice price book where a line code matches a price-book code in the estimate currency (material
+ *   or equipment column); the rest stay 0 to price. The file rendering becomes the project cover image
+ *   (shown in the project header) and, with the floor plan, goes on the estimate cover page. Estimate
+ *   saves now also keep the import provenance (budget.import), which the first save used to drop.
+ *   Needs prisma/sql/0041_project_cover_image.sql applied FIRST.
  */
-export const APP_VERSION = "0.47.0";
+export const APP_VERSION = "0.48.0";
 
 /**
  * Bright Turquoise — the colour a version is shown in, everywhere it appears.
